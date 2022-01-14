@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"io/ioutil"
+	"os"
+	"os/exec"
 )
 
 func nasm_header(asm *os.File) {
@@ -27,12 +28,23 @@ func compile(srcFile []byte) {
         fmt.Fprintln(os.Stderr, "[ERROR] could not create \"output.asm\"")
         os.Exit(1)
     }
+    defer asm.Close()
     
     nasm_header(asm)
  
     // TODO: process src file
 
     nasm_footer(asm)
+}
+
+func genExe() {
+    cmd := exec.Command("nasm", "-f", "elf64", "-o", "output.o", "output.asm")
+    err := cmd.Run()
+    checkErr(err)
+
+    cmd = exec.Command("ld", "-o", "output", "output.o")
+    err = cmd.Run()
+    checkErr(err)
 }
 
 func checkErr(err error) {
@@ -52,5 +64,7 @@ func main() {
     checkErr(err)
 
     compile(src)
+
+    genExe()
 }
 
