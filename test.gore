@@ -1,2 +1,10 @@
-println 86
-println 69
+println   (86 )
+
+println (86)
+
+
+println(86)
+
+println ( 86 )
+
+println ( 69)

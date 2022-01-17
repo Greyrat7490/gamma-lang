@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"strings"
+	"unicode"
 )
 
 const SYS_WRITE = 1
@@ -38,7 +38,7 @@ func syscall(asm *os.File, syscallNum uint, args... interface{}) {
     regs := []string{"rdi", "rsi", "rdx", "r10", "r8", "r9"}
 
     if len(args) > len(regs) {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) syscall only supports %d args\n", len(regs))
+        fmt.Fprintf(os.Stderr, "[ERROR] syscall only supports %d args\n", len(regs))
         os.Exit(1)
     }
 
@@ -48,6 +48,64 @@ func syscall(asm *os.File, syscallNum uint, args... interface{}) {
 
     asm.WriteString(fmt.Sprintf("mov rax, %d\n", syscallNum))
     asm.WriteString("syscall\n")
+}
+
+func getArgs(words []string) (args []string) {
+    if len(words) < 2 || words[1] != "(" {
+        fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
+        os.Exit(1)
+    }
+
+    for _, w := range words[2:] {
+        if w == ")" {
+            break
+        }
+
+        args = append(args, w)
+    }
+
+    if len(words) - 2 == len(args) {
+        fmt.Fprintf(os.Stderr, "[ERROR] missing \")\"\n")
+        os.Exit(1)
+    }
+
+    return args
+}
+
+func checkArgs(args []string, argNum uint) {
+    if uint(len(args)) != argNum {
+        fmt.Fprintf(os.Stderr, "[ERROR] function takes %d argument but got %d\n", argNum, len(args))
+        os.Exit(1)
+    }
+}
+
+func write(asm *os.File, words []string, i int) int {
+    args := getArgs(words[i:])
+    checkArgs(args, 1)
+
+    syscall(asm, SYS_WRITE, STDOUT, fmt.Sprintf("str%d", len(strLits)), len(args[0]) + 1)
+    strLits = append(strLits, args[0])
+
+    return i + len(args) + 2 // skip args, "(" and ")"
+}
+
+func split(file string) (words []string) {
+    start := 0
+
+    for i, r := range(file) {
+        if unicode.IsSpace(r) || r == '(' || r == ')' {
+            if start != i {
+                words = append(words, file[start:i])
+            }
+            start = i + 1
+
+            if r == '(' || r == ')' {
+                words = append(words, string(r))
+            }
+        }
+    }
+
+    return words
 }
 
 func compile(srcFile []byte) {
@@ -60,19 +118,12 @@ func compile(srcFile []byte) {
 
     nasm_header(asm)
 
-    words := strings.Fields(string(srcFile))
+    words := split(string(srcFile))
 
     for i := 0; i < len(words); i++ {
         switch words[i] {
         case "println":
-            if len(words) <= i + 1 {
-                fmt.Fprintln(os.Stderr, "[ERROR] you have not provided enough arguments")
-                os.Exit(1)
-            }
-
-            i++
-            syscall(asm, SYS_WRITE, STDOUT, fmt.Sprintf("str%d", len(strLits)), len(words[i]) + 1)
-            strLits = append(strLits, words[i])
+            i = write(asm, words, i)
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] keyword \"%s\" is not supported\n", words[i])
@@ -86,6 +137,7 @@ func compile(srcFile []byte) {
 func genExe() {
     cmd := exec.Command("nasm", "-f", "elf64", "-o", "output.o", "output.asm")
     err := cmd.Run()
+    // TODO: better error messages
     checkErr(err)
 
     cmd = exec.Command("ld", "-o", "output", "output.o")
@@ -113,4 +165,3 @@ func main() {
 
     genExe()
 }
-
