@@ -46,19 +46,52 @@ func nasm_header(asm *os.File) {
     asm.WriteString("[BITS 64]\n")
     asm.WriteString("section .text\n")
     asm.WriteString("global _start\n")
-    asm.WriteString("_start:\n")
+
+    asm.WriteString(`; rax = input int
+; rbx = output string pointer
+; rax = output string length
+int_to_str:
+    push rcx
+    push rdx
+
+    mov ecx, 10
+
+    mov rbx, intBuf + 10
+    .l1:
+        xor edx, edx
+        div ecx
+        add dl, 48
+        dec rbx
+        mov byte [rbx], dl
+        cmp eax, 0
+        jne .l1
+
+    mov rax, rbx
+    sub rax, intBuf
+    pop rdx
+    pop rcx
+    ret
+`)
+
+    asm.WriteString("\n_start:\n")
+    asm.WriteString("mov rsp, stack_top\n\n")
 }
 
 func nasm_footer(asm *os.File) {
-    asm.WriteString("mov rdi, 0\n")
+    asm.WriteString("\nmov rdi, 0\n")
     asm.WriteString(fmt.Sprintf("mov rax, %d\n", SYS_EXIT))
     asm.WriteString("syscall\n")
-    asm.WriteString("section .data\n")
-    for i, str := range strLits {
-        asm.WriteString(fmt.Sprintf("str%d: db \"%s\", 0xa\n", i, str))
+    asm.WriteString("\nsection .data\n")
+
+    if len(strLits) > 0 {
+        for i, str := range strLits {
+            asm.WriteString(fmt.Sprintf("str%d: db \"%s\", 0xa\n", i, str))
+        }
     }
 
-    // TODO: .bss section
+    asm.WriteString("\nsection .bss\n")
+    asm.WriteString("\tresb 1024 * 1024\nstack_top:\n") // 1MiB
+    asm.WriteString("intBuf:\n\tresb 10") // int(32bit) -> 10 digits max -> 10 char string max
 }
 
 func syscall(asm *os.File, syscallNum uint, args... interface{}) {
@@ -100,7 +133,7 @@ func getArgs(words []string, expectedArgCount int) (args []arg) {
         fmt.Fprintf(os.Stderr, "[ERROR] missing \")\"\n")
         os.Exit(1)
     }
-    
+
     if len(args) != expectedArgCount {
         fmt.Fprintf(os.Stderr, "[ERROR] function takes %d argument but got %d\n", expectedArgCount, len(args))
         os.Exit(1)
@@ -125,18 +158,20 @@ func write(asm *os.File, words []string, i int) int {
                 os.Exit(1)
             }
 
-        // TODO: print integer
+        // TODO: add linebreak
         case Int:
-            fmt.Fprintln(os.Stderr, "[ERROR] printing integers is not yet supported")
-            os.Exit(1)
-            /*
-                if !registers[v.regIdx].isAddr {
-                    syscall(asm, SYS_WRITE, STDOUT, registers[v.regIdx].name, len(registers[v.regIdx].value))
-                } else {
-                    fmt.Fprintln(os.Stderr, "[ERROR] unreachable: register.isAddr should always be false if type of var is Int")
-                    os.Exit(1)
-                }
-            */
+            if !registers[v.regIdx].isAddr {
+                asm.WriteString("push rbx\n")
+                asm.WriteString("push rax\n")
+                asm.WriteString(fmt.Sprintf("mov rax, %s\n", registers[v.regIdx].name))
+                asm.WriteString("call int_to_str\n")
+                syscall(asm, SYS_WRITE, STDOUT, "rbx", "rax")
+                asm.WriteString("pop rax\n")
+                asm.WriteString("pop rbx\n")
+            } else {
+                fmt.Fprintln(os.Stderr, "[ERROR] unreachable: register.isAddr should always be false if type of var is Int")
+                os.Exit(1)
+            }
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] unknown type \"%#v\"\n", v.vartype)
@@ -189,7 +224,7 @@ func compile(srcFile []byte) {
             i = declareVar(words, i)
         case ":=":
             i = defineVar(asm, words, i)
-            
+
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] keyword \"%s\" is not supported\n", words[i])
             os.Exit(1)
