@@ -1,6 +1,6 @@
 var v1 int := 86
 var v2 str := some_string
-var v3 str := v2
+var v2 int := v1
 
 println(v1)
 println(,)

@@ -38,8 +38,11 @@ func declareVar(words []string, i int) int {
         fmt.Fprintf(os.Stderr, "[ERROR] a maximum of only %d variables is allowed yet\n", len(registers))
         os.Exit(1)
     }
-
-    // TODO: is a variable with this name already declared
+    // maybe implement shadowing later (TODO)
+    if getVar(words[i+1]) != nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] a variable with the name \"%s\" is already declared\n", words[i+1])
+        os.Exit(1)
+    }
 
     if words[i+2] == "str" {
         vars = append(vars, variable{words[i+1], len(vars), String, -1})
