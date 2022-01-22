@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"unicode"
+    "fmt"
+    "io/ioutil"
+    "os"
+    "os/exec"
+    "unicode"
 )
 
 const SYS_WRITE = 1
@@ -16,8 +16,7 @@ const STDOUT = 1
 type reg struct {
     name string
     isAddr bool
-    value string    // later int64
-    strIdx int      // acts like an address
+    value int      // either an actual value or an address(index)
 }
 
 type vType int
@@ -123,7 +122,7 @@ func getArgs(words []string, expectedArgCount int) (args []arg) {
 
         if v := getVar(w); v != nil {           // variable
             args = append(args, arg{true, v.regIdx})
-        } else {                                // string/int literale
+        } else {                                // string/int literal
             args = append(args, arg{false, len(strLits)})
             strLits = append(strLits, w)
         }
@@ -152,13 +151,14 @@ func write(asm *os.File, words []string, i int) int {
         switch v.vartype {
         case String:
             if registers[v.regIdx].isAddr {
-                syscall(asm, SYS_WRITE, STDOUT, registers[v.regIdx].name, len(strLits[registers[v.regIdx].strIdx]) + 1)
+                syscall(asm, SYS_WRITE, STDOUT, registers[v.regIdx].name, len(strLits[registers[v.regIdx].value]) + 1)
             } else {
                 fmt.Fprintln(os.Stderr, "[ERROR] unreachable: register.isAddr should always be true if type of var is String")
                 os.Exit(1)
             }
 
         // TODO: add linebreak
+        // TODO: add sign
         case Int:
             if !registers[v.regIdx].isAddr {
                 asm.WriteString("push rbx\n")
