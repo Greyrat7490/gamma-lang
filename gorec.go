@@ -189,19 +189,33 @@ func split(file string) (words []string) {
     start := 0
 
     skip := false
+    mlSkip := false
 
     for i, r := range(file) {
         if skip {
-            if r == '\n' {
-                skip = false
-                start = i + 1
-            }
+            if mlSkip {
+                if r == '*' && file[i+1] == '/' {
+                    skip = false
+                    mlSkip = false
+                    start = i + 2
+                }
+            } else {
+                if r == '\n' {
+                    skip = false
+                    start = i + 1
+                }
 
+            }
             continue
         }
 
-        if r == '/' && file[i+1] == '/' {
-            skip = true
+        if r == '/' {
+            if file[i+1] == '/' {
+                skip = true
+            } else if file[i+1] == '*' {
+                skip = true
+                mlSkip = true
+            }
         }
 
         if unicode.IsSpace(r) || r == '(' || r == ')' {
@@ -214,6 +228,11 @@ func split(file string) (words []string) {
                 words = append(words, string(r))
             }
         }
+    }
+
+    if mlSkip {
+        fmt.Fprintln(os.Stderr, "you have not terminated your comment (missing \"*/\")")
+        os.Exit(1)
     }
 
     return words

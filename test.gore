@@ -6,4 +6,9 @@ println(v1)
 println(,)
 println(v2)
 println(v3)
-// println(this_will_not_be_printed)
+
+// println(this_will_not_be_printed2)
+/*
+    println(this_will_not_be_printed)
+    println(this_will_not_be_printed2)
+*/
