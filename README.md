@@ -15,18 +15,20 @@ And because it is written in Go...
 * fast
 * easy and consistend syntax
 
-Supported:
+## Supported:
 * [x] Linux
 * [ ] MacOS
 * [ ] windows
 * [x] x86_64
 * [ ] ARM
 
-TODO:
+## TODO:
 * [x] generate assembly file (nasm)
 * [x] generate executable
+* [x] variables
 * [ ] syscalls
-* [ ] variables
+* [ ] examples
+* [ ] tests
 * [ ] turing complete (with Rule 110 programm) -> actual programming language
 * [ ] type checking
 * [ ] self-hosted
