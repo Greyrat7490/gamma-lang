@@ -184,11 +184,26 @@ func write(asm *os.File, words []string, i int) int {
     return i + len(args) + 2 // skip args, "(" and ")"
 }
 
-// TODO: comments
+// TODO: multiline comment
 func split(file string) (words []string) {
     start := 0
 
+    skip := false
+
     for i, r := range(file) {
+        if skip {
+            if r == '\n' {
+                skip = false
+                start = i + 1
+            }
+
+            continue
+        }
+
+        if r == '/' && file[i+1] == '/' {
+            skip = true
+        }
+
         if unicode.IsSpace(r) || r == '(' || r == ')' {
             if start != i {
                 words = append(words, file[start:i])
