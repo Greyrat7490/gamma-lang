@@ -1,0 +1,7 @@
+var v1 int := 86
+var v1 int := 69                // causes an error
+var v3 int
+
+println(v1)
+println(,)
+println(v3)                     // should cause an compiler error (TODO)

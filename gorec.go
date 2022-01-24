@@ -40,6 +40,7 @@ var registers []reg = []reg { // so far safe to use registers for variables
     {name: "r10"},
 }
 
+// TODO: proper error handling
 
 func nasm_header(asm *os.File) {
     asm.WriteString("[BITS 64]\n")
