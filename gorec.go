@@ -6,6 +6,7 @@ import (
     "os"
     "os/exec"
     "unicode"
+    "strings"
 )
 
 const SYS_WRITE = 1
@@ -270,23 +271,28 @@ func compile(srcFile []byte) {
 }
 
 func genExe() {
+    var stderr strings.Builder
+
+    fmt.Println("[INFO] generating object files...")
+
     cmd := exec.Command("nasm", "-f", "elf64", "-o", "output.o", "output.asm")
+    cmd.Stderr = &stderr
     err := cmd.Run()
-    // TODO: better error messages
-    checkErr(err)
+    if err != nil {
+        fmt.Println("[ERROR] ", stderr.String())
+    }
+
+    fmt.Println("[INFO] linking object files...")
 
     cmd = exec.Command("ld", "-o", "output", "output.o")
+    cmd.Stderr = &stderr
     err = cmd.Run()
-    checkErr(err)
-}
-
-func checkErr(err error) {
     if err != nil {
-        fmt.Fprintln(os.Stderr, "[ERROR]", err)
-        os.Exit(1)
+        fmt.Println("[ERROR] ", stderr.String())
     }
-}
 
+    fmt.Println("[INFO] generated executable")
+}
 func main() {
     if len(os.Args) < 2 {
         fmt.Fprintln(os.Stderr, "[ERROR] you need to provide a source file to compile")
@@ -294,7 +300,10 @@ func main() {
     }
 
     src, err := ioutil.ReadFile(os.Args[1])
-    checkErr(err)
+    if err != nil {
+        fmt.Fprintln(os.Stderr, "[ERROR]", err)
+        os.Exit(1)
+    }
 
     // TODO: type checking step
     compile(src)
