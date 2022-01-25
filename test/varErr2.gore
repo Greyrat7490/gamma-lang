@@ -1,0 +1,6 @@
+var v1 int := 86
+var v1 int := 69                // error already used name
+
+println(v1)
+println(,)
+println(v3)                     // should cause an compiler error (TODO)

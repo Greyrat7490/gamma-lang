@@ -31,6 +31,17 @@ type arg struct {
     regIdx int
 }
 
+type word struct {
+    line int
+    col int
+    str string
+    // later filename
+}
+
+func (w word) at() string {
+    return fmt.Sprintf("at line: %d, col: %d", w.line, w.col)
+}
+
 // TODO: proper string literales ("" to indicate)
 var strLits []string
 
@@ -41,7 +52,6 @@ var registers []reg = []reg { // so far safe to use registers for variables
     {name: "r10"},
 }
 
-// TODO: proper error handling
 
 func nasm_header(asm *os.File) {
     asm.WriteString("[BITS 64]\n")
@@ -111,22 +121,23 @@ func syscall(asm *os.File, syscallNum uint, args... interface{}) {
     asm.WriteString("syscall\n")
 }
 
-func getArgs(words []string, expectedArgCount int) (args []arg) {
-    if len(words) < 2 || words[1] != "(" {
+func getArgs(words []word, expectedArgCount int) (args []arg) {
+    if len(words) < 2 || words[1].str != "(" {
         fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
+        fmt.Fprintln(os.Stderr, "\t" + words[1].at())
         os.Exit(1)
     }
 
     for _, w := range words[2:] {
-        if w == ")" {
+        if w.str == ")" {
             break
         }
 
-        if v := getVar(w); v != nil {           // variable
+        if v := getVar(w.str); v != nil {           // variable
             args = append(args, arg{true, v.regIdx})
-        } else {                                // string/int literal
+        } else {                                    // string/int literal
             args = append(args, arg{false, len(strLits)})
-            strLits = append(strLits, w)
+            strLits = append(strLits, w.str)
         }
     }
 
@@ -137,6 +148,7 @@ func getArgs(words []string, expectedArgCount int) (args []arg) {
 
     if len(args) != expectedArgCount {
         fmt.Fprintf(os.Stderr, "[ERROR] function takes %d argument but got %d\n", expectedArgCount, len(args))
+        fmt.Fprintln(os.Stderr, "\t" + words[0].at())
         os.Exit(1)
     }
 
@@ -145,7 +157,7 @@ func getArgs(words []string, expectedArgCount int) (args []arg) {
 
 
 // TODO: use stack to backup registers to prevent unwanted behavior
-func write(asm *os.File, words []string, i int) int {
+func write(asm *os.File, words []word, i int) int {
     args := getArgs(words[i:], 1)
 
     if args[0].isVar {
@@ -156,6 +168,7 @@ func write(asm *os.File, words []string, i int) int {
                 syscall(asm, SYS_WRITE, STDOUT, registers[v.regIdx].name, len(strLits[registers[v.regIdx].value]) + 1)
             } else {
                 fmt.Fprintln(os.Stderr, "[ERROR] unreachable: register.isAddr should always be true if type of var is String")
+                fmt.Fprintln(os.Stderr, "\t" + words[i].at())
                 os.Exit(1)
             }
 
@@ -172,11 +185,13 @@ func write(asm *os.File, words []string, i int) int {
                 asm.WriteString("pop rbx\n")
             } else {
                 fmt.Fprintln(os.Stderr, "[ERROR] unreachable: register.isAddr should always be false if type of var is Int")
+                fmt.Fprintln(os.Stderr, "\t" + words[i].at())
                 os.Exit(1)
             }
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] unknown type \"%#v\"\n", v.vartype)
+            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
             os.Exit(1)
         }
     } else {
@@ -186,14 +201,24 @@ func write(asm *os.File, words []string, i int) int {
     return i + len(args) + 2 // skip args, "(" and ")"
 }
 
-// TODO: multiline comment
-func split(file string) (words []string) {
+func split(file string) (words []word) {
     start := 0
+
+    line := 1
+    col := 0
 
     skip := false
     mlSkip := false
 
     for i, r := range(file) {
+        // get word position
+        if r == '\n' {
+            line++
+            col = -1
+        }
+        col++
+
+        // skipping comments
         if skip {
             if mlSkip {
                 if r == '*' && file[i+1] == '/' {
@@ -211,23 +236,26 @@ func split(file string) (words []string) {
             continue
         }
 
+        // start skipping comments
         if r == '/' {
             if file[i+1] == '/' {
                 skip = true
+                continue
             } else if file[i+1] == '*' {
                 skip = true
                 mlSkip = true
+                continue
             }
-        }
 
-        if unicode.IsSpace(r) || r == '(' || r == ')' {
+        // split
+        } else if unicode.IsSpace(r) || r == '(' || r == ')' {
             if start != i {
-                words = append(words, file[start:i])
+                words = append(words, word{line, col + start - i, file[start:i]})
             }
             start = i + 1
 
             if r == '(' || r == ')' {
-                words = append(words, string(r))
+                words = append(words, word{line, col - 1, string(r)})
             }
         }
     }
@@ -253,7 +281,7 @@ func compile(srcFile []byte) {
     words := split(string(srcFile))
 
     for i := 0; i < len(words); i++ {
-        switch words[i] {
+        switch words[i].str {
         case "println":
             i = write(asm, words, i)
         case "var":
@@ -262,7 +290,8 @@ func compile(srcFile []byte) {
             i = defineVar(asm, words, i)
 
         default:
-            fmt.Fprintf(os.Stderr, "[ERROR] keyword \"%s\" is not supported\n", words[i])
+            fmt.Fprintf(os.Stderr, "[ERROR] keyword \"%s\" is not supported\n", words[i].str)
+            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
             os.Exit(1)
         }
     }

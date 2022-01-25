@@ -1,7 +1,7 @@
 var v1 int := 86
-var v1 int := 69                // causes an error
-var v3 int
+var v2 int := 69
 
 println(v1)
 println(,)
-println(v3)                     // should cause an compiler error (TODO)
+println(v2)
+println(,)

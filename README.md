@@ -28,7 +28,7 @@ And because it is written in Go...
 * [x] variables
 * [ ] syscalls
 * [ ] examples
-* [ ] tests
+* [x] tests
 * [ ] turing complete (with Rule 110 programm) -> actual programming language
 * [ ] type checking
 * [ ] self-hosted
