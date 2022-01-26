@@ -1,5 +1,5 @@
-var v1 int := 86
-var v1 int := 69                // error already used name
+var v1 i32 := 86
+var v1 i32 := 69                // error already used name
 
 println(v1)
 println(,)

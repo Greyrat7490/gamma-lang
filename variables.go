@@ -11,7 +11,7 @@ var vars []variable
 type variable struct {
     name string
     regIdx int
-    vartype vType
+    vartype gType
     strIdx int
 }
 
@@ -48,11 +48,12 @@ func declareVar(words []word, i int) int {
         os.Exit(1)
     }
 
-    if words[i+2].str == "str" {
-        vars = append(vars, variable{words[i+1].str, len(vars), String, -1})
-    } else if words[i+2].str == "int" {
-        vars = append(vars, variable{words[i+1].str, len(vars), Int, -1})
-    } else {
+    switch toType(words[i+2].str) {
+    case str:
+        vars = append(vars, variable{words[i+1].str, len(vars), str, -1})
+    case i32:
+        vars = append(vars, variable{words[i+1].str, len(vars), i32, -1})
+    default:
         fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", words[i+2].str)
         fmt.Fprintln(os.Stderr, "\t" + words[i+2].at())
         os.Exit(1)
@@ -78,16 +79,17 @@ func defineVar(asm *os.File, words []word, i int) int {
             fmt.Fprintln(os.Stderr, "\t" + words[i-2].at())
             os.Exit(1)
         }
-    } else {                                                    // define with literal
+    } else {                                                        // define with literal
         if v := getVar(words[i-2].str); v != nil {
             switch v.vartype {
-            case String:
+            case str:
                 registers[v.regIdx].isAddr = true;
                 registers[v.regIdx].value = len(strLits);
 
                 strLits = append(strLits, words[i+1].str)
                 asm.WriteString(fmt.Sprintf("mov %s, %s\n", registers[v.regIdx].name, fmt.Sprintf("str%d", registers[v.regIdx].value)))
-            case Int:
+
+            case i32:
                 registers[v.regIdx].isAddr = false;
 
                 if i, err := strconv.Atoi(words[i+1].str); err == nil {
@@ -100,9 +102,8 @@ func defineVar(asm *os.File, words []word, i int) int {
                     os.Exit(1)
                 }
 
-            // TODO: type to human readable
             default:
-                fmt.Fprintf(os.Stderr, "[ERROR] \"%#v\" is not supported, only str and int are supported yet\n", v.vartype)
+                fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.name)
                 fmt.Fprintln(os.Stderr, "\t" + words[i-2].at())
                 os.Exit(1)
             }

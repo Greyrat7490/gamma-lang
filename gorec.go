@@ -20,12 +20,6 @@ type reg struct {
     value int      // either an actual value or an address(index)
 }
 
-type vType int
-const (
-    Int vType = iota
-    String vType = iota
-)
-
 type arg struct {
     isVar bool
     regIdx int
@@ -163,7 +157,7 @@ func write(asm *os.File, words []word, i int) int {
     if args[0].isVar {
         v := vars[args[0].regIdx]
         switch v.vartype {
-        case String:
+        case str:
             if registers[v.regIdx].isAddr {
                 syscall(asm, SYS_WRITE, STDOUT, registers[v.regIdx].name, len(strLits[registers[v.regIdx].value]) + 1)
             } else {
@@ -174,7 +168,7 @@ func write(asm *os.File, words []word, i int) int {
 
         // TODO: add linebreak
         // TODO: add sign
-        case Int:
+        case i32:
             if !registers[v.regIdx].isAddr {
                 asm.WriteString("push rbx\n")
                 asm.WriteString("push rax\n")
@@ -190,7 +184,7 @@ func write(asm *os.File, words []word, i int) int {
             }
 
         default:
-            fmt.Fprintf(os.Stderr, "[ERROR] unknown type \"%#v\"\n", v.vartype)
+            fmt.Fprintf(os.Stderr, "[ERROR] unknown type \"%s\"\n", v.vartype.readable())
             fmt.Fprintln(os.Stderr, "\t" + words[i].at())
             os.Exit(1)
         }
