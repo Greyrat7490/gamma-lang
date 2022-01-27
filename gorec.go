@@ -185,7 +185,6 @@ func write(asm *os.File, words []word, i int) int {
     return i + len(args) + 2 // skip args, "(" and ")"
 }
 
-// TODO: ignore spaces in string literales
 // TODO: escape chars
 func split(file string) (words []word) {
     start := 0
@@ -195,6 +194,7 @@ func split(file string) (words []word) {
 
     skip := false
     mlSkip := false
+    strLit := false
 
     for i, r := range(file) {
         // skipping comments
@@ -211,7 +211,17 @@ func split(file string) (words []word) {
                     start = i + 1
                 }
             }
+        } else if strLit {
+            // end string literal
+            if r == '"' {
+                strLit = false
+            }
         } else {
+            // start string literal
+            if r == '"' {
+                strLit = true
+            }
+
             // start skipping comments
             if r == '/' {
                 if file[i+1] == '/' {
