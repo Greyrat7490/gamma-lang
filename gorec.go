@@ -74,7 +74,7 @@ func nasm_footer(asm *os.File) {
 
     if len(strLits) > 0 {
         for i, str := range strLits {
-            asm.WriteString(fmt.Sprintf("str%d: db \"%s\", 0xa\n", i, str))
+            asm.WriteString(fmt.Sprintf("str%d: db %s\n", i, str.value))
         }
     }
 
@@ -149,7 +149,7 @@ func write(asm *os.File, words []word, i int) int {
         switch v.vartype {
         case str:
             if registers[v.regIdx].isAddr {
-                syscall(asm, SYS_WRITE, STDOUT, registers[v.regIdx].name, len(strLits[registers[v.regIdx].value]) + 1)
+                syscall(asm, SYS_WRITE, STDOUT, registers[v.regIdx].name, strLits[registers[v.regIdx].value].size)
             } else {
                 fmt.Fprintln(os.Stderr, "[ERROR] unreachable: register.isAddr should always be true if type of var is String")
                 fmt.Fprintln(os.Stderr, "\t" + words[i].at())
@@ -179,13 +179,13 @@ func write(asm *os.File, words []word, i int) int {
             os.Exit(1)
         }
     } else {
-        syscall(asm, SYS_WRITE, STDOUT, fmt.Sprintf("str%d", args[0].regIdx) , len(strLits[args[0].regIdx]) + 1)
+        syscall(asm, SYS_WRITE, STDOUT, fmt.Sprintf("str%d", args[0].regIdx) , strLits[args[0].regIdx].size)
     }
 
     return i + len(args) + 2 // skip args, "(" and ")"
 }
 
-// TODO: escape chars
+// escape chars (TODO: \n, \t, ...) (done: \\, \")
 func split(file string) (words []word) {
     start := 0
 
@@ -195,9 +195,10 @@ func split(file string) (words []word) {
     skip := false
     mlSkip := false
     strLit := false
+    escape := false
 
     for i, r := range(file) {
-        // skipping comments
+        // comments
         if skip {
             if mlSkip {
                 if r == '*' && file[i+1] == '/' {
@@ -211,25 +212,32 @@ func split(file string) (words []word) {
                     start = i + 1
                 }
             }
+
+        // string literales
         } else if strLit {
-            // end string literal
-            if r == '"' {
-                strLit = false
+            if !escape {
+                if r == '"' {
+                    strLit = false
+                } else if r == '\\' {
+                    escape = true
+                }
+            } else {
+                escape = false
             }
+
         } else {
-            // start string literal
-            if r == '"' {
+            if r == '"' {       // start string literal
                 strLit = true
             }
 
-            // start skipping comments
-            if r == '/' {
+            if r == '/' {       // start comment
                 if file[i+1] == '/' {
                     skip = true
                 } else if file[i+1] == '*' {
                     skip = true
                     mlSkip = true
                 }
+
             // split
             } else if unicode.IsSpace(r) || r == '(' || r == ')' {
                 if start != i {

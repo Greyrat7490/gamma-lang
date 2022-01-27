@@ -1,5 +1,9 @@
 package main
 
+import (
+    "strings"
+)
+
 type gType int
 const (
     i32 gType = iota
@@ -29,8 +33,23 @@ func toType(s string) gType {
     }
 }
 
-var strLits []string
+type data struct {
+    value string
+    size int
+}
+
+// later .data in general
+var strLits []data
 
 func addStrLit(w word) {
-    strLits = append(strLits, w.str[1:len(w.str) - 1])
+    i := strings.Count(w.str, "\\\"") * 7
+
+    // replace escape characters
+    w.str = strings.ReplaceAll(w.str, "\\\"", "\",0x22,\"")     //   \" -> ",0x22," (0x22 = ascii of ")
+    w.str = strings.ReplaceAll(w.str, "\\\\", "\\")             //   \\ -> \
+
+    size := len(w.str) - i - 2 + 1 // -2 (don't count ""), -i (don't count ",0x22,"), +1 (for \n)
+    s := w.str + ",0xa"
+
+    strLits = append(strLits, data{s, size})
 }
