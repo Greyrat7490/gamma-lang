@@ -1,8 +1,8 @@
 var v1 i32 := 86
-var v2 str := some_string
+var v2 str := "some_string"
 
 println(v1)
-println(,)
+println(",")
 println(v2)
 
 // println(this_will_not_be_printed2)

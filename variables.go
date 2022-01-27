@@ -6,6 +6,19 @@ import (
     "strconv"
 )
 
+type reg struct {
+    name string
+    isAddr bool
+    value int      // either an actual value or an address(index)
+}
+
+// TODO: register allocator for variables
+var registers []reg = []reg { // so far safe to use registers for variables
+    {name: "rbx"},
+    {name: "r9"},
+    {name: "r10"},
+}
+
 var vars []variable
 
 type variable struct {
@@ -23,6 +36,18 @@ func getVar(varname string) *variable {
     }
 
     return nil
+}
+
+func isLit(w string) bool {
+    if w[0] == '"' && w[len(w) - 1] == '"' {
+        return true
+    }
+
+    if _, err := strconv.Atoi(w); err == nil {
+        return true
+    }
+
+    return false
 }
 
 func declareVar(words []word, i int) int {
@@ -69,38 +94,22 @@ func defineVar(asm *os.File, words []word, i int) int {
         os.Exit(1)
     }
 
-    if otherVar := getVar(words[i+1].str); otherVar != nil {        // define with variable
-        if v := getVar(words[i-2].str); v != nil {
-            registers[v.regIdx].isAddr = registers[otherVar.regIdx].isAddr;
-            registers[v.regIdx].value = registers[otherVar.regIdx].value;
-            asm.WriteString(fmt.Sprintf("mov %s, %s\n", registers[v.regIdx].name, registers[otherVar.regIdx].name))
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" not declared\n", words[i-2].str)
-            fmt.Fprintln(os.Stderr, "\t" + words[i-2].at())
-            os.Exit(1)
-        }
-    } else {                                                        // define with literal
+    if isLit(words[i+1].str) {
         if v := getVar(words[i-2].str); v != nil {
             switch v.vartype {
             case str:
                 registers[v.regIdx].isAddr = true;
                 registers[v.regIdx].value = len(strLits);
 
-                strLits = append(strLits, words[i+1].str)
+                addStrLit(words[i+1])
                 asm.WriteString(fmt.Sprintf("mov %s, %s\n", registers[v.regIdx].name, fmt.Sprintf("str%d", registers[v.regIdx].value)))
 
             case i32:
                 registers[v.regIdx].isAddr = false;
 
-                if i, err := strconv.Atoi(words[i+1].str); err == nil {
-                    registers[v.regIdx].value = i;
-
-                    asm.WriteString(fmt.Sprintf("mov %s, %d\n", registers[v.regIdx].name, i))
-                } else {
-                    fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid integer\n", words[i+1].str)
-                fmt.Fprintln(os.Stderr, "\t" + words[i+1].at())
-                    os.Exit(1)
-                }
+                i, _ := strconv.Atoi(words[i+1].str)
+                registers[v.regIdx].value = i;
+                asm.WriteString(fmt.Sprintf("mov %s, %d\n", registers[v.regIdx].name, i))
 
             default:
                 fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.name)
@@ -110,6 +119,23 @@ func defineVar(asm *os.File, words []word, i int) int {
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" not declared\n", words[i-2].str)
             fmt.Fprintln(os.Stderr, "\t" + words[i-2].at())
+            os.Exit(1)
+        }
+    } else {
+        // TODO: check if var is defined
+        if otherVar := getVar(words[i+1].str); otherVar != nil {
+            if v := getVar(words[i-2].str); v != nil {
+                registers[v.regIdx].isAddr = registers[otherVar.regIdx].isAddr;
+                registers[v.regIdx].value = registers[otherVar.regIdx].value;
+                asm.WriteString(fmt.Sprintf("mov %s, %s\n", registers[v.regIdx].name, registers[otherVar.regIdx].name))
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" not declared\n", words[i-2].str)
+                fmt.Fprintln(os.Stderr, "\t" + words[i-2].at())
+                os.Exit(1)
+            }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", words[i+1].str)
+            fmt.Fprintln(os.Stderr, "\t" + words[i+1].at())
             os.Exit(1)
         }
     }

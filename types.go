@@ -28,3 +28,9 @@ func toType(s string) gType {
         return -1
     }
 }
+
+var strLits []string
+
+func addStrLit(w word) {
+    strLits = append(strLits, w.str[1:len(w.str) - 1])
+}

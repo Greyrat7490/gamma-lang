@@ -14,12 +14,6 @@ const SYS_EXIT = 60
 
 const STDOUT = 1
 
-type reg struct {
-    name string
-    isAddr bool
-    value int      // either an actual value or an address(index)
-}
-
 type arg struct {
     isVar bool
     regIdx int
@@ -34,16 +28,6 @@ type word struct {
 
 func (w word) at() string {
     return fmt.Sprintf("at line: %d, col: %d", w.line, w.col)
-}
-
-// TODO: proper string literales ("" to indicate)
-var strLits []string
-
-// TODO: register allocator for variables
-var registers []reg = []reg { // so far safe to use registers for variables
-    {name: "rbx"},
-    {name: "r9"},
-    {name: "r10"},
 }
 
 
@@ -127,11 +111,17 @@ func getArgs(words []word, expectedArgCount int) (args []arg) {
             break
         }
 
-        if v := getVar(w.str); v != nil {           // variable
-            args = append(args, arg{true, v.regIdx})
-        } else {                                    // string/int literal
+        if isLit(w.str) {
             args = append(args, arg{false, len(strLits)})
-            strLits = append(strLits, w.str)
+            addStrLit(w)
+        } else {
+            if v := getVar(w.str); v != nil {
+                args = append(args, arg{true, v.regIdx})
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", w.str)
+                fmt.Fprintln(os.Stderr, "\t" + w.at())
+                os.Exit(1)
+            }
         }
     }
 
@@ -195,23 +185,18 @@ func write(asm *os.File, words []word, i int) int {
     return i + len(args) + 2 // skip args, "(" and ")"
 }
 
+// TODO: ignore spaces in string literales
+// TODO: escape chars
 func split(file string) (words []word) {
     start := 0
 
     line := 1
-    col := 0
+    col := 1
 
     skip := false
     mlSkip := false
 
     for i, r := range(file) {
-        // get word position
-        if r == '\n' {
-            line++
-            col = -1
-        }
-        col++
-
         // skipping comments
         if skip {
             if mlSkip {
@@ -225,33 +210,35 @@ func split(file string) (words []word) {
                     skip = false
                     start = i + 1
                 }
-
             }
-            continue
-        }
+        } else {
+            // start skipping comments
+            if r == '/' {
+                if file[i+1] == '/' {
+                    skip = true
+                } else if file[i+1] == '*' {
+                    skip = true
+                    mlSkip = true
+                }
+            // split
+            } else if unicode.IsSpace(r) || r == '(' || r == ')' {
+                if start != i {
+                    words = append(words, word{line, col + start - i, file[start:i]})
+                }
+                start = i + 1
 
-        // start skipping comments
-        if r == '/' {
-            if file[i+1] == '/' {
-                skip = true
-                continue
-            } else if file[i+1] == '*' {
-                skip = true
-                mlSkip = true
-                continue
-            }
-
-        // split
-        } else if unicode.IsSpace(r) || r == '(' || r == ')' {
-            if start != i {
-                words = append(words, word{line, col + start - i, file[start:i]})
-            }
-            start = i + 1
-
-            if r == '(' || r == ')' {
-                words = append(words, word{line, col - 1, string(r)})
+                if r == '(' || r == ')' {
+                    words = append(words, word{line, col - 1, string(r)})
+                }
             }
         }
+
+        // set word position
+        if r == '\n' {
+            line++
+            col = 0
+        }
+        col++
     }
 
     if mlSkip {
@@ -316,6 +303,7 @@ func genExe() {
 
     fmt.Println("[INFO] generated executable")
 }
+
 func main() {
     if len(os.Args) < 2 {
         fmt.Fprintln(os.Stderr, "[ERROR] you need to provide a source file to compile")
