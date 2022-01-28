@@ -23,7 +23,9 @@ And because it is written in Go...
 * [ ] ARM
 
 ## TODO:
-* [x] generate assembly file (nasm)
+* [ ] generate assembly file
+  * [x] nasm
+  * [ ] fasm (preferable!)
 * [x] generate executable
 * [x] variables
 * [ ] syscalls
