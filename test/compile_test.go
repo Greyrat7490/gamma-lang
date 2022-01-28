@@ -21,6 +21,8 @@ func record(t *testing.T, name string, stdout string, stderr string) {
     if err != nil {
         t.Fatalf("[ERROR] could not record results\n%v", err)
     }
+
+    fmt.Println("[RECORDED]")
 }
 
 func check(t *testing.T, name string, stdout string, stderr string) {
@@ -32,8 +34,21 @@ func check(t *testing.T, name string, stdout string, stderr string) {
     }
 
     if result != string(expected) {
-        t.Log("test failed\n")
+        fmt.Println("[FAILED]")
+        fmt.Println("--------------------")
+
+        fmt.Fprintln(os.Stderr, "result:")
+        fmt.Fprint(os.Stderr, result)
+
+        fmt.Println("-----")
+
+        fmt.Fprintln(os.Stderr, "expected:")
+        fmt.Fprint(os.Stderr, string(expected))
+        fmt.Println("--------------------")
+
         os.Exit(1)
+    } else {
+        fmt.Println("[PASSED]")
     }
 }
 
@@ -83,7 +98,7 @@ func TestCompile(t *testing.T) {
 
     for _, f := range files {
         if filepath.Ext(f.Name()) == ".gore" {
-            t.Log(f.Name())
+            fmt.Print(f.Name())
             cmd := exec.Command("go", "run", "gorec", f.Name())
 
             var stdout, stderr strings.Builder
@@ -94,9 +109,6 @@ func TestCompile(t *testing.T) {
 
             stdoutStr := stdout.String()
             stderrStr := stderr.String()
-
-            fmt.Println("stdout: " + stdoutStr)
-            fmt.Println("stderr: " + stderrStr)
 
             if rec {
                 record(t, f.Name() + ".rec", stdoutStr, stderrStr)
