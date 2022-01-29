@@ -39,7 +39,7 @@ func nasm_header(asm *os.File) {
     asm.WriteString(`; rax = input int
 ; rbx = output string pointer
 ; rax = output string length
-int_to_str:
+uint_to_str:
     push rcx
     push rdx
 
@@ -55,15 +55,55 @@ int_to_str:
         cmp eax, 0
         jne .l1
 
+
     mov rax, rbx
     sub rax, intBuf
+    inc rax
     pop rdx
     pop rcx
     ret
+
+int_to_str:
+    push rcx
+    push rdx
+    push rax
+
+    mov ecx, 10
+    mov rbx, intBuf + 10
+
+    cmp rax, 0
+    jge .l1
+
+    neg rax
+
+    .l1:
+        xor edx, edx
+        div ecx
+        add dl, 48
+        dec rbx
+        mov byte [rbx], dl
+        cmp eax, 0
+        jne .l1
+
+    pop rax
+    cmp rax, 0
+    jge .end
+
+    dec rbx
+    mov byte [rbx], 0x2d
+
+    .end:
+        mov rax, rbx
+        sub rax, intBuf
+        inc rax
+        pop rdx
+        pop rcx
+        ret
 `)
 
     asm.WriteString("\n_start:\n")
-    asm.WriteString("mov rsp, stack_top\n\n")
+    asm.WriteString("mov rsp, stack_top\n")
+    asm.WriteString("mov byte [intBuf + 11], 0xa\n\n")
 }
 
 func nasm_footer(asm *os.File) {
@@ -80,7 +120,7 @@ func nasm_footer(asm *os.File) {
 
     asm.WriteString("\nsection .bss\n")
     asm.WriteString("\tresb 1024 * 1024\nstack_top:\n") // 1MiB
-    asm.WriteString("intBuf:\n\tresb 10") // int(32bit) -> 10 digits max -> 10 char string max
+    asm.WriteString("intBuf:\n\tresb 12") // int(32bit) -> 10 digits max + \n and sign -> 12 char string max
 }
 
 func syscall(asm *os.File, syscallNum uint, args... interface{}) {
@@ -156,8 +196,6 @@ func write(asm *os.File, words []word, i int) int {
                 os.Exit(1)
             }
 
-        // TODO: add linebreak
-        // TODO: add sign
         case i32:
             if !registers[v.regIdx].isAddr {
                 asm.WriteString("push rbx\n")
