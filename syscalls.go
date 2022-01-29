@@ -81,3 +81,38 @@ func write(asm *os.File, words []word, i int) int {
 
     return i + len(args) + 2 // skip args, "(" and ")"
 }
+
+func exit(asm *os.File, words []word, i int) int {
+    args := getArgs(words[i:], 1)
+
+    if args[0].isVar {
+        v := vars[args[0].value]
+        switch v.vartype {
+        case i32:
+            syscall(asm, SYS_EXIT, registers[v.regIdx].name)
+        case str:
+            fmt.Fprintln(os.Stderr, "[ERROR] exit only accepts i32 (got str)")
+            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+            os.Exit(1)
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] unknown type \"%d\"\n", args[0].argType)
+            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+            os.Exit(1)
+        }
+    } else {
+        switch args[0].argType {
+        case i32:
+            syscall(asm, SYS_EXIT, args[0].value)
+        case str:
+            fmt.Fprintln(os.Stderr, "[ERROR] exit only accepts i32 (got str)")
+            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+            os.Exit(1)
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] unknown type \"%d\"\n", args[0].argType)
+            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+            os.Exit(1)
+        }
+    }
+
+    return i + len(args) + 2
+}
