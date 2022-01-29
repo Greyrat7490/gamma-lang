@@ -268,6 +268,8 @@ func compile(srcFile []byte) {
             i = defineVar(asm, words, i)
         case "println":
             i = write(asm, words, i)
+        case "exit":
+            i = exit(asm, words, i)
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] keyword \"%s\" is not supported\n", words[i].str)
