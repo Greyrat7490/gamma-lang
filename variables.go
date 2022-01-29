@@ -20,6 +20,7 @@ var registers []reg = []reg { // so far safe to use registers for variables
 }
 
 var vars []variable
+var globalDefs []string
 
 type variable struct {
     name string
@@ -87,7 +88,7 @@ func declareVar(words []word, i int) int {
     return i + 2
 }
 
-func defineVar(asm *os.File, words []word, i int) int {
+func defineVar(words []word, i int) int {
     if len(words) < i + 1 {
         fmt.Fprintf(os.Stderr, "[ERROR] no value provided to define the variable\n")
         fmt.Fprintln(os.Stderr, "\t" + words[i].at())
@@ -102,14 +103,14 @@ func defineVar(asm *os.File, words []word, i int) int {
                 registers[v.regIdx].value = len(strLits);
 
                 addStrLit(words[i+1])
-                asm.WriteString(fmt.Sprintf("mov %s, %s\n", registers[v.regIdx].name, fmt.Sprintf("str%d", registers[v.regIdx].value)))
+                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %s\n", registers[v.regIdx].name, fmt.Sprintf("str%d", registers[v.regIdx].value)))
 
             case i32:
                 registers[v.regIdx].isAddr = false;
 
                 i, _ := strconv.Atoi(words[i+1].str)
                 registers[v.regIdx].value = i;
-                asm.WriteString(fmt.Sprintf("mov %s, %d\n", registers[v.regIdx].name, i))
+                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %d\n", registers[v.regIdx].name, i))
 
             default:
                 fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.name)
@@ -127,7 +128,7 @@ func defineVar(asm *os.File, words []word, i int) int {
             if v := getVar(words[i-2].str); v != nil {
                 registers[v.regIdx].isAddr = registers[otherVar.regIdx].isAddr;
                 registers[v.regIdx].value = registers[otherVar.regIdx].value;
-                asm.WriteString(fmt.Sprintf("mov %s, %s\n", registers[v.regIdx].name, registers[otherVar.regIdx].name))
+                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %s\n", registers[v.regIdx].name, registers[otherVar.regIdx].name))
             } else {
                 fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" not declared\n", words[i-2].str)
                 fmt.Fprintln(os.Stderr, "\t" + words[i-2].at())

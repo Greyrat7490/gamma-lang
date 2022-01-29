@@ -97,7 +97,10 @@ func nasm_footer(asm *os.File) {
     asm.WriteString("\n_start:\n")
     asm.WriteString("mov rsp, stack_top\n")
     asm.WriteString("mov byte [intBuf + 11], 0xa\n\n")
-    
+
+    for _, s := range globalDefs {
+        asm.WriteString(s)
+    }
     asm.WriteString("call main\n")
     
     asm.WriteString("\nmov rdi, 0\n")
@@ -211,12 +214,13 @@ func compile(srcFile []byte) {
 
     words := split(string(srcFile))
 
+    // TODO: only allow global variable declarations/definitions and main function definition
     for i := 0; i < len(words); i++ {
         switch words[i].str {
         case "var":
             i = declareVar(words, i)
         case ":=":
-            i = defineVar(asm, words, i)
+            i = defineVar(words, i)
         case "println":
             i = write(asm, words, i)
         case "exit":
