@@ -23,15 +23,28 @@ And because it is written in Go...
 * [ ] ARM
 
 ## TODO:
-* [ ] generate assembly file
+* [x] generate assembly file
   * [x] nasm
   * [ ] fasm (preferable!)
 * [x] generate executable
 * [x] variables
-* [ ] syscalls
+* [x] syscalls
 * [ ] examples
 * [x] tests
 * [ ] turing complete (with Rule 110 programm) -> actual programming language
 * [ ] type checking
 * [ ] self-hosted
 * [ ] cross-platform
+
+## Get Started
+
+compile a source file
+```console
+$ go run gorec <source_file>
+```
+run tests
+```console
+$ go test ./test -v
+```
+
+later examples in examples folder...
