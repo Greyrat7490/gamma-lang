@@ -46,6 +46,7 @@ func check(t *testing.T, name string, stdout string, stderr string) {
         fmt.Fprint(os.Stderr, string(expected))
         fmt.Println("--------------------")
 
+        // TODO: don't exit
         os.Exit(1)
     } else {
         fmt.Println("[PASSED]")

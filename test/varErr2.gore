@@ -1,6 +1,8 @@
 var v1 i32 := 86
 var v1 i32 := 69                // error already used name
 
-println(v1)
-println(",")
-println(v2)                     // would cause an error (but does not get reached)
+fn main() {
+    println(v1)
+    println(",")
+    println(v2)                     // would cause an error (but does not get reached)
+}

@@ -1,8 +1,10 @@
 var v1 i32 := 86
 var v2 str := "some string"
 
-println(v1)  // println(this_will_not_be_printed2)
-println(",")/*
-println(this_will_not_be_printed)
-println(this_will_not_be_printed2)
-*/println(v2)
+fn main() {
+    println(v1)  // println(this_will_not_be_printed2)
+    println(",")/*
+    println(this_will_not_be_printed)
+    println(this_will_not_be_printed2)
+    */println(v2)
+}
