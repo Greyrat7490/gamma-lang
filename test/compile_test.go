@@ -14,6 +14,8 @@ import (
 var rec bool
 var keepAsm bool
 
+var failed bool = false
+
 func record(t *testing.T, name string, stdout string, stderr string) {
     output := []byte(stdout + "\n" + stderr)
 
@@ -46,7 +48,7 @@ func check(t *testing.T, name string, stdout string, stderr string) {
         fmt.Fprint(os.Stderr, string(expected))
         fmt.Println("--------------------")
 
-        os.Exit(1)
+        failed = true
     } else {
         fmt.Println("[PASSED]")
     }
@@ -122,5 +124,9 @@ func TestCompile(t *testing.T) {
                 clearBuilds(t, "")
             }
         }
+    }
+
+    if failed {
+        os.Exit(1)
     }
 }
