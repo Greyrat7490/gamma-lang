@@ -120,7 +120,7 @@ func nasm_footer(asm *os.File) {
     asm.WriteString("intBuf:\n\tresb 12") // int(32bit) -> 10 digits max + \n and sign -> 12 char string max
 }
 
-// escape chars (TODO: \n, \t, ...) (done: \\, \")
+// escape chars (TODO: \n, \t, \r, ...) (done: \\, \")
 func split(file string) (words []word) {
     start := 0
 
@@ -214,25 +214,24 @@ func compile(srcFile []byte) {
 
     words := split(string(srcFile))
 
-    // TODO: only allow global variable declarations/definitions and main function definition
     for i := 0; i < len(words); i++ {
         switch words[i].str {
         case "var":
             i = declareVar(words, i)
         case ":=":
             i = defineVar(words, i)
-        case "println":
-            i = write(asm, words, i)
-        case "exit":
-            i = exit(asm, words, i)
         case "fn":
-            i = defineEntry(asm, words, i)
-        case "}":
-            asm.WriteString("ret\n")
-            inMain = false
-            
+            i = defineFunc(asm, words, i)
+        case "println":
+            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
+            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+            os.Exit(1)
+        case "exit":
+            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
+            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+            os.Exit(1)
         default:
-            fmt.Fprintf(os.Stderr, "[ERROR] keyword \"%s\" is not supported\n", words[i].str)
+            fmt.Fprintf(os.Stderr, "[ERROR] unknown word \"%s\"\n", words[i].str)
             fmt.Fprintln(os.Stderr, "\t" + words[i].at())
             os.Exit(1)
         }

@@ -12,20 +12,77 @@ type arg struct {
     value int       // regIdx if isVar, strIdx if argType is str
 }
 
-var inMain bool = false
+type function struct {
+    name string
+}
 
-func defineEntry(asm *os.File, words []word, i int) int {
-    if words[i+1].str != "main" {
-        fmt.Fprintf(os.Stderr, "[ERROR] only \"main\" is allowed as name for the entry function (not \"%s\")\n", words[i+1].str)
-        fmt.Fprintln(os.Stderr, "\t" + words[i+1].at())
-        os.Exit(1)
+var funcs []function
+var curFunc int = -1
+
+var mainDef bool = false
+
+func defineFunc(asm *os.File, words []word, i int) int {
+    if words[i+1].str == "main" {
+        mainDef = true
     }
 
-    asm.WriteString("main:\n")
-    
-    inMain = true
-    
-    return i + 4
+    asm.WriteString(words[i+1].str + ":\n")
+
+    curFunc = len(funcs)
+    funcs = append(funcs, function{words[i+1].str})
+
+    for i += 5; i < len(words); i++ {
+        switch words[i].str {
+        case "var":
+            i = declareVar(words, i)
+        case ":=":
+            i = defineVar(words, i)
+        case "println":
+            i = write(asm, words, i)
+        case "exit":
+            i = exit(asm, words, i)
+        case "fn":
+            fmt.Fprintln(os.Stderr, "[ERROR] you are ot allowed to define functions inside a function")
+            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+            os.Exit(1)
+        case "}":
+            endFunc(asm)
+            return i
+        default:
+            i = callFunc(asm, words, i)
+        }
+    }
+
+    return i
+}
+
+func endFunc(asm *os.File) {
+    asm.WriteString("ret\n")
+    curFunc = -1
+}
+
+func getFunc(funcName string) *function {
+    for _, f := range funcs {
+        if f.name == funcName {
+            return &f
+        }
+    }
+
+    return nil
+}
+
+func callFunc(asm *os.File, words []word, i int) int {
+    if f := getFunc(words[i].str); f == nil {
+        // TODO check for ()
+
+        fmt.Fprintf(os.Stderr, "[ERROR] keyword \"%s\" is not supported\n", words[i].str)
+        fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+        os.Exit(1)
+    } else {
+        asm.WriteString("call " + f.name + "\n")
+    }
+
+    return i + 2
 }
 
 func getArgs(words []word, expectedArgCount int) (args []arg) {
