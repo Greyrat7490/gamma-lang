@@ -14,6 +14,12 @@ type arg struct {
 
 type function struct {
     name string
+    col int
+    line int
+}
+
+func (f *function) at() string {
+    return fmt.Sprintf("at line: %d, col: %d", f.line, f.col)
 }
 
 var funcs []function
@@ -26,10 +32,16 @@ func defineFunc(asm *os.File, words []word, i int) int {
         mainDef = true
     }
 
+    declareArgs(words, i) // checks for () later actually declare args
+
     asm.WriteString(words[i+1].str + ":\n")
 
     curFunc = len(funcs)
-    funcs = append(funcs, function{words[i+1].str})
+    funcs = append(funcs, function{
+        name: words[i+1].str,
+        col: words[i+1].col,
+        line: words[i+1].line,
+    })
 
     for i += 5; i < len(words); i++ {
         switch words[i].str {
@@ -42,7 +54,7 @@ func defineFunc(asm *os.File, words []word, i int) int {
         case "exit":
             i = exit(asm, words, i)
         case "fn":
-            fmt.Fprintln(os.Stderr, "[ERROR] you are ot allowed to define functions inside a function")
+            fmt.Fprintln(os.Stderr, "[ERROR] you are not allowed to define functions inside a function")
             fmt.Fprintln(os.Stderr, "\t" + words[i].at())
             os.Exit(1)
         case "}":
@@ -73,27 +85,64 @@ func getFunc(funcName string) *function {
 
 func callFunc(asm *os.File, words []word, i int) int {
     if f := getFunc(words[i].str); f == nil {
-        // TODO check for ()
-
         fmt.Fprintf(os.Stderr, "[ERROR] keyword \"%s\" is not supported\n", words[i].str)
         fmt.Fprintln(os.Stderr, "\t" + words[i].at())
         os.Exit(1)
+        return 1
     } else {
-        asm.WriteString("call " + f.name + "\n")
-    }
+        if len(words) < i + 1 || words[i+1].str != "(" {
+            fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
+            fmt.Fprintln(os.Stderr, "\t" + words[i+1].at())
+            os.Exit(1)
+        }
+        args := defineArgs(words[i+1:])
+        checkArgs(args, words[i+1], 0) // no args supported yet
 
-    return i + 2
+        asm.WriteString("call " + f.name + "\n")
+        return i + len(args) + 2
+    }
 }
 
-func getArgs(words []word, expectedArgCount int) (args []arg) {
-    if len(words) < 2 || words[1].str != "(" {
+func declareArgs(words []word, i int) {
+    if len(words) < i + 2 || words[i+2].str != "(" {
         fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
-        fmt.Fprintln(os.Stderr, "\t" + words[1].at())
+        fmt.Fprintln(os.Stderr, "\t" + words[i+2].at())
         os.Exit(1)
     }
 
-    for _, w := range words[2:] {
+    b := false
+    for _, w := range words[i+3:] {
         if w.str == ")" {
+            b = true
+            break
+        }
+
+        if w.str == "{" || w.str == "}" {
+            fmt.Fprintln(os.Stderr, "[ERROR] missing \")\"")
+            fmt.Fprintln(os.Stderr, "\t" + w.at())
+            os.Exit(1)
+        }
+
+        // TODO
+    }
+
+    if !b {
+        fmt.Fprintf(os.Stderr, "[ERROR] missing \")\"\n")
+        os.Exit(1)
+    }
+}
+
+func defineArgs(words []word) (args []arg) {
+    if len(words) < 1 || words[0].str != "(" {
+        fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
+        fmt.Fprintln(os.Stderr, "\t" + words[0].at())
+        os.Exit(1)
+    }
+
+    b := false
+    for _, w := range words[1:] {
+        if w.str == ")" {
+            b = true
             break
         }
 
@@ -113,16 +162,20 @@ func getArgs(words []word, expectedArgCount int) (args []arg) {
         }
     }
 
-    if len(words) - 2 == len(args) {
+    if !b {
         fmt.Fprintf(os.Stderr, "[ERROR] missing \")\"\n")
         os.Exit(1)
     }
 
-    if len(args) != expectedArgCount {
-        fmt.Fprintf(os.Stderr, "[ERROR] function takes %d argument but got %d\n", expectedArgCount, len(args))
-        fmt.Fprintln(os.Stderr, "\t" + words[0].at())
+    return args
+}
+
+func checkArgs(args []arg, w word, expected int) {
+    if len(args) != expected {
+        fmt.Fprintf(os.Stderr, "[ERROR] function takes %d argument but got %d\n", expected, len(args))
+        fmt.Fprintln(os.Stderr, "\t" + w.at())
         os.Exit(1)
     }
 
-    return args
+    // TODO: check types
 }

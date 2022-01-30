@@ -102,7 +102,7 @@ func nasm_footer(asm *os.File) {
         asm.WriteString(s)
     }
     asm.WriteString("call main\n")
-    
+
     asm.WriteString("\nmov rdi, 0\n")
     asm.WriteString(fmt.Sprintf("mov rax, %d\n", SYS_EXIT))
     asm.WriteString("syscall\n")
@@ -235,6 +235,17 @@ func compile(srcFile []byte) {
             fmt.Fprintln(os.Stderr, "\t" + words[i].at())
             os.Exit(1)
         }
+    }
+
+    if !mainDef {
+        fmt.Fprintln(os.Stderr, "[ERROR] no \"main\" function was defined")
+        os.Exit(1)
+    }
+
+    if curFunc != -1 {
+        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" was not closed (missing \"}\")\n", funcs[curFunc].name)
+        fmt.Fprintln(os.Stderr, "\t" + funcs[curFunc].at())
+        os.Exit(1)
     }
 
     nasm_footer(asm)

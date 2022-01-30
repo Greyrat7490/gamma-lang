@@ -25,8 +25,10 @@ func syscall(asm *os.File, syscallNum uint, args... interface{}) {
 }
 
 // TODO: use stack to backup registers to prevent unwanted behavior
+// TODO: to an actual function
 func write(asm *os.File, words []word, i int) int {
-    args := getArgs(words[i:], 1)
+    args := defineArgs(words[i+1:])
+    checkArgs(args, words[i+1], 1)
 
     if args[0].isVar {
         v := vars[args[0].value]
@@ -83,7 +85,7 @@ func write(asm *os.File, words []word, i int) int {
 }
 
 func exit(asm *os.File, words []word, i int) int {
-    args := getArgs(words[i:], 1)
+    args := defineArgs(words[i:])
 
     if args[0].isVar {
         v := vars[args[0].value]
