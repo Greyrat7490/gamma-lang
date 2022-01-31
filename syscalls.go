@@ -3,10 +3,18 @@ package main
 import (
     "fmt"
     "os"
+    "strconv"
 )
 
 const SYS_WRITE = 1
 const SYS_EXIT = 60
+
+
+type arg struct {
+    isVar bool
+    argType gType
+    value int       // regIdx if isVar, strIdx if argType is str
+}
 
 func syscall(asm *os.File, syscallNum uint, args... interface{}) {
     regs := []string{"rdi", "rsi", "rdx", "r10", "r8", "r9"}
@@ -24,38 +32,70 @@ func syscall(asm *os.File, syscallNum uint, args... interface{}) {
     asm.WriteString("syscall\n")
 }
 
+func syscallParseArgs(words []word) (args []arg) {
+    if len(words) < 1 || words[0].str != "(" {
+        fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
+        fmt.Fprintln(os.Stderr, "\t" + words[0].at())
+        os.Exit(1)
+    }
+
+    b := false
+    for _, w := range words[1:] {
+        if w.str == ")" {
+            b = true
+            break
+        }
+
+        if w.str[0] == '"' && w.str[len(w.str) - 1] == '"' {
+            args = append(args, arg{false, str, len(strLits)})
+            addStrLit(w)
+        } else if i, err := strconv.Atoi(w.str); err == nil {
+            args = append(args, arg{false, i32, i})
+        } else {
+            if v := getVar(w.str); v != nil {
+                args = append(args, arg{true, v.vartype, v.regIdx})
+            } else {
+                fmt.Fprintln(os.Stderr, vars)
+                fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", w.str)
+                fmt.Fprintln(os.Stderr, "\t" + w.at())
+                os.Exit(1)
+            }
+        }
+    }
+
+    if !b {
+        fmt.Fprintf(os.Stderr, "[ERROR] missing \")\"\n")
+        os.Exit(1)
+    }
+
+    return args
+
+}
+
 // TODO: use stack to backup registers to prevent unwanted behavior
-// TODO: to an actual function
+// TODO: to an actual function!!!!
 func write(asm *os.File, words []word, i int) int {
-    args := defineArgs(words[i+1:])
-    checkArgs(args, words[i+1], 1)
+    args := syscallParseArgs(words[i+1:])
+    if len(args) != 1 {
+        fmt.Fprintf(os.Stderr, "[ERROR] function takes %d argument but got %d\n", 1, len(args))
+        fmt.Fprintln(os.Stderr, "\t" + words[i+1].at())
+        os.Exit(1)
+    }
 
     if args[0].isVar {
         v := vars[args[0].value]
         switch v.vartype {
         case str:
-            if registers[v.regIdx].isAddr {
-                syscall(asm, SYS_WRITE, STDOUT, registers[v.regIdx].name, strLits[registers[v.regIdx].value].size)
-            } else {
-                fmt.Fprintln(os.Stderr, "[ERROR] unreachable: register.isAddr should always be true if type of var is String")
-                fmt.Fprintln(os.Stderr, "\t" + words[i].at())
-                os.Exit(1)
-            }
+            syscall(asm, SYS_WRITE, STDOUT, registers[v.regIdx].name, 5)
 
         case i32:
-            if !registers[v.regIdx].isAddr {
-                asm.WriteString("push rbx\n")
-                asm.WriteString("push rax\n")
-                asm.WriteString(fmt.Sprintf("mov rax, %s\n", registers[v.regIdx].name))
-                asm.WriteString("call int_to_str\n")
-                syscall(asm, SYS_WRITE, STDOUT, "rbx", "rax")
-                asm.WriteString("pop rax\n")
-                asm.WriteString("pop rbx\n")
-            } else {
-                fmt.Fprintln(os.Stderr, "[ERROR] unreachable: register.isAddr should always be false if type of var is Int")
-                fmt.Fprintln(os.Stderr, "\t" + words[i].at())
-                os.Exit(1)
-            }
+            asm.WriteString("push rbx\n")
+            asm.WriteString("push rax\n")
+            asm.WriteString(fmt.Sprintf("mov rax, %s\n", registers[v.regIdx].name))
+            asm.WriteString("call int_to_str\n")
+            syscall(asm, SYS_WRITE, STDOUT, "rbx", "rax")
+            asm.WriteString("pop rax\n")
+            asm.WriteString("pop rbx\n")
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] unknown type %d\n", v.vartype)
@@ -85,7 +125,12 @@ func write(asm *os.File, words []word, i int) int {
 }
 
 func exit(asm *os.File, words []word, i int) int {
-    args := defineArgs(words[i:])
+    args := syscallParseArgs(words[i+1:])
+    if len(args) != 1 {
+        fmt.Fprintf(os.Stderr, "[ERROR] function takes %d argument but got %d\n", 1, len(args))
+        fmt.Fprintln(os.Stderr, "\t" + words[i+1].at())
+        os.Exit(1)
+    }
 
     if args[0].isVar {
         v := vars[args[0].value]

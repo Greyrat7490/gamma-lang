@@ -103,7 +103,7 @@ func defineVar(words []word, i int) int {
                 registers[v.regIdx].value = len(strLits);
 
                 addStrLit(words[i+1])
-                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %s\n", registers[v.regIdx].name, fmt.Sprintf("str%d", registers[v.regIdx].value)))
+                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, str%d\n", registers[v.regIdx].name, registers[v.regIdx].value))
 
             case i32:
                 registers[v.regIdx].isAddr = false;
