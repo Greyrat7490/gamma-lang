@@ -25,7 +25,7 @@ func syscall(asm *os.File, syscallNum uint, args... interface{}) {
 }
 
 func defineWriteInt(asm *os.File) {
-    args := []argDec{{"i", i32}}
+    args := []arg{{name: "i", argType: i32}}
     funcs = append(funcs, function{name: "printInt", args: args})
 
     asm.WriteString("printInt:\n")
@@ -40,7 +40,7 @@ func defineWriteInt(asm *os.File) {
 }
 
 func defineWriteStr(asm *os.File) {
-    args := []argDec{{"str", str}}
+    args := []arg{{name: "str", argType: str}}
     funcs = append(funcs, function{name: "printStr", args: args})
 
     asm.WriteString("printStr:\n")
@@ -49,7 +49,7 @@ func defineWriteStr(asm *os.File) {
 }
 
 func defineExit(asm *os.File) {
-    args := []argDec{{"i", i32}}
+    args := []arg{{name: "i", argType: i32}}
     funcs = append(funcs, function{name: "exit", args: args})
 
     asm.WriteString("exit:\n")
