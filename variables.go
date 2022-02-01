@@ -102,7 +102,7 @@ func defineVar(words []word, i int) int {
                 registers[v.regIdx].isAddr = true;
                 registers[v.regIdx].value = len(strLits);
 
-                addStrLit(words[i+1])
+                addStrLit(words[i+1].str)
                 globalDefs = append(globalDefs, fmt.Sprintf("mov %s, str%d\n", registers[v.regIdx].name, registers[v.regIdx].value))
 
             case i32:
@@ -144,3 +144,12 @@ func defineVar(words []word, i int) int {
     return i + 1
 }
 
+func rmVar(varname string) {
+    for i, v := range vars {
+        if v.name == varname {
+            vars[i] = vars[len(vars)-1]
+            vars = vars[:len(vars)-1]
+            return
+        }
+    }
+}

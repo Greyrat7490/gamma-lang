@@ -6,6 +6,18 @@ import (
     "strconv"
 )
 
+// calling convention:
+// - one argument max
+// - i32 -> r9 = num
+// - str -> r9 = addr, r10 = size
+// TODO: C calling convention
+
+type arg struct {
+    isVar bool
+    argType gType
+    value string
+}
+
 type argDec struct {
     name string
     argType gType
@@ -34,6 +46,11 @@ func defineFunc(asm *os.File, words []word, i int) int {
 
     args, nextIdx := declareArgs(words, i)
 
+    if len(args) > 1 {
+        fmt.Fprintln(os.Stderr, "[ERROR] functions only acept one argument max at the moment")
+        os.Exit(1)
+    }
+
     curFunc = len(funcs)
     funcs = append(funcs, function{
         name: words[i+1].str,
@@ -49,10 +66,6 @@ func defineFunc(asm *os.File, words []word, i int) int {
             i = declareVar(words, i)
         case ":=":
             i = defineVar(words, i)
-        case "println":
-            i = write(asm, words, i)
-        case "exit":
-            i = exit(asm, words, i)
         case "fn":
             fmt.Fprintln(os.Stderr, "[ERROR] you are not allowed to define functions inside a function")
             fmt.Fprintln(os.Stderr, "\t" + words[i].at())
@@ -61,7 +74,9 @@ func defineFunc(asm *os.File, words []word, i int) int {
             endFunc(asm)
             return i
         default:
-            i = callFunc(asm, words, i)
+            f, args, nextIdx := parseCallFunc(words, i)
+            i = nextIdx
+            callFunc(asm, f, args)
         }
     }
 
@@ -83,12 +98,11 @@ func getFunc(funcName string) *function {
     return nil
 }
 
-func callFunc(asm *os.File, words []word, i int) int {
-    if f := getFunc(words[i].str); f == nil {
+func parseCallFunc(words []word, i int) (f *function, args []arg, nextIdx int) {
+    if fn := getFunc(words[i].str); fn == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] keyword \"%s\" is not supported\n", words[i].str)
         fmt.Fprintln(os.Stderr, "\t" + words[i].at())
         os.Exit(1)
-        return 1
     } else {
         if len(words) < i + 1 || words[i+1].str != "(" {
             fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
@@ -96,11 +110,79 @@ func callFunc(asm *os.File, words []word, i int) int {
             os.Exit(1)
         }
 
-        defineArgs(asm, words[i+1:], f)
+        as, ni := parseCallArgs(words, i)
 
-        asm.WriteString("call " + f.name + "\n")
-        return i + len(f.args) + 2
+        if len(as) != len(fn.args) {
+            fmt.Fprintln(os.Stderr, "[ERROR] function should have ...")
+            fmt.Fprintln(os.Stderr, "\t" + words[i+1].at())
+            os.Exit(1)
+        }
+
+        f = fn
+        args = as
+        nextIdx = ni
     }
+
+    return f, args, nextIdx
+}
+
+func parseCallArgs(words []word, i int) (args []arg, nextIdx int) {
+    b := false
+    for _, w := range words[i+2:] {
+        if w.str == ")" {
+            b = true
+            break
+        }
+
+        if w.str == "{" || w.str == "}" {
+            fmt.Fprintln(os.Stderr, "[ERROR] missing \")\"")
+            fmt.Fprintln(os.Stderr, "\t" + w.at())
+            os.Exit(1)
+        }
+
+        var t gType
+        isVar := false
+        if v := getVar(w.str); v != nil {
+            t = v.vartype
+            isVar = true
+        } else {
+            if w.str[0] == '"' && w.str[len(w.str) - 1] == '"' {
+                t = str
+            }
+
+            if _, err := strconv.Atoi(w.str); err == nil {
+                t = i32
+            }
+        }
+
+        args = append(args, arg{isVar, t, w.str})
+    }
+
+    if !b {
+        fmt.Fprintf(os.Stderr, "[ERROR] missing \")\"\n")
+        os.Exit(1)
+    }
+
+    return args, i + len(args) + 2
+}
+
+func callFunc(asm *os.File, f *function, args []arg) {
+    defineArgs(asm, args, f)
+
+    asm.WriteString("call " + f.name + "\n")
+
+    clearArgs(asm, f, args)
+}
+
+func clearArgs(asm *os.File, f *function, args []arg) {
+    if args[0].argType == i32 {
+        asm.WriteString("pop r9\n")
+    } else {
+        asm.WriteString("pop r10\n")
+        asm.WriteString("pop r9\n")
+    }
+
+    rmVar(f.args[0].name)
 }
 
 func declareArgs(words []word, i int) (args []argDec, nextIdx int) {
@@ -147,63 +229,50 @@ func declareArgs(words []word, i int) (args []argDec, nextIdx int) {
     return args, i + len(args) * 2 + 5
 }
 
-func defineArgs(asm *os.File, words []word, f *function) {
-    if len(words) < 1 || words[0].str != "(" {
-        fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
-        fmt.Fprintln(os.Stderr, "\t" + words[0].at())
-        os.Exit(1)
+func defineArgs(asm *os.File, args []arg, f *function) {
+    if args[0].argType == i32 {
+        asm.WriteString("push r9\n")
+    } else {
+        asm.WriteString("push r9\n")
+        asm.WriteString("push r10\n")
     }
 
-    b := false
-    for i, w := range words[1:] {
-        if w.str == ")" {
-            b = true
-            break
-        }
+    for i, a := range args {
+        v := variable{f.args[i].name, len(vars), f.args[i].argType, -1}
+        vars = append(vars, v)
+        fmt.Println(f.args[i].name)
 
-        a := f.args[i]
-        v := getVar(a.name)
-
-        if isLit(w.str) {
+        if a.isVar {
+            // TODO: check if var is defined
+            if otherVar := getVar(a.value); otherVar != nil {
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] \"...\" is not declared\n")
+                os.Exit(1)
+            }
+        } else {
             switch a.argType {
             case str:
-                // later push registers
                 registers[v.regIdx].isAddr = true;
                 registers[v.regIdx].value = len(strLits);
-                asm.WriteString(fmt.Sprintf("mov %s, str%d\n", registers[v.regIdx].name, registers[v.regIdx].value))
 
-                addStrLit(w)
+                asm.WriteString(fmt.Sprintf("mov r9, str%d\n", registers[v.regIdx].value))
+
+                addStrLit(a.value)
+
+                asm.WriteString(fmt.Sprintf("mov r10, %d\n", strLits[len(strLits)-1].size))
 
             case i32:
-                i, _ := strconv.Atoi(w.str)
+                i, _ := strconv.Atoi(a.value)
 
-                // later push registers
                 registers[v.regIdx].isAddr = false;
                 registers[v.regIdx].value = i;
-                asm.WriteString(fmt.Sprintf("mov %s, %d\n", registers[v.regIdx].name, i))
+                asm.WriteString(fmt.Sprintf("mov r9, %d\n", i))
 
             default:
                 fmt.Fprintln(os.Stderr, "[ERROR] (unreachable) function.go defineArgs()")
                 os.Exit(1)
             }
-        } else {
-            // TODO: check if var is defined
-            if otherVar := getVar(w.str); otherVar != nil {
-                // later push registers
-                registers[v.regIdx].isAddr = registers[otherVar.regIdx].isAddr;
-                registers[v.regIdx].value = registers[otherVar.regIdx].value;
-                asm.WriteString(fmt.Sprintf("mov %s, %s\n", registers[v.regIdx].name, registers[otherVar.regIdx].name))
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", w.str)
-                fmt.Fprintln(os.Stderr, "\t" + w.at())
-                os.Exit(1)
-            }
         }
-    }
-
-    if !b {
-        fmt.Fprintf(os.Stderr, "[ERROR] missing \")\"\n")
-        os.Exit(1)
     }
 }
 

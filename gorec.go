@@ -212,6 +212,12 @@ func compile(srcFile []byte) {
 
     nasm_header(asm)
 
+    // define build-in functions
+    // TODO: add int_to_str and uint_to_str
+    defineWriteStr(asm)
+    defineWriteInt(asm)
+    defineExit(asm)
+
     words := split(string(srcFile))
 
     for i := 0; i < len(words); i++ {
@@ -222,7 +228,11 @@ func compile(srcFile []byte) {
             i = defineVar(words, i)
         case "fn":
             i = defineFunc(asm, words, i)
-        case "println":
+        case "printInt":
+            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
+            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+            os.Exit(1)
+        case "printStr":
             fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
             fmt.Fprintln(os.Stderr, "\t" + words[i].at())
             os.Exit(1)

@@ -1,21 +1,23 @@
-var v1 i32 := 420
-var v2 str := "some string2"
+// var v2 i32 := 86
 
-fn test_fn(v3 str) {
-    println(86)
-    println(v1)
-    println(v2)
-    println(v3)
+fn test_fn(v1 i32) {
+    printInt(v1)
+    printInt(v1)
+    printInt(v1)
+    printInt(v1)
+    printInt(v1)
 }
 
-fn test_fn2() {
-    println(v2)
-    println(v1)
-    println(86)
+fn test_fn2(v1 str) {
+    printStr(v1)
+    printStr("test fn2: printStr")
+    printStr("test fn2: printStr")
+    printStr("test fn2: printStr")
 }
 
 fn main() {
-    test_fn("test")
-    println("some string")
-    test_fn2()
+    test_fn(86)
+    // test_fn(v2)  // global variables don't work yet
+    printStr("some string")
+    test_fn2("test fn2: arg string")
 }
