@@ -36,7 +36,7 @@ func defineWriteInt(asm *os.File) {
     syscall(asm, SYS_WRITE, STDOUT, "rbx", "rax")
     asm.WriteString("pop rax\n")
     asm.WriteString("pop rbx\n")
-    asm.WriteString("ret\n")
+    asm.WriteString("ret\n\n")
 }
 
 func defineWriteStr(asm *os.File) {
@@ -45,7 +45,7 @@ func defineWriteStr(asm *os.File) {
 
     asm.WriteString("printStr:\n")
     syscall(asm, SYS_WRITE, STDOUT, "r9", "r10")
-    asm.WriteString("ret\n")
+    asm.WriteString("ret\n\n")
 }
 
 func defineExit(asm *os.File) {
@@ -54,5 +54,5 @@ func defineExit(asm *os.File) {
 
     asm.WriteString("exit:\n")
     syscall(asm, SYS_EXIT, "r9")
-    asm.WriteString("ret\n")
+    asm.WriteString("ret\n\n")
 }

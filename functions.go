@@ -80,7 +80,12 @@ func defineFunc(asm *os.File, words []word, i int) int {
 }
 
 func endFunc(asm *os.File) {
-    asm.WriteString("ret\n")
+    asm.WriteString("ret\n\n")
+
+    for _, a := range funcs[curFunc].args {
+        rmVar(a.name)
+    }
+
     curFunc = -1
 }
 
@@ -172,19 +177,6 @@ func callFunc(asm *os.File, f *function) {
     defineArgs(asm, f)
 
     asm.WriteString("call " + f.name + "\n")
-
-    clearArgs(asm, f)
-}
-
-func clearArgs(asm *os.File, f *function) {
-    if f.args[0].argType == i32 {
-        asm.WriteString("pop r9\n")
-    } else {
-        asm.WriteString("pop r10\n")
-        asm.WriteString("pop r9\n")
-    }
-
-    rmVar(f.args[0].name)
 }
 
 func declareArgs(words []word, i int) (args []arg, nextIdx int) {
@@ -218,6 +210,10 @@ func declareArgs(words []word, i int) (args []arg, nextIdx int) {
             argName = true
 
             args = append(args, a)
+
+             // see calling convention (first arg = r9(idx=5))
+            v := variable{a.name, 5, a.argType, -1}
+            vars = append(vars, v)
         }
     }
 
@@ -230,37 +226,41 @@ func declareArgs(words []word, i int) (args []arg, nextIdx int) {
 }
 
 func defineArgs(asm *os.File, f *function) {
-    if f.args[0].argType == i32 {
-        asm.WriteString("push r9\n")
-    } else {
-        asm.WriteString("push r9\n")
-        asm.WriteString("push r10\n")
-    }
+    for i, a := range f.args {
+        if otherVar := getVar(a.value); otherVar != nil {
+            if otherVar.vartype != a.argType {
+                fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
+                    f.name, i, a.argType.readable(), otherVar.vartype.readable())
+                fmt.Fprintln(os.Stderr, "\t" + f.at())
+                os.Exit(1)
+            }
 
-    for _, a := range f.args {
-        v := variable{a.name, len(vars), a.argType, -1}
-        vars = append(vars, v)
-        if a.isVar {
-            // works for now (except global variables)
-            // does not check the variable name or type
-            // TODO: get register of the variable
+            // skip if r9 is already set correct
+            if otherVar.reg == 5 {
+                return
+            }
+
+            switch a.argType {
+            case str:
+                asm.WriteString(fmt.Sprintf("mov r9, %s\n", registers[otherVar.reg].name))
+                asm.WriteString(fmt.Sprintf("mov r10, %s\n", registers[otherVar.reg+1].name)) // + 1 is only temporary
+
+            case i32:
+                asm.WriteString(fmt.Sprintf("mov r9, %s\n", registers[otherVar.reg].name))
+
+            default:
+                fmt.Fprintln(os.Stderr, "[ERROR] (unreachable) function.go defineArgs()")
+                os.Exit(1)
+            }
         } else {
             switch a.argType {
             case str:
-                registers[v.regIdx].isAddr = true;
-                registers[v.regIdx].value = len(strLits);
-
-                asm.WriteString(fmt.Sprintf("mov r9, str%d\n", registers[v.regIdx].value))
-
+                asm.WriteString(fmt.Sprintf("mov r9, str%d\n", len(strLits)))
                 addStrLit(a.value)
-
                 asm.WriteString(fmt.Sprintf("mov r10, %d\n", strLits[len(strLits)-1].size))
 
             case i32:
                 i, _ := strconv.Atoi(a.value)
-
-                registers[v.regIdx].isAddr = false;
-                registers[v.regIdx].value = i;
                 asm.WriteString(fmt.Sprintf("mov r9, %d\n", i))
 
             default:

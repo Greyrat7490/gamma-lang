@@ -1,10 +1,8 @@
-// var v2 i32 := 86
+var v2 i32 := 420
 
 fn test_fn(v1 i32) {
     printInt(v1)
-    printInt(v1)
-    printInt(v1)
-    printInt(v1)
+    printInt(v2) // r9 will be overwritten here (TODO: push if later used)
     printInt(v1)
 }
 
@@ -16,8 +14,7 @@ fn test_fn2(v1 str) {
 }
 
 fn main() {
-    test_fn(86)
-    // test_fn(v2)  // global variables don't work yet
-    printStr("some string")
+    printInt(v2)  // global variables don't work yet
     test_fn2("test fn2: arg string")
+    test_fn(86)
 }

@@ -13,10 +13,15 @@ type reg struct {
 }
 
 // TODO: register allocator for variables
-var registers []reg = []reg { // so far safe to use registers for variables
+var registers []reg = []reg {
+    {name: "rax"},
     {name: "rbx"},
+    {name: "rcx"},
+    {name: "rdx"},
+    {name: "r8"},
     {name: "r9"},
     {name: "r10"},
+    {name: "r11"},
 }
 
 var vars []variable
@@ -24,7 +29,7 @@ var globalDefs []string
 
 type variable struct {
     name string
-    regIdx int
+    reg int
     vartype gType
     strIdx int
 }
@@ -99,18 +104,12 @@ func defineVar(words []word, i int) int {
         if v := getVar(words[i-2].str); v != nil {
             switch v.vartype {
             case str:
-                registers[v.regIdx].isAddr = true;
-                registers[v.regIdx].value = len(strLits);
-
                 addStrLit(words[i+1].str)
-                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, str%d\n", registers[v.regIdx].name, registers[v.regIdx].value))
+                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, str%d\n", registers[v.reg].name, len(strLits)))
 
             case i32:
-                registers[v.regIdx].isAddr = false;
-
                 i, _ := strconv.Atoi(words[i+1].str)
-                registers[v.regIdx].value = i;
-                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %d\n", registers[v.regIdx].name, i))
+                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %d\n", registers[v.reg].name, i))
 
             default:
                 fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.name)
@@ -126,9 +125,7 @@ func defineVar(words []word, i int) int {
         // TODO: check if var is defined
         if otherVar := getVar(words[i+1].str); otherVar != nil {
             if v := getVar(words[i-2].str); v != nil {
-                registers[v.regIdx].isAddr = registers[otherVar.regIdx].isAddr;
-                registers[v.regIdx].value = registers[otherVar.regIdx].value;
-                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %s\n", registers[v.regIdx].name, registers[otherVar.regIdx].name))
+                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %s\n", registers[v.reg].name, registers[otherVar.reg].name))
             } else {
                 fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" not declared\n", words[i-2].str)
                 fmt.Fprintln(os.Stderr, "\t" + words[i-2].at())
@@ -145,6 +142,11 @@ func defineVar(words []word, i int) int {
 }
 
 func rmVar(varname string) {
+    if len(vars) == 1 && vars[0].name == varname {
+        vars = []variable{}
+        return
+    }
+
     for i, v := range vars {
         if v.name == varname {
             vars[i] = vars[len(vars)-1]
