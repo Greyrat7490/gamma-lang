@@ -1,6 +1,6 @@
 fn main() {
     var
 
-    println(v1) // -> println as var name, "(" as type
+    printStr(v1) // -> println as var name, "(" as type
                 // TODO: check if var name is a reserved keyword
 }

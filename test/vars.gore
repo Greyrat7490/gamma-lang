@@ -3,7 +3,7 @@ var v2 i32 := -69
 var v3 str := "some string"
 
 fn main() {
-    println(v1)
-    println(v2)
-    println(v3)
+    printInt(v1)
+    printInt(v2)
+    printStr(v3)
 }
