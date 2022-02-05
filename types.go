@@ -41,15 +41,15 @@ type data struct {
 // later .data in general
 var strLits []data
 
-func addStrLit(w word) {
-    i := strings.Count(w.str, "\\\"") * 7
+func addStrLit(s string) {
+    i := strings.Count(s, "\\\"") * 7
 
     // replace escape characters
-    w.str = strings.ReplaceAll(w.str, "\\\"", "\",0x22,\"")     //   \" -> ",0x22," (0x22 = ascii of ")
-    w.str = strings.ReplaceAll(w.str, "\\\\", "\\")             //   \\ -> \
+    s = strings.ReplaceAll(s, "\\\"", "\",0x22,\"")     //   \" -> ",0x22," (0x22 = ascii of ")
+    s = strings.ReplaceAll(s, "\\\\", "\\")             //   \\ -> \
 
-    size := len(w.str) - i - 2 + 1 // -2 (don't count ""), -i (don't count ",0x22,"), +1 (for \n)
-    s := w.str + ",0xa"
+    size := len(s) - i - 2 + 1 // -2 (don't count ""), -i (don't count ",0x22,"), +1 (for \n)
+    s += ",0xa"
 
     strLits = append(strLits, data{s, size})
 }

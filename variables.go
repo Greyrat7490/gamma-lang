@@ -13,19 +13,27 @@ type reg struct {
 }
 
 // TODO: register allocator for variables
-var registers []reg = []reg { // so far safe to use registers for variables
+var registers []reg = []reg {
+    {name: "rax"},
     {name: "rbx"},
+    {name: "rcx"},
+    {name: "rdx"},
+    {name: "r8"},
     {name: "r9"},
     {name: "r10"},
+    {name: "r11"},
 }
 
+const maxRegs int = 5
+var availReg int = 0
+
 var vars []variable
+var globalDefs []string
 
 type variable struct {
     name string
-    regIdx int
+    regs []int
     vartype gType
-    strIdx int
 }
 
 func getVar(varname string) *variable {
@@ -75,9 +83,23 @@ func declareVar(words []word, i int) int {
 
     switch toType(words[i+2].str) {
     case str:
-        vars = append(vars, variable{words[i+1].str, len(vars), str, -1})
+        if availReg + 1 >= maxRegs {
+            fmt.Fprintf(os.Stderr, "[ERROR] not enough registers left for var \"%s\"(string)", words[i+1].str)
+            fmt.Fprintln(os.Stderr, "\t" + words[i+1].at())
+            os.Exit(1)
+        }
+
+        vars = append(vars, variable{words[i+1].str, []int{ availReg, availReg+1 }, str})
+        availReg += 2
     case i32:
-        vars = append(vars, variable{words[i+1].str, len(vars), i32, -1})
+        if availReg >= maxRegs {
+            fmt.Fprintf(os.Stderr, "[ERROR] not enough registers left for var \"%s\"(i32)", words[i+1].str)
+            fmt.Fprintln(os.Stderr, "\t" + words[i+1].at())
+            os.Exit(1)
+        }
+
+        vars = append(vars, variable{words[i+1].str, []int{ availReg }, i32})
+        availReg++
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", words[i+2].str)
         fmt.Fprintln(os.Stderr, "\t" + words[i+2].at())
@@ -87,7 +109,7 @@ func declareVar(words []word, i int) int {
     return i + 2
 }
 
-func defineVar(asm *os.File, words []word, i int) int {
+func defineVar(words []word, i int) int {
     if len(words) < i + 1 {
         fmt.Fprintf(os.Stderr, "[ERROR] no value provided to define the variable\n")
         fmt.Fprintln(os.Stderr, "\t" + words[i].at())
@@ -98,18 +120,19 @@ func defineVar(asm *os.File, words []word, i int) int {
         if v := getVar(words[i-2].str); v != nil {
             switch v.vartype {
             case str:
-                registers[v.regIdx].isAddr = true;
-                registers[v.regIdx].value = len(strLits);
+                if len(v.regs) != 2 {
+                    fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) string variable should use 2 registers\n")
+                    fmt.Fprintln(os.Stderr, "\t" + words[i-2].at())
+                    os.Exit(1)
+                }
 
-                addStrLit(words[i+1])
-                asm.WriteString(fmt.Sprintf("mov %s, %s\n", registers[v.regIdx].name, fmt.Sprintf("str%d", registers[v.regIdx].value)))
+                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, str%d\n", registers[v.regs[0]].name, len(strLits)))
+                addStrLit(words[i+1].str)
+                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %d\n", registers[v.regs[1]].name, strLits[len(strLits)-1].size))
 
             case i32:
-                registers[v.regIdx].isAddr = false;
-
                 i, _ := strconv.Atoi(words[i+1].str)
-                registers[v.regIdx].value = i;
-                asm.WriteString(fmt.Sprintf("mov %s, %d\n", registers[v.regIdx].name, i))
+                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %d\n", registers[v.regs[0]].name, i))
 
             default:
                 fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.name)
@@ -125,9 +148,9 @@ func defineVar(asm *os.File, words []word, i int) int {
         // TODO: check if var is defined
         if otherVar := getVar(words[i+1].str); otherVar != nil {
             if v := getVar(words[i-2].str); v != nil {
-                registers[v.regIdx].isAddr = registers[otherVar.regIdx].isAddr;
-                registers[v.regIdx].value = registers[otherVar.regIdx].value;
-                asm.WriteString(fmt.Sprintf("mov %s, %s\n", registers[v.regIdx].name, registers[otherVar.regIdx].name))
+                for ri, r := range otherVar.regs {
+                    globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %s\n", registers[v.regs[ri]].name, registers[r].name))
+                }
             } else {
                 fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" not declared\n", words[i-2].str)
                 fmt.Fprintln(os.Stderr, "\t" + words[i-2].at())
@@ -143,3 +166,17 @@ func defineVar(asm *os.File, words []word, i int) int {
     return i + 1
 }
 
+func rmVar(varname string) {
+    if len(vars) == 1 && vars[0].name == varname {
+        vars = []variable{}
+        return
+    }
+
+    for i, v := range vars {
+        if v.name == varname {
+            vars[i] = vars[len(vars)-1]
+            vars = vars[:len(vars)-1]
+            return
+        }
+    }
+}

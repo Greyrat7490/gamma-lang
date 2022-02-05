@@ -7,16 +7,9 @@ import (
     "os/exec"
     "unicode"
     "strings"
-    "strconv"
 )
 
 const STDOUT = 1
-
-type arg struct {
-    isVar bool
-    argType gType
-    value int       // regIdx if isVar, strIdx if argType is str
-}
 
 type word struct {
     line int
@@ -53,7 +46,6 @@ uint_to_str:
         mov byte [rbx], dl
         cmp eax, 0
         jne .l1
-
 
     mov rax, rbx
     sub rax, intBuf
@@ -98,14 +90,20 @@ int_to_str:
         pop rdx
         pop rcx
         ret
-`)
 
-    asm.WriteString("\n_start:\n")
-    asm.WriteString("mov rsp, stack_top\n")
-    asm.WriteString("mov byte [intBuf + 11], 0xa\n\n")
+`)
 }
 
 func nasm_footer(asm *os.File) {
+    asm.WriteString("\n_start:\n")
+    asm.WriteString("mov rsp, stack_top\n")
+    asm.WriteString("mov byte [intBuf + 11], 0xa\n\n")
+
+    for _, s := range globalDefs {
+        asm.WriteString(s)
+    }
+    asm.WriteString("call main\n")
+
     asm.WriteString("\nmov rdi, 0\n")
     asm.WriteString(fmt.Sprintf("mov rax, %d\n", SYS_EXIT))
     asm.WriteString("syscall\n")
@@ -123,50 +121,7 @@ func nasm_footer(asm *os.File) {
     asm.WriteString("intBuf:\n\tresb 12") // int(32bit) -> 10 digits max + \n and sign -> 12 char string max
 }
 
-
-func getArgs(words []word, expectedArgCount int) (args []arg) {
-    if len(words) < 2 || words[1].str != "(" {
-        fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
-        fmt.Fprintln(os.Stderr, "\t" + words[1].at())
-        os.Exit(1)
-    }
-
-    for _, w := range words[2:] {
-        if w.str == ")" {
-            break
-        }
-
-        if w.str[0] == '"' && w.str[len(w.str) - 1] == '"' {
-            args = append(args, arg{false, str, len(strLits)})
-            addStrLit(w)
-        } else if i, err := strconv.Atoi(w.str); err == nil {
-            args = append(args, arg{false, i32, i})
-        } else {
-            if v := getVar(w.str); v != nil {
-                args = append(args, arg{true, v.vartype, v.regIdx})
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", w.str)
-                fmt.Fprintln(os.Stderr, "\t" + w.at())
-                os.Exit(1)
-            }
-        }
-    }
-
-    if len(words) - 2 == len(args) {
-        fmt.Fprintf(os.Stderr, "[ERROR] missing \")\"\n")
-        os.Exit(1)
-    }
-
-    if len(args) != expectedArgCount {
-        fmt.Fprintf(os.Stderr, "[ERROR] function takes %d argument but got %d\n", expectedArgCount, len(args))
-        fmt.Fprintln(os.Stderr, "\t" + words[0].at())
-        os.Exit(1)
-    }
-
-    return args
-}
-
-// escape chars (TODO: \n, \t, ...) (done: \\, \")
+// escape chars (TODO: \n, \t, \r, ...) (done: \\, \")
 func split(file string) (words []word) {
     start := 0
 
@@ -220,13 +175,13 @@ func split(file string) (words []word) {
                 }
 
             // split
-            } else if unicode.IsSpace(r) || r == '(' || r == ')' {
+            } else if unicode.IsSpace(r) || r == '(' || r == ')' || r == '{' || r == '}' {
                 if start != i {
                     words = append(words, word{line, col + start - i, file[start:i]})
                 }
                 start = i + 1
 
-                if r == '(' || r == ')' {
+                if r == '(' || r == ')' || r == '{' || r == '}' {
                     words = append(words, word{line, col - 1, string(r)})
                 }
             }
@@ -258,6 +213,12 @@ func compile(srcFile []byte) {
 
     nasm_header(asm)
 
+    // define build-in functions
+    // TODO: add int_to_str and uint_to_str
+    defineWriteStr(asm)
+    defineWriteInt(asm)
+    defineExit(asm)
+
     words := split(string(srcFile))
 
     for i := 0; i < len(words); i++ {
@@ -265,17 +226,37 @@ func compile(srcFile []byte) {
         case "var":
             i = declareVar(words, i)
         case ":=":
-            i = defineVar(asm, words, i)
-        case "println":
-            i = write(asm, words, i)
+            i = defineVar(words, i)
+        case "fn":
+            i = defineFunc(asm, words, i)
+        case "printInt":
+            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
+            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+            os.Exit(1)
+        case "printStr":
+            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
+            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+            os.Exit(1)
         case "exit":
-            i = exit(asm, words, i)
-
+            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
+            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+            os.Exit(1)
         default:
-            fmt.Fprintf(os.Stderr, "[ERROR] keyword \"%s\" is not supported\n", words[i].str)
+            fmt.Fprintf(os.Stderr, "[ERROR] unknown word \"%s\"\n", words[i].str)
             fmt.Fprintln(os.Stderr, "\t" + words[i].at())
             os.Exit(1)
         }
+    }
+
+    if !mainDef {
+        fmt.Fprintln(os.Stderr, "[ERROR] no \"main\" function was defined")
+        os.Exit(1)
+    }
+
+    if curFunc != -1 {
+        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" was not closed (missing \"}\")\n", funcs[curFunc].name)
+        fmt.Fprintln(os.Stderr, "\t" + funcs[curFunc].at())
+        os.Exit(1)
     }
 
     nasm_footer(asm)

@@ -1,8 +1,10 @@
-var v1 str := "86"
-var v2 str := "some\" string"
-var v3 str := "some\\ string"
+var v1 str := "some\" string"
+var v2 str := "some\\ string"
+// var v3 str := "86" // not enough register left (1 more needed)
 
-println(v1)
-println("\" \"")
-println(v2)
-println(v3)
+fn main() {
+    printStr(v1)
+    printStr("\" \"")
+    printStr(v2)
+    // printStr(v3)
+}
