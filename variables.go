@@ -34,7 +34,6 @@ type variable struct {
     name string
     regs []int
     vartype gType
-    strIdx int
 }
 
 func getVar(varname string) *variable {
@@ -90,7 +89,7 @@ func declareVar(words []word, i int) int {
             os.Exit(1)
         }
 
-        vars = append(vars, variable{words[i+1].str, []int{ availReg, availReg+1 }, str, -1})
+        vars = append(vars, variable{words[i+1].str, []int{ availReg, availReg+1 }, str})
         availReg += 2
     case i32:
         if availReg >= maxRegs {
@@ -99,7 +98,7 @@ func declareVar(words []word, i int) int {
             os.Exit(1)
         }
 
-        vars = append(vars, variable{words[i+1].str, []int{ availReg }, i32, -1})
+        vars = append(vars, variable{words[i+1].str, []int{ availReg }, i32})
         availReg++
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", words[i+2].str)
@@ -121,7 +120,11 @@ func defineVar(words []word, i int) int {
         if v := getVar(words[i-2].str); v != nil {
             switch v.vartype {
             case str:
-                // TODO: check regs count
+                if len(v.regs) != 2 {
+                    fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) string variable should use 2 registers\n")
+                    fmt.Fprintln(os.Stderr, "\t" + words[i-2].at())
+                    os.Exit(1)
+                }
 
                 globalDefs = append(globalDefs, fmt.Sprintf("mov %s, str%d\n", registers[v.regs[0]].name, len(strLits)))
                 addStrLit(words[i+1].str)

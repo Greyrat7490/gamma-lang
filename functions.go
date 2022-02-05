@@ -35,12 +35,12 @@ var curFunc int = -1
 
 var mainDef bool = false
 
-func defineFunc(asm *os.File, words []word, i int) int {
-    if words[i+1].str == "main" {
+func defineFunc(asm *os.File, words []word, idx int) int {
+    if words[idx+1].str == "main" {
         mainDef = true
     }
 
-    args, nextIdx := declareArgs(words, i)
+    args, nextIdx := declareArgs(words, idx)
 
     if len(args) > 1 {
         fmt.Fprintln(os.Stderr, "[ERROR] functions only acept one argument max at the moment")
@@ -49,34 +49,34 @@ func defineFunc(asm *os.File, words []word, i int) int {
 
     curFunc = len(funcs)
     funcs = append(funcs, function{
-        name: words[i+1].str,
+        name: words[idx+1].str,
         args: args,
-        col: words[i+1].col,
-        line: words[i+1].line,
+        col: words[idx+1].col,
+        line: words[idx+1].line,
     })
 
-    asm.WriteString(words[i+1].str + ":\n")
-    for i = nextIdx; i < len(words); i++ {
-        switch words[i].str {
+    asm.WriteString(words[idx+1].str + ":\n")
+    for idx = nextIdx; idx < len(words); idx++ {
+        switch words[idx].str {
         case "var":
-            i = declareVar(words, i)
+            idx = declareVar(words, idx)
         case ":=":
-            i = defineVar(words, i)
+            idx = defineVar(words, idx)
         case "fn":
             fmt.Fprintln(os.Stderr, "[ERROR] you are not allowed to define functions inside a function")
-            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+            fmt.Fprintln(os.Stderr, "\t" + words[idx].at())
             os.Exit(1)
         case "}":
             endFunc(asm)
-            return i
+            return idx
         default:
-            f, nextIdx := parseCallFunc(words, i)
-            i = nextIdx
+            f, nextIdx := parseCallFunc(words, idx)
+            idx = nextIdx
             callFunc(asm, f)
         }
     }
 
-    return i
+    return idx
 }
 
 func endFunc(asm *os.File) {
@@ -99,33 +99,33 @@ func getFunc(funcName string) *function {
     return nil
 }
 
-func parseCallFunc(words []word, i int) (*function, int) {
-    f := getFunc(words[i].str)
+func parseCallFunc(words []word, idx int) (*function, int) {
+    f := getFunc(words[idx].str)
 
     if f == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] keyword \"%s\" is not supported\n", words[i].str)
-        fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+        fmt.Fprintf(os.Stderr, "[ERROR] undeclared name \"%s\"\n", words[idx].str)
+        fmt.Fprintln(os.Stderr, "\t" + words[idx].at())
         os.Exit(1)
     }
 
-    if len(words) < i + 1 || words[i+1].str != "(" {
+    if len(words) < idx + 1 || words[idx+1].str != "(" {
         fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
-        fmt.Fprintln(os.Stderr, "\t" + words[i+1].at())
+        fmt.Fprintln(os.Stderr, "\t" + words[idx+1].at())
         os.Exit(1)
     }
 
-    i = parseCallArgs(words, f, i)
+    idx = parseCallArgs(words, f, idx)
 
-    return f, i
+    return f, idx
 }
 
-func parseCallArgs(words []word, f *function, i int) (nextIdx int) {
+func parseCallArgs(words []word, f *function, idx int) (nextIdx int) {
     argCount := 0
     b := false
-    for ai, w := range words[i+2:] {
+    for i, w := range words[idx+2:] {
         if w.str == ")" {
             b = true
-            argCount = ai
+            argCount = i
             break
         }
 
@@ -135,7 +135,7 @@ func parseCallArgs(words []word, f *function, i int) (nextIdx int) {
             os.Exit(1)
         }
 
-        t := f.args[ai].argType
+        t := f.args[i].argType
         isVar := false
         if w.str[0] == '"' && w.str[len(w.str) - 1] == '"' {
             t = str
@@ -145,14 +145,12 @@ func parseCallArgs(words []word, f *function, i int) (nextIdx int) {
             isVar = true
         }
 
-        f.args[ai].isVar = isVar
-        f.args[ai].value = w.str
+        f.args[i].isVar = isVar
+        f.args[i].value = w.str
 
-        // fmt.Printf("%s = %s\n", f.args[ai].name, w.str)
-
-        if f.args[ai].argType != t {
+        if f.args[i].argType != t {
             fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" expected as %d argument \"%s\" but got \"%s\"\n",
-                f.name, ai, f.args[ai].argType.readable(), t.readable())
+                f.name, i, f.args[i].argType.readable(), t.readable())
             fmt.Fprintln(os.Stderr, "\t" + w.at())
             os.Exit(1)
         }
@@ -170,7 +168,7 @@ func parseCallArgs(words []word, f *function, i int) (nextIdx int) {
         os.Exit(1)
     }
 
-    return i + len(f.args) + 2
+    return idx + len(f.args) + 2
 }
 
 func callFunc(asm *os.File, f *function) {
@@ -179,10 +177,10 @@ func callFunc(asm *os.File, f *function) {
     asm.WriteString("call " + f.name + "\n")
 }
 
-func declareArgs(words []word, i int) (args []arg, nextIdx int) {
-    if len(words) < i + 2 || words[i+2].str != "(" {
+func declareArgs(words []word, idx int) (args []arg, nextIdx int) {
+    if len(words) < idx + 2 || words[idx+2].str != "(" {
         fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
-        fmt.Fprintln(os.Stderr, "\t" + words[i+2].at())
+        fmt.Fprintln(os.Stderr, "\t" + words[idx+2].at())
         os.Exit(1)
     }
 
@@ -190,7 +188,7 @@ func declareArgs(words []word, i int) (args []arg, nextIdx int) {
     argName := true
 
     b := false
-    for _, w := range words[i+3:] {
+    for _, w := range words[idx+3:] {
         if w.str == ")" {
             b = true
             break
@@ -211,30 +209,31 @@ func declareArgs(words []word, i int) (args []arg, nextIdx int) {
 
             args = append(args, a)
 
-            var v variable
             // see calling convention
             // 5 = r9, 6 = r10
+            var regs []int
             switch a.argType {
             case str:
-                v = variable{a.name, []int { 5, 6 }, a.argType, -1}
+                regs = []int { 5, 6 }
             case i32:
-                v = variable{a.name, []int { 5 }, a.argType, -1}
+                regs = []int { 5 }
             default:
                 fmt.Fprintf(os.Stderr, "[ERROR] unknown type \"%s\"\n", w.str)
                 fmt.Fprintln(os.Stderr, "\t" + w.at())
                 os.Exit(1)
             }
 
-            vars = append(vars, v)
+            vars = append(vars, variable{a.name, regs, a.argType})
         }
     }
 
     if !b {
-        fmt.Fprintf(os.Stderr, "[ERROR] missing \")\"\n")
+        fmt.Fprintf(os.Stderr, "[ERROR] missing \")\" for function \"%s\"\n", words[idx+1].str)
+        fmt.Fprintln(os.Stderr, "\t" + words[idx+1].at())
         os.Exit(1)
     }
 
-    return args, i + len(args) * 2 + 5
+    return args, idx + len(args) * 2 + 5
 }
 
 func defineArgs(asm *os.File, f *function) {
