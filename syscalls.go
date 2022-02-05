@@ -29,13 +29,17 @@ func defineWriteInt(asm *os.File) {
     funcs = append(funcs, function{name: "printInt", args: args})
 
     asm.WriteString("printInt:\n")
-    asm.WriteString("push rbx\n")
     asm.WriteString("push rax\n")
+    asm.WriteString("push rbx\n")
+    asm.WriteString("push rcx\n")
+    asm.WriteString("push rdx\n")
     asm.WriteString("mov rax, r9\n")
     asm.WriteString("call int_to_str\n")
     syscall(asm, SYS_WRITE, STDOUT, "rbx", "rax")
-    asm.WriteString("pop rax\n")
+    asm.WriteString("pop rdx\n")
+    asm.WriteString("pop rcx\n")
     asm.WriteString("pop rbx\n")
+    asm.WriteString("pop rax\n")
     asm.WriteString("ret\n\n")
 }
 
@@ -44,7 +48,13 @@ func defineWriteStr(asm *os.File) {
     funcs = append(funcs, function{name: "printStr", args: args})
 
     asm.WriteString("printStr:\n")
+    asm.WriteString("push rax\n")
+    asm.WriteString("push rcx\n")
+    asm.WriteString("push rdx\n")
     syscall(asm, SYS_WRITE, STDOUT, "r9", "r10")
+    asm.WriteString("pop rdx\n")
+    asm.WriteString("pop rcx\n")
+    asm.WriteString("pop rax\n")
     asm.WriteString("ret\n\n")
 }
 

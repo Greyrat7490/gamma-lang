@@ -211,8 +211,20 @@ func declareArgs(words []word, i int) (args []arg, nextIdx int) {
 
             args = append(args, a)
 
-             // see calling convention (first arg = r9(idx=5))
-            v := variable{a.name, 5, a.argType, -1}
+            var v variable
+            // see calling convention
+            // 5 = r9, 6 = r10
+            switch a.argType {
+            case str:
+                v = variable{a.name, []int { 5, 6 }, a.argType, -1}
+            case i32:
+                v = variable{a.name, []int { 5 }, a.argType, -1}
+            default:
+                fmt.Fprintf(os.Stderr, "[ERROR] unknown type \"%s\"\n", w.str)
+                fmt.Fprintln(os.Stderr, "\t" + w.at())
+                os.Exit(1)
+            }
+
             vars = append(vars, v)
         }
     }
@@ -236,17 +248,17 @@ func defineArgs(asm *os.File, f *function) {
             }
 
             // skip if r9 is already set correct
-            if otherVar.reg == 5 {
+            if otherVar.regs[0] == 5 {
                 return
             }
 
             switch a.argType {
             case str:
-                asm.WriteString(fmt.Sprintf("mov r9, %s\n", registers[otherVar.reg].name))
-                asm.WriteString(fmt.Sprintf("mov r10, %s\n", registers[otherVar.reg+1].name)) // + 1 is only temporary
+                asm.WriteString(fmt.Sprintf("mov r9, %s\n", registers[otherVar.regs[0]].name))
+                asm.WriteString(fmt.Sprintf("mov r10, %s\n", registers[otherVar.regs[1]].name))
 
             case i32:
-                asm.WriteString(fmt.Sprintf("mov r9, %s\n", registers[otherVar.reg].name))
+                asm.WriteString(fmt.Sprintf("mov r9, %s\n", registers[otherVar.regs[0]].name))
 
             default:
                 fmt.Fprintln(os.Stderr, "[ERROR] (unreachable) function.go defineArgs()")

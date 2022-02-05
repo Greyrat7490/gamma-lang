@@ -1,9 +1,11 @@
 var v1 i32 := 86
 var v2 i32 := -69
 var v3 str := "some string"
+// var v4 str := "some string 2" // not enough register left (1 more needed)
 
 fn main() {
     printInt(v1)
     printInt(v2)
     printStr(v3)
+    // printStr(v4)
 }

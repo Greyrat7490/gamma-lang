@@ -24,12 +24,15 @@ var registers []reg = []reg {
     {name: "r11"},
 }
 
+const maxRegs int = 5
+var availReg int = 0
+
 var vars []variable
 var globalDefs []string
 
 type variable struct {
     name string
-    reg int
+    regs []int
     vartype gType
     strIdx int
 }
@@ -81,9 +84,23 @@ func declareVar(words []word, i int) int {
 
     switch toType(words[i+2].str) {
     case str:
-        vars = append(vars, variable{words[i+1].str, len(vars), str, -1})
+        if availReg + 1 >= maxRegs {
+            fmt.Fprintf(os.Stderr, "[ERROR] not enough registers left for var \"%s\"(string)", words[i+1].str)
+            fmt.Fprintln(os.Stderr, "\t" + words[i+1].at())
+            os.Exit(1)
+        }
+
+        vars = append(vars, variable{words[i+1].str, []int{ availReg, availReg+1 }, str, -1})
+        availReg += 2
     case i32:
-        vars = append(vars, variable{words[i+1].str, len(vars), i32, -1})
+        if availReg >= maxRegs {
+            fmt.Fprintf(os.Stderr, "[ERROR] not enough registers left for var \"%s\"(i32)", words[i+1].str)
+            fmt.Fprintln(os.Stderr, "\t" + words[i+1].at())
+            os.Exit(1)
+        }
+
+        vars = append(vars, variable{words[i+1].str, []int{ availReg }, i32, -1})
+        availReg++
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", words[i+2].str)
         fmt.Fprintln(os.Stderr, "\t" + words[i+2].at())
@@ -104,12 +121,15 @@ func defineVar(words []word, i int) int {
         if v := getVar(words[i-2].str); v != nil {
             switch v.vartype {
             case str:
+                // TODO: check regs count
+
+                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, str%d\n", registers[v.regs[0]].name, len(strLits)))
                 addStrLit(words[i+1].str)
-                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, str%d\n", registers[v.reg].name, len(strLits)))
+                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %d\n", registers[v.regs[1]].name, strLits[len(strLits)-1].size))
 
             case i32:
                 i, _ := strconv.Atoi(words[i+1].str)
-                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %d\n", registers[v.reg].name, i))
+                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %d\n", registers[v.regs[0]].name, i))
 
             default:
                 fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.name)
@@ -125,7 +145,9 @@ func defineVar(words []word, i int) int {
         // TODO: check if var is defined
         if otherVar := getVar(words[i+1].str); otherVar != nil {
             if v := getVar(words[i-2].str); v != nil {
-                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %s\n", registers[v.reg].name, registers[otherVar.reg].name))
+                for ri, r := range otherVar.regs {
+                    globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %s\n", registers[v.regs[ri]].name, registers[r].name))
+                }
             } else {
                 fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" not declared\n", words[i-2].str)
                 fmt.Fprintln(os.Stderr, "\t" + words[i-2].at())

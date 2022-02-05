@@ -1,9 +1,5 @@
 package main
 
-// TODO:
-// ERROR in test/vars.gore
-// str1 instead of str0
-
 import (
     "fmt"
     "io/ioutil"
