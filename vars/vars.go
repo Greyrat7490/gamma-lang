@@ -6,12 +6,13 @@ import (
     "strconv"
     "gorec/parser"
     "gorec/types"
+    "gorec/str"
 )
 
 type reg struct {
     Name string
-    IsAddr bool
-    Value int      // either an actual value or an address(index)
+    isAddr bool
+    value int      // either an actual value or an address(index)
 }
 
 // TODO: register allocator for variables
@@ -29,16 +30,16 @@ var Registers []reg = []reg {
 const maxRegs int = 5
 var availReg int = 0
 
-var vars []Variable
+var vars []Var
 var globalDefs []string
 
-type Variable struct {
+type Var struct {
     Name string
     Regs []int
     Vartype types.Type
 }
 
-func GetVar(varname string) *Variable {
+func Get(varname string) *Var {
     for _, v := range vars {
         if v.Name == varname {
             return &v
@@ -60,7 +61,7 @@ func IsLit(w string) bool {
     return false
 }
 
-func DeclareVar(words []prs.Word, i int) int {
+func Declare(words []prs.Word, i int) int {
     if len(words) < i + 1 {
         fmt.Fprintln(os.Stderr, "[ERROR] neither name nor type provided for the variable declaration")
         fmt.Fprintln(os.Stderr, "\t" + words[i].At())
@@ -77,7 +78,7 @@ func DeclareVar(words []prs.Word, i int) int {
         os.Exit(1)
     }
     // maybe implement shadowing later (TODO)
-    if GetVar(words[i+1].Str) != nil {
+    if Get(words[i+1].Str) != nil {
         fmt.Fprintf(os.Stderr, "[ERROR] a variable with the name \"%s\" is already declared\n", words[i+1].Str)
         fmt.Fprintln(os.Stderr, "\t" + words[i+1].At())
         os.Exit(1)
@@ -91,7 +92,7 @@ func DeclareVar(words []prs.Word, i int) int {
             os.Exit(1)
         }
 
-        vars = append(vars, Variable{words[i+1].Str, []int{ availReg, availReg+1 }, types.Str})
+        vars = append(vars, Var{words[i+1].Str, []int{ availReg, availReg+1 }, types.Str})
         availReg += 2
     case types.I32:
         if availReg >= maxRegs {
@@ -100,7 +101,7 @@ func DeclareVar(words []prs.Word, i int) int {
             os.Exit(1)
         }
 
-        vars = append(vars, Variable{words[i+1].Str, []int{ availReg }, types.I32})
+        vars = append(vars, Var{words[i+1].Str, []int{ availReg }, types.I32})
         availReg++
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", words[i+2].Str)
@@ -111,7 +112,7 @@ func DeclareVar(words []prs.Word, i int) int {
     return i + 2
 }
 
-func DefineVar(words []prs.Word, idx int) int {
+func Define(words []prs.Word, idx int) int {
     if len(words) < idx + 1 {
         fmt.Fprintf(os.Stderr, "[ERROR] no value provided to define the variable\n")
         fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
@@ -119,7 +120,7 @@ func DefineVar(words []prs.Word, idx int) int {
     }
 
     if IsLit(words[idx+1].Str) {
-        if v := GetVar(words[idx-2].Str); v != nil {
+        if v := Get(words[idx-2].Str); v != nil {
             switch v.Vartype {
             case types.Str:
                 if len(v.Regs) != 2 {
@@ -128,9 +129,9 @@ func DefineVar(words []prs.Word, idx int) int {
                     os.Exit(1)
                 }
 
-                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, str%d\n", Registers[v.Regs[0]].Name, len(types.StrLits)))
-                types.AddStrLit(words[idx+1].Str)
-                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %d\n", Registers[v.Regs[1]].Name, types.StrLits[len(types.StrLits)-1].Size))
+                strIdx := str.Add(words[idx+1].Str)
+                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, str%d\n", Registers[v.Regs[0]].Name, strIdx))
+                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %d\n", Registers[v.Regs[1]].Name, str.GetSize(strIdx)))
 
             case types.I32:
                 i, _ := strconv.Atoi(words[idx+1].Str)
@@ -148,8 +149,8 @@ func DefineVar(words []prs.Word, idx int) int {
         }
     } else {
         // TODO: check if var is defined
-        if otherVar := GetVar(words[idx+1].Str); otherVar != nil {
-            if v := GetVar(words[idx-2].Str); v != nil {
+        if otherVar := Get(words[idx+1].Str); otherVar != nil {
+            if v := Get(words[idx-2].Str); v != nil {
                 for ri, r := range otherVar.Regs {
                     globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[ri]].Name, Registers[r].Name))
                 }
@@ -168,13 +169,13 @@ func DefineVar(words []prs.Word, idx int) int {
     return idx + 1
 }
 
-func AddVar(v Variable) {
+func Add(v Var) {
     vars = append(vars, v)
 }
 
-func RmVar(varname string) {
+func Remove(varname string) {
     if len(vars) == 1 && vars[0].Name == varname {
-        vars = []Variable{}
+        vars = []Var{}
         return
     }
 
@@ -190,15 +191,5 @@ func RmVar(varname string) {
 func WriteGlobalVars(asm *os.File) {
     for _, s := range globalDefs {
         asm.WriteString(s)
-    }
-}
-
-func WriteStrLits(asm *os.File) {
-    if len(types.StrLits) > 0 {
-        asm.WriteString("\nsection .data\n")
-
-        for i, str := range types.StrLits {
-            asm.WriteString(fmt.Sprintf("str%d: db %s\n", i, str.Value))
-        }
     }
 }

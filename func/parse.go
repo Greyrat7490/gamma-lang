@@ -1,4 +1,4 @@
-package function
+package fn
 
 import (
     "fmt"
@@ -8,8 +8,8 @@ import (
     "gorec/parser"
 )
 
-func parseCallFunc(words []prs.Word, idx int) (*Function, int) {
-    f := getFunc(words[idx].Str)
+func parseCallFunc(words []prs.Word, idx int) (*Func, int) {
+    f := get(words[idx].Str)
 
     if f == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] undeclared name \"%s\"\n", words[idx].Str)
@@ -28,7 +28,7 @@ func parseCallFunc(words []prs.Word, idx int) (*Function, int) {
     return f, idx
 }
 
-func parseCallArgs(words []prs.Word, f *Function, idx int) (nextIdx int) {
+func parseCallArgs(words []prs.Word, f *Func, idx int) (nextIdx int) {
     argCount := 0
     b := false
     for i, w := range words[idx+2:] {
@@ -44,7 +44,7 @@ func parseCallArgs(words []prs.Word, f *Function, idx int) (nextIdx int) {
             os.Exit(1)
         }
 
-        t := f.Args[i].ArgType
+        t := f.Args[i].argType
         isVar := false
         if w.Str[0] == '"' && w.Str[len(w.Str) - 1] == '"' {
             t = types.Str
@@ -54,12 +54,12 @@ func parseCallArgs(words []prs.Word, f *Function, idx int) (nextIdx int) {
             isVar = true
         }
 
-        f.Args[i].IsVar = isVar
-        f.Args[i].Value = w.Str
+        f.Args[i].isVar = isVar
+        f.Args[i].value = w.Str
 
-        if f.Args[i].ArgType != t {
+        if f.Args[i].argType != t {
             fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" expected as %d argument \"%s\" but got \"%s\"\n",
-                f.Name, i, f.Args[i].ArgType.Readable(), t.Readable())
+                f.Name, i, f.Args[i].argType.Readable(), t.Readable())
             fmt.Fprintln(os.Stderr, "\t" + w.At())
             os.Exit(1)
         }

@@ -1,15 +1,16 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"strings"
-    "gorec/parser"
-    "gorec/vars"
+    "fmt"
+    "io/ioutil"
+    "os"
+    "os/exec"
+    "strings"
     "gorec/func"
+    "gorec/parser"
     "gorec/syscall"
+    "gorec/vars"
+    "gorec/str"
 )
 
 
@@ -17,71 +18,6 @@ func nasm_header(asm *os.File) {
     asm.WriteString("[BITS 64]\n")
     asm.WriteString("section .text\n")
     asm.WriteString("global _start\n")
-
-    asm.WriteString(`; rax = input int
-; rbx = output string pointer
-; rax = output string length
-uint_to_str:
-    push rcx
-    push rdx
-
-    mov ecx, 10
-
-    mov rbx, intBuf + 10
-    .l1:
-        xor edx, edx
-        div ecx
-        add dl, 48
-        dec rbx
-        mov byte [rbx], dl
-        cmp eax, 0
-        jne .l1
-
-    mov rax, rbx
-    sub rax, intBuf
-    inc rax
-    pop rdx
-    pop rcx
-    ret
-
-int_to_str:
-    push rcx
-    push rdx
-    push rax
-
-    mov ecx, 10
-    mov rbx, intBuf + 10
-
-    cmp rax, 0
-    jge .l1
-
-    neg rax
-
-    .l1:
-        xor edx, edx
-        div ecx
-        add dl, 48
-        dec rbx
-        mov byte [rbx], dl
-        cmp eax, 0
-        jne .l1
-
-    pop rax
-    cmp rax, 0
-    jge .end
-
-    dec rbx
-    mov byte [rbx], 0x2d
-
-    .end:
-        mov rax, rbx
-        sub rax, intBuf
-        inc rax
-        pop rdx
-        pop rcx
-        ret
-
-`)
 }
 
 func nasm_footer(asm *os.File) {
@@ -97,7 +33,7 @@ func nasm_footer(asm *os.File) {
     asm.WriteString(fmt.Sprintf("mov rax, %d\n", sys.SYS_EXIT))
     asm.WriteString("syscall\n")
 
-    vars.WriteStrLits(asm)
+    str.WriteStrLits(asm)
 
     asm.WriteString("\nsection .bss\n")
     asm.WriteString("\tresb 1024 * 1024\nstack_top:\n") // 1MiB
@@ -114,22 +50,18 @@ func compile(srcFile []byte) {
 
     nasm_header(asm)
 
-    // define build-in functions
-    // TODO: add int_to_str and uint_to_str
-    sys.DefineWriteStr(asm)
-    sys.DefineWriteInt(asm)
-    sys.DefineExit(asm)
+    sys.DefineBuildIns(asm)
 
     prs.Split(string(srcFile))
 
     for i := 0; i < len(prs.Words); i++ {
         switch prs.Words[i].Str {
         case "var":
-            i = vars.DeclareVar(prs.Words, i)
+            i = vars.Declare(prs.Words, i)
         case ":=":
-            i = vars.DefineVar(prs.Words, i)
+            i = vars.Define(prs.Words, i)
         case "fn":
-            i = function.DefineFunc(asm, prs.Words, i)
+            i = fn.Define(asm, prs.Words, i)
         case "printInt":
             fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
             fmt.Fprintln(os.Stderr, "\t" + prs.Words[i].At())
@@ -149,7 +81,7 @@ func compile(srcFile []byte) {
         }
     }
 
-    function.Checks();
+    fn.Checks();
 
     nasm_footer(asm)
 }

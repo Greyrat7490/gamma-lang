@@ -1,9 +1,5 @@
 package types
 
-import (
-    "strings"
-)
-
 type Type int
 const (
     I32 Type = iota
@@ -31,25 +27,4 @@ func ToType(s string) Type {
     default:
         return -1
     }
-}
-
-type data struct {
-    Value string
-    Size int
-}
-
-// later .data in general
-var StrLits []data
-
-func AddStrLit(s string) {
-    i := strings.Count(s, "\\\"") * 7
-
-    // replace escape characters
-    s = strings.ReplaceAll(s, "\\\"", "\",0x22,\"")     //   \" -> ",0x22," (0x22 = ascii of ")
-    s = strings.ReplaceAll(s, "\\\\", "\\")             //   \\ -> \
-
-    size := len(s) - i - 2 + 1 // -2 (don't count ""), -i (don't count ",0x22,"), +1 (for \n)
-    s += ",0xa"
-
-    StrLits = append(StrLits, data{s, size})
 }

@@ -1,4 +1,4 @@
-package function
+package fn
 
 import (
     "fmt"
@@ -7,6 +7,7 @@ import (
     "gorec/types"
     "gorec/parser"
     "gorec/vars"
+    "gorec/str"
 )
 
 // calling convention (temporary):
@@ -15,30 +16,31 @@ import (
 // - str -> r9 = addr, r10 = size
 // TODO: C calling convention
 
-type Arg struct {
+type Func struct {
     Name string
-    IsVar bool
-    ArgType types.Type
-    Value string
-}
-
-type Function struct {
-    Name string
-    Args []Arg
+    Args []arg
     Col int
     Line int
 }
 
-func (f *Function) At() string {
-    return fmt.Sprintf("at line: %d, col: %d", f.Line, f.Col)
+type arg struct {
+    name string
+    isVar bool
+    argType types.Type
+    value string
 }
 
-var funcs []Function
+var funcs []Func
 var curFunc int = -1
 
 var mainDef bool = false
 
-func DefineFunc(asm *os.File, words []prs.Word, idx int) int {
+
+func (f *Func) At() string {
+    return fmt.Sprintf("at line: %d, col: %d", f.Line, f.Col)
+}
+
+func Define(asm *os.File, words []prs.Word, idx int) int {
     if words[idx+1].Str == "main" {
         mainDef = true
     }
@@ -51,7 +53,7 @@ func DefineFunc(asm *os.File, words []prs.Word, idx int) int {
     }
 
     curFunc = len(funcs)
-    funcs = append(funcs, Function{
+    funcs = append(funcs, Func{
         Name: words[idx+1].Str,
         Args: args,
         Col: words[idx+1].Col,
@@ -62,15 +64,15 @@ func DefineFunc(asm *os.File, words []prs.Word, idx int) int {
     for idx = nextIdx; idx < len(words); idx++ {
         switch words[idx].Str {
         case "var":
-            idx = vars.DeclareVar(words, idx)
+            idx = vars.Declare(words, idx)
         case ":=":
-            idx = vars.DefineVar(words, idx)
+            idx = vars.Define(words, idx)
         case "fn":
             fmt.Fprintln(os.Stderr, "[ERROR] you are not allowed to define functions inside a function")
             fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
             os.Exit(1)
         case "}":
-            endFunc(asm)
+            end(asm)
             return idx
         default:
             f, nextIdx := parseCallFunc(words, idx)
@@ -82,17 +84,17 @@ func DefineFunc(asm *os.File, words []prs.Word, idx int) int {
     return idx
 }
 
-func endFunc(asm *os.File) {
+func end(asm *os.File) {
     asm.WriteString("ret\n\n")
 
     for _, a := range funcs[curFunc].Args {
-        vars.RmVar(a.Name)
+        vars.Remove(a.name)
     }
 
     curFunc = -1
 }
 
-func getFunc(funcName string) *Function {
+func get(funcName string) *Func {
     for _, f := range funcs {
         if f.Name == funcName {
             return &f
@@ -101,20 +103,20 @@ func getFunc(funcName string) *Function {
 
     return nil
 }
-func callFunc(asm *os.File, f *Function) {
+func callFunc(asm *os.File, f *Func) {
     defineArgs(asm, f)
 
     asm.WriteString("call " + f.Name + "\n")
 }
 
-func declareArgs(words []prs.Word, idx int) (args []Arg, nextIdx int) {
+func declareArgs(words []prs.Word, idx int) (args []arg, nextIdx int) {
     if len(words) < idx + 2 || words[idx+2].Str != "(" {
         fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
         fmt.Fprintln(os.Stderr, "\t" + words[idx+2].At())
         os.Exit(1)
     }
 
-    var a Arg
+    var a arg
     argName := true
 
     b := false
@@ -131,10 +133,10 @@ func declareArgs(words []prs.Word, idx int) (args []Arg, nextIdx int) {
         }
 
         if argName {
-            a.Name = w.Str
+            a.name = w.Str
             argName = false
         } else {
-            a.ArgType = types.ToType(w.Str)
+            a.argType = types.ToType(w.Str)
             argName = true
 
             args = append(args, a)
@@ -142,7 +144,7 @@ func declareArgs(words []prs.Word, idx int) (args []Arg, nextIdx int) {
             // see calling convention
             // 5 = r9, 6 = r10
             var regs []int
-            switch a.ArgType {
+            switch a.argType {
             case types.Str:
                 regs = []int { 5, 6 }
             case types.I32:
@@ -153,7 +155,7 @@ func declareArgs(words []prs.Word, idx int) (args []Arg, nextIdx int) {
                 os.Exit(1)
             }
 
-            vars.AddVar(vars.Variable{a.Name, regs, a.ArgType})
+            vars.Add(vars.Var{Name: a.name, Regs: regs, Vartype: a.argType})
         }
     }
 
@@ -166,12 +168,12 @@ func declareArgs(words []prs.Word, idx int) (args []Arg, nextIdx int) {
     return args, idx + len(args) * 2 + 5
 }
 
-func defineArgs(asm *os.File, f *Function) {
+func defineArgs(asm *os.File, f *Func) {
     for i, a := range f.Args {
-        if otherVar := vars.GetVar(a.Value); otherVar != nil {
-            if otherVar.Vartype != a.ArgType {
+        if otherVar := vars.Get(a.value); otherVar != nil {
+            if otherVar.Vartype != a.argType {
                 fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
-                    f.Name, i, a.ArgType.Readable(), otherVar.Vartype.Readable())
+                    f.Name, i, a.argType.Readable(), otherVar.Vartype.Readable())
                 fmt.Fprintln(os.Stderr, "\t" + f.At())
                 os.Exit(1)
             }
@@ -181,7 +183,7 @@ func defineArgs(asm *os.File, f *Function) {
                 return
             }
 
-            switch a.ArgType {
+            switch a.argType {
             case types.Str:
                 asm.WriteString(fmt.Sprintf("mov r9, %s\n", vars.Registers[otherVar.Regs[0]].Name))
                 asm.WriteString(fmt.Sprintf("mov r10, %s\n", vars.Registers[otherVar.Regs[1]].Name))
@@ -194,14 +196,14 @@ func defineArgs(asm *os.File, f *Function) {
                 os.Exit(1)
             }
         } else {
-            switch a.ArgType {
+            switch a.argType {
             case types.Str:
-                asm.WriteString(fmt.Sprintf("mov r9, str%d\n", len(types.StrLits)))
-                types.AddStrLit(a.Value)
-                asm.WriteString(fmt.Sprintf("mov r10, %d\n", types.StrLits[len(types.StrLits)-1].Size))
+                strIdx := str.Add(a.value)
+                asm.WriteString(fmt.Sprintf("mov r9, str%d\n", strIdx))
+                asm.WriteString(fmt.Sprintf("mov r10, %d\n", str.GetSize(strIdx)))
 
             case types.I32:
-                i, _ := strconv.Atoi(a.Value)
+                i, _ := strconv.Atoi(a.value)
                 asm.WriteString(fmt.Sprintf("mov r9, %d\n", i))
 
             default:
@@ -212,8 +214,12 @@ func defineArgs(asm *os.File, f *Function) {
     }
 }
 
-func AddFunc(f *Function) {
+func Add(f *Func) {
     funcs = append(funcs, *f)
+}
+
+func AddBuildIn(name string, argname string, argtype types.Type) {
+    funcs = append(funcs, Func{Name: name, Args: []arg{{name: argname, argType: argtype}}})
 }
 
 func Checks() {

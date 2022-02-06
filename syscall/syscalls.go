@@ -12,6 +12,13 @@ const STDOUT = 1
 const SYS_WRITE = 1
 const SYS_EXIT = 60
 
+func DefineBuildIns(asm *os.File) {
+    defineItoS(asm)
+    defineWriteStr(asm)
+    defineWriteInt(asm)
+    defineExit(asm)
+}
+
 func syscall(asm *os.File, syscallNum uint, args... interface{}) {
     regs := []string{"rdi", "rsi", "rdx", "r10", "r8", "r9"}
 
@@ -28,9 +35,8 @@ func syscall(asm *os.File, syscallNum uint, args... interface{}) {
     asm.WriteString("syscall\n")
 }
 
-func DefineWriteInt(asm *os.File) {
-    args := []function.Arg{{Name: "i", ArgType: types.I32}}
-    function.AddFunc(&function.Function{Name: "printInt", Args: args})
+func defineWriteInt(asm *os.File) {
+    fn.AddBuildIn("printInt", "i", types.I32)
 
     asm.WriteString("printInt:\n")
     asm.WriteString("push rax\n")
@@ -47,9 +53,8 @@ func DefineWriteInt(asm *os.File) {
     asm.WriteString("ret\n\n")
 }
 
-func DefineWriteStr(asm *os.File) {
-    args := []function.Arg{{Name: "str", ArgType: types.Str}}
-    function.AddFunc(&function.Function{Name: "printStr", Args: args})
+func defineWriteStr(asm *os.File) {
+    fn.AddBuildIn("printStr", "s", types.Str)
 
     asm.WriteString("printStr:\n")
     asm.WriteString("push rax\n")
@@ -62,11 +67,77 @@ func DefineWriteStr(asm *os.File) {
     asm.WriteString("ret\n\n")
 }
 
-func DefineExit(asm *os.File) {
-    args := []function.Arg{{Name: "i", ArgType: types.I32}}
-    function.AddFunc(&function.Function{Name: "exit", Args: args})
+func defineExit(asm *os.File) {
+    fn.AddBuildIn("exit", "i", types.I32)
 
     asm.WriteString("exit:\n")
     syscall(asm, SYS_EXIT, "r9")
     asm.WriteString("ret\n\n")
+}
+
+func defineItoS(asm *os.File) {
+    asm.WriteString(`; rax = input int
+; rbx = output string pointer
+; rax = output string length
+uint_to_str:
+    push rcx
+    push rdx
+
+    mov ecx, 10
+
+    mov rbx, intBuf + 10
+    .l1:
+        xor edx, edx
+        div ecx
+        add dl, 48
+        dec rbx
+        mov byte [rbx], dl
+        cmp eax, 0
+        jne .l1
+
+    mov rax, rbx
+    sub rax, intBuf
+    inc rax
+    pop rdx
+    pop rcx
+    ret
+
+int_to_str:
+    push rcx
+    push rdx
+    push rax
+
+    mov ecx, 10
+    mov rbx, intBuf + 10
+
+    cmp rax, 0
+    jge .l1
+
+    neg rax
+
+    .l1:
+        xor edx, edx
+        div ecx
+        add dl, 48
+        dec rbx
+        mov byte [rbx], dl
+        cmp eax, 0
+        jne .l1
+
+    pop rax
+    cmp rax, 0
+    jge .end
+
+    dec rbx
+    mov byte [rbx], 0x2d
+
+    .end:
+        mov rax, rbx
+        sub rax, intBuf
+        inc rax
+        pop rdx
+        pop rcx
+        ret
+
+`)
 }
