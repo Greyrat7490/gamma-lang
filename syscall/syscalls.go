@@ -1,9 +1,13 @@
-package main
+package sys
 
 import (
     "fmt"
     "os"
+    "gorec/types"
+    "gorec/func"
 )
+
+const STDOUT = 1
 
 const SYS_WRITE = 1
 const SYS_EXIT = 60
@@ -24,9 +28,9 @@ func syscall(asm *os.File, syscallNum uint, args... interface{}) {
     asm.WriteString("syscall\n")
 }
 
-func defineWriteInt(asm *os.File) {
-    args := []arg{{name: "i", argType: i32}}
-    funcs = append(funcs, function{name: "printInt", args: args})
+func DefineWriteInt(asm *os.File) {
+    args := []function.Arg{{Name: "i", ArgType: types.I32}}
+    function.AddFunc(&function.Function{Name: "printInt", Args: args})
 
     asm.WriteString("printInt:\n")
     asm.WriteString("push rax\n")
@@ -43,9 +47,9 @@ func defineWriteInt(asm *os.File) {
     asm.WriteString("ret\n\n")
 }
 
-func defineWriteStr(asm *os.File) {
-    args := []arg{{name: "str", argType: str}}
-    funcs = append(funcs, function{name: "printStr", args: args})
+func DefineWriteStr(asm *os.File) {
+    args := []function.Arg{{Name: "str", ArgType: types.Str}}
+    function.AddFunc(&function.Function{Name: "printStr", Args: args})
 
     asm.WriteString("printStr:\n")
     asm.WriteString("push rax\n")
@@ -58,9 +62,9 @@ func defineWriteStr(asm *os.File) {
     asm.WriteString("ret\n\n")
 }
 
-func defineExit(asm *os.File) {
-    args := []arg{{name: "i", argType: i32}}
-    funcs = append(funcs, function{name: "exit", args: args})
+func DefineExit(asm *os.File) {
+    args := []function.Arg{{Name: "i", ArgType: types.I32}}
+    function.AddFunc(&function.Function{Name: "exit", Args: args})
 
     asm.WriteString("exit:\n")
     syscall(asm, SYS_EXIT, "r9")

@@ -1,26 +1,16 @@
 package main
 
 import (
-    "fmt"
-    "io/ioutil"
-    "os"
-    "os/exec"
-    "unicode"
-    "strings"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"strings"
+    "gorec/parser"
+    "gorec/vars"
+    "gorec/func"
+    "gorec/syscall"
 )
-
-const STDOUT = 1
-
-type word struct {
-    line int
-    col int
-    str string
-    // later filename
-}
-
-func (w word) at() string {
-    return fmt.Sprintf("at line: %d, col: %d", w.line, w.col)
-}
 
 
 func nasm_header(asm *os.File) {
@@ -99,108 +89,19 @@ func nasm_footer(asm *os.File) {
     asm.WriteString("mov rsp, stack_top\n")
     asm.WriteString("mov byte [intBuf + 11], 0xa\n\n")
 
-    for _, s := range globalDefs {
-        asm.WriteString(s)
-    }
+    vars.WriteGlobalVars(asm)
+
     asm.WriteString("call main\n")
 
     asm.WriteString("\nmov rdi, 0\n")
-    asm.WriteString(fmt.Sprintf("mov rax, %d\n", SYS_EXIT))
+    asm.WriteString(fmt.Sprintf("mov rax, %d\n", sys.SYS_EXIT))
     asm.WriteString("syscall\n")
 
-    if len(strLits) > 0 {
-        asm.WriteString("\nsection .data\n")
-
-        for i, str := range strLits {
-            asm.WriteString(fmt.Sprintf("str%d: db %s\n", i, str.value))
-        }
-    }
+    vars.WriteStrLits(asm)
 
     asm.WriteString("\nsection .bss\n")
     asm.WriteString("\tresb 1024 * 1024\nstack_top:\n") // 1MiB
     asm.WriteString("intBuf:\n\tresb 12") // int(32bit) -> 10 digits max + \n and sign -> 12 char string max
-}
-
-// escape chars (TODO: \n, \t, \r, ...) (done: \\, \")
-func split(file string) (words []word) {
-    start := 0
-
-    line := 1
-    col := 1
-
-    skip := false
-    mlSkip := false
-    strLit := false
-    escape := false
-
-    for i, r := range(file) {
-        // comments
-        if skip {
-            if mlSkip {
-                if r == '*' && file[i+1] == '/' {
-                    skip = false
-                    mlSkip = false
-                    start = i + 2
-                }
-            } else {
-                if r == '\n' {
-                    skip = false
-                    start = i + 1
-                }
-            }
-
-        // string literales
-        } else if strLit {
-            if !escape {
-                if r == '"' {
-                    strLit = false
-                } else if r == '\\' {
-                    escape = true
-                }
-            } else {
-                escape = false
-            }
-
-        } else {
-            if r == '"' {       // start string literal
-                strLit = true
-            }
-
-            if r == '/' {       // start comment
-                if file[i+1] == '/' {
-                    skip = true
-                } else if file[i+1] == '*' {
-                    skip = true
-                    mlSkip = true
-                }
-
-            // split
-            } else if unicode.IsSpace(r) || r == '(' || r == ')' || r == '{' || r == '}' {
-                if start != i {
-                    words = append(words, word{line, col + start - i, file[start:i]})
-                }
-                start = i + 1
-
-                if r == '(' || r == ')' || r == '{' || r == '}' {
-                    words = append(words, word{line, col - 1, string(r)})
-                }
-            }
-        }
-
-        // set word position
-        if r == '\n' {
-            line++
-            col = 0
-        }
-        col++
-    }
-
-    if mlSkip {
-        fmt.Fprintln(os.Stderr, "you have not terminated your comment (missing \"*/\")")
-        os.Exit(1)
-    }
-
-    return words
 }
 
 func compile(srcFile []byte) {
@@ -215,49 +116,40 @@ func compile(srcFile []byte) {
 
     // define build-in functions
     // TODO: add int_to_str and uint_to_str
-    defineWriteStr(asm)
-    defineWriteInt(asm)
-    defineExit(asm)
+    sys.DefineWriteStr(asm)
+    sys.DefineWriteInt(asm)
+    sys.DefineExit(asm)
 
-    words := split(string(srcFile))
+    prs.Split(string(srcFile))
 
-    for i := 0; i < len(words); i++ {
-        switch words[i].str {
+    for i := 0; i < len(prs.Words); i++ {
+        switch prs.Words[i].Str {
         case "var":
-            i = declareVar(words, i)
+            i = vars.DeclareVar(prs.Words, i)
         case ":=":
-            i = defineVar(words, i)
+            i = vars.DefineVar(prs.Words, i)
         case "fn":
-            i = defineFunc(asm, words, i)
+            i = function.DefineFunc(asm, prs.Words, i)
         case "printInt":
             fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
-            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+            fmt.Fprintln(os.Stderr, "\t" + prs.Words[i].At())
             os.Exit(1)
         case "printStr":
             fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
-            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+            fmt.Fprintln(os.Stderr, "\t" + prs.Words[i].At())
             os.Exit(1)
         case "exit":
             fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
-            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+            fmt.Fprintln(os.Stderr, "\t" + prs.Words[i].At())
             os.Exit(1)
         default:
-            fmt.Fprintf(os.Stderr, "[ERROR] unknown word \"%s\"\n", words[i].str)
-            fmt.Fprintln(os.Stderr, "\t" + words[i].at())
+            fmt.Fprintf(os.Stderr, "[ERROR] unknown word \"%s\"\n", prs.Words[i].Str)
+            fmt.Fprintln(os.Stderr, "\t" + prs.Words[i].At())
             os.Exit(1)
         }
     }
 
-    if !mainDef {
-        fmt.Fprintln(os.Stderr, "[ERROR] no \"main\" function was defined")
-        os.Exit(1)
-    }
-
-    if curFunc != -1 {
-        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" was not closed (missing \"}\")\n", funcs[curFunc].name)
-        fmt.Fprintln(os.Stderr, "\t" + funcs[curFunc].at())
-        os.Exit(1)
-    }
+    function.Checks();
 
     nasm_footer(asm)
 }

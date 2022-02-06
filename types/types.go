@@ -1,20 +1,20 @@
-package main
+package types
 
 import (
     "strings"
 )
 
-type gType int
+type Type int
 const (
-    i32 gType = iota
-    str gType = iota
+    I32 Type = iota
+    Str Type = iota
 )
 
-func (t gType) readable() string {
+func (t Type) Readable() string {
     switch t {
-    case str:
+    case Str:
         return "str"
-    case i32:
+    case I32:
         return "i32"
     default:
         return ""
@@ -22,26 +22,26 @@ func (t gType) readable() string {
 }
 
 // -1 if string does not contain a valid type
-func toType(s string) gType {
+func ToType(s string) Type {
     switch s {
     case "str":
-        return str
+        return Str
     case "i32":
-        return i32
+        return I32
     default:
         return -1
     }
 }
 
 type data struct {
-    value string
-    size int
+    Value string
+    Size int
 }
 
 // later .data in general
-var strLits []data
+var StrLits []data
 
-func addStrLit(s string) {
+func AddStrLit(s string) {
     i := strings.Count(s, "\\\"") * 7
 
     // replace escape characters
@@ -51,5 +51,5 @@ func addStrLit(s string) {
     size := len(s) - i - 2 + 1 // -2 (don't count ""), -i (don't count ",0x22,"), +1 (for \n)
     s += ",0xa"
 
-    strLits = append(strLits, data{s, size})
+    StrLits = append(StrLits, data{s, size})
 }
