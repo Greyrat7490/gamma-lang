@@ -64,9 +64,9 @@ func Define(asm *os.File, words []prs.Word, idx int) int {
     for idx = nextIdx; idx < len(words); idx++ {
         switch words[idx].Str {
         case "var":
-            idx = vars.Declare(words, idx)
+            idx = vars.ParseDeclare(words, idx)
         case ":=":
-            idx = vars.Define(words, idx)
+             idx = vars.ParseDefine(words, idx)
         case "fn":
             fmt.Fprintln(os.Stderr, "[ERROR] you are not allowed to define functions inside a function")
             fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
@@ -75,9 +75,7 @@ func Define(asm *os.File, words []prs.Word, idx int) int {
             end(asm)
             return idx
         default:
-            f, nextIdx := parseCallFunc(words, idx)
-            idx = nextIdx
-            callFunc(asm, f)
+            idx = parseCallFunc(asm, words, idx)
         }
     }
 

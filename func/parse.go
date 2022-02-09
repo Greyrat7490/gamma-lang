@@ -8,7 +8,7 @@ import (
     "gorec/parser"
 )
 
-func parseCallFunc(words []prs.Word, idx int) (*Func, int) {
+func parseCallFunc(asm *os.File, words []prs.Word, idx int) int {
     f := get(words[idx].Str)
 
     if f == nil {
@@ -25,7 +25,9 @@ func parseCallFunc(words []prs.Word, idx int) (*Func, int) {
 
     idx = parseCallArgs(words, f, idx)
 
-    return f, idx
+    callFunc(asm, f)
+
+    return idx
 }
 
 func parseCallArgs(words []prs.Word, f *Func, idx int) (nextIdx int) {

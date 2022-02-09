@@ -57,9 +57,9 @@ func compile(srcFile []byte) {
     for i := 0; i < len(prs.Words); i++ {
         switch prs.Words[i].Str {
         case "var":
-            i = vars.Declare(prs.Words, i)
+            i = vars.ParseDeclare(prs.Words, i)
         case ":=":
-            i = vars.Define(prs.Words, i)
+            i = vars.ParseDefine(prs.Words, i)
         case "fn":
             i = fn.Define(asm, prs.Words, i)
         case "printInt":
