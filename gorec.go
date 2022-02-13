@@ -48,40 +48,65 @@ func compile(srcFile []byte) {
     }
     defer asm.Close()
 
+    prs.Split(string(srcFile))
+
     nasm_header(asm)
 
     sys.DefineBuildIns(asm)
 
-    prs.Split(string(srcFile))
-
-    for i := 0; i < len(prs.Words); i++ {
-        switch prs.Words[i].Str {
+    for i := 0; i < len(prs.Tokens); i++ {
+        switch prs.Tokens[i].Str {
         case "var":
-            i = vars.ParseDeclare(prs.Words, i)
+            i = vars.ParseDeclare(prs.Tokens, i)
         case ":=":
-            i = vars.ParseDefine(prs.Words, i)
+            i = vars.ParseDefine(prs.Tokens, i)
         case "fn":
-            i = fn.Define(asm, prs.Words, i)
+            i = fn.ParseDefine(prs.Tokens, i)
         case "printInt":
             fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
-            fmt.Fprintln(os.Stderr, "\t" + prs.Words[i].At())
+            fmt.Fprintln(os.Stderr, "\t" + prs.Tokens[i].At())
             os.Exit(1)
         case "printStr":
             fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
-            fmt.Fprintln(os.Stderr, "\t" + prs.Words[i].At())
+            fmt.Fprintln(os.Stderr, "\t" + prs.Tokens[i].At())
             os.Exit(1)
         case "exit":
             fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
-            fmt.Fprintln(os.Stderr, "\t" + prs.Words[i].At())
+            fmt.Fprintln(os.Stderr, "\t" + prs.Tokens[i].At())
             os.Exit(1)
         default:
-            fmt.Fprintf(os.Stderr, "[ERROR] unknown word \"%s\"\n", prs.Words[i].Str)
-            fmt.Fprintln(os.Stderr, "\t" + prs.Words[i].At())
+            fmt.Fprintf(os.Stderr, "[ERROR] unknown word \"%s\"\n", prs.Tokens[i].Str)
+            fmt.Fprintln(os.Stderr, "\t" + prs.Tokens[i].At())
             os.Exit(1)
         }
     }
 
-    fn.Checks();
+    prs.ShowOps()
+
+    fn.Checks()
+
+    for _, o := range prs.Ops {
+        switch o.Type {
+        case prs.OP_DEF_VAR:
+            vars.Define(&o)
+        case prs.OP_DEC_VAR:
+            vars.Declare(&o)
+        case prs.OP_CALL_FN:
+            fn.CallFunc(asm, &o)
+        case prs.OP_DEF_FN:
+            fn.Define(asm, &o)
+        case prs.OP_END_FN:
+            fn.End(asm, &o)
+        case prs.OP_DEC_ARGS:
+            fn.DeclareArgs(&o)
+        case prs.OP_DEF_ARGS:
+            fn.DefineArgs(asm, &o)
+        default:
+            fmt.Println(o.Type)
+            fmt.Fprintln(os.Stderr, "TODO")
+            os.Exit(1)
+        }
+    }
 
     nasm_footer(asm)
 }

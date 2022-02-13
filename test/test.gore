@@ -1,20 +1,22 @@
 var v2 i32 := 420
+var v1 str := "test string 3"
 
-fn test_fn(v1 i32) {
-    printInt(v1)
-    printInt(v2) // r9 will be overwritten here (TODO: push if later used)
-    printInt(v1)
+fn test1(a1 i32) {
+    printInt(a1)
+    printStr(v1)
+    printInt(v2)
+    printInt(a1) // r9 will be overwritten by the print before (TODO: push and pop if used later)
 }
 
-fn test_fn2(v1 str) {
+fn test2(a1 str) {
+    printStr(a1)
     printStr(v1)
-    printStr("test fn2: printStr")
-    printStr("test fn2: printStr")
-    printStr("test fn2: printStr")
+    printInt(v2)
+    printStr(a1) // same here with r9 and r10
 }
 
 fn main() {
-    printInt(v2)  // global variables don't work yet
-    test_fn2("test fn2: arg string")
-    test_fn(86)
+    test1(-86)
+    printStr("----")
+    test2("test string")
 }

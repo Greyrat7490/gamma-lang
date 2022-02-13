@@ -3,9 +3,9 @@ package vars
 import (
     "fmt"
     "os"
-    "strconv"
     "gorec/types"
     "gorec/str"
+    "gorec/parser"
 )
 
 type reg struct {
@@ -38,6 +38,10 @@ type Var struct {
     Vartype types.Type
 }
 
+func ShowVars() {
+    fmt.Println(vars)
+}
+
 func Get(varname string) *Var {
     for _, v := range vars {
         if v.Name == varname {
@@ -48,8 +52,22 @@ func Get(varname string) *Var {
     return nil
 }
 
-func Declare(v Var) {
-    switch v.Vartype {
+func Declare(op *prs.Op) {
+    if op.Type != prs.OP_DEC_VAR {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_DEC_VAR\n")
+        os.Exit(1)
+    }
+
+    if len(op.Operants) != 2 {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_DEC_VAR) should have 2 operants\n")
+        os.Exit(1)
+    }
+
+    varname := op.Operants[0]
+    vartype := types.ToType(op.Operants[1])
+    v := Var{ Name: varname, Vartype: vartype }
+
+    switch vartype {
     case types.Str:
         if availReg + 1 >= maxRegs {
             fmt.Fprintf(os.Stderr, "[ERROR] not enough registers left for var \"%s\"(string)", v.Name)
@@ -67,6 +85,7 @@ func Declare(v Var) {
         }
 
         v.Regs = []int{ availReg }
+
         vars = append(vars, v)
         availReg++
     default:
@@ -75,8 +94,26 @@ func Declare(v Var) {
     }
 }
 
-func Define(isLit bool, v Var, value string) {
-    if isLit {
+func Define(op *prs.Op) {
+    if op.Type != prs.OP_DEF_VAR {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_DEF_VAR\n")
+        os.Exit(1)
+    }
+
+    if len(op.Operants) != 2 {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_DEF_VAR) should have 2 operants\n")
+        os.Exit(1)
+    }
+
+    v := Get(op.Operants[0])
+    value := op.Operants[1]
+
+    if v == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_DEF_VAR) var \"%s\" is not declared\n", op.Operants[0])
+        os.Exit(1)
+    }
+
+    if IsLit(value) {
         switch v.Vartype {
         case types.Str:
             if len(v.Regs) != 2 {
@@ -89,8 +126,7 @@ func Define(isLit bool, v Var, value string) {
             globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %d\n", Registers[v.Regs[1]].Name, str.GetSize(strIdx)))
 
         case types.I32:
-            i, _ := strconv.Atoi(value)
-            globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %d\n", Registers[v.Regs[0]].Name, i))
+            globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[0]].Name, value))
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name)
