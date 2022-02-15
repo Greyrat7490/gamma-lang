@@ -16,7 +16,21 @@ import (
 // - str -> r9 = addr, r10 = size
 // TODO: C calling convention
 
-func Get(funcName string) *fnHead {
+var funcs []fnHead
+var curFunc int = -1
+
+
+type fnHead struct {
+    name string
+    args []arg
+}
+
+type arg struct {
+    name string
+    argType types.Type
+}
+
+func GetFn(funcName string) *fnHead {
     for _, f := range funcs {
         if f.name == funcName {
             return &f
@@ -26,54 +40,65 @@ func Get(funcName string) *fnHead {
     return nil
 }
 
+
 func Define(asm *os.File, op *prs.Op) {
-    f := get(op.Operants[0])
-    if f == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) \"%s\" is not declared\n", op.Operants[0])
-        os.Exit(1)
+    var f fnHead = fnHead{
+        name: op.Operants[0],
     }
+    curFunc = len(funcs)
+    funcs = append(funcs, f)
 
     asm.WriteString(op.Operants[0] + ":\n")
 }
 
-func End(asm *os.File, op *prs.Op) {
-    for _, a := range op.Operants {
-        vars.Remove(a)
-    }
+func End(asm *os.File) {
+    f := funcs[curFunc]
 
+    // TODO: later local variables
+    for _, a := range f.args {
+        vars.Remove(a.name)
+    }
     curFunc = -1
 
     asm.WriteString("ret\n\n")
 }
 
-func get(funcName string) *fnHead {
-    for _, f := range funcs {
-        if f.name == funcName {
-            return &f
-        }
+func CallFunc(asm *os.File, op *prs.Op) {
+    f := GetFn(op.Operants[0])
+    if f == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] undeclared name \"%s\"\n", op.Token.Str)
+        fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
+        os.Exit(1)
     }
 
-    return nil
-}
-func CallFunc(asm *os.File, op *prs.Op) {
-    f := get(op.Operants[0])
-
-    asm.WriteString("call " + f.name + "\n")
+    asm.WriteString("call " + op.Operants[0] + "\n")
 }
 
 func DeclareArgs(op *prs.Op) {
-    isType := false
-    var vartype types.Type
-    var name string
+    if curFunc == -1 {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) CurFunc should be set")
+        os.Exit(1)
+    }
 
-    for _, a := range op.Operants {
-        if isType {
-            isType = false
+    f := &funcs[curFunc]
+
+    name := ""
+    for _, o := range op.Operants {
+        if name == "" {
+            name = o
+        } else {
+            if t := types.ToType(o); t != -1 {
+                f.args = append(f.args, arg{ name: name, argType: t })
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] unknown type \"%s\"\n", o)
+                os.Exit(1)
+            }
 
             // see calling convention
             // 5 = r9, 6 = r10
             var regs []int
-            switch a {
+            var vartype types.Type
+            switch o {
             case "str":
                 regs = []int { 5, 6 }
                 vartype = types.Str
@@ -83,28 +108,36 @@ func DeclareArgs(op *prs.Op) {
                 vartype = types.I32
 
             default:
-                fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) unknown type \"%s\"", a)
+                fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) unknown type \"%s\"", o)
                 os.Exit(1)
             }
 
             vars.Add(vars.Var{Name: name, Regs: regs, Vartype: vartype})
-        } else {
-            isType = true
-            name = a
+
+            name = ""
         }
+    }
+
+    if len(f.args) > 1 {
+        fmt.Fprintln(os.Stderr, "[ERROR] functions only accept one argument max at the moment")
+        os.Exit(1)
     }
 }
 
 func DefineArgs(asm *os.File, op *prs.Op) {
-    f := get(op.Operants[0])
+    f := GetFn(op.Operants[0])
 
-    for i, val := range op.Operants[1:] {
-        // TODO: check type of arg
-        if otherVar := vars.Get(val); otherVar != nil {
+    if f == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", op.Operants[0])
+        os.Exit(1)
+    }
+
+    for i, val := range op.Operants[1:] {       
+        if otherVar := vars.GetVar(val); otherVar != nil {
             if otherVar.Vartype != f.args[i].argType {
                 fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
                     f.name, i, f.args[i].argType.Readable(), otherVar.Vartype.Readable())
-                fmt.Fprintln(os.Stderr, "\t" + f.At())
+                fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
                 os.Exit(1)
             }
 
@@ -122,11 +155,20 @@ func DefineArgs(asm *os.File, op *prs.Op) {
                 asm.WriteString(fmt.Sprintf("mov r9, %s\n", vars.Registers[otherVar.Regs[0]].Name))
 
             default:
-                fmt.Fprintln(os.Stderr, "[ERROR] (unreachable) function.go defineArgs()")
+                fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", otherVar.Name)
                 os.Exit(1)
             }
         } else {
-            switch types.TypeOfVal(val) {
+            t := types.TypeOfVal(val)
+            
+            if t != f.args[i].argType {
+                fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
+                    f.name, i, f.args[i].argType.Readable(), t.Readable())
+                fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
+                os.Exit(1)
+            }
+
+            switch t {
             case types.Str:
                 strIdx := str.Add(val)
                 asm.WriteString(fmt.Sprintf("mov r9, str%d\n", strIdx))
@@ -137,30 +179,13 @@ func DefineArgs(asm *os.File, op *prs.Op) {
                 asm.WriteString(fmt.Sprintf("mov r9, %d\n", i))
 
             default:
-                fmt.Fprintln(os.Stderr, "[ERROR] (unreachable) function.go defineArgs()")
+                fmt.Fprintf(os.Stderr, "[ERROR] could not get type of value \"%s\"\n", val)
                 os.Exit(1)
             }
         }
     }
 }
 
-func Add(f *fnHead) {
-    funcs = append(funcs, *f)
-}
-
 func AddBuildIn(name string, argname string, argtype types.Type) {
     funcs = append(funcs, fnHead{name: name, args: []arg{{name: argname, argType: argtype}}})
-}
-
-func Checks() {
-    if !isMainDefined {
-        fmt.Fprintln(os.Stderr, "[ERROR] no \"main\" function was defined")
-        os.Exit(1)
-    }
-
-    if curFunc != -1 {
-        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" was not closed (missing \"}\")\n", funcs[curFunc].name)
-        fmt.Fprintln(os.Stderr, "\t" + funcs[curFunc].At())
-        os.Exit(1)
-    }
 }

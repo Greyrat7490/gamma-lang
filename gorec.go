@@ -40,7 +40,7 @@ func nasm_footer(asm *os.File) {
     asm.WriteString("intBuf:\n\tresb 12") // int(32bit) -> 10 digits max + \n and sign -> 12 char string max
 }
 
-func compile(srcFile []byte) {
+func compile() {
     asm, err := os.Create("output.asm")
     if err != nil {
         fmt.Fprintln(os.Stderr, "[ERROR] could not create \"output.asm\"")
@@ -48,42 +48,9 @@ func compile(srcFile []byte) {
     }
     defer asm.Close()
 
-    prs.Split(string(srcFile))
-
     nasm_header(asm)
 
     sys.DefineBuildIns(asm)
-
-    for i := 0; i < len(prs.Tokens); i++ {
-        switch prs.Tokens[i].Str {
-        case "var":
-            i = vars.ParseDeclare(prs.Tokens, i)
-        case ":=":
-            i = vars.ParseDefine(prs.Tokens, i)
-        case "fn":
-            i = fn.ParseDefine(prs.Tokens, i)
-        case "printInt":
-            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
-            fmt.Fprintln(os.Stderr, "\t" + prs.Tokens[i].At())
-            os.Exit(1)
-        case "printStr":
-            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
-            fmt.Fprintln(os.Stderr, "\t" + prs.Tokens[i].At())
-            os.Exit(1)
-        case "exit":
-            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
-            fmt.Fprintln(os.Stderr, "\t" + prs.Tokens[i].At())
-            os.Exit(1)
-        default:
-            fmt.Fprintf(os.Stderr, "[ERROR] unknown word \"%s\"\n", prs.Tokens[i].Str)
-            fmt.Fprintln(os.Stderr, "\t" + prs.Tokens[i].At())
-            os.Exit(1)
-        }
-    }
-
-    prs.ShowOps()
-
-    fn.Checks()
 
     for _, o := range prs.Ops {
         switch o.Type {
@@ -96,7 +63,7 @@ func compile(srcFile []byte) {
         case prs.OP_DEF_FN:
             fn.Define(asm, &o)
         case prs.OP_END_FN:
-            fn.End(asm, &o)
+            fn.End(asm)
         case prs.OP_DEC_ARGS:
             fn.DeclareArgs(&o)
         case prs.OP_DEF_ARGS:
@@ -148,7 +115,8 @@ func main() {
     }
 
     // TODO: type checking step
-    compile(src)
+    prs.Tokenize(src)
+    compile()
     // TODO: optimization step
 
     genExe()

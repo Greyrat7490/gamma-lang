@@ -3,6 +3,7 @@ package vars
 import (
     "fmt"
     "os"
+    "strconv"
     "gorec/types"
     "gorec/str"
     "gorec/parser"
@@ -38,11 +39,25 @@ type Var struct {
     Vartype types.Type
 }
 
-func ShowVars() {
-    fmt.Println(vars)
+func IsLit(w string) bool {
+    if w[0] == '"' && w[len(w) - 1] == '"' {
+        return true
+    }
+
+    if _, err := strconv.Atoi(w); err == nil {
+        return true
+    }
+
+    return false
 }
 
-func Get(varname string) *Var {
+func ShowVars() {
+    for _, v := range vars {
+        fmt.Printf("%s { type:%s regs:%v }\n", v.Name, v.Vartype.Readable(), v.Regs)
+    }
+}
+
+func GetVar(varname string) *Var {
     for _, v := range vars {
         if v.Name == varname {
             return &v
@@ -65,8 +80,15 @@ func Declare(op *prs.Op) {
 
     varname := op.Operants[0]
     vartype := types.ToType(op.Operants[1])
-    v := Var{ Name: varname, Vartype: vartype }
 
+    // maybe implement shadowing later (TODO)
+    if GetVar(varname) != nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] a variable with the name \"%s\" is already declared\n", op.Token.Str)
+        fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
+        os.Exit(1)
+    }
+
+    v := Var{ Name: varname, Vartype: vartype }
     switch vartype {
     case types.Str:
         if availReg + 1 >= maxRegs {
@@ -105,7 +127,7 @@ func Define(op *prs.Op) {
         os.Exit(1)
     }
 
-    v := Get(op.Operants[0])
+    v := GetVar(op.Operants[0])
     value := op.Operants[1]
 
     if v == nil {
@@ -134,7 +156,7 @@ func Define(op *prs.Op) {
         }
     } else {
         // TODO: check if var is defined
-        if otherVar := Get(value); otherVar != nil {
+        if otherVar := GetVar(value); otherVar != nil {
             for ri, r := range otherVar.Regs {
                 globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[ri]].Name, Registers[r].Name))
             }

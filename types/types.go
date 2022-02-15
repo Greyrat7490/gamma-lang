@@ -6,6 +6,7 @@ type Type int
 const (
     I32 Type = iota
     Str Type = iota
+    TypesCount uint = iota
 )
 
 func (t Type) Readable() string {

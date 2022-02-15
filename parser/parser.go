@@ -9,6 +9,7 @@ import (
 var Tokens []Token
 var Ops []Op
 
+var isMainDefined bool = false
 
 type Token struct {
     Str string
@@ -30,9 +31,13 @@ const (
     OP_CALL_FN  OpType = iota
     OP_DEC_ARGS OpType = iota
     OP_DEF_ARGS OpType = iota
+    OP_COUNT      uint = iota
 )
 
 func (o OpType) Readable() string {
+    // compile time reminder to add cases when Operants are added
+    const _ uint = 7 - OP_COUNT
+
     switch o {
     case OP_DEC_VAR:
         return "OP_DEC_VAR"
@@ -145,6 +150,42 @@ func Split(file string) {
 
     if mlSkip {
         fmt.Fprintln(os.Stderr, "you have not terminated your comment (missing \"*/\")")
+        os.Exit(1)
+    }
+}
+
+func Tokenize(src []byte) {
+    Split(string(src))
+
+    for i := 0; i < len(Tokens); i++ {
+        switch Tokens[i].Str {
+        case "var":
+            i = prsDecVar(Tokens, i)
+        case ":=":
+            i = prsDefVar(Tokens, i)
+        case "fn":
+            i = prsDefFn(Tokens, i)
+        case "printInt":
+            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
+            fmt.Fprintln(os.Stderr, "\t" + Tokens[i].At())
+            os.Exit(1)
+        case "printStr":
+            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
+            fmt.Fprintln(os.Stderr, "\t" + Tokens[i].At())
+            os.Exit(1)
+        case "exit":
+            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
+            fmt.Fprintln(os.Stderr, "\t" + Tokens[i].At())
+            os.Exit(1)
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] unknown word \"%s\"\n", Tokens[i].Str)
+            fmt.Fprintln(os.Stderr, "\t" + Tokens[i].At())
+            os.Exit(1)
+        }
+    }
+
+    if !isMainDefined {
+        fmt.Fprintln(os.Stderr, "[ERROR] no \"main\" function was defined")
         os.Exit(1)
     }
 }
