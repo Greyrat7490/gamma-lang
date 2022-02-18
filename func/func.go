@@ -42,6 +42,16 @@ func GetFn(funcName string) *fnHead {
 
 
 func Define(asm *os.File, op *prs.Op) {
+    if op.Type != prs.OP_DEF_FN {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_DEF_FN\n")
+        os.Exit(1)
+    }
+
+    if len(op.Operants) != 1 {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_DEF_FN) should have 1 operant\n")
+        os.Exit(1)
+    }
+
     var f fnHead = fnHead{
         name: op.Operants[0],
     }
@@ -64,6 +74,16 @@ func End(asm *os.File) {
 }
 
 func CallFunc(asm *os.File, op *prs.Op) {
+    if op.Type != prs.OP_CALL_FN {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_CALL_FN\n")
+        os.Exit(1)
+    }
+
+    if len(op.Operants) != 1 {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_CALL_FN) should have 1 operant\n")
+        os.Exit(1)
+    }
+
     f := GetFn(op.Operants[0])
     if f == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] undeclared name \"%s\"\n", op.Token.Str)
@@ -75,6 +95,11 @@ func CallFunc(asm *os.File, op *prs.Op) {
 }
 
 func DeclareArgs(op *prs.Op) {
+    if op.Type != prs.OP_DEC_ARGS {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_DEC_ARGS\n")
+        os.Exit(1)
+    }
+
     if curFunc == -1 {
         fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) CurFunc should be set")
         os.Exit(1)
@@ -98,6 +123,8 @@ func DeclareArgs(op *prs.Op) {
             // 5 = r9, 6 = r10
             var regs []int
             var vartype types.Type
+
+            const _ uint = 2 - types.TypesCount
             switch o {
             case "str":
                 regs = []int { 5, 6 }
@@ -125,64 +152,74 @@ func DeclareArgs(op *prs.Op) {
 }
 
 func DefineArgs(asm *os.File, op *prs.Op) {
-    f := GetFn(op.Operants[0])
-
-    if f == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", op.Operants[0])
+    if op.Type != prs.OP_CALL_FN {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_CALL_FN\n")
         os.Exit(1)
     }
 
-    for i, val := range op.Operants[1:] {       
-        if otherVar := vars.GetVar(val); otherVar != nil {
-            if otherVar.Vartype != f.args[i].argType {
-                fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
-                    f.name, i, f.args[i].argType.Readable(), otherVar.Vartype.Readable())
-                fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
-                os.Exit(1)
-            }
+    if len(op.Operants) != 1 {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_CALL_FN) should have 1 operant\n")
+        os.Exit(1)
+    }
 
-            // skip if r9 is already set correct
-            if otherVar.Regs[0] == 5 {
-                return
-            }
+    if f := GetFn(op.Operants[0]); f != nil {
+        for i, val := range op.Operants[1:] {
+            if otherVar := vars.GetVar(val); otherVar != nil {
+                if otherVar.Vartype != f.args[i].argType {
+                    fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
+                        f.name, i, f.args[i].argType.Readable(), otherVar.Vartype.Readable())
+                    fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
+                    os.Exit(1)
+                }
 
-            switch otherVar.Vartype {
-            case types.Str:
-                asm.WriteString(fmt.Sprintf("mov r9, %s\n", vars.Registers[otherVar.Regs[0]].Name))
-                asm.WriteString(fmt.Sprintf("mov r10, %s\n", vars.Registers[otherVar.Regs[1]].Name))
+                // skip if r9 is already set correct
+                if otherVar.Regs[0] == 5 {
+                    return
+                }
 
-            case types.I32:
-                asm.WriteString(fmt.Sprintf("mov r9, %s\n", vars.Registers[otherVar.Regs[0]].Name))
+                const _ uint = 2 - types.TypesCount
+                switch otherVar.Vartype {
+                case types.Str:
+                    asm.WriteString(fmt.Sprintf("mov r9, %s\n", vars.Registers[otherVar.Regs[0]].Name))
+                    asm.WriteString(fmt.Sprintf("mov r10, %s\n", vars.Registers[otherVar.Regs[1]].Name))
 
-            default:
-                fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", otherVar.Name)
-                os.Exit(1)
-            }
-        } else {
-            t := types.TypeOfVal(val)
-            
-            if t != f.args[i].argType {
-                fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
-                    f.name, i, f.args[i].argType.Readable(), t.Readable())
-                fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
-                os.Exit(1)
-            }
+                case types.I32:
+                    asm.WriteString(fmt.Sprintf("mov r9, %s\n", vars.Registers[otherVar.Regs[0]].Name))
 
-            switch t {
-            case types.Str:
-                strIdx := str.Add(val)
-                asm.WriteString(fmt.Sprintf("mov r9, str%d\n", strIdx))
-                asm.WriteString(fmt.Sprintf("mov r10, %d\n", str.GetSize(strIdx)))
+                default:
+                    fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", otherVar.Name)
+                    os.Exit(1)
+                }
+            } else {
+                t := types.TypeOfVal(val)
 
-            case types.I32:
-                i, _ := strconv.Atoi(val)
-                asm.WriteString(fmt.Sprintf("mov r9, %d\n", i))
+                if t != f.args[i].argType {
+                    fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
+                        f.name, i, f.args[i].argType.Readable(), t.Readable())
+                    fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
+                    os.Exit(1)
+                }
 
-            default:
-                fmt.Fprintf(os.Stderr, "[ERROR] could not get type of value \"%s\"\n", val)
-                os.Exit(1)
+                const _ uint = 2 - types.TypesCount
+                switch t {
+                case types.Str:
+                    strIdx := str.Add(val)
+                    asm.WriteString(fmt.Sprintf("mov r9, str%d\n", strIdx))
+                    asm.WriteString(fmt.Sprintf("mov r10, %d\n", str.GetSize(strIdx)))
+
+                case types.I32:
+                    i, _ := strconv.Atoi(val)
+                    asm.WriteString(fmt.Sprintf("mov r9, %d\n", i))
+
+                default:
+                    fmt.Fprintf(os.Stderr, "[ERROR] could not get type of value \"%s\"\n", val)
+                    os.Exit(1)
+                }
             }
         }
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", op.Operants[0])
+        os.Exit(1)
     }
 }
 

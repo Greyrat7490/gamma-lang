@@ -10,6 +10,9 @@ const (
 )
 
 func (t Type) Readable() string {
+    // compile time reminder to add cases when Types are added
+    const _ uint = 2 - TypesCount
+
     switch t {
     case Str:
         return "str"
@@ -22,6 +25,8 @@ func (t Type) Readable() string {
 
 // -1 if string does not contain a valid type
 func ToType(s string) Type {
+    const _ uint = 2 - TypesCount
+
     switch s {
     case "str":
         return Str

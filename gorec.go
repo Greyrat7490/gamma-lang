@@ -53,6 +53,8 @@ func compile() {
     sys.DefineBuildIns(asm)
 
     for _, o := range prs.Ops {
+        const _ uint = 7 - prs.OP_COUNT
+
         switch o.Type {
         case prs.OP_DEF_VAR:
             vars.Define(&o)
@@ -69,8 +71,7 @@ func compile() {
         case prs.OP_DEF_ARGS:
             fn.DefineArgs(asm, &o)
         default:
-            fmt.Println(o.Type)
-            fmt.Fprintln(os.Stderr, "TODO")
+            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) \"%s\" has an unknown operante type\n", o.Token.Str)
             os.Exit(1)
         }
     }

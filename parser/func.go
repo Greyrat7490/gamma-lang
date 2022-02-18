@@ -51,7 +51,7 @@ func prsDecArgs(words []Token, idx int) int {
         os.Exit(1)
     }
 
-    var op Op = Op{ Type: OP_DEC_ARGS, Token: words[idx] }
+    var op Op = Op{ Type: OP_DEC_ARGS, Token: words[idx+3] }
 
     b := false
     for _, w := range words[idx+3:] {
@@ -98,7 +98,7 @@ func prsCallFn(words []Token, idx int) int {
 }
 
 func prsDefArgs(words []Token, idx int) int {
-    var op Op = Op{ Type: OP_DEF_ARGS, Token: words[idx], Operants: []string{ words[idx].Str } }
+    var op Op = Op{ Type: OP_DEF_ARGS, Token: words[idx+2], Operants: []string{ words[idx].Str } }
 
     b := false
     for _, w := range words[idx+2:] {

@@ -42,7 +42,7 @@ func prsDefVar(words []Token, idx int) int {
     value := words[idx+1].Str
     v := words[idx-2].Str
 
-    op := Op{ Type: OP_DEF_VAR, Token: words[idx], Operants: []string{ v, value } }
+    op := Op{ Type: OP_DEF_VAR, Token: words[idx-2], Operants: []string{ v, value } }
     Ops = append(Ops, op)
 
     return idx + 1

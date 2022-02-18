@@ -6,10 +6,10 @@ import (
     "os"
 )
 
-var Tokens []Token
 var Ops []Op
-
+var tokens []Token
 var isMainDefined bool = false
+
 
 type Token struct {
     Str string
@@ -74,8 +74,36 @@ func ShowOps() {
     }
 }
 
+func Tokenize(src []byte) {
+    split(string(src))
+
+    for i := 0; i < len(tokens); i++ {
+        switch tokens[i].Str {
+        case "var":
+            i = prsDecVar(tokens, i)
+        case ":=":
+            i = prsDefVar(tokens, i)
+        case "fn":
+            i = prsDefFn(tokens, i)
+        case "printInt", "printStr", "exit":
+            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
+            fmt.Fprintln(os.Stderr, "\t" + tokens[i].At())
+            os.Exit(1)
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] unknown word \"%s\"\n", tokens[i].Str)
+            fmt.Fprintln(os.Stderr, "\t" + tokens[i].At())
+            os.Exit(1)
+        }
+    }
+
+    if !isMainDefined {
+        fmt.Fprintln(os.Stderr, "[ERROR] no \"main\" function was defined")
+        os.Exit(1)
+    }
+}
+
 // escape chars (TODO: \n, \t, \r, ...) (done: \\, \")
-func Split(file string) {
+func split(file string) {
     start := 0
 
     line := 1
@@ -130,12 +158,12 @@ func Split(file string) {
             // split
             } else if unicode.IsSpace(r) || r == '(' || r == ')' || r == '{' || r == '}' {
                 if start != i {
-                    Tokens = append(Tokens, Token{file[start:i], line, col + start - i})
+                    tokens = append(tokens, Token{file[start:i], line, col + start - i})
                 }
                 start = i + 1
 
                 if r == '(' || r == ')' || r == '{' || r == '}' {
-                    Tokens = append(Tokens, Token{string(r), line, col - 1})
+                    tokens = append(tokens, Token{string(r), line, col - 1})
                 }
             }
         }
@@ -150,42 +178,6 @@ func Split(file string) {
 
     if mlSkip {
         fmt.Fprintln(os.Stderr, "you have not terminated your comment (missing \"*/\")")
-        os.Exit(1)
-    }
-}
-
-func Tokenize(src []byte) {
-    Split(string(src))
-
-    for i := 0; i < len(Tokens); i++ {
-        switch Tokens[i].Str {
-        case "var":
-            i = prsDecVar(Tokens, i)
-        case ":=":
-            i = prsDefVar(Tokens, i)
-        case "fn":
-            i = prsDefFn(Tokens, i)
-        case "printInt":
-            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
-            fmt.Fprintln(os.Stderr, "\t" + Tokens[i].At())
-            os.Exit(1)
-        case "printStr":
-            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
-            fmt.Fprintln(os.Stderr, "\t" + Tokens[i].At())
-            os.Exit(1)
-        case "exit":
-            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
-            fmt.Fprintln(os.Stderr, "\t" + Tokens[i].At())
-            os.Exit(1)
-        default:
-            fmt.Fprintf(os.Stderr, "[ERROR] unknown word \"%s\"\n", Tokens[i].Str)
-            fmt.Fprintln(os.Stderr, "\t" + Tokens[i].At())
-            os.Exit(1)
-        }
-    }
-
-    if !isMainDefined {
-        fmt.Fprintln(os.Stderr, "[ERROR] no \"main\" function was defined")
         os.Exit(1)
     }
 }

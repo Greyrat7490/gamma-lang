@@ -9,11 +9,11 @@ import (
     "gorec/parser"
 )
 
-type reg struct {
-    Name string
-    isAddr bool
-    value int      // either an actual value or an address(index)
-}
+const maxRegs int = 5
+var availReg int = 0
+
+var vars []Var
+var globalDefs []string
 
 // TODO: register allocator for variables
 var Registers []reg = []reg {
@@ -27,11 +27,12 @@ var Registers []reg = []reg {
     {Name: "r11"},
 }
 
-const maxRegs int = 5
-var availReg int = 0
 
-var vars []Var
-var globalDefs []string
+type reg struct {
+    Name string
+    isAddr bool
+    value int      // either an actual value or an address(index)
+}
 
 type Var struct {
     Name string
@@ -89,6 +90,8 @@ func Declare(op *prs.Op) {
     }
 
     v := Var{ Name: varname, Vartype: vartype }
+
+    const _ uint = 2 - types.TypesCount
     switch vartype {
     case types.Str:
         if availReg + 1 >= maxRegs {
@@ -136,6 +139,7 @@ func Define(op *prs.Op) {
     }
 
     if IsLit(value) {
+        const _ uint = 2 - types.TypesCount
         switch v.Vartype {
         case types.Str:
             if len(v.Regs) != 2 {
