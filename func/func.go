@@ -157,8 +157,8 @@ func DefineArgs(asm *os.File, op *prs.Op) {
         os.Exit(1)
     }
 
-    if len(op.Operants) != 1 {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_DEF_ARGS) should have 1 operant\n")
+    if len(op.Operants) < 1 {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_DEF_ARGS) should have 1 or more operants\n")
         os.Exit(1)
     }
 
