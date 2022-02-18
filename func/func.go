@@ -152,13 +152,13 @@ func DeclareArgs(op *prs.Op) {
 }
 
 func DefineArgs(asm *os.File, op *prs.Op) {
-    if op.Type != prs.OP_CALL_FN {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_CALL_FN\n")
+    if op.Type != prs.OP_DEF_ARGS {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_DEF_ARGS\n")
         os.Exit(1)
     }
 
     if len(op.Operants) != 1 {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_CALL_FN) should have 1 operant\n")
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_DEF_ARGS) should have 1 operant\n")
         os.Exit(1)
     }
 
