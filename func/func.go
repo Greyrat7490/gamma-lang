@@ -190,7 +190,7 @@ func DefineArgs(asm *os.File, op *prs.Op) {
                     fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", otherVar.Name)
                     os.Exit(1)
                 }
-            } else {
+            } else if prs.IsLit(val) {
                 t := types.TypeOfVal(val)
 
                 if t != f.args[i].argType {
@@ -215,6 +215,10 @@ func DefineArgs(asm *os.File, op *prs.Op) {
                     fmt.Fprintf(os.Stderr, "[ERROR] could not get type of value \"%s\"\n", val)
                     os.Exit(1)
                 }
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", val)
+                fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
+                os.Exit(1)
             }
         }
     } else {
