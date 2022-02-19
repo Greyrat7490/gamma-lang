@@ -41,8 +41,24 @@ func prsDefVar(words []Token, idx int) int {
 
     value := words[idx+1].Str
     v := words[idx-2].Str
+    t := words[idx-2]
 
-    op := Op{ Type: OP_DEF_VAR, Token: words[idx-2], Operants: []string{ v, value } }
+    // process sign
+    if value == "+" || value == "-" {
+        if IsLit(words[idx+2].Str) {
+            value += words[idx+2].Str
+        } else {
+            if value == "+" {
+                value = words[idx+2].Str
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] negating a variable is not yet supported\n")
+                os.Exit(1)
+            }
+        }
+        idx++
+    }
+
+    op := Op{ Type: OP_DEF_VAR, Token: t, Operants: []string{ v, value } }
     Ops = append(Ops, op)
 
     return idx + 1

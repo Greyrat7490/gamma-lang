@@ -3,7 +3,6 @@ package vars
 import (
     "fmt"
     "os"
-    "strconv"
     "gorec/types"
     "gorec/str"
     "gorec/parser"
@@ -38,18 +37,6 @@ type Var struct {
     Name string
     Regs []int
     Vartype types.Type
-}
-
-func IsLit(w string) bool {
-    if w[0] == '"' && w[len(w) - 1] == '"' {
-        return true
-    }
-
-    if _, err := strconv.Atoi(w); err == nil {
-        return true
-    }
-
-    return false
 }
 
 func ShowVars() {
@@ -95,7 +82,7 @@ func Declare(op *prs.Op) {
     switch vartype {
     case types.Str:
         if availReg + 1 >= maxRegs {
-            fmt.Fprintf(os.Stderr, "[ERROR] not enough registers left for var \"%s\"(string)", v.Name)
+            fmt.Fprintf(os.Stderr, "[ERROR] not enough registers left for var \"%s\"(string)\n", v.Name)
             os.Exit(1)
         }
 
@@ -105,7 +92,7 @@ func Declare(op *prs.Op) {
         availReg += 2
     case types.I32:
         if availReg >= maxRegs {
-            fmt.Fprintf(os.Stderr, "[ERROR] not enough registers left for var \"%s\"(i32)", v.Name)
+            fmt.Fprintf(os.Stderr, "[ERROR] not enough registers left for var \"%s\"(i32)\n", v.Name)
             os.Exit(1)
         }
 
@@ -138,7 +125,7 @@ func Define(op *prs.Op) {
         os.Exit(1)
     }
 
-    if IsLit(value) {
+    if prs.IsLit(value) {
         const _ uint = 2 - types.TypesCount
         switch v.Vartype {
         case types.Str:

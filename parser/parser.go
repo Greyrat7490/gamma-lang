@@ -5,6 +5,7 @@ import (
     "os"
     "strings"
     "unicode"
+    "strconv"
 )
 
 var Ops []Op
@@ -85,6 +86,18 @@ func ShowOps() {
     for i, o := range Ops {
         fmt.Printf("%d: %s\n", i, o.Readable())
     }
+}
+
+func IsLit(w string) bool {
+    if w[0] == '"' && w[len(w) - 1] == '"' {
+        return true
+    }
+
+    if _, err := strconv.Atoi(w); err == nil {
+        return true
+    }
+
+    return false
 }
 
 func Tokenize(src []byte) {
