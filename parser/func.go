@@ -21,6 +21,14 @@ func prsDefFn(words []Token, idx int) int {
             idx = prsDecVar(words, idx)
         case ":=":
             idx = prsDefVar(words, idx)
+        case "+":
+            idx = prsAdd(tokens, idx)
+        case "-":
+            idx = prsSub(tokens, idx)
+        case "*":
+            idx = prsMul(tokens, idx)
+        case "/":
+            idx = prsDiv(tokens, idx)
         case "fn":
             fmt.Fprintln(os.Stderr, "[ERROR] you are not allowed to define functions inside a function")
             fmt.Fprintln(os.Stderr, "\t" + words[idx].At())

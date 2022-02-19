@@ -1,22 +1,15 @@
-var v2 i32 := 420
-var v1 str := "test string 3"
-
-fn test1(a1 i32) {
-    printInt(a1)
-    printStr(v1)
-    printInt(v2)
-    printInt(a1) // r9 will be overwritten by the print before (TODO: push and pop if used later)
-}
-
-fn test2(a1 str) {
-    printStr(a1)
-    printStr(v1)
-    printInt(v2)
-    printStr(a1) // same here with r9 and r10
-}
+var v1 i32 := 40 + 46
+var v2 i32 := 10 - 96
+var v3 i32 := 42 * 10
+var v4 i32 := 860 / 10
 
 fn main() {
-    test1(-86)
-    printStr("----")
-    test2("test string")
+    var l1 i32 := 86 / 2
+
+    printInt(l1)
+
+    printInt(v1)
+    printInt(v2)
+    printInt(v3)
+    printInt(v4)
 }

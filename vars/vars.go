@@ -13,7 +13,7 @@ const maxRegs int = 5
 var availReg int = 0
 
 var vars []Var
-var globalDefs []string
+var globalScope []string
 
 // TODO: register allocator for variables
 var Registers []reg = []reg {
@@ -148,11 +148,11 @@ func Define(op *prs.Op) {
             }
 
             strIdx := str.Add(value)
-            globalDefs = append(globalDefs, fmt.Sprintf("mov %s, str%d\n", Registers[v.Regs[0]].Name, strIdx))
-            globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %d\n", Registers[v.Regs[1]].Name, str.GetSize(strIdx)))
+            AddToGlobalScope(fmt.Sprintf("mov %s, str%d\n", Registers[v.Regs[0]].Name, strIdx))
+            AddToGlobalScope(fmt.Sprintf("mov %s, %d\n", Registers[v.Regs[1]].Name, str.GetSize(strIdx)))
 
         case types.I32:
-            globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[0]].Name, value))
+            AddToGlobalScope(fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[0]].Name, value))
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name)
@@ -162,7 +162,7 @@ func Define(op *prs.Op) {
         // TODO: check if var is defined
         if otherVar := GetVar(value); otherVar != nil {
             for ri, r := range otherVar.Regs {
-                globalDefs = append(globalDefs, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[ri]].Name, Registers[r].Name))
+                AddToGlobalScope(fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[ri]].Name, Registers[r].Name))
             }
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", value)
@@ -190,8 +190,12 @@ func Remove(varname string) {
     }
 }
 
-func WriteGlobalVars(asm *os.File) {
-    for _, s := range globalDefs {
+func AddToGlobalScope(s string) {
+    globalScope = append(globalScope, s)
+}
+
+func WriteGlobalScope(asm *os.File) {
+    for _, s := range globalScope {
         asm.WriteString(s)
     }
 }

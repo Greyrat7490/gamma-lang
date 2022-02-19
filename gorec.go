@@ -2,15 +2,16 @@ package main
 
 import (
     "fmt"
+    "gorec/arithmetic"
+    "gorec/func"
+    "gorec/parser"
+    "gorec/str"
+    "gorec/syscall"
+    "gorec/vars"
     "io/ioutil"
     "os"
     "os/exec"
     "strings"
-    "gorec/func"
-    "gorec/parser"
-    "gorec/syscall"
-    "gorec/vars"
-    "gorec/str"
 )
 
 
@@ -25,7 +26,7 @@ func nasm_footer(asm *os.File) {
     asm.WriteString("mov rsp, stack_top\n")
     asm.WriteString("mov byte [intBuf + 11], 0xa\n\n")
 
-    vars.WriteGlobalVars(asm)
+    vars.WriteGlobalScope(asm)
 
     asm.WriteString("call main\n")
 
@@ -53,7 +54,7 @@ func compile() {
     sys.DefineBuildIns(asm)
 
     for _, o := range prs.Ops {
-        const _ uint = 7 - prs.OP_COUNT
+        const _ uint = 11 - prs.OP_COUNT
 
         switch o.Type {
         case prs.OP_DEF_VAR:
@@ -70,6 +71,14 @@ func compile() {
             fn.DeclareArgs(&o)
         case prs.OP_DEF_ARGS:
             fn.DefineArgs(asm, &o)
+        case prs.OP_ADD:
+            arithmetic.Add(&o)
+        case prs.OP_SUB:
+            arithmetic.Sub(&o)
+        case prs.OP_MUL:
+            arithmetic.Mul(&o)
+        case prs.OP_DIV:
+            arithmetic.Div(&o)
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) \"%s\" has an unknown operante type\n", o.Token.Str)
             os.Exit(1)
@@ -117,6 +126,7 @@ func main() {
 
     // TODO: type checking step
     prs.Tokenize(src)
+    // prs.ShowOps()
     compile()
     // TODO: optimization step
 

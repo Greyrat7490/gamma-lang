@@ -2,8 +2,9 @@ package prs
 
 import (
     "fmt"
-    "unicode"
     "os"
+    "strings"
+    "unicode"
 )
 
 var Ops []Op
@@ -25,18 +26,22 @@ func (w Token) At() string {
 type OpType uint
 const (
     OP_DEC_VAR  OpType = iota
-    OP_DEF_VAR  OpType = iota
-    OP_DEF_FN   OpType = iota
-    OP_END_FN   OpType = iota
-    OP_CALL_FN  OpType = iota
-    OP_DEC_ARGS OpType = iota
-    OP_DEF_ARGS OpType = iota
+    OP_DEF_VAR
+    OP_DEF_FN
+    OP_END_FN
+    OP_CALL_FN
+    OP_DEC_ARGS
+    OP_DEF_ARGS
+    OP_ADD
+    OP_SUB
+    OP_MUL
+    OP_DIV
     OP_COUNT      uint = iota
 )
 
 func (o OpType) Readable() string {
     // compile time reminder to add cases when Operants are added
-    const _ uint = 7 - OP_COUNT
+    const _ uint = 11 - OP_COUNT
 
     switch o {
     case OP_DEC_VAR:
@@ -53,6 +58,14 @@ func (o OpType) Readable() string {
         return "OP_DEC_ARGS"
     case OP_DEF_ARGS:
         return "OP_DEF_ARGS"
+    case OP_ADD:
+        return "OP_ADD"
+    case OP_SUB:
+        return "OP_SUB"
+    case OP_MUL:
+        return "OP_MUL"
+    case OP_DIV:
+        return "OP_DIV"
     default:
         return ""
     }
@@ -85,6 +98,14 @@ func Tokenize(src []byte) {
             i = prsDefVar(tokens, i)
         case "fn":
             i = prsDefFn(tokens, i)
+        case "+":
+            i = prsAdd(tokens, i)
+        case "-":
+            i = prsSub(tokens, i)
+        case "*":
+            i = prsMul(tokens, i)
+        case "/":
+            i = prsDiv(tokens, i)
         case "printInt", "printStr", "exit":
             fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
             fmt.Fprintln(os.Stderr, "\t" + tokens[i].At())
@@ -104,6 +125,8 @@ func Tokenize(src []byte) {
 
 // escape chars (TODO: \n, \t, \r, ...) (done: \\, \")
 func split(file string) {
+    keySigns := "(){}+-*/"
+
     start := 0
 
     line := 1
@@ -156,13 +179,13 @@ func split(file string) {
                 }
 
             // split
-            } else if unicode.IsSpace(r) || r == '(' || r == ')' || r == '{' || r == '}' {
+            } else if unicode.IsSpace(r) || strings.Contains(keySigns, string(r)) {
                 if start != i {
                     tokens = append(tokens, Token{file[start:i], line, col + start - i})
                 }
                 start = i + 1
 
-                if r == '(' || r == ')' || r == '{' || r == '}' {
+                if strings.Contains(keySigns, string(r)) {
                     tokens = append(tokens, Token{string(r), line, col - 1})
                 }
             }
