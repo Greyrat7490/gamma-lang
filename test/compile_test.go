@@ -21,18 +21,20 @@ func record(t *testing.T, name string, stdout string, stderr string) {
 
     err := ioutil.WriteFile(name, output, 0644)
     if err != nil {
-        t.Fatalf("[ERROR] could not record results\n%v", err)
+        t.Fatalf("[ERROR] could not record results\n\t%v\n", err)
     }
 
     fmt.Println("[RECORDED]")
 }
 
-func check(t *testing.T, name string, stdout string, stderr string) {
+func check(name string, stdout string, stderr string) {
     result := stdout + "\n" + stderr
 
     expected, err := ioutil.ReadFile(name)
     if err != nil {
-        t.Fatalf("[ERROR] could not compair with recorded results\n%v", err)
+        fmt.Printf("[ERROR] could not compair with recorded results\n\t%v\n", err)
+        failed = true
+        return
     }
 
     if result != string(expected) {
@@ -115,7 +117,7 @@ func TestCompile(t *testing.T) {
             if rec {
                 record(t, f.Name() + ".rec", stdoutStr, stderrStr)
             } else {
-                check(t, f.Name() + ".rec", stdoutStr, stderrStr)
+                check(f.Name() + ".rec", stdoutStr, stderrStr)
             }
 
             if keepAsm {
