@@ -1,0 +1,53 @@
+var v1 i32 := 40 + 46
+
+fn test1() {
+    printStr("global var")
+    printStr("40 + 46")
+    printInt(v1)
+
+    printStr("+ 10")
+    v1 = v1 + 10
+    printInt(v1)
+
+    printStr("- 10")
+    v1 = v1 - 10
+    printInt(v1)
+
+    printStr("* 2")
+    v1 = v1 * 2
+    printInt(v1)
+
+    printStr("/ 2")
+    v1 = v1 / 2
+    printInt(v1)
+}
+
+fn test2() {
+    var l1 i32 := 40 + 46
+
+    printStr("\"local\" var")
+    printStr("40 + 46")
+    printInt(l1)
+
+    printStr("+ 10")
+    l1 = l1 + 10
+    printInt(l1)
+
+    printStr("- 10")
+    l1 = l1 - 10
+    printInt(l1)
+
+    printStr("* 2")
+    l1 = l1 * 2
+    printInt(l1)
+
+    printStr("/ 2")
+    l1 = l1 / 2
+    printInt(l1)
+}
+
+fn main() {
+    test1()
+    printStr("-------")
+    test2()
+}

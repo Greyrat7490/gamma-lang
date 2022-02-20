@@ -12,22 +12,22 @@ var Ops []Op
 var tokens []Token
 var isMainDefined bool = false
 
-
 type Token struct {
     Str string
-    Line int
-    Col int
+    line int
+    col int
     // later filename
 }
 
 func (w Token) At() string {
-    return fmt.Sprintf("at line: %d, col: %d", w.Line, w.Col)
+    return fmt.Sprintf("at line: %d, col: %d", w.line, w.col)
 }
 
 type OpType uint
 const (
     OP_DEC_VAR  OpType = iota
     OP_DEF_VAR
+    OP_ASSIGN_VAR
     OP_DEF_FN
     OP_END_FN
     OP_CALL_FN
@@ -42,13 +42,15 @@ const (
 
 func (o OpType) Readable() string {
     // compile time reminder to add cases when Operants are added
-    const _ uint = 11 - OP_COUNT
+    const _ uint = 12 - OP_COUNT
 
     switch o {
     case OP_DEC_VAR:
         return "OP_DEC_VAR"
     case OP_DEF_VAR:
         return "OP_DEF_VAR"
+    case OP_ASSIGN_VAR:
+        return "OP_ASSIGN_VAR"
     case OP_DEF_FN:
         return "OP_DEF_FN"
     case OP_END_FN:

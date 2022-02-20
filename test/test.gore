@@ -1,14 +1,21 @@
 var v1 i32 := 40 + 46
-var v2 i32 := 42 * 10
-var v3 i32 := 860 / 10
 
 fn main() {
-    var l1 i32 := +v3
-    var l2 i32 := -86
-
-    printInt(l2)
-
     printInt(v1)
-    printInt(v2)
-    printInt(v3)
+
+    printStr("+ 10")
+    v1 = v1 + 10
+    printInt(v1)
+
+    printStr("- 10")
+    v1 = v1 - 10
+    printInt(v1)
+
+    printStr("* 2")
+    v1 = v1 * 2
+    printInt(v1)
+
+    printStr("/ 2")
+    v1 = v1 / 2
+    printInt(v1)
 }

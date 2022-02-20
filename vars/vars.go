@@ -11,6 +11,8 @@ import (
 const maxRegs int = 5
 var availReg int = 0
 
+var IsGlobalScope bool = true
+
 var vars []Var
 var globalScope []string
 
@@ -106,7 +108,7 @@ func Declare(op *prs.Op) {
     }
 }
 
-func Define(op *prs.Op) {
+func Define(asm *os.File, op *prs.Op) {
     if op.Type != prs.OP_DEF_VAR {
         fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_DEF_VAR\n")
         os.Exit(1)
@@ -125,6 +127,12 @@ func Define(op *prs.Op) {
         os.Exit(1)
     }
 
+    if v.Name == value {
+        fmt.Fprintln(os.Stderr, "[ERROR] cannot define a variable with itself")
+        fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
+        os.Exit(1)
+    }
+
     if prs.IsLit(value) {
         const _ uint = 2 - types.TypesCount
         switch v.Vartype {
@@ -135,11 +143,11 @@ func Define(op *prs.Op) {
             }
 
             strIdx := str.Add(value)
-            AddToGlobalScope(fmt.Sprintf("mov %s, str%d\n", Registers[v.Regs[0]].Name, strIdx))
-            AddToGlobalScope(fmt.Sprintf("mov %s, %d\n", Registers[v.Regs[1]].Name, str.GetSize(strIdx)))
+            WriteVar(asm, fmt.Sprintf("mov %s, str%d\n", Registers[v.Regs[0]].Name, strIdx))
+            WriteVar(asm, fmt.Sprintf("mov %s, %d\n", Registers[v.Regs[1]].Name, str.GetSize(strIdx)))
 
         case types.I32:
-            AddToGlobalScope(fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[0]].Name, value))
+            WriteVar(asm, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[0]].Name, value))
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name)
@@ -149,7 +157,64 @@ func Define(op *prs.Op) {
         // TODO: check if var is defined
         if otherVar := GetVar(value); otherVar != nil {
             for ri, r := range otherVar.Regs {
-                AddToGlobalScope(fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[ri]].Name, Registers[r].Name))
+                WriteVar(asm, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[ri]].Name, Registers[r].Name))
+            }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", value)
+            os.Exit(1)
+        }
+    }
+}
+
+func Assign(asm *os.File, op *prs.Op) {
+    if op.Type != prs.OP_ASSIGN_VAR {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_ASSIGN_VAR\n")
+        os.Exit(1)
+    }
+
+    if len(op.Operants) != 2 {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_ASSIGN_VAR) should have 2 operants\n")
+        os.Exit(1)
+    }
+
+    v := GetVar(op.Operants[0])
+    value := op.Operants[1]
+
+    if v == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_ASSIGN_VAR) var \"%s\" is not declared\n", op.Operants[0])
+        os.Exit(1)
+    }
+
+    // skip assigning a variable to itself (redundant)
+    if v.Name == value {
+        return
+    }
+
+    if prs.IsLit(value) {
+        const _ uint = 2 - types.TypesCount
+        switch v.Vartype {
+        case types.Str:
+            if len(v.Regs) != 2 {
+                fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) string variable should use 2 registers\n")
+                os.Exit(1)
+            }
+
+            strIdx := str.Add(value)
+            asm.WriteString(fmt.Sprintf("mov %s, str%d\n", Registers[v.Regs[0]].Name, strIdx))
+            asm.WriteString(fmt.Sprintf("mov %s, %d\n", Registers[v.Regs[1]].Name, str.GetSize(strIdx)))
+
+        case types.I32:
+            asm.WriteString(fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[0]].Name, value))
+
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name)
+            os.Exit(1)
+        }
+    } else {
+        // TODO: check if var is defined
+        if otherVar := GetVar(value); otherVar != nil {
+            for ri, r := range otherVar.Regs {
+                asm.WriteString(fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[ri]].Name, Registers[r].Name))
             }
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", value)
@@ -177,8 +242,12 @@ func Remove(varname string) {
     }
 }
 
-func AddToGlobalScope(s string) {
-    globalScope = append(globalScope, s)
+func WriteVar(asm *os.File, s string) {
+    if IsGlobalScope {
+        globalScope = append(globalScope, s)
+    } else {
+        asm.WriteString(s)
+    }
 }
 
 func WriteGlobalScope(asm *os.File) {

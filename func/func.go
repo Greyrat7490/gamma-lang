@@ -40,7 +40,6 @@ func GetFn(funcName string) *fnHead {
     return nil
 }
 
-
 func Define(asm *os.File, op *prs.Op) {
     if op.Type != prs.OP_DEF_FN {
         fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_DEF_FN\n")
@@ -57,6 +56,7 @@ func Define(asm *os.File, op *prs.Op) {
     }
     curFunc = len(funcs)
     funcs = append(funcs, f)
+    vars.IsGlobalScope = false
 
     asm.WriteString(op.Operants[0] + ":\n")
 }
@@ -69,6 +69,7 @@ func End(asm *os.File) {
         vars.Remove(a.name)
     }
     curFunc = -1
+    vars.IsGlobalScope = true
 
     asm.WriteString("ret\n\n")
 }

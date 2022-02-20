@@ -54,11 +54,13 @@ func compile() {
     sys.DefineBuildIns(asm)
 
     for _, o := range prs.Ops {
-        const _ uint = 11 - prs.OP_COUNT
+        const _ uint = 12 - prs.OP_COUNT
 
         switch o.Type {
         case prs.OP_DEF_VAR:
-            vars.Define(&o)
+            vars.Define(asm, &o)
+        case prs.OP_ASSIGN_VAR:
+            vars.Assign(asm, &o)
         case prs.OP_DEC_VAR:
             vars.Declare(&o)
         case prs.OP_CALL_FN:
@@ -72,13 +74,13 @@ func compile() {
         case prs.OP_DEF_ARGS:
             fn.DefineArgs(asm, &o)
         case prs.OP_ADD:
-            arithmetic.Add(&o)
+            arithmetic.Add(asm, &o)
         case prs.OP_SUB:
-            arithmetic.Sub(&o)
+            arithmetic.Sub(asm, &o)
         case prs.OP_MUL:
-            arithmetic.Mul(&o)
+            arithmetic.Mul(asm, &o)
         case prs.OP_DIV:
-            arithmetic.Div(&o)
+            arithmetic.Div(asm, &o)
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) \"%s\" has an unknown operante type\n", o.Token.Str)
             os.Exit(1)

@@ -5,6 +5,10 @@ import (
     "os"
 )
 
+func isFuncCall(words []Token, idx int) bool {
+    return len(words) < idx + 1 || words[idx+1].Str == "("
+}
+
 func prsDefFn(words []Token, idx int) int {
     if words[idx+1].Str == "main" {
         isMainDefined = true
@@ -21,6 +25,8 @@ func prsDefFn(words []Token, idx int) int {
             idx = prsDecVar(words, idx)
         case ":=":
             idx = prsDefVar(words, idx)
+        case "=":
+            idx = prsAssignVar(words, idx)
         case "+":
             idx = prsAdd(tokens, idx)
         case "-":
@@ -37,7 +43,9 @@ func prsDefFn(words []Token, idx int) int {
             prsEnd(words, idx)
             return idx
         default:
-            idx = prsCallFn(words, idx)
+            if isFuncCall(words, idx) {
+                idx = prsCallFn(words, idx)
+            }
         }
     }
 
@@ -90,13 +98,13 @@ func prsDecArgs(words []Token, idx int) int {
 }
 
 func prsCallFn(words []Token, idx int) int {
-    var op Op = Op{ Type: OP_CALL_FN, Token: words[idx], Operants: []string{ words[idx].Str } }
-
     if len(words) < idx + 1 || words[idx+1].Str != "(" {
         fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
         fmt.Fprintln(os.Stderr, "\t" + words[idx+1].At())
         os.Exit(1)
     }
+
+    var op Op = Op{ Type: OP_CALL_FN, Token: words[idx], Operants: []string{ words[idx].Str } }
 
     idx = prsDefArgs(words, idx)
 

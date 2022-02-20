@@ -63,3 +63,35 @@ func prsDefVar(words []Token, idx int) int {
 
     return idx + 1
 }
+
+func prsAssignVar(words []Token, idx int) int {
+    if len(words) < idx + 1 {
+        fmt.Fprintf(os.Stderr, "[ERROR] no value provided to define the variable\n")
+        fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
+        os.Exit(1)
+    }
+
+    value := words[idx+1].Str
+    v := words[idx-1].Str
+    t := words[idx-1]
+
+    // process sign
+    if value == "+" || value == "-" {
+        if IsLit(words[idx+2].Str) {
+            value += words[idx+2].Str
+        } else {
+            if value == "+" {
+                value = words[idx+2].Str
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] negating a variable is not yet supported\n")
+                os.Exit(1)
+            }
+        }
+        idx++
+    }
+
+    op := Op{ Type: OP_ASSIGN_VAR, Token: t, Operants: []string{ v, value } }
+    Ops = append(Ops, op)
+
+    return idx + 1
+}
