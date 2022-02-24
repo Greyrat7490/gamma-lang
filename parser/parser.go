@@ -84,6 +84,10 @@ func (o Op) Readable() string {
     return fmt.Sprintf("%s %v", o.Type.Readable(), o.Operants)
 }
 
+func isBinaryOp(t OpType) bool {
+    return t >= OP_ADD && t <= OP_DIV
+}
+
 func ShowOps() {
     for i, o := range Ops {
         fmt.Printf("%d: %s\n", i, o.Readable())

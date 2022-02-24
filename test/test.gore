@@ -1,21 +1,21 @@
-var v1 i32 := 40 + 46
+var v1 i32 := 86 - 10
 
 fn main() {
-    printInt(v1)
+   // printInt(40 + 46) // not yet supported (TODO)
 
-    printStr("+ 10")
-    v1 = v1 + 10
-    printInt(v1)
+   printStr("76 + 10")
+   v1 = v1 + 10
+   printInt(v1)
 
-    printStr("- 10")
-    v1 = v1 - 10
-    printInt(v1)
+   printStr("76 + 10 - 20")
+   v1 = 76 + 10 - 20
+   printInt(v1)
 
-    printStr("* 2")
-    v1 = v1 * 2
-    printInt(v1)
+   printStr("76 + 10 - 20 * 10")
+   v1 = 76 + 10 - 20 * 10
+   printInt(v1)
 
-    printStr("/ 2")
-    v1 = v1 / 2
-    printInt(v1)
+   printStr("76 + 10 - 20 * 10 / 2")
+   v1 = 76 + 10 - 20 * 10 / 2
+   printInt(v1)
 }
