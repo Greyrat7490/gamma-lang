@@ -88,7 +88,13 @@ func genExe() {
     cmd.Stderr = &stderr
     err := cmd.Run()
     if err != nil {
-        fmt.Println("[ERROR] ", stderr.String())
+        s := stderr.String()
+        if s == "" {
+            fmt.Fprintf(os.Stderr, "[ERROR] %v\n", err)
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] %v\n", s)
+        }
+        os.Exit(1)
     }
 
     fmt.Println("[INFO] linking object files...")
@@ -97,7 +103,13 @@ func genExe() {
     cmd.Stderr = &stderr
     err = cmd.Run()
     if err != nil {
-        fmt.Println("[ERROR] ", stderr.String())
+        s := stderr.String()
+        if s == "" {
+            fmt.Fprintf(os.Stderr, "[ERROR] %v\n", err)
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] %v\n", s)
+        }
+        os.Exit(1)
     }
 
     fmt.Println("[INFO] generated executable")
@@ -117,6 +129,7 @@ func main() {
 
     // TODO: type checking step
     prs.Tokenize(src)
+    // prs.ShowOps()
     compile()
     // TODO: optimization step
 
