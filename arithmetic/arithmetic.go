@@ -3,9 +3,12 @@ package arithmetic
 import (
     "fmt"
     "gorec/parser"
+    "gorec/types"
     "gorec/vars"
     "os"
 )
+
+// TODO: to one function
 
 func Add(asm *os.File, op *prs.Op) {
     if op.Type != prs.OP_ADD {
@@ -24,7 +27,22 @@ func Add(asm *os.File, op *prs.Op) {
             os.Exit(1)
         }
 
-        vars.WriteVar(asm, fmt.Sprintf("add %s, %s\n", vars.Registers[v.Regs[0]].Name, op.Operants[1]))
+        dest := vars.Registers[v.Regs[0]].Name
+        var val string
+
+        if otherVar := vars.GetVar(op.Operants[1]); otherVar != nil {
+            if otherVar.Vartype != types.I32 {
+                fmt.Fprintf(os.Stderr, "[ERROR] you cannot add I32 and %s (type of %s)\n", otherVar.Vartype.Readable(), otherVar.Name)
+                fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
+                os.Exit(1)
+            }
+
+            val = vars.Registers[otherVar.Regs[0]].Name
+        } else {
+            val = op.Operants[1]
+        }
+
+        vars.WriteVar(asm, fmt.Sprintf("add %s, %s\n", dest, val))
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) variable \"%s\" is not declared\n", op.Operants[0])
         os.Exit(1)
@@ -48,7 +66,22 @@ func Sub(asm *os.File, op *prs.Op) {
             os.Exit(1)
         }
 
-        vars.WriteVar(asm, fmt.Sprintf("sub %s, %s\n", vars.Registers[v.Regs[0]].Name, op.Operants[1]))
+        dest := vars.Registers[v.Regs[0]].Name
+        var val string
+
+        if otherVar := vars.GetVar(op.Operants[1]); otherVar != nil {
+            if otherVar.Vartype != types.I32 {
+                fmt.Fprintf(os.Stderr, "[ERROR] you cannot sub I32 and %s (type of %s)\n", otherVar.Vartype.Readable(), otherVar.Name)
+                fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
+                os.Exit(1)
+            }
+
+            val = vars.Registers[otherVar.Regs[0]].Name
+        } else {
+            val = op.Operants[1]
+        }
+
+        vars.WriteVar(asm, fmt.Sprintf("sub %s, %s\n", dest, val))
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) variable \"%s\" is not declared\n", op.Operants[0])
         os.Exit(1)
@@ -73,6 +106,19 @@ func Mul(asm *os.File, op *prs.Op) {
         }
 
         dest := vars.Registers[v.Regs[0]].Name
+        var val string
+
+        if otherVar := vars.GetVar(op.Operants[1]); otherVar != nil {
+            if otherVar.Vartype != types.I32 {
+                fmt.Fprintf(os.Stderr, "[ERROR] you cannot mul I32 and %s (type of %s)\n", otherVar.Vartype.Readable(), otherVar.Name)
+                fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
+                os.Exit(1)
+            }
+
+            val = vars.Registers[otherVar.Regs[0]].Name
+        } else {
+            val = op.Operants[1]
+        }
 
         if dest != "rbx" {
             vars.WriteVar(asm, "push rbx\n")
@@ -82,8 +128,8 @@ func Mul(asm *os.File, op *prs.Op) {
             vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", dest))
         }
 
-        vars.WriteVar(asm, fmt.Sprintf("mov rbx, %s\n", op.Operants[1]))
-        vars.WriteVar(asm, "mul rbx\n")
+        vars.WriteVar(asm, fmt.Sprintf("mov rbx, %s\n", val))
+        vars.WriteVar(asm, "imul rbx\n")
 
         if dest != "rax" {
             vars.WriteVar(asm, fmt.Sprintf("mov %s, rax\n", dest))
@@ -116,6 +162,19 @@ func Div(asm *os.File, op *prs.Op) {
         }
 
         dest := vars.Registers[v.Regs[0]].Name
+        var val string
+
+        if otherVar := vars.GetVar(op.Operants[1]); otherVar != nil {
+            if otherVar.Vartype != types.I32 {
+                fmt.Fprintf(os.Stderr, "[ERROR] you cannot div I32 and %s (type of %s)\n", otherVar.Vartype.Readable(), otherVar.Name)
+                fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
+                os.Exit(1)
+            }
+
+            val = vars.Registers[otherVar.Regs[0]].Name
+        } else {
+            val = op.Operants[1]
+        }
 
         if dest != "rdx" {
             vars.WriteVar(asm, "push rdx\n")
@@ -128,9 +187,11 @@ func Div(asm *os.File, op *prs.Op) {
             vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", dest))
         }
 
-        vars.WriteVar(asm, fmt.Sprintf("mov rbx, %s\n", op.Operants[1]))
-        vars.WriteVar(asm, "xor rdx, rdx\n")
-        vars.WriteVar(asm, "div rbx\n")
+        // TODO: check if dest is signed or unsigned (use either idiv or div)
+        // for now only signed integers are supported
+        vars.WriteVar(asm, fmt.Sprintf("mov rbx, %s\n", val))
+        vars.WriteVar(asm, "cqo\n") // sign extend rax into rdx (div with 64bit regs -> 128bit div)
+        vars.WriteVar(asm, "idiv rbx\n")
 
         if dest != "rax" {
             vars.WriteVar(asm, fmt.Sprintf("mov %s, rax\n", dest))

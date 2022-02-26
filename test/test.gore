@@ -3,19 +3,21 @@ var v1 i32 := 86 - 10
 fn main() {
    // printInt(40 + 46) // not yet supported (TODO)
 
-   printStr("76 + 10")
-   v1 = v1 + 10
-   printInt(v1)
+    var l1 i32
 
-   printStr("76 + 10 - 20")
-   v1 = 76 + 10 - 20
-   printInt(v1)
+    printStr("76 + 10")                      // 86
+    l1 = v1 + 10
+    printInt(l1)
 
-   printStr("76 + 10 - 20 * 10")
-   v1 = 76 + 10 - 20 * 10
-   printInt(v1)
+    printStr("76 + 10 - 20")                 // 66
+    l1 = v1 + 10 - 20
+    printInt(l1)
 
-   printStr("76 + 10 - 20 * 10 / 2")
-   v1 = 76 + 10 - 20 * 10 / 2
-   printInt(v1)
+    printStr("76 + 10 - 20 * 10")            // -114
+    l1 = v1 + 10 - 20 * 10
+    printInt(l1)
+
+    printStr("76 + 10 - 20 * 10 / 2")        // -14
+    l1 = v1 + 10 - 20 * 10 / 2
+    printInt(l1)
 }
