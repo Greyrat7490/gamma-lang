@@ -3,8 +3,38 @@ package prs
 import (
     "fmt"
     "gorec/types"
+    "gorec/vars"
     "os"
 )
+
+type OpDecVar struct {
+    Varname string
+    Vartype types.Type
+}
+
+func (o OpDecVar) Readable() string {
+    return fmt.Sprintf("%s: %s %s", OP_DEC_VAR.Readable(), o.Varname, o.Vartype.Readable())
+}
+
+func (o OpDecVar) Compile(asm *os.File) {
+    vars.Declare(o.Varname, o.Vartype)
+}
+
+
+type OpDefVar struct {
+    Varname string
+    Value string
+    ValueType types.Type
+}
+
+func (o OpDefVar) Readable() string {
+    return fmt.Sprintf("%s: %s %s %s", OP_DEF_VAR.Readable(), o.Varname, o.Value, o.ValueType.Readable())
+}
+
+func (o OpDefVar) Compile(asm *os.File) {
+    vars.Define(o.Varname, o.Value)
+}
+
 
 func prsDecVar(words []Token, idx int) int {
     if len(words) < idx + 1 {
@@ -14,7 +44,11 @@ func prsDecVar(words []Token, idx int) int {
     }
 
     if len(words) < idx + 2 {
-        fmt.Fprintln(os.Stderr, "[ERROR] no name or type provided for the variable")
+        if words[idx+1].Type == name {
+            fmt.Fprintln(os.Stderr, "[ERROR] no type provided for the variable")
+        } else {
+            fmt.Fprintln(os.Stderr, "[ERROR] no name provided for the variable")
+        }
         fmt.Fprintln(os.Stderr, "\t" + words[idx+1].At())
         os.Exit(1)
     }
@@ -26,7 +60,7 @@ func prsDecVar(words []Token, idx int) int {
         os.Exit(1)
     }
 
-    op := Op{ Type: OP_DEC_VAR, Token: words[idx+1], Operants: []string{ words[idx+1].Str, words[idx+2].Str } }
+    op := OpDecVar{ Varname: words[idx+1].Str, Vartype: t }
     Ops = append(Ops, op)
 
     return idx + 2
@@ -40,9 +74,10 @@ func prsDefVar(words []Token, idx int) int {
     }
 
     value := words[idx+1].Str
+    t := types.TypeOfVal(value)
     v := words[idx-2].Str
 
-    op := Op{ Type: OP_DEF_VAR, Token: words[idx-2], Operants: []string{ v, value } }
+    op := OpDefVar{ Varname: v, Value: value, ValueType: t }
     Ops = append(Ops, op)
 
     return idx + 1

@@ -6,7 +6,6 @@ import (
     "os"
     "os/exec"
     "strings"
-    "gorec/func"
     "gorec/parser"
     "gorec/syscall"
     "gorec/vars"
@@ -52,28 +51,8 @@ func compile() {
 
     sys.DefineBuildIns(asm)
 
-    for _, o := range prs.Ops {
-        const _ uint = 7 - prs.OP_COUNT
-
-        switch o.Type {
-        case prs.OP_DEF_VAR:
-            vars.Define(&o)
-        case prs.OP_DEC_VAR:
-            vars.Declare(&o)
-        case prs.OP_CALL_FN:
-            fn.CallFunc(asm, &o)
-        case prs.OP_DEF_FN:
-            fn.Define(asm, &o)
-        case prs.OP_END_FN:
-            fn.End(asm)
-        case prs.OP_DEC_ARGS:
-            fn.DeclareArgs(&o)
-        case prs.OP_DEF_ARGS:
-            fn.DefineArgs(asm, &o)
-        default:
-            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) \"%s\" has an unknown operante type\n", o.Token.Str)
-            os.Exit(1)
-        }
+    for _, op := range prs.Ops {
+        op.Compile(asm)
     }
 
     nasm_footer(asm)
@@ -127,11 +106,11 @@ func main() {
         os.Exit(1)
     }
 
+    prs.Tokenize(string(src))
+    prs.Parse()
     // TODO: type checking step
-    prs.Tokenize(src)
+    // TODO: optimization step
     // prs.ShowOps()
     compile()
-    // TODO: optimization step
-
     genExe()
 }

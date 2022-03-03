@@ -2,16 +2,110 @@ package prs
 
 import (
     "fmt"
-    "unicode"
+    "gorec/types"
     "os"
+    "unicode"
+    "strconv"
 )
 
-var Ops []Op
+var Ops []interface{ Op }
 var tokens []Token
 var isMainDefined bool = false
 
+type TokenType uint
+const (
+    unknown TokenType = iota
+
+    name            // var/func name
+    typename        // i32, str
+    str             // "string"
+    number          // 1234
+
+    plus            // +
+    minus           // -
+    mul             // *
+    div             // /
+
+    parenL          // (
+    parenR          // )
+    brackL          // [
+    brackR          // ]
+    braceL          // {
+    braceR          // }
+
+    comment         // //,/*,*/
+
+    dec_var         // var
+    def_var         // :=
+    assign          // =
+    def_fn          // fn
+
+    tokenTypeCount uint = iota
+)
+
+func TokenTypeOfStr(s string) TokenType {
+    switch s {
+    case "+":
+        return plus
+    case "-":
+        return minus
+    case "*":
+        return mul
+    case "/":
+        return div
+
+    case "(":
+        return parenL
+    case ")":
+        return parenR
+    case "[":
+        return brackL
+    case "]":
+        return brackR
+    case "{":
+        return braceL
+    case "}":
+        return braceR
+
+    case "//", "/*", "*/":
+        return comment
+
+    case "var":
+        return dec_var
+    case ":=":
+        return def_var
+    case "=":
+        return assign
+    case "fn":
+        return def_fn
+
+    default:
+        if types.ToType(s) != -1 {
+            return typename
+        } else if s[0] == '"' && s[len(s) - 1] == '"' {
+            return str
+        } else if _, err := strconv.Atoi(s); err == nil {
+            return number
+        }
+
+        return name
+    }
+}
+
+func IsLit(s string) bool {
+    if s[0] == '"' && s[len(s) - 1] == '"' {
+        return true
+    }
+
+    if _, err := strconv.Atoi(s); err == nil {
+        return true
+    }
+
+    return false
+}
 
 type Token struct {
+    Type TokenType
     Str string
     Line int
     Col int
@@ -25,12 +119,12 @@ func (w Token) At() string {
 type OpType uint
 const (
     OP_DEC_VAR  OpType = iota
-    OP_DEF_VAR  OpType = iota
-    OP_DEF_FN   OpType = iota
-    OP_END_FN   OpType = iota
-    OP_CALL_FN  OpType = iota
-    OP_DEC_ARGS OpType = iota
-    OP_DEF_ARGS OpType = iota
+    OP_DEF_VAR
+    OP_DEF_FN
+    OP_END_FN
+    OP_CALL_FN
+    OP_DEC_ARGS
+    OP_DEF_ARGS
     OP_COUNT      uint = iota
 )
 
@@ -58,14 +152,9 @@ func (o OpType) Readable() string {
     }
 }
 
-type Op struct {
-    Type OpType
-    Token Token
-    Operants []string
-}
-
-func (o Op) Readable() string {
-    return fmt.Sprintf("%s %v", o.Type.Readable(), o.Operants)
+type Op interface {
+    Readable() string
+    Compile(asm *os.File)
 }
 
 func ShowOps() {
@@ -74,21 +163,21 @@ func ShowOps() {
     }
 }
 
-func Tokenize(src []byte) {
-    split(string(src))
-
+func Parse() {
     for i := 0; i < len(tokens); i++ {
-        switch tokens[i].Str {
-        case "var":
+        switch tokens[i].Type {
+        case dec_var:
             i = prsDecVar(tokens, i)
-        case ":=":
+        case def_var:
             i = prsDefVar(tokens, i)
-        case "fn":
+        case def_fn:
             i = prsDefFn(tokens, i)
-        case "printInt", "printStr", "exit":
-            fmt.Fprintln(os.Stderr, "[ERROR] function calls outside of main are not allowed")
-            fmt.Fprintln(os.Stderr, "\t" + tokens[i].At())
-            os.Exit(1)
+        case name:
+            if tokens[i+1].Type == parenL {
+                fmt.Fprintln(os.Stderr, "[ERROR] function calls are not allowed in global scope")
+                fmt.Fprintln(os.Stderr, "\t" + tokens[i].At())
+                os.Exit(1)
+            }
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] unknown word \"%s\"\n", tokens[i].Str)
             fmt.Fprintln(os.Stderr, "\t" + tokens[i].At())
@@ -103,7 +192,7 @@ func Tokenize(src []byte) {
 }
 
 // escape chars (TODO: \n, \t, \r, ...) (done: \\, \")
-func split(file string) {
+func Tokenize(file string) {
     start := 0
 
     line := 1
@@ -158,12 +247,14 @@ func split(file string) {
             // split
             } else if unicode.IsSpace(r) || r == '(' || r == ')' || r == '{' || r == '}' {
                 if start != i {
-                    tokens = append(tokens, Token{file[start:i], line, col + start - i})
+                    s := file[start:i]
+
+                    tokens = append(tokens, Token{TokenTypeOfStr(s), s, line, col + start - i})
                 }
                 start = i + 1
 
                 if r == '(' || r == ')' || r == '{' || r == '}' {
-                    tokens = append(tokens, Token{string(r), line, col - 1})
+                    tokens = append(tokens, Token{TokenTypeOfStr(string(r)), string(r), line, col - 1})
                 }
             }
         }
