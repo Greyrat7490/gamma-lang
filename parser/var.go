@@ -1,19 +1,20 @@
 package prs
 
 import (
-    "fmt"
-    "gorec/types"
-    "gorec/vars"
     "os"
+    "fmt"
+    "gorec/vars"
+    "gorec/types"
+    "gorec/token"
 )
 
 type OpDecVar struct {
-    Varname string
+    Varname token.Token
     Vartype types.Type
 }
 
 func (o OpDecVar) Readable() string {
-    return fmt.Sprintf("%s: %s %s", OP_DEC_VAR.Readable(), o.Varname, o.Vartype.Readable())
+    return fmt.Sprintf("%s: %s %s", OP_DEC_VAR.Readable(), o.Varname.Str, o.Vartype.Readable())
 }
 
 func (o OpDecVar) Compile(asm *os.File) {
@@ -22,13 +23,13 @@ func (o OpDecVar) Compile(asm *os.File) {
 
 
 type OpDefVar struct {
-    Varname string
-    Value string
+    Varname token.Token
+    Value token.Token
     ValueType types.Type
 }
 
 func (o OpDefVar) Readable() string {
-    return fmt.Sprintf("%s: %s %s %s", OP_DEF_VAR.Readable(), o.Varname, o.Value, o.ValueType.Readable())
+    return fmt.Sprintf("%s: %s %s %s", OP_DEF_VAR.Readable(), o.Varname.Str, o.Value.Str, o.ValueType.Readable())
 }
 
 func (o OpDefVar) Compile(asm *os.File) {
@@ -36,46 +37,50 @@ func (o OpDefVar) Compile(asm *os.File) {
 }
 
 
-func prsDecVar(words []Token, idx int) int {
-    if len(words) < idx + 1 {
+func prsDecVar(idx int) int {
+    tokens := token.GetTokens()
+
+    if len(tokens) < idx + 1 {
         fmt.Fprintln(os.Stderr, "[ERROR] neither name nor type provided for the variable declaration")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
     }
 
-    if len(words) < idx + 2 {
-        if words[idx+1].Type == name {
+    if len(tokens) < idx + 2 {
+        if tokens[idx+1].Type == token.Name {
             fmt.Fprintln(os.Stderr, "[ERROR] no type provided for the variable")
         } else {
             fmt.Fprintln(os.Stderr, "[ERROR] no name provided for the variable")
         }
-        fmt.Fprintln(os.Stderr, "\t" + words[idx+1].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
         os.Exit(1)
     }
 
-    t := types.ToType(words[idx+2].Str)
+    t := types.ToType(tokens[idx+2].Str)
     if t == -1 {
-        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", words[idx+2].Str)
-        fmt.Fprintln(os.Stderr, "\t" + words[idx+2].At())
+        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", tokens[idx+2].Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+2].At())
         os.Exit(1)
     }
 
-    op := OpDecVar{ Varname: words[idx+1].Str, Vartype: t }
+    op := OpDecVar{ Varname: tokens[idx+1], Vartype: t }
     Ops = append(Ops, op)
 
     return idx + 2
 }
 
-func prsDefVar(words []Token, idx int) int {
-    if len(words) < idx + 1 {
+func prsDefVar(idx int) int {
+    tokens := token.GetTokens()
+
+    if len(tokens) < idx + 1 {
         fmt.Fprintf(os.Stderr, "[ERROR] no value provided to define the variable\n")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
     }
 
-    value := words[idx+1].Str
-    t := types.TypeOfVal(value)
-    v := words[idx-2].Str
+    value := tokens[idx+1]
+    t := types.TypeOfVal(value.Str)
+    v := tokens[idx-2]
 
     op := OpDefVar{ Varname: v, Value: value, ValueType: t }
     Ops = append(Ops, op)

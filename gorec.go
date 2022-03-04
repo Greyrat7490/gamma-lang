@@ -7,6 +7,7 @@ import (
     "os/exec"
     "strings"
     "gorec/parser"
+    "gorec/token"
     "gorec/syscall"
     "gorec/vars"
     "gorec/str"
@@ -106,7 +107,7 @@ func main() {
         os.Exit(1)
     }
 
-    prs.Tokenize(string(src))
+    token.Tokenize(src)
     prs.Parse()
     // TODO: type checking step
     // TODO: optimization step

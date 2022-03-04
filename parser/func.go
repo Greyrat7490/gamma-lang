@@ -1,20 +1,21 @@
 package prs
 
 import (
-    "fmt"
     "os"
-    "gorec/types"
+    "fmt"
     "gorec/func"
+    "gorec/token"
+    "gorec/types"
 )
 
 type OpDefFn struct {
-    Funcname string
+    FnName token.Token
 }
 func (o OpDefFn) Readable() string {
-    return fmt.Sprintf("%s: %s", OP_DEF_FN.Readable(), o.Funcname)
+    return fmt.Sprintf("%s: %s", OP_DEF_FN.Readable(), o.FnName)
 }
 func (o OpDefFn) Compile(asm *os.File) {
-    fn.Define(asm, o.Funcname)
+    fn.Define(asm, o.FnName)
 }
 
 type OpEndFn struct {}
@@ -38,7 +39,7 @@ func (o OpDecArgs) Compile(asm *os.File) {
 
 
 type OpFnCall struct {
-    FnName string
+    FnName token.Token
 }
 func (o OpFnCall) Readable() string {
     return fmt.Sprintf("%s: %s", OP_CALL_FN.Readable(), o.FnName)
@@ -49,7 +50,7 @@ func (o OpFnCall) Compile(asm *os.File) {
 
 
 type OpDefArgs struct {
-    FnName string
+    FnName token.Token
     Values []string
 }
 func (o OpDefArgs) Readable() string {
@@ -60,55 +61,61 @@ func (o OpDefArgs) Compile(asm *os.File) {
 }
 
 
-func prsDefFn(words []Token, idx int) int {
-    if words[idx+1].Str == "main" {
+func prsDefFn(idx int) int {
+    tokens := token.GetTokens()
+
+    if tokens[idx+1].Str == "main" {
         isMainDefined = true
     }
 
-    var op OpDefFn = OpDefFn{ Funcname: words[idx+1].Str }
+    var op OpDefFn = OpDefFn{ FnName: tokens[idx+1] }
     Ops = append(Ops, op)
 
-    idx = prsDecArgs(words, idx)
+    idx = prsDecArgs(idx)
 
-    for ; idx < len(words); idx++ {
-        switch words[idx].Type {
-        case dec_var:
-            idx = prsDecVar(words, idx)
-        case def_var:
-            idx = prsDefVar(words, idx)
-        case def_fn:
+    for ; idx < len(tokens); idx++ {
+        switch tokens[idx].Type {
+        case token.Dec_var:
+            idx = prsDecVar(idx)
+        case token.Def_var:
+            idx = prsDefVar(idx)
+        case token.Def_fn:
             fmt.Fprintln(os.Stderr, "[ERROR] you are not allowed to define functions inside a function")
-            fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
+            fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
             os.Exit(1)
-        case braceR:
-            prsEnd(words, idx)
+        case token.BraceR:
+            prsEnd()
             return idx
-        case name:
-            if tokens[idx+1].Type == parenL {
-                idx = prsCallFn(words, idx)
+        case token.Name:
+            if tokens[idx+1].Type == token.ParenL {
+                idx = prsCallFn(idx)
             }
+            // TODO: assign
         default:
-            fmt.Fprintf(os.Stderr, "[ERROR] \"%s\"\n", words[idx].Str)
-            fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
+            // TODO
+            fmt.Fprintf(os.Stderr, "[ERROR] \"%s\"\n", tokens[idx].Str)
+            fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
             os.Exit(1)
         }
     }
 
-    fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" was not closed (missing \"}\")\n", words[idx+1].Str)
-    fmt.Fprintln(os.Stderr, "\t" + words[idx+1].At())
+    fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" was not closed (missing \"}\")\n", tokens[idx+1].Str)
+    fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
     os.Exit(1)
 
     return -1
 }
 
-func prsEnd(words []Token, idx int) {
+func prsEnd() {
     Ops = append(Ops, OpEndFn{})
 }
 
-func prsDecArgs(words []Token, idx int) int {
-    if len(words) < idx + 2 || words[idx+2].Str != "(" {
+func prsDecArgs(idx int) int {
+    tokens := token.GetTokens()
+
+    if len(tokens) < idx + 2 || tokens[idx+2].Str != "(" {
         fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx+2].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+2].At())
         os.Exit(1)
     }
 
@@ -116,7 +123,7 @@ func prsDecArgs(words []Token, idx int) int {
 
     var a fn.Arg
     b := false
-    for _, w := range words[idx+3:] {
+    for _, w := range tokens[idx+3:] {
         if w.Str == ")" {
             b = true
             break
@@ -139,8 +146,8 @@ func prsDecArgs(words []Token, idx int) int {
     }
 
     if !b {
-        fmt.Fprintf(os.Stderr, "[ERROR] missing \")\" for function \"%s\"\n", words[idx+1].Str)
-        fmt.Fprintln(os.Stderr, "\t" + words[idx+1].At())
+        fmt.Fprintf(os.Stderr, "[ERROR] missing \")\" for function \"%s\"\n", tokens[idx+1].Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
         os.Exit(1)
     }
 
@@ -151,27 +158,31 @@ func prsDecArgs(words []Token, idx int) int {
     return idx + len(op.Args) * 2 + 5
 }
 
-func prsCallFn(words []Token, idx int) int {
-    var op OpFnCall = OpFnCall{ FnName: words[idx].Str }
+func prsCallFn(idx int) int {
+    tokens := token.GetTokens()
 
-    if len(words) < idx + 1 || words[idx+1].Str != "(" {
+    var op OpFnCall = OpFnCall{ FnName: tokens[idx] }
+
+    if len(tokens) < idx + 1 || tokens[idx+1].Str != "(" {
         fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx+1].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
         os.Exit(1)
     }
 
-    idx = prsDefArgs(words, idx)
+    idx = prsDefArgs(idx)
 
     Ops = append(Ops, op)
 
     return idx
 }
 
-func prsDefArgs(words []Token, idx int) int {
-    var op OpDefArgs = OpDefArgs{ FnName: words[idx].Str }
+func prsDefArgs(idx int) int {
+    tokens := token.GetTokens()
+
+    var op OpDefArgs = OpDefArgs{ FnName: tokens[idx] }
 
     b := false
-    for _, w := range words[idx+2:] {
+    for _, w := range tokens[idx+2:] {
         if w.Str == ")" {
             b = true
             break

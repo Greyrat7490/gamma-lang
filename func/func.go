@@ -1,12 +1,13 @@
 package fn
 
 import (
-    "fmt"
-    "gorec/str"
-    "gorec/types"
-    "gorec/vars"
     "os"
+    "fmt"
     "strconv"
+    "gorec/str"
+    "gorec/vars"
+    "gorec/token"
+    "gorec/types"
 )
 
 // calling convention (temporary):
@@ -20,7 +21,7 @@ var curFunc int = -1
 
 
 type fnHead struct {
-    name string
+    name token.Token
     args []Arg
 }
 
@@ -29,9 +30,13 @@ type Arg struct {
     Type types.Type
 }
 
+func (f *fnHead) At() string {
+    return f.name.At()
+}
+
 func GetFn(funcName string) *fnHead {
     for _, f := range funcs {
-        if f.name == funcName {
+        if f.name.Str == funcName {
             return &f
         }
     }
@@ -40,14 +45,14 @@ func GetFn(funcName string) *fnHead {
 }
 
 
-func Define(asm *os.File, fnName string) {
+func Define(asm *os.File, fnName token.Token) {
     var f fnHead = fnHead{
         name: fnName,
     }
     curFunc = len(funcs)
     funcs = append(funcs, f)
 
-    asm.WriteString(fnName + ":\n")
+    asm.WriteString(fnName.Str + ":\n")
 }
 
 func End(asm *os.File) {
@@ -62,13 +67,14 @@ func End(asm *os.File) {
     asm.WriteString("ret\n\n")
 }
 
-func CallFunc(asm *os.File, fnName string) {
-    if f := GetFn(fnName); f == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] undeclared name \"%s\"\n", fnName)
+func CallFunc(asm *os.File, fnName token.Token) {
+    if f := GetFn(fnName.Str); f == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] undeclared name \"%s\"\n", fnName.Str)
+        fmt.Fprintln(os.Stderr, "\t" + fnName.At())
         os.Exit(1)
     }
 
-    asm.WriteString("call " + fnName + "\n")
+    asm.WriteString("call " + fnName.Str + "\n")
 }
 
 func DeclareArgs(args []Arg) {
@@ -101,17 +107,19 @@ func DeclareArgs(args []Arg) {
 
     if len(f.args) > 1 {
         fmt.Fprintln(os.Stderr, "[ERROR] functions only accept one argument max at the moment")
+        fmt.Fprintln(os.Stderr, "\t" + f.At())
         os.Exit(1)
     }
 }
 
-func DefineArgs(asm *os.File, fnName string, values []string) {
-    if f := GetFn(fnName); f != nil {
+func DefineArgs(asm *os.File, fnName token.Token, values []string) {
+    if f := GetFn(fnName.Str); f != nil {
         for i, val := range values {
             if otherVar := vars.GetVar(val); otherVar != nil {
                 if otherVar.Vartype != f.args[i].Type {
                     fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
-                        f.name, i, f.args[i].Type.Readable(), otherVar.Vartype.Readable())
+                        f.name.Str, i, f.args[i].Type.Readable(), otherVar.Vartype.Readable())
+                    fmt.Fprintln(os.Stderr, "\t" + fnName.At())
                     os.Exit(1)
                 }
 
@@ -138,7 +146,7 @@ func DefineArgs(asm *os.File, fnName string, values []string) {
 
                 if t != f.args[i].Type {
                     fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
-                        f.name, i, f.args[i].Type.Readable(), t.Readable())
+                        f.name.Str, i, f.args[i].Type.Readable(), t.Readable())
                     os.Exit(1)
                 }
 
@@ -160,11 +168,19 @@ func DefineArgs(asm *os.File, fnName string, values []string) {
             }
         }
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", fnName)
+        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", fnName.Str)
         os.Exit(1)
     }
 }
 
 func AddBuildIn(name string, argname string, argtype types.Type) {
-    funcs = append(funcs, fnHead{name: name, args: []Arg{{Name: argname, Type: argtype}}})
+    funcs = append(funcs, fnHead{
+        name: token.Token{
+            Str: name,
+            Pos: token.Pos{Col: -1, Line: -1},
+        },
+        args: []Arg{{
+            Name: argname, Type: argtype,
+        }},
+    })
 }
