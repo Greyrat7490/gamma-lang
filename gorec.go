@@ -11,6 +11,7 @@ import (
     "gorec/syscall"
     "gorec/vars"
     "gorec/str"
+    "gorec/ast"
 )
 
 
@@ -52,7 +53,7 @@ func compile() {
 
     sys.DefineBuildIns(asm)
 
-    for _, op := range prs.Ops {
+    for _, op := range ast.Ast {
         op.Compile(asm)
     }
 
@@ -111,7 +112,7 @@ func main() {
     prs.Parse()
     // TODO: type checking step
     // TODO: optimization step
-    // prs.ShowOps()
+    // ast.ShowAst()
     compile()
     genExe()
 }

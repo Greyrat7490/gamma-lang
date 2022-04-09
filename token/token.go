@@ -90,16 +90,54 @@ func TokenTypeOfStr(s string) TokenType {
     }
 }
 
-func IsLit(s string) bool {
-    if s[0] == '"' && s[len(s) - 1] == '"' {
-        return true
-    }
+func (t TokenType) Readable() string {
+    switch t {
+    case Plus:
+        return "Plus"
+    case Minus:
+        return "Minus"
+    case Mul:
+        return "Mul"
+    case Div:
+        return "Div"
 
-    if _, err := strconv.Atoi(s); err == nil {
-        return true
-    }
+    case ParenL:
+        return "ParenL"
+    case ParenR:
+        return "ParenR"
+    case BrackL:
+        return "BrackL"
+    case BrackR:
+        return "BrackR"
+    case BraceL:
+        return "BraceL"
+    case BraceR:
+        return "BraceR"
 
-    return false
+    case Comment:
+        return "Comment"
+
+    case Dec_var:
+        return "Dec_var"
+    case Def_var:
+        return "Def_var"
+    case Assign:
+        return "Assign"
+    case Def_fn:
+        return "Def_fn"
+
+    case Typename:
+        return "Typename"
+    case Str:
+        return "Str"
+    case Number:
+        return "Number"
+    case Name:
+        return "Name"
+
+    default:
+        return "Unknown"
+    }
 }
 
 type Pos struct {

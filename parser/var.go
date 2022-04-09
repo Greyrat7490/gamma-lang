@@ -6,6 +6,7 @@ import (
     "gorec/vars"
     "gorec/types"
     "gorec/token"
+    "gorec/ast"
 )
 
 type OpDecVar struct {
@@ -14,7 +15,7 @@ type OpDecVar struct {
 }
 
 func (o OpDecVar) Readable() string {
-    return fmt.Sprintf("%s: %s %s", OP_DEC_VAR.Readable(), o.Varname.Str, o.Vartype.Readable())
+    return fmt.Sprintf("%s: %s %s", ast.OP_DEC_VAR.Readable(), o.Varname.Str, o.Vartype.Readable())
 }
 
 func (o OpDecVar) Compile(asm *os.File) {
@@ -29,7 +30,7 @@ type OpDefVar struct {
 }
 
 func (o OpDefVar) Readable() string {
-    return fmt.Sprintf("%s: %s %s %s", OP_DEF_VAR.Readable(), o.Varname.Str, o.Value.Str, o.ValueType.Readable())
+    return fmt.Sprintf("%s: %s %s %s", ast.OP_DEF_VAR.Readable(), o.Varname.Str, o.Value.Str, o.ValueType.Readable())
 }
 
 func (o OpDefVar) Compile(asm *os.File) {
@@ -45,7 +46,6 @@ func prsDecVar(idx int) int {
         fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
     }
-
     if len(tokens) < idx + 2 {
         if tokens[idx+1].Type == token.Name {
             fmt.Fprintln(os.Stderr, "[ERROR] no type provided for the variable")
@@ -56,6 +56,18 @@ func prsDecVar(idx int) int {
         os.Exit(1)
     }
 
+    if (tokens[idx+1].Type != token.Name) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %s(\"%s\")\n", tokens[idx+1].Type.Readable(), tokens[idx+1].Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
+        os.Exit(1)
+    }
+    if (tokens[idx+2].Type != token.Typename) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Typename but got %s(\"%s\")\n", tokens[idx+2].Type.Readable(), tokens[idx+2].Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+2].At())
+        os.Exit(1)
+    }
+
+
     t := types.ToType(tokens[idx+2].Str)
     if t == -1 {
         fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", tokens[idx+2].Str)
@@ -64,7 +76,7 @@ func prsDecVar(idx int) int {
     }
 
     op := OpDecVar{ Varname: tokens[idx+1], Vartype: t }
-    Ops = append(Ops, op)
+    ast.Ast = append(ast.Ast, op)
 
     return idx + 2
 }
@@ -78,12 +90,23 @@ func prsDefVar(idx int) int {
         os.Exit(1)
     }
 
+    if (tokens[idx-2].Type != token.Name) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %s(\"%s\")\n", tokens[idx-2].Type.Readable(), tokens[idx-2].Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx-2].At())
+        os.Exit(1)
+    }
+    if (!(tokens[idx+1].Type == token.Name || tokens[idx+1].Type == token.Number || tokens[idx+1].Type == token.Str)) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name or a literal but got %s(\"%s\")\n", tokens[idx+1].Type.Readable(), tokens[idx+1].Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
+        os.Exit(1)
+    }
+
     value := tokens[idx+1]
     t := types.TypeOfVal(value.Str)
     v := tokens[idx-2]
 
     op := OpDefVar{ Varname: v, Value: value, ValueType: t }
-    Ops = append(Ops, op)
+    ast.Ast = append(ast.Ast, op)
 
     return idx + 1
 }
