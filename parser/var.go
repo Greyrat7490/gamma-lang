@@ -3,10 +3,10 @@ package prs
 import (
     "os"
     "fmt"
-    "gorec/vars"
-    "gorec/types"
+    "strings"
     "gorec/token"
-    "gorec/ast"
+    "gorec/types"
+    "gorec/vars"
 )
 
 type OpDecVar struct {
@@ -14,8 +14,11 @@ type OpDecVar struct {
     Vartype types.Type
 }
 
-func (o OpDecVar) Readable() string {
-    return fmt.Sprintf("%s: %s %s", ast.OP_DEC_VAR.Readable(), o.Varname.Str, o.Vartype.Readable())
+func (o OpDecVar) Readable(indent int) string {
+    return strings.Repeat("   ", indent) +
+        fmt.Sprintf("OP_DEC_VAR: %s(%s) %s(Typename)\n",
+        o.Varname.Str, o.Varname.Type.Readable(),
+        o.Vartype.Readable())
 }
 
 func (o OpDecVar) Compile(asm *os.File) {
@@ -29,8 +32,12 @@ type OpDefVar struct {
     ValueType types.Type
 }
 
-func (o OpDefVar) Readable() string {
-    return fmt.Sprintf("%s: %s %s %s", ast.OP_DEF_VAR.Readable(), o.Varname.Str, o.Value.Str, o.ValueType.Readable())
+func (o OpDefVar) Readable(indent int) string {
+    return strings.Repeat("   ", indent) +
+        fmt.Sprintf("OP_DEF_VAR: %s(%s) %s(%s) %s(Typename)\n",
+        o.Varname.Str, o.Varname.Type.Readable(),
+        o.Value.Str, o.Value.Type.Readable(),
+        o.ValueType.Readable())
 }
 
 func (o OpDefVar) Compile(asm *os.File) {
@@ -38,7 +45,7 @@ func (o OpDefVar) Compile(asm *os.File) {
 }
 
 
-func prsDecVar(idx int) int {
+func prsDecVar(idx int) (OpDecVar, int) {
     tokens := token.GetTokens()
 
     if len(tokens) < idx + 1 {
@@ -76,12 +83,11 @@ func prsDecVar(idx int) int {
     }
 
     op := OpDecVar{ Varname: tokens[idx+1], Vartype: t }
-    ast.Ast = append(ast.Ast, op)
 
-    return idx + 2
+    return op, idx + 2
 }
 
-func prsDefVar(idx int) int {
+func prsDefVar(idx int) (OpDefVar, int) {
     tokens := token.GetTokens()
 
     if len(tokens) < idx + 1 {
@@ -106,7 +112,6 @@ func prsDefVar(idx int) int {
     v := tokens[idx-2]
 
     op := OpDefVar{ Varname: v, Value: value, ValueType: t }
-    ast.Ast = append(ast.Ast, op)
 
-    return idx + 1
+    return op, idx + 1
 }

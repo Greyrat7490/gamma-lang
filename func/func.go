@@ -30,6 +30,10 @@ type Arg struct {
     Type types.Type
 }
 
+func (a Arg) String() string {
+    return fmt.Sprintf("{%s(Name) %s(Typename)}", a.Name, a.Type.Readable())
+}
+
 func (f *fnHead) At() string {
     return f.name.At()
 }

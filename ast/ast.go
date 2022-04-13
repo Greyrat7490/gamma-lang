@@ -1,11 +1,16 @@
 package ast
 
 import (
-    "os"
     "fmt"
+    "os"
 )
 
-var Ast []interface{ Op }
+var Ast OpProgramm
+
+func ShowAst() {
+    fmt.Println(Ast.Readable(0));
+}
+
 
 type OpType uint
 const (
@@ -43,17 +48,27 @@ func (o OpType) Readable() string {
     }
 }
 
+
 type Op interface {
-    Readable() string
+    Readable(indent int) string
     Compile(asm *os.File)
 }
 
-func ShowAst() {
-    fmt.Println("AST START")
+type OpProgramm struct {
+    Ops []interface{ Op } // TODO: later only OpDecVar, OpDefVar, OpDefFn
+}
 
-    for i, op := range Ast {
-        fmt.Printf("%d: %s\n", i, op.Readable())
+func (o *OpProgramm) Readable(indent int) string {
+    res := ""
+    for _, op := range o.Ops {
+        res += op.Readable(indent)
     }
 
-    fmt.Println("AST END")
+    return res
+}
+
+func (o *OpProgramm) Compile(asm *os.File) {
+    for _, op := range o.Ops {
+        op.Compile(asm)
+    }
 }

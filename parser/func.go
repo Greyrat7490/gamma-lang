@@ -3,6 +3,7 @@ package prs
 import (
     "os"
     "fmt"
+    "strings"
     "gorec/func"
     "gorec/token"
     "gorec/types"
@@ -11,28 +12,37 @@ import (
 
 type OpDefFn struct {
     FnName token.Token
+    DecArgsOp OpDecArgs
+    Ops []interface{ ast.Op }   // TODO: later all Ops except OpDefFn
 }
-func (o OpDefFn) Readable() string {
-    return fmt.Sprintf("%s: %s", ast.OP_DEF_FN.Readable(), o.FnName.Str)
+func (o OpDefFn) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) +
+        fmt.Sprintf("OP_DEF_FN:  %s (%s)\n",
+        o.FnName.Str, o.FnName.Type.Readable()) +
+        o.DecArgsOp.Readable(indent+1)
+
+    for _, op := range o.Ops {
+        res += op.Readable(indent+1)
+    }
+
+    return res
 }
 func (o OpDefFn) Compile(asm *os.File) {
     fn.Define(asm, o.FnName)
-}
+    o.DecArgsOp.Compile(asm)
 
-type OpEndFn struct {}
-func (o OpEndFn) Readable() string {
-    return fmt.Sprintf("%s", ast.OP_END_FN.Readable())
-}
-func (o OpEndFn) Compile(asm *os.File) {
-    fn.End(asm)
-}
+    for _, op := range o.Ops {
+        op.Compile(asm)
+    }
 
+    fn.End(asm);
+}
 
 type OpDecArgs struct {
     Args []fn.Arg
 }
-func (o OpDecArgs) Readable() string {
-    return fmt.Sprintf("%s: %v", ast.OP_DEF_ARGS.Readable(), o.Args)
+func (o OpDecArgs) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + fmt.Sprintf("OP_DEC_ARGS: %v\n", o.Args)
 }
 func (o OpDecArgs) Compile(asm *os.File) {
     fn.DeclareArgs(o.Args)
@@ -41,11 +51,15 @@ func (o OpDecArgs) Compile(asm *os.File) {
 
 type OpFnCall struct {
     FnName token.Token
+    DefArgsOp OpDefArgs
 }
-func (o OpFnCall) Readable() string {
-    return fmt.Sprintf("%s: %s", ast.OP_CALL_FN.Readable(), o.FnName.Str)
+func (o OpFnCall) Readable(indent int) string {
+    return strings.Repeat("   ", indent) +
+        fmt.Sprintf("OP_CALL_FN: %s\n", o.FnName.Str) +
+        o.DefArgsOp.Readable(indent+1)
 }
 func (o OpFnCall) Compile(asm *os.File) {
+    o.DefArgsOp.Compile(asm)
     fn.CallFunc(asm, o.FnName)
 }
 
@@ -54,15 +68,15 @@ type OpDefArgs struct {
     FnName token.Token
     Values []string
 }
-func (o OpDefArgs) Readable() string {
-    return fmt.Sprintf("%s: %s %v", ast.OP_DEF_ARGS.Readable(), o.FnName.Str, o.Values)
+func (o OpDefArgs) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + fmt.Sprintf("OP_DEF_ARGS: %s %v\n", o.FnName.Str, o.Values)
 }
 func (o OpDefArgs) Compile(asm *os.File) {
     fn.DefineArgs(asm, o.FnName, o.Values)
 }
 
 
-func prsDefFn(idx int) int {
+func prsDefFn(idx int) (OpDefFn, int) {
     tokens := token.GetTokens()
 
     if tokens[idx+1].Str == "main" {
@@ -70,26 +84,30 @@ func prsDefFn(idx int) int {
     }
 
     var op OpDefFn = OpDefFn{ FnName: tokens[idx+1] }
-    ast.Ast = append(ast.Ast, op)
 
-    idx = prsDecArgs(idx)
+    op.DecArgsOp, idx = prsDecArgs(idx)
 
     for ; idx < len(tokens); idx++ {
         switch tokens[idx].Type {
         case token.Dec_var:
-            idx = prsDecVar(idx)
+            var decOp OpDecVar
+            decOp, idx = prsDecVar(idx)
+            op.Ops = append(op.Ops, decOp)
         case token.Def_var:
-            idx = prsDefVar(idx)
+            var defOp OpDefVar
+            defOp, idx = prsDefVar(idx)
+            op.Ops = append(op.Ops, defOp)
         case token.Def_fn:
             fmt.Fprintln(os.Stderr, "[ERROR] you are not allowed to define functions inside a function")
             fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
             os.Exit(1)
         case token.BraceR:
-            prsEnd()
-            return idx
+            return op, idx
         case token.Name:
             if tokens[idx+1].Type == token.ParenL {
-                idx = prsCallFn(idx)
+                var callOp OpFnCall
+                callOp, idx = prsCallFn(idx)
+                op.Ops = append(op.Ops, callOp)
             }
             // TODO: assign
         default:
@@ -104,14 +122,10 @@ func prsDefFn(idx int) int {
     fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
     os.Exit(1)
 
-    return -1
+    return OpDefFn{}, -1
 }
 
-func prsEnd() {
-    ast.Ast = append(ast.Ast, OpEndFn{})
-}
-
-func prsDecArgs(idx int) int {
+func prsDecArgs(idx int) (OpDecArgs, int) {
     tokens := token.GetTokens()
 
     if len(tokens) < idx + 2 {
@@ -170,14 +184,10 @@ func prsDecArgs(idx int) int {
         os.Exit(1)
     }
 
-    if len(op.Args) > 0 {
-        ast.Ast = append(ast.Ast, op)
-    }
-
-    return idx + len(op.Args) * 2 + 5
+    return op, idx + len(op.Args) * 2 + 5
 }
 
-func prsCallFn(idx int) int {
+func prsCallFn(idx int) (OpFnCall, int) {
     tokens := token.GetTokens()
 
     var op OpFnCall = OpFnCall{ FnName: tokens[idx] }
@@ -193,14 +203,12 @@ func prsCallFn(idx int) int {
         os.Exit(1)
     }
 
-    idx = prsDefArgs(idx)
+    op.DefArgsOp, idx = prsDefArgs(idx)
 
-    ast.Ast = append(ast.Ast, op)
-
-    return idx
+    return op, idx
 }
 
-func prsDefArgs(idx int) int {
+func prsDefArgs(idx int) (OpDefArgs, int) {
     tokens := token.GetTokens()
 
     var op OpDefArgs = OpDefArgs{ FnName: tokens[idx] }
@@ -232,7 +240,5 @@ func prsDefArgs(idx int) int {
         os.Exit(1)
     }
 
-    ast.Ast = append(ast.Ast, op)
-
-    return idx + len(op.Values) + 2
+    return op, idx + len(op.Values) + 2
 }
