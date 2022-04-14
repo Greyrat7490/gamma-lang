@@ -1,4 +1,4 @@
-var v1 i32 := 86 - 10
+/*var v1 i32 := 86 - 10
 
 fn main() {
    // printInt(40 + 46) // not yet supported (TODO)
@@ -19,5 +19,16 @@ fn main() {
 
     printStr("76 + 10 - 20 * 10 / 2")        // -14
     l1 = v1 + 10 - 20 * 10 / 2
+    printInt(l1)
+}*/
+
+var v1 i32 := -86
+
+fn main() {
+    var l1 i32
+
+    printInt(v1)
+
+    l1 = -420
     printInt(l1)
 }

@@ -3,9 +3,9 @@ package vars
 import (
     "fmt"
     "os"
-    "gorec/types"
     "gorec/str"
-    "gorec/parser"
+    "gorec/types"
+    "gorec/token"
 )
 
 const maxRegs int = 5
@@ -57,34 +57,22 @@ func GetVar(varname string) *Var {
     return nil
 }
 
-func Declare(op *prs.Op) {
-    if op.Type != prs.OP_DEC_VAR {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_DEC_VAR\n")
-        os.Exit(1)
-    }
-
-    if len(op.Operants) != 2 {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_DEC_VAR) should have 2 operants\n")
-        os.Exit(1)
-    }
-
-    varname := op.Operants[0]
-    vartype := types.ToType(op.Operants[1])
-
+func Declare(varname token.Token, vartype types.Type) {
     // maybe implement shadowing later (TODO)
-    if GetVar(varname) != nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] a variable with the name \"%s\" is already declared\n", op.Token.Str)
-        fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
+    if GetVar(varname.Str) != nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] a variable with the name \"%s\" is already declared\n", varname.Str)
+        fmt.Fprintln(os.Stderr, "\t" + varname.At())
         os.Exit(1)
     }
 
-    v := Var{ Name: varname, Vartype: vartype }
+    v := Var{ Name: varname.Str, Vartype: vartype }
 
     const _ uint = 2 - types.TypesCount
     switch vartype {
     case types.Str:
         if availReg + 1 >= maxRegs {
-            fmt.Fprintf(os.Stderr, "[ERROR] not enough registers left for var \"%s\"(string)\n", v.Name)
+            fmt.Fprintf(os.Stderr, "[ERROR] not enough registers left for var \"%s\"(string)", v.Name)
+            fmt.Fprintln(os.Stderr, "\t" + varname.At())
             os.Exit(1)
         }
 
@@ -94,7 +82,8 @@ func Declare(op *prs.Op) {
         availReg += 2
     case types.I32:
         if availReg >= maxRegs {
-            fmt.Fprintf(os.Stderr, "[ERROR] not enough registers left for var \"%s\"(i32)\n", v.Name)
+            fmt.Fprintf(os.Stderr, "[ERROR] not enough registers left for var \"%s\"(i32)", v.Name)
+            fmt.Fprintln(os.Stderr, "\t" + varname.At())
             os.Exit(1)
         }
 
@@ -104,36 +93,34 @@ func Declare(op *prs.Op) {
         availReg++
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name)
+        fmt.Fprintln(os.Stderr, "\t" + varname.At())
         os.Exit(1)
     }
 }
 
-func Define(asm *os.File, op *prs.Op) {
-    if op.Type != prs.OP_DEF_VAR {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_DEF_VAR\n")
-        os.Exit(1)
+func Define(asm *os.File, varname token.Token, value token.Token) {
+    if v := GetVar(value.Str); v != nil {
+        DefineByVar(asm, varname, value)
+    } else {
+        DefineByValue(asm, varname, value)
     }
+}
 
-    if len(op.Operants) != 2 {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_DEF_VAR) should have 2 operants\n")
-        os.Exit(1)
-    }
-
-    v := GetVar(op.Operants[0])
-    value := op.Operants[1]
-
+func DefineByValue(asm *os.File, varname token.Token, value token.Token) {
+    v := GetVar(varname.Str)
     if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_DEF_VAR) var \"%s\" is not declared\n", op.Operants[0])
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_DEF_VAR) var \"%s\" is not declared\n", varname.Str)
+        fmt.Fprintln(os.Stderr, "\t" + varname.At())
         os.Exit(1)
     }
 
-    if v.Name == value {
+    if v.Name == value.Str {
         fmt.Fprintln(os.Stderr, "[ERROR] cannot define a variable with itself")
-        fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
+        fmt.Fprintln(os.Stderr, "\t" + value.At())
         os.Exit(1)
     }
 
-    if prs.IsLit(value) {
+    if value.Type == token.Number || value.Type == token.Str {
         const _ uint = 2 - types.TypesCount
         switch v.Vartype {
         case types.Str:
@@ -142,55 +129,53 @@ func Define(asm *os.File, op *prs.Op) {
                 os.Exit(1)
             }
 
-            strIdx := str.Add(value)
+            strIdx := str.Add(value.Str)
             WriteVar(asm, fmt.Sprintf("mov %s, str%d\n", Registers[v.Regs[0]].Name, strIdx))
             WriteVar(asm, fmt.Sprintf("mov %s, %d\n", Registers[v.Regs[1]].Name, str.GetSize(strIdx)))
 
         case types.I32:
-            WriteVar(asm, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[0]].Name, value))
+            WriteVar(asm, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[0]].Name, value.Str))
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name)
-            os.Exit(1)
-        }
-    } else {
-        // TODO: check if var is defined
-        if otherVar := GetVar(value); otherVar != nil {
-            for ri, r := range otherVar.Regs {
-                WriteVar(asm, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[ri]].Name, Registers[r].Name))
-            }
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", value)
-            os.Exit(1)
         }
     }
 }
 
-func Assign(asm *os.File, op *prs.Op) {
-    if op.Type != prs.OP_ASSIGN_VAR {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_ASSIGN_VAR\n")
+func DefineByVar(asm *os.File, destVar token.Token, srcVar token.Token) {
+    if v := GetVar(destVar.Str); v == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", destVar.Str)
+        fmt.Fprintln(os.Stderr, "\t" + destVar.At())
         os.Exit(1)
+    } else {
+        // TODO: check if var is defined
+        if otherVar := GetVar(srcVar.Str); otherVar == nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", srcVar.Str)
+            fmt.Fprintln(os.Stderr, "\t" + srcVar.At())
+            os.Exit(1)
+        } else {
+            for ri, r := range otherVar.Regs {
+                WriteVar(asm, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[ri]].Name, Registers[r].Name))
+            }
+        }
     }
+}
 
-    if len(op.Operants) != 2 {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_ASSIGN_VAR) should have 2 operants\n")
-        os.Exit(1)
-    }
-
-    v := GetVar(op.Operants[0])
-    value := op.Operants[1]
+func Assign(asm *os.File, varname token.Token, value token.Token) {
+    v := GetVar(varname.Str)
 
     if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_ASSIGN_VAR) var \"%s\" is not declared\n", op.Operants[0])
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_ASSIGN_VAR) var \"%s\" is not declared\n", varname.Str)
+        fmt.Fprintln(os.Stderr, "\t" + varname.At())
         os.Exit(1)
     }
 
     // skip assigning a variable to itself (redundant)
-    if v.Name == value {
+    if v.Name == value.Str {
         return
     }
 
-    if prs.IsLit(value) {
+    if value.Type == token.Number || value.Type == token.Str {
         const _ uint = 2 - types.TypesCount
         switch v.Vartype {
         case types.Str:
@@ -199,12 +184,12 @@ func Assign(asm *os.File, op *prs.Op) {
                 os.Exit(1)
             }
 
-            strIdx := str.Add(value)
+            strIdx := str.Add(value.Str)
             asm.WriteString(fmt.Sprintf("mov %s, str%d\n", Registers[v.Regs[0]].Name, strIdx))
             asm.WriteString(fmt.Sprintf("mov %s, %d\n", Registers[v.Regs[1]].Name, str.GetSize(strIdx)))
 
         case types.I32:
-            asm.WriteString(fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[0]].Name, value))
+            asm.WriteString(fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[0]].Name, value.Str))
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name)
@@ -212,13 +197,10 @@ func Assign(asm *os.File, op *prs.Op) {
         }
     } else {
         // TODO: check if var is defined
-        if otherVar := GetVar(value); otherVar != nil {
+        if otherVar := GetVar(value.Str); otherVar != nil {
             for ri, r := range otherVar.Regs {
                 asm.WriteString(fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[ri]].Name, Registers[r].Name))
             }
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", value)
-            os.Exit(1)
         }
     }
 }
@@ -233,9 +215,9 @@ func Remove(varname string) {
         return
     }
 
-    for i, v := range vars {
+    for _, v := range vars {
         if v.Name == varname {
-            vars[i] = vars[len(vars)-1]
+            v = vars[len(vars)-1]
             vars = vars[:len(vars)-1]
             return
         }

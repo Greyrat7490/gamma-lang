@@ -2,12 +2,12 @@ package main
 
 import (
     "fmt"
-    "gorec/arithmetic"
-    "gorec/func"
     "gorec/parser"
     "gorec/str"
     "gorec/syscall"
     "gorec/vars"
+    "gorec/ast"
+    "gorec/token"
     "io/ioutil"
     "os"
     "os/exec"
@@ -52,40 +52,8 @@ func compile() {
     nasm_header(asm)
 
     sys.DefineBuildIns(asm)
-
-    for _, o := range prs.Ops {
-        const _ uint = 12 - prs.OP_COUNT
-
-        switch o.Type {
-        case prs.OP_DEF_VAR:
-            vars.Define(asm, &o)
-        case prs.OP_ASSIGN_VAR:
-            vars.Assign(asm, &o)
-        case prs.OP_DEC_VAR:
-            vars.Declare(&o)
-        case prs.OP_CALL_FN:
-            fn.CallFunc(asm, &o)
-        case prs.OP_DEF_FN:
-            fn.Define(asm, &o)
-        case prs.OP_END_FN:
-            fn.End(asm)
-        case prs.OP_DEC_ARGS:
-            fn.DeclareArgs(&o)
-        case prs.OP_DEF_ARGS:
-            fn.DefineArgs(asm, &o)
-        case prs.OP_ADD:
-            arithmetic.Add(asm, &o)
-        case prs.OP_SUB:
-            arithmetic.Sub(asm, &o)
-        case prs.OP_MUL:
-            arithmetic.Mul(asm, &o)
-        case prs.OP_DIV:
-            arithmetic.Div(asm, &o)
-        default:
-            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) \"%s\" has an unknown operante type\n", o.Token.Str)
-            os.Exit(1)
-        }
-    }
+ 
+    ast.Compile(asm)
 
     nasm_footer(asm)
 }
@@ -99,7 +67,13 @@ func genExe() {
     cmd.Stderr = &stderr
     err := cmd.Run()
     if err != nil {
-        fmt.Println("[ERROR] ", stderr.String())
+        s := stderr.String()
+        if s == "" {
+            fmt.Fprintf(os.Stderr, "[ERROR] %v\n", err)
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] %v\n", s)
+        }
+        os.Exit(1)
     }
 
     fmt.Println("[INFO] linking object files...")
@@ -108,7 +82,13 @@ func genExe() {
     cmd.Stderr = &stderr
     err = cmd.Run()
     if err != nil {
-        fmt.Println("[ERROR] ", stderr.String())
+        s := stderr.String()
+        if s == "" {
+            fmt.Fprintf(os.Stderr, "[ERROR] %v\n", err)
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] %v\n", s)
+        }
+        os.Exit(1)
     }
 
     fmt.Println("[INFO] generated executable")
@@ -126,11 +106,11 @@ func main() {
         os.Exit(1)
     }
 
+    token.Tokenize(src)
+    prs.Parse()
     // TODO: type checking step
-    prs.Tokenize(src)
-    // prs.ShowOps()
-    compile()
     // TODO: optimization step
-
+    // ast.ShowAst()
+    compile()
     genExe()
 }

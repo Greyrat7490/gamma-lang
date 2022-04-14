@@ -1,97 +1,140 @@
 package prs
 
 import (
-    "fmt"
-    "gorec/types"
     "os"
+    "fmt"
+    "gorec/token"
+    "gorec/types"
+    "gorec/ast"
 )
 
-func prsDecVar(words []Token, idx int) int {
-    if len(words) < idx + 1 {
+
+func prsDecVar(idx int) (ast.OpDecVar, int) {
+    tokens := token.GetTokens()
+
+    if len(tokens) < idx + 1 {
         fmt.Fprintln(os.Stderr, "[ERROR] neither name nor type provided for the variable declaration")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+        os.Exit(1)
+    }
+    if len(tokens) < idx + 2 {
+        if tokens[idx+1].Type == token.Name {
+            fmt.Fprintln(os.Stderr, "[ERROR] no type provided for the variable")
+        } else {
+            fmt.Fprintln(os.Stderr, "[ERROR] no name provided for the variable")
+        }
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
         os.Exit(1)
     }
 
-    if len(words) < idx + 2 {
-        fmt.Fprintln(os.Stderr, "[ERROR] no name or type provided for the variable")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx+1].At())
+    if (tokens[idx+1].Type != token.Name) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %s(\"%s\")\n", tokens[idx+1].Type.Readable(), tokens[idx+1].Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
+        os.Exit(1)
+    }
+    if (tokens[idx+2].Type != token.Typename) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Typename but got %s(\"%s\")\n", tokens[idx+2].Type.Readable(), tokens[idx+2].Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+2].At())
         os.Exit(1)
     }
 
-    t := types.ToType(words[idx+2].Str)
+
+    t := types.ToType(tokens[idx+2].Str)
     if t == -1 {
-        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", words[idx+2].Str)
-        fmt.Fprintln(os.Stderr, "\t" + words[idx+2].At())
+        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", tokens[idx+2].Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+2].At())
         os.Exit(1)
     }
 
-    op := Op{ Type: OP_DEC_VAR, Token: words[idx+1], Operants: []string{ words[idx+1].Str, words[idx+2].Str } }
-    Ops = append(Ops, op)
+    op := ast.OpDecVar{ Varname: tokens[idx+1], Vartype: t }
 
-    return idx + 2
+    return op, idx + 2
 }
 
-func prsDefVar(words []Token, idx int) int {
-    if len(words) < idx + 1 {
+func prsDefVar(idx int) (ast.OpDefVar, int) {
+    tokens := token.GetTokens()
+
+    if len(tokens) < idx + 1 {
         fmt.Fprintf(os.Stderr, "[ERROR] no value provided to define the variable\n")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
     }
 
-    value := words[idx+1].Str
-    v := words[idx-2].Str
-    t := words[idx-2]
+    if (tokens[idx-2].Type != token.Name) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %s(\"%s\")\n", tokens[idx-2].Type.Readable(), tokens[idx-2].Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx-2].At())
+        os.Exit(1)
+    }
+    if (!(tokens[idx+1].Type == token.Name || tokens[idx+1].Type == token.Number || tokens[idx+1].Type == token.Str)) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name or a literal but got %s(\"%s\")\n", tokens[idx+1].Type.Readable(), tokens[idx+1].Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
+        os.Exit(1)
+    }
+    
+    value := tokens[idx+1]
+    name := tokens[idx-2]
 
     // process sign
-    if value == "+" || value == "-" {
-        if IsLit(words[idx+2].Str) {
-            value += words[idx+2].Str
-        } else {
-            if value == "+" {
-                value = words[idx+2].Str
+    if value.Type == token.Plus || value.Type == token.Minus {
+        if tokens[idx+2].Type == token.Number {
+            value.Str += tokens[idx+2].Str
+        } else if tokens[idx+2].Type == token.Name {
+            if value.Type == token.Plus {
+                value = tokens[idx+2]
             } else {
                 fmt.Fprintf(os.Stderr, "[ERROR] negating a variable is not yet supported\n")
                 os.Exit(1)
             }
         }
+        value.Pos = tokens[idx+2].Pos
+        value.Type = tokens[idx+2].Type
+ 
         idx++
     }
 
-    op := Op{ Type: OP_DEF_VAR, Token: t, Operants: []string{ v, value } }
-    Ops = append(Ops, op)
+    op := ast.OpDefVar{ Varname: name, Value: value }
 
-    return idx + 1
+    return op, idx + 1
 }
 
-func prsAssignVar(words []Token, idx int) int {
-    if len(words) < idx + 1 {
-        fmt.Fprintf(os.Stderr, "[ERROR] no value provided to define the variable\n")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
-        os.Exit(1)
-    }
-
-    value := words[idx+1].Str
-    v := words[idx-1].Str
-    t := words[idx-1]
-
+func prsExpr(idx int) (token.Token, int) {
+    tokens := token.GetTokens()
+    value := tokens[idx]
+    
     // process sign
-    if value == "+" || value == "-" {
-        if IsLit(words[idx+2].Str) {
-            value += words[idx+2].Str
-        } else {
-            if value == "+" {
-                value = words[idx+2].Str
+    if value.Type == token.Plus || value.Type == token.Minus {
+        if tokens[idx+1].Type == token.Number {
+            value.Str += tokens[idx+1].Str
+        } else if tokens[idx+1].Type == token.Name {
+            if value.Type == token.Plus {
+                value = tokens[idx+1]
             } else {
                 fmt.Fprintf(os.Stderr, "[ERROR] negating a variable is not yet supported\n")
                 os.Exit(1)
             }
         }
-        idx++
+        value.Pos = tokens[idx+2].Pos
+        value.Type = tokens[idx+2].Type
+ 
+        return value, idx + 1
     }
 
-    op := Op{ Type: OP_ASSIGN_VAR, Token: t, Operants: []string{ v, value } }
-    Ops = append(Ops, op)
+    return value, idx
+}
 
-    return idx + 1
+func prsAssignVar(idx int) (ast.OpAssignVar, int) {
+    tokens := token.GetTokens()
+
+    if len(tokens) < idx + 1 {
+        fmt.Fprintf(os.Stderr, "[ERROR] no value provided to define the variable\n")
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+        os.Exit(1)
+    }
+
+    v := tokens[idx-1]
+    value, idx := prsExpr(idx+1)
+    
+    op := ast.OpAssignVar{ Varname: v, Value: value }
+
+    return op, idx
 }

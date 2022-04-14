@@ -1,8 +1,10 @@
 package prs
 
+/*
 import (
-    "fmt"
-    "os"
+	"gorec/token"
+	"os"
+	"fmt"
 )
 
 func sortBinOps(destIdx int) {
@@ -30,10 +32,12 @@ func sortBinOps(destIdx int) {
     }
 }
 
-func prsAdd(words []Token, idx int) int {
-    if len(words) < idx + 1 {
+func prsAdd(idx int) int {
+    tokens := token.GetTokens()
+
+    if len(tokens) < idx + 1 {
         fmt.Fprintln(os.Stderr, "[ERROR] '+' needs 2 operants")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
     }
 
@@ -41,21 +45,23 @@ func prsAdd(words []Token, idx int) int {
     for isBinaryOp(Ops[destOpIdx].Type) { destOpIdx-- }
 
     if Ops[destOpIdx].Type == OP_DEF_VAR || Ops[destOpIdx].Type == OP_ASSIGN_VAR {
-        op := Op{ Type: OP_ADD, Token: words[idx], Operants: []string{ Ops[destOpIdx].Operants[0], words[idx+1].Str } }
+        op := Op{ Type: OP_ADD, Token: tokens[idx], Operants: []string{ Ops[destOpIdx].Operants[0], tokens[idx+1].Str } }
         Ops = append(Ops, op)
     } else {
         fmt.Fprintln(os.Stderr, "[ERROR] not using result (assigning or defining a var)")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
     }
 
     return idx + 1
 }
 
-func prsSub(words []Token, idx int) int {
-    if len(words) < idx + 1 {
+func prsSub(idx int) int {
+    tokens := token.GetTokens()
+
+    if len(tokens) < idx + 1 {
         fmt.Fprintln(os.Stderr, "[ERROR] '-' needs 2 operants")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
     }
 
@@ -63,21 +69,23 @@ func prsSub(words []Token, idx int) int {
     for isBinaryOp(Ops[destOpIdx].Type) { destOpIdx-- }
 
     if Ops[destOpIdx].Type == OP_DEF_VAR || Ops[destOpIdx].Type == OP_ASSIGN_VAR {
-        op := Op{ Type: OP_SUB, Token: words[idx], Operants: []string{ Ops[destOpIdx].Operants[0], words[idx+1].Str } }
+        op := Op{ Type: OP_SUB, Token: tokens[idx], Operants: []string{ Ops[destOpIdx].Operants[0], tokens[idx+1].Str } }
         Ops = append(Ops, op)
     } else {
         fmt.Fprintln(os.Stderr, "[ERROR] not using result (assigning or defining a var)")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
     }
 
     return idx + 1
 }
 
-func prsMul(words []Token, idx int) int {
-    if len(words) < idx + 1 {
+func prsMul(idx int) int {
+    tokens := token.GetTokens()
+
+    if len(tokens) < idx + 1 {
         fmt.Fprintln(os.Stderr, "[ERROR] '*' needs 2 operants")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
     }
 
@@ -85,23 +93,25 @@ func prsMul(words []Token, idx int) int {
     for isBinaryOp(Ops[destOpIdx].Type) { destOpIdx-- }
 
     if Ops[destOpIdx].Type == OP_DEF_VAR || Ops[destOpIdx].Type == OP_ASSIGN_VAR {
-        op := Op{ Type: OP_MUL, Token: words[idx], Operants: []string{ Ops[destOpIdx].Operants[0], words[idx+1].Str } }
+        op := Op{ Type: OP_MUL, Token: tokens[idx], Operants: []string{ Ops[destOpIdx].Operants[0], tokens[idx+1].Str } }
         Ops = append(Ops, op)
     } else {
         fmt.Fprintln(os.Stderr, "[ERROR] not using result (assigning or defining a var)")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
     }
 
-    sortBinOps(destOpIdx)
+    // sortBinOps(destOpIdx)
 
     return idx + 1
 }
 
-func prsDiv(words []Token, idx int) int {
-    if len(words) < idx + 1 {
+func prsDiv(idx int) int {
+    tokens := token.GetTokens()
+
+    if len(tokens) < idx + 1 {
         fmt.Fprintln(os.Stderr, "[ERROR] '/' needs 2 operants")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
     }
 
@@ -109,15 +119,16 @@ func prsDiv(words []Token, idx int) int {
     for isBinaryOp(Ops[destOpIdx].Type) { destOpIdx-- }
 
     if Ops[destOpIdx].Type == OP_DEF_VAR || Ops[destOpIdx].Type == OP_ASSIGN_VAR {
-        op := Op{ Type: OP_DIV, Token: words[idx], Operants: []string{ Ops[destOpIdx].Operants[0], words[idx+1].Str } }
+        op := Op{ Type: OP_DIV, Token: tokens[idx], Operants: []string{ Ops[destOpIdx].Operants[0], tokens[idx+1].Str } }
         Ops = append(Ops, op)
     } else {
         fmt.Fprintln(os.Stderr, "[ERROR] not using result (assigning or defining a var)")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
     }
 
-    sortBinOps(destOpIdx)
+    // sortBinOps(destOpIdx)
 
     return idx + 1
 }
+*/

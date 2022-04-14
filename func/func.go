@@ -1,13 +1,13 @@
 package fn
 
 import (
-    "fmt"
-    "gorec/parser"
-    "gorec/str"
-    "gorec/types"
-    "gorec/vars"
     "os"
+    "fmt"
     "strconv"
+    "gorec/str"
+    "gorec/vars"
+    "gorec/token"
+    "gorec/types"
 )
 
 // calling convention (temporary):
@@ -21,18 +21,26 @@ var curFunc int = -1
 
 
 type fnHead struct {
-    name string
-    args []arg
+    name token.Token
+    args []Arg
 }
 
-type arg struct {
-    name string
-    argType types.Type
+type Arg struct {
+    Name string
+    Type types.Type
+}
+
+func (a Arg) String() string {
+    return fmt.Sprintf("{%s(Name) %s(Typename)}", a.Name, a.Type.Readable())
+}
+
+func (f *fnHead) At() string {
+    return f.name.At()
 }
 
 func GetFn(funcName string) *fnHead {
     for _, f := range funcs {
-        if f.name == funcName {
+        if f.name.Str == funcName {
             return &f
         }
     }
@@ -40,25 +48,16 @@ func GetFn(funcName string) *fnHead {
     return nil
 }
 
-func Define(asm *os.File, op *prs.Op) {
-    if op.Type != prs.OP_DEF_FN {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_DEF_FN\n")
-        os.Exit(1)
-    }
 
-    if len(op.Operants) != 1 {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_DEF_FN) should have 1 operant\n")
-        os.Exit(1)
-    }
-
+func Define(asm *os.File, fnName token.Token) {
     var f fnHead = fnHead{
-        name: op.Operants[0],
+        name: fnName,
     }
     curFunc = len(funcs)
     funcs = append(funcs, f)
     vars.IsGlobalScope = false
 
-    asm.WriteString(op.Operants[0] + ":\n")
+    asm.WriteString(fnName.Str + ":\n")
 }
 
 func End(asm *os.File) {
@@ -66,7 +65,7 @@ func End(asm *os.File) {
 
     // TODO: later local variables
     for _, a := range f.args {
-        vars.Remove(a.name)
+        vars.Remove(a.Name)
     }
     curFunc = -1
     vars.IsGlobalScope = true
@@ -74,33 +73,17 @@ func End(asm *os.File) {
     asm.WriteString("ret\n\n")
 }
 
-func CallFunc(asm *os.File, op *prs.Op) {
-    if op.Type != prs.OP_CALL_FN {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_CALL_FN\n")
+func CallFunc(asm *os.File, fnName token.Token) {
+    if f := GetFn(fnName.Str); f == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] undeclared name \"%s\"\n", fnName.Str)
+        fmt.Fprintln(os.Stderr, "\t" + fnName.At())
         os.Exit(1)
     }
 
-    if len(op.Operants) != 1 {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_CALL_FN) should have 1 operant\n")
-        os.Exit(1)
-    }
-
-    f := GetFn(op.Operants[0])
-    if f == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] undeclared name \"%s\"\n", op.Token.Str)
-        fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
-        os.Exit(1)
-    }
-
-    asm.WriteString("call " + op.Operants[0] + "\n")
+    asm.WriteString("call " + fnName.Str + "\n")
 }
 
-func DeclareArgs(op *prs.Op) {
-    if op.Type != prs.OP_DEC_ARGS {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_DEC_ARGS\n")
-        os.Exit(1)
-    }
-
+func DeclareArgs(args []Arg) {
     if curFunc == -1 {
         fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) CurFunc should be set")
         os.Exit(1)
@@ -108,68 +91,41 @@ func DeclareArgs(op *prs.Op) {
 
     f := &funcs[curFunc]
 
-    name := ""
-    for _, o := range op.Operants {
-        if name == "" {
-            name = o
-        } else {
-            if t := types.ToType(o); t != -1 {
-                f.args = append(f.args, arg{ name: name, argType: t })
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] unknown type \"%s\"\n", o)
-                os.Exit(1)
-            }
+    for _, a := range args {
+        f.args = append(f.args, Arg{ Name: a.Name, Type: a.Type })
 
-            // see calling convention
-            // 5 = r9, 6 = r10
-            var regs []int
-            var vartype types.Type
-
-            const _ uint = 2 - types.TypesCount
-            switch o {
-            case "str":
-                regs = []int { 5, 6 }
-                vartype = types.Str
-
-            case "i32":
-                regs = []int { 5 }
-                vartype = types.I32
-
-            default:
-                fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) unknown type \"%s\"", o)
-                os.Exit(1)
-            }
-
-            vars.Add(vars.Var{Name: name, Regs: regs, Vartype: vartype})
-
-            name = ""
+        // see calling convention
+        // 5 = r9, 6 = r10
+        var regs []int
+        const _ uint = 2 - types.TypesCount
+        switch a.Type {
+        case types.Str:
+            regs = []int { 5, 6 }
+        case types.I32:
+            regs = []int { 5 }
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) TODO")
+            os.Exit(1)
         }
+
+        vars.Add(vars.Var{Name: a.Name, Regs: regs, Vartype: a.Type})
     }
 
     if len(f.args) > 1 {
         fmt.Fprintln(os.Stderr, "[ERROR] functions only accept one argument max at the moment")
+        fmt.Fprintln(os.Stderr, "\t" + f.At())
         os.Exit(1)
     }
 }
 
-func DefineArgs(asm *os.File, op *prs.Op) {
-    if op.Type != prs.OP_DEF_ARGS {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) OpType should be OP_DEF_ARGS\n")
-        os.Exit(1)
-    }
-
-    if len(op.Operants) < 1 {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) Op(OP_DEF_ARGS) should have 1 or more operants\n")
-        os.Exit(1)
-    }
-
-    if f := GetFn(op.Operants[0]); f != nil {
-        for i, val := range op.Operants[1:] {
+func DefineArgs(asm *os.File, fnName token.Token, values []string) {
+    if f := GetFn(fnName.Str); f != nil {
+        for i, val := range values {
             if otherVar := vars.GetVar(val); otherVar != nil {
-                if otherVar.Vartype != f.args[i].argType {
+                if otherVar.Vartype != f.args[i].Type {
                     fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
-                        f.name, i, f.args[i].argType.Readable(), otherVar.Vartype.Readable())
-                    fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
+                        f.name.Str, i, f.args[i].Type.Readable(), otherVar.Vartype.Readable())
+                    fmt.Fprintln(os.Stderr, "\t" + fnName.At())
                     os.Exit(1)
                 }
 
@@ -191,13 +147,10 @@ func DefineArgs(asm *os.File, op *prs.Op) {
                     fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", otherVar.Name)
                     os.Exit(1)
                 }
-            } else if prs.IsLit(val) {
-                t := types.TypeOfVal(val)
-
-                if t != f.args[i].argType {
+            } else if t := types.TypeOfVal(val); t != -1 {
+                if t != f.args[i].Type {
                     fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
-                        f.name, i, f.args[i].argType.Readable(), t.Readable())
-                    fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
+                        f.name.Str, i, f.args[i].Type.Readable(), t.Readable())
                     os.Exit(1)
                 }
 
@@ -218,16 +171,24 @@ func DefineArgs(asm *os.File, op *prs.Op) {
                 }
             } else {
                 fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", val)
-                fmt.Fprintln(os.Stderr, "\t" + op.Token.At())
+                fmt.Fprintln(os.Stderr, "\t" + fnName.At())
                 os.Exit(1)
             }
         }
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", op.Operants[0])
+        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", fnName.Str)
         os.Exit(1)
     }
 }
 
 func AddBuildIn(name string, argname string, argtype types.Type) {
-    funcs = append(funcs, fnHead{name: name, args: []arg{{name: argname, argType: argtype}}})
+    funcs = append(funcs, fnHead{
+        name: token.Token{
+            Str: name,
+            Pos: token.Pos{Col: -1, Line: -1},
+        },
+        args: []Arg{{
+            Name: argname, Type: argtype,
+        }},
+    })
 }

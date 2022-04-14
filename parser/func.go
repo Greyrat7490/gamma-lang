@@ -1,135 +1,174 @@
 package prs
 
 import (
-    "fmt"
     "os"
+    "fmt"
+    "gorec/func"
+    "gorec/token"
+    "gorec/types"
+    "gorec/ast"
 )
 
-func isFuncCall(words []Token, idx int) bool {
-    return len(words) < idx + 1 || words[idx+1].Str == "("
-}
+func prsDefFn(idx int) (ast.OpDefFn, int) {
+    tokens := token.GetTokens()
 
-func prsDefFn(words []Token, idx int) int {
-    if words[idx+1].Str == "main" {
+    if tokens[idx+1].Str == "main" {
         isMainDefined = true
     }
 
-    var op Op = Op{ Type: OP_DEF_FN, Token: words[idx], Operants: []string{ words[idx+1].Str } }
-    Ops = append(Ops, op)
+    var op ast.OpDefFn = ast.OpDefFn{ FnName: tokens[idx+1] }
 
-    idx = prsDecArgs(words, idx)
+    op.Args, idx = prsDecArgs(idx)
 
-    for ; idx < len(words); idx++ {
-        switch words[idx].Str {
-        case "var":
-            idx = prsDecVar(words, idx)
-        case ":=":
-            idx = prsDefVar(words, idx)
-        case "=":
-            idx = prsAssignVar(words, idx)
-        case "+":
-            idx = prsAdd(tokens, idx)
-        case "-":
-            idx = prsSub(tokens, idx)
-        case "*":
-            idx = prsMul(tokens, idx)
-        case "/":
-            idx = prsDiv(tokens, idx)
-        case "fn":
+    for ; idx < len(tokens); idx++ {
+        switch tokens[idx].Type {
+        case token.Dec_var:
+            var decOp ast.OpDecVar
+            decOp, idx = prsDecVar(idx)
+            op.Block.Stmts = append(op.Block.Stmts, ast.OpDeclStmt{ Decl: decOp })
+        case token.Def_var:
+            var defOp ast.OpDefVar
+            defOp, idx = prsDefVar(idx)
+            op.Block.Stmts = append(op.Block.Stmts, ast.OpDeclStmt{ Decl: defOp })
+        case token.Assign:
+            var o ast.OpAssignVar
+            o, idx = prsAssignVar(idx)
+            op.Block.Stmts = append(op.Block.Stmts, o)
+        case token.Def_fn:
             fmt.Fprintln(os.Stderr, "[ERROR] you are not allowed to define functions inside a function")
-            fmt.Fprintln(os.Stderr, "\t" + words[idx].At())
+            fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
             os.Exit(1)
-        case "}":
-            prsEnd(words, idx)
-            return idx
-        default:
-            if isFuncCall(words, idx) {
-                idx = prsCallFn(words, idx)
+        case token.BraceR:
+            return op, idx
+        case token.Name:
+            if tokens[idx+1].Type == token.ParenL {
+                var callOp ast.OpFnCall
+                callOp, idx = prsCallFn(idx)
+                op.Block.Stmts = append(op.Block.Stmts, ast.OpExprStmt{ Expr: callOp })
             }
+        default:
+            // TODO
+            fmt.Fprintf(os.Stderr, "[ERROR] \"%s\"\n", tokens[idx].Str)
+            fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+            os.Exit(1)
         }
     }
 
-    fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" was not closed (missing \"}\")\n", words[idx+1].Str)
-    fmt.Fprintln(os.Stderr, "\t" + words[idx+1].At())
+    fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" was not closed (missing \"}\")\n", tokens[idx+1].Str)
+    fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
     os.Exit(1)
 
-    return -1
+    return ast.OpDefFn{}, -1
 }
 
-func prsEnd(words []Token, idx int) {
-    Ops = append(Ops, Op{ Type: OP_END_FN, Token: words[idx] })
-}
+func prsDecArgs(idx int) ([]fn.Arg, int) {
+    tokens := token.GetTokens()
 
-func prsDecArgs(words []Token, idx int) int {
-    if len(words) < idx + 2 || words[idx+2].Str != "(" {
+    if len(tokens) < idx + 2 {
         fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx+2].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
     }
 
-    var op Op = Op{ Type: OP_DEC_ARGS, Token: words[idx+3] }
+    if tokens[idx+2].Type != token.ParenL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got %s(\"%s\")\n", tokens[idx+2].Type.Readable(), tokens[idx+2].Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+2].At())
+        os.Exit(1)
+    }
 
+    var args []fn.Arg
+
+    var a fn.Arg
     b := false
-    for _, w := range words[idx+3:] {
-        if w.Str == ")" {
+    for _, w := range tokens[idx+3:] {
+        if w.Type == token.ParenR {
             b = true
             break
         }
 
-        if w.Str == "{" || w.Str == "}" {
+        if w.Type == token.BraceL || w.Type == token.BraceR {
             fmt.Fprintln(os.Stderr, "[ERROR] missing \")\"")
             fmt.Fprintln(os.Stderr, "\t" + w.At())
             os.Exit(1)
         }
-        op.Operants = append(op.Operants, w.Str)
+
+        if a.Name == "" {
+            if w.Type != token.Name {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %s(\"%s\")\n", w.Type.Readable(), w.Str)
+                fmt.Fprintln(os.Stderr, "\t" + w.At())
+                os.Exit(1)
+            }
+
+            a.Name = w.Str
+        } else {
+            if w.Type != token.Typename {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected a Typename but got %s(\"%s\")\n", w.Type.Readable(), w.Str)
+                fmt.Fprintln(os.Stderr, "\t" + w.At())
+                os.Exit(1)
+            }
+
+            a.Type = types.ToType(w.Str)
+            args = append(args, a)
+
+            a.Name = ""
+        }
     }
 
     if !b {
-        fmt.Fprintf(os.Stderr, "[ERROR] missing \")\" for function \"%s\"\n", words[idx+1].Str)
-        fmt.Fprintln(os.Stderr, "\t" + words[idx+1].At())
+        fmt.Fprintf(os.Stderr, "[ERROR] missing \")\" for function \"%s\"\n", tokens[idx+1].Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
         os.Exit(1)
     }
 
-    if len(op.Operants) > 0 {
-        Ops = append(Ops, op)
-    }
-
-    return idx + len(op.Operants) + 5
+    return args, idx + len(args) * 2 + 5
 }
 
-func prsCallFn(words []Token, idx int) int {
-    if len(words) < idx + 1 || words[idx+1].Str != "(" {
+func prsCallFn(idx int) (ast.OpFnCall, int) {
+    tokens := token.GetTokens()
+
+    var op ast.OpFnCall = ast.OpFnCall{ FnName: tokens[idx] }
+
+    if len(tokens) < idx + 1 {
         fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
-        fmt.Fprintln(os.Stderr, "\t" + words[idx+1].At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+        os.Exit(1)
+    }
+    if tokens[idx+1].Type != token.ParenL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got %s(\"%s\")\n", tokens[idx+1].Type.Readable(), tokens[idx+1].Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
         os.Exit(1)
     }
 
-    var op Op = Op{ Type: OP_CALL_FN, Token: words[idx], Operants: []string{ words[idx].Str } }
+    op.Values, idx = prsDefArgs(idx)
 
-    idx = prsDefArgs(words, idx)
-
-    Ops = append(Ops, op)
-
-    return idx
+    return op, idx
 }
 
-func prsDefArgs(words []Token, idx int) int {
-    var op Op = Op{ Type: OP_DEF_ARGS, Token: words[idx+2], Operants: []string{ words[idx].Str } }
+func prsDefArgs(idx int) ([]string, int) {
+    tokens := token.GetTokens()
+
+    var values []string
 
     b := false
-    for _, w := range words[idx+2:] {
-        if w.Str == ")" {
+    for _, w := range tokens[idx+2:] {
+        if w.Type == token.ParenR {
             b = true
             break
         }
 
-        if w.Str == "{" || w.Str == "}" {
+        if w.Type == token.BraceL || w.Type == token.BraceR {
             fmt.Fprintln(os.Stderr, "[ERROR] missing \")\"")
             fmt.Fprintln(os.Stderr, "\t" + w.At())
             os.Exit(1)
         }
 
-        op.Operants = append(op.Operants, w.Str)
+        if !(w.Type == token.Number || w.Type == token.Str || w.Type == token.Name) {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a Name or a literal but got %s(\"%s\")\n", w.Type.Readable(), w.Str)
+            fmt.Fprintln(os.Stderr, "\t" + w.At())
+            os.Exit(1)
+        }
+
+        values = append(values, w.Str)
     }
 
     if !b {
@@ -137,7 +176,5 @@ func prsDefArgs(words []Token, idx int) int {
         os.Exit(1)
     }
 
-    Ops = append(Ops, op)
-
-    return idx + len(op.Operants) + 1
+    return values, idx + len(values) + 2
 }
