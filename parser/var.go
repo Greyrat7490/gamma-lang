@@ -65,36 +65,19 @@ func prsDefVar(idx int) (ast.OpDefVar, int) {
         fmt.Fprintln(os.Stderr, "\t" + tokens[idx-2].At())
         os.Exit(1)
     }
-    if (!(tokens[idx+1].Type == token.Name || tokens[idx+1].Type == token.Number || tokens[idx+1].Type == token.Str)) {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name or a literal but got %s(\"%s\")\n", tokens[idx+1].Type.Readable(), tokens[idx+1].Str)
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
-        os.Exit(1)
-    }
     
-    value := tokens[idx+1]
     name := tokens[idx-2]
+    value, idx := prsExpr(idx+1)
 
-    // process sign
-    if value.Type == token.Plus || value.Type == token.Minus {
-        if tokens[idx+2].Type == token.Number {
-            value.Str += tokens[idx+2].Str
-        } else if tokens[idx+2].Type == token.Name {
-            if value.Type == token.Plus {
-                value = tokens[idx+2]
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] negating a variable is not yet supported\n")
-                os.Exit(1)
-            }
-        }
-        value.Pos = tokens[idx+2].Pos
-        value.Type = tokens[idx+2].Type
- 
-        idx++
+    if (!(tokens[idx].Type == token.Name || tokens[idx].Type == token.Number || tokens[idx].Type == token.Str)) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name or a literal but got %s(\"%s\")\n", tokens[idx].Type.Readable(), tokens[idx].Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+        os.Exit(1)
     }
 
     op := ast.OpDefVar{ Varname: name, Value: value }
 
-    return op, idx + 1
+    return op, idx
 }
 
 func prsExpr(idx int) (token.Token, int) {
@@ -113,8 +96,8 @@ func prsExpr(idx int) (token.Token, int) {
                 os.Exit(1)
             }
         }
-        value.Pos = tokens[idx+2].Pos
-        value.Type = tokens[idx+2].Type
+        value.Pos = tokens[idx+1].Pos
+        value.Type = tokens[idx+1].Type
  
         return value, idx + 1
     }

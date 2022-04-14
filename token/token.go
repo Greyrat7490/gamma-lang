@@ -5,6 +5,7 @@ import (
     "fmt"
     "strconv"
     "unicode"
+    "strings"
     "gorec/types"
 )
 
@@ -162,6 +163,7 @@ func (t Token) At() string {
 
 // escape chars (TODO: \n, \t, \r, ...) (done: \\, \")
 func Tokenize(file []byte) {
+    keySigns := "(){}+-*/"
     f := string(file)
 
     start := 0
@@ -216,7 +218,7 @@ func Tokenize(file []byte) {
                 }
 
             // split
-            } else if unicode.IsSpace(r) || r == '(' || r == ')' || r == '{' || r == '}' {
+            } else if unicode.IsSpace(r) || strings.Contains(keySigns, string(r)) {
                 if start != i {
                     s := f[start:i]
 
@@ -224,7 +226,7 @@ func Tokenize(file []byte) {
                 }
                 start = i + 1
 
-                if r == '(' || r == ')' || r == '{' || r == '}' {
+                if strings.Contains(keySigns, string(r)) {
                     tokens = append(tokens, Token{TokenTypeOfStr(string(r)), string(r), Pos{line, col}})
                 }
             }
