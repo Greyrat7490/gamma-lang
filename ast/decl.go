@@ -28,7 +28,7 @@ type OpDefVar struct {
 type OpDefFn struct {
     FnName token.Token
     Args []fn.Arg
-    Ops []interface{ Op }   // TODO: later only BlockStmt
+    Block OpBlock
 }
 
 
@@ -49,9 +49,7 @@ func (o OpDefFn) Compile(asm *os.File) {
     fn.Define(asm, o.FnName)
     fn.DeclareArgs(o.Args)
 
-    for _, op := range o.Ops {
-        op.Compile(asm)
-    }
+    o.Block.Compile(asm)
 
     fn.End(asm);
 }
@@ -61,7 +59,7 @@ func (o OpDecVar) Readable(indent int) string {
     s := strings.Repeat("   ", indent)
     s2 := s + "   "
 
-    return fmt.Sprintf("%sOP_DEC_VAR:\n%s %s(%s) %s(Typename)\n", s, s2,
+    return fmt.Sprintf("%sOP_DEC_VAR:\n%s%s(%s) %s(Typename)\n", s, s2,
         o.Varname.Str, o.Varname.Type.Readable(),
         o.Vartype.Readable())
 }
@@ -70,7 +68,7 @@ func (o OpDefVar) Readable(indent int) string {
     s := strings.Repeat("   ", indent)
     s2 := s + "   "
 
-    return fmt.Sprintf("%sOP_DEF_VAR:\n%s %s(%s) %s(%s)\n", s, s2,
+    return fmt.Sprintf("%sOP_DEF_VAR:\n%s%s(%s) %s(%s)\n", s, s2,
         o.Varname.Str, o.Varname.Type.Readable(),
         o.Value.Str, o.Value.Type.Readable())
 }
@@ -79,12 +77,9 @@ func (o OpDefFn) Readable(indent int) string {
     s := strings.Repeat("   ", indent)
     s2 := s + "   "
 
-    res := fmt.Sprintf("%sOP_DEF_FN:\n%s%s (%s) %v\n", s, s2,
-        o.FnName.Str, o.FnName.Type.Readable(), o.Args)
-
-    for _, op := range o.Ops {
-        res += op.Readable(indent+2)
-    }
+    res := fmt.Sprintf("%sOP_DEF_FN:\n%s%s(%s) %v\n", s, s2,
+        o.FnName.Str, o.FnName.Type.Readable(), o.Args) +
+        o.Block.Readable(indent+2)
 
     return res
 }

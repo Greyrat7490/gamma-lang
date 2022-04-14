@@ -25,11 +25,11 @@ func prsDefFn(idx int) (ast.OpDefFn, int) {
         case token.Dec_var:
             var decOp ast.OpDecVar
             decOp, idx = prsDecVar(idx)
-            op.Ops = append(op.Ops, decOp)
+            op.Block.Stmts = append(op.Block.Stmts, ast.OpDeclStmt{ Decl: decOp })
         case token.Def_var:
             var defOp ast.OpDefVar
             defOp, idx = prsDefVar(idx)
-            op.Ops = append(op.Ops, defOp)
+            op.Block.Stmts = append(op.Block.Stmts, ast.OpDeclStmt{ Decl: defOp })
         case token.Def_fn:
             fmt.Fprintln(os.Stderr, "[ERROR] you are not allowed to define functions inside a function")
             fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
@@ -40,7 +40,7 @@ func prsDefFn(idx int) (ast.OpDefFn, int) {
             if tokens[idx+1].Type == token.ParenL {
                 var callOp ast.OpFnCall
                 callOp, idx = prsCallFn(idx)
-                op.Ops = append(op.Ops, callOp)
+                op.Block.Stmts = append(op.Block.Stmts, ast.OpExprStmt{ Expr: callOp })
             }
             // TODO: assign
         default:
