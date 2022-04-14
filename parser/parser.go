@@ -15,17 +15,17 @@ func Parse() {
     for i := 0; i < len(tokens); i++ {
         switch tokens[i].Type {
         case token.Dec_var:
-            var decOp OpDecVar
-            decOp, i = prsDecVar(i)
-            ast.Ast.Ops = append(ast.Ast.Ops, decOp)
+            var op ast.OpDecVar
+            op, i = prsDecVar(i)
+            ast.AddOp(op)
         case token.Def_var:
-            var defOp OpDefVar
-            defOp, i = prsDefVar(i)
-            ast.Ast.Ops = append(ast.Ast.Ops, defOp)
+            var op ast.OpDefVar
+            op, i = prsDefVar(i)
+            ast.AddOp(op)
         case token.Def_fn:
-            var op OpDefFn
+            var op ast.OpDefFn
             op, i = prsDefFn(i)
-            ast.Ast.Ops = append(ast.Ast.Ops, op)
+            ast.AddOp(op)
         case token.Name:
             if tokens[i+1].Type == token.ParenL {
                 fmt.Fprintln(os.Stderr, "[ERROR] function calls are not allowed in global scope")

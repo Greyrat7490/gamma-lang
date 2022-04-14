@@ -53,7 +53,7 @@ func compile() {
 
     sys.DefineBuildIns(asm)
 
-    ast.Ast.Compile(asm)
+    ast.Compile(asm)
 
     nasm_footer(asm)
 }

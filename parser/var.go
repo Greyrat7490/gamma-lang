@@ -3,49 +3,13 @@ package prs
 import (
     "os"
     "fmt"
-    "strings"
     "gorec/token"
     "gorec/types"
-    "gorec/vars"
+    "gorec/ast"
 )
 
-type OpDecVar struct {
-    Varname token.Token
-    Vartype types.Type
-}
 
-func (o OpDecVar) Readable(indent int) string {
-    return strings.Repeat("   ", indent) +
-        fmt.Sprintf("OP_DEC_VAR: %s(%s) %s(Typename)\n",
-        o.Varname.Str, o.Varname.Type.Readable(),
-        o.Vartype.Readable())
-}
-
-func (o OpDecVar) Compile(asm *os.File) {
-    vars.Declare(o.Varname, o.Vartype)
-}
-
-
-type OpDefVar struct {
-    Varname token.Token
-    Value token.Token
-    ValueType types.Type
-}
-
-func (o OpDefVar) Readable(indent int) string {
-    return strings.Repeat("   ", indent) +
-        fmt.Sprintf("OP_DEF_VAR: %s(%s) %s(%s) %s(Typename)\n",
-        o.Varname.Str, o.Varname.Type.Readable(),
-        o.Value.Str, o.Value.Type.Readable(),
-        o.ValueType.Readable())
-}
-
-func (o OpDefVar) Compile(asm *os.File) {
-    vars.Define(o.Varname, o.Value)
-}
-
-
-func prsDecVar(idx int) (OpDecVar, int) {
+func prsDecVar(idx int) (ast.OpDecVar, int) {
     tokens := token.GetTokens()
 
     if len(tokens) < idx + 1 {
@@ -82,12 +46,12 @@ func prsDecVar(idx int) (OpDecVar, int) {
         os.Exit(1)
     }
 
-    op := OpDecVar{ Varname: tokens[idx+1], Vartype: t }
+    op := ast.OpDecVar{ Varname: tokens[idx+1], Vartype: t }
 
     return op, idx + 2
 }
 
-func prsDefVar(idx int) (OpDefVar, int) {
+func prsDefVar(idx int) (ast.OpDefVar, int) {
     tokens := token.GetTokens()
 
     if len(tokens) < idx + 1 {
@@ -108,10 +72,9 @@ func prsDefVar(idx int) (OpDefVar, int) {
     }
 
     value := tokens[idx+1]
-    t := types.TypeOfVal(value.Str)
     v := tokens[idx-2]
 
-    op := OpDefVar{ Varname: v, Value: value, ValueType: t }
+    op := ast.OpDefVar{ Varname: v, Value: value }
 
     return op, idx + 1
 }
