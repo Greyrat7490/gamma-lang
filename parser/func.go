@@ -25,15 +25,15 @@ func prsDefFn(idx int) (ast.OpDefFn, int) {
         case token.Dec_var:
             var decOp ast.OpDecVar
             decOp, idx = prsDecVar(idx)
-            op.Block.Stmts = append(op.Block.Stmts, ast.OpDeclStmt{ Decl: decOp })
+            op.Block.Stmts = append(op.Block.Stmts, &ast.OpDeclStmt{ Decl: &decOp })
         case token.Def_var:
             var defOp ast.OpDefVar
             defOp, idx = prsDefVar(idx)
-            op.Block.Stmts = append(op.Block.Stmts, ast.OpDeclStmt{ Decl: defOp })
+            op.Block.Stmts = append(op.Block.Stmts, &ast.OpDeclStmt{ Decl: &defOp })
         case token.Assign:
             var o ast.OpAssignVar
             o, idx = prsAssignVar(idx)
-            op.Block.Stmts = append(op.Block.Stmts, o)
+            op.Block.Stmts = append(op.Block.Stmts, &o)
         case token.Def_fn:
             fmt.Fprintln(os.Stderr, "[ERROR] you are not allowed to define functions inside a function")
             fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
@@ -44,7 +44,7 @@ func prsDefFn(idx int) (ast.OpDefFn, int) {
             if tokens[idx+1].Type == token.ParenL {
                 var callOp ast.OpFnCall
                 callOp, idx = prsCallFn(idx)
-                op.Block.Stmts = append(op.Block.Stmts, ast.OpExprStmt{ Expr: callOp })
+                op.Block.Stmts = append(op.Block.Stmts, &ast.OpExprStmt{ Expr: &callOp })
             }
         default:
             // TODO

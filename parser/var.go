@@ -65,7 +65,7 @@ func prsDefVar(idx int) (ast.OpDefVar, int) {
         fmt.Fprintln(os.Stderr, "\t" + tokens[idx-2].At())
         os.Exit(1)
     }
-    
+
     name := tokens[idx-2]
     value, idx := prsExpr(idx+1)
 
@@ -80,29 +80,47 @@ func prsDefVar(idx int) (ast.OpDefVar, int) {
     return op, idx
 }
 
-func prsExpr(idx int) (token.Token, int) {
+func prsIdentExpr(idx int) (*ast.IdentExpr, int) {
+    tokens := token.GetTokens()
+    return &ast.IdentExpr{ Ident: tokens[idx] }, idx
+}
+
+func prsLitExpr(idx int) (*ast.LitExpr, int) {
+    tokens := token.GetTokens()
+    return &ast.LitExpr{ Val: tokens[idx], Type: types.TypeOfVal(tokens[idx].Str) }, idx
+}
+
+func prsUnaryExpr(idx int) (*ast.UnaryExpr, int) {
+    tokens := token.GetTokens()
+    expr := ast.UnaryExpr{ Operator: tokens[idx] }
+
+    expr.Operand, idx = prsExpr(idx+1)
+
+    return &expr, idx
+}
+
+func prsExpr(idx int) (ast.OpExpr, int) {
     tokens := token.GetTokens()
     value := tokens[idx]
-    
-    // process sign
-    if value.Type == token.Plus || value.Type == token.Minus {
-        if tokens[idx+1].Type == token.Number {
-            value.Str += tokens[idx+1].Str
-        } else if tokens[idx+1].Type == token.Name {
-            if value.Type == token.Plus {
-                value = tokens[idx+1]
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] negating a variable is not yet supported\n")
-                os.Exit(1)
-            }
-        }
-        value.Pos = tokens[idx+1].Pos
-        value.Type = tokens[idx+1].Type
- 
-        return value, idx + 1
-    }
 
-    return value, idx
+    switch value.Type {
+    case token.Plus, token.Minus:
+        return prsUnaryExpr(idx)
+
+    case token.Name:
+        return prsIdentExpr(idx)
+
+    case token.Number, token.Str:
+        var expr ast.OpExpr
+        expr, idx = prsLitExpr(idx)
+        return expr, idx
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] no valid expression\n")
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+        os.Exit(1)
+        return &ast.LitExpr{}, -1
+    }
 }
 
 func prsAssignVar(idx int) (ast.OpAssignVar, int) {
@@ -116,7 +134,7 @@ func prsAssignVar(idx int) (ast.OpAssignVar, int) {
 
     v := tokens[idx-1]
     value, idx := prsExpr(idx+1)
-    
+
     op := ast.OpAssignVar{ Varname: v, Value: value }
 
     return op, idx

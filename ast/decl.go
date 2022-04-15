@@ -22,7 +22,7 @@ type OpDecVar struct {
 
 type OpDefVar struct {
     Varname token.Token
-    Value token.Token
+    Value OpExpr
 }
 
 type OpDefFn struct {
@@ -32,20 +32,23 @@ type OpDefFn struct {
 }
 
 
-func (o OpDecVar) decl() {}
-func (o OpDefVar) decl() {}
-func (o OpDefFn)  decl() {}
+func (o *OpDecVar) decl() {}
+func (o *OpDefVar) decl() {}
+func (o *OpDefFn)  decl() {}
 
 
-func (o OpDecVar) Compile(asm *os.File) {
+func (o *OpDecVar) Compile(asm *os.File) {
     vars.Declare(o.Varname, o.Vartype)
 }
 
-func (o OpDefVar) Compile(asm *os.File) {
-    vars.Define(asm, o.Varname, o.Value)
+func (o *OpDefVar) Compile(asm *os.File) {
+    o.Value.Compile(asm)
+    value := o.Value.GetValue()
+
+    vars.Define(asm, o.Varname, value)
 }
 
-func (o OpDefFn) Compile(asm *os.File) {
+func (o *OpDefFn) Compile(asm *os.File) {
     fn.Define(asm, o.FnName)
     fn.DeclareArgs(o.Args)
 
@@ -55,7 +58,7 @@ func (o OpDefFn) Compile(asm *os.File) {
 }
 
 
-func (o OpDecVar) Readable(indent int) string {
+func (o *OpDecVar) Readable(indent int) string {
     s := strings.Repeat("   ", indent)
     s2 := s + "   "
 
@@ -64,16 +67,15 @@ func (o OpDecVar) Readable(indent int) string {
         o.Vartype.Readable())
 }
 
-func (o OpDefVar) Readable(indent int) string {
+func (o *OpDefVar) Readable(indent int) string {
     s := strings.Repeat("   ", indent)
     s2 := s + "   "
 
-    return fmt.Sprintf("%sOP_DEF_VAR:\n%s%s(%s) %s(%s)\n", s, s2,
-        o.Varname.Str, o.Varname.Type.Readable(),
-        o.Value.Str, o.Value.Type.Readable())
+    return fmt.Sprintf("%sOP_DEF_VAR:\n%s%s(%s)\n", s, s2,
+        o.Varname.Str, o.Varname.Type.Readable()) + o.Value.Readable(indent+1)
 }
 
-func (o OpDefFn) Readable(indent int) string {
+func (o *OpDefFn) Readable(indent int) string {
     s := strings.Repeat("   ", indent)
     s2 := s + "   "
 
