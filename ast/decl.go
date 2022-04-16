@@ -12,7 +12,8 @@ import (
 
 type OpDecl interface {
     Op
-    decl()  // to differenciate OpDecl from OpStmt and OpExpr
+    Compile(asm *os.File)
+    decl()  // to differenciate OpDecl from OpStmt
 }
 
 type OpDecVar struct {
@@ -42,10 +43,8 @@ func (o *OpDecVar) Compile(asm *os.File) {
 }
 
 func (o *OpDefVar) Compile(asm *os.File) {
-    o.Value.Compile(asm)
-    value := o.Value.GetValue()
-
-    vars.Define(asm, o.Varname, value)
+    vars.Define(asm, o.Varname, o.Value.GetValue())
+    o.Value.Compile(asm, o.Varname)
 }
 
 func (o *OpDefFn) Compile(asm *os.File) {

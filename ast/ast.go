@@ -22,7 +22,6 @@ func Compile(asm *os.File) {
 
 type Op interface {
     Readable(indent int) string
-    Compile(asm *os.File)
 }
 
 type OpProgramm struct {

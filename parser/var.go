@@ -112,11 +112,16 @@ func prsExpr(idx int) (ast.OpExpr, int) {
 
     case token.Number, token.Str:
         var expr ast.OpExpr
-        expr, idx = prsLitExpr(idx)
-        return expr, idx
-
+        if tokens[idx+1].Type == token.Plus || tokens[idx+1].Type == token.Minus ||
+            tokens[idx+1].Type == token.Mul || tokens[idx+1].Type == token.Div {
+            expr, idx = prsBinary(idx)
+            return expr, idx
+        } else {
+            expr, idx = prsLitExpr(idx)
+            return expr, idx
+        }
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] no valid expression\n")
+        fmt.Fprintf(os.Stderr, "[ERROR] no valid expression (got type %s)\n", value.Type.Readable())
         fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
         return &ast.LitExpr{}, -1

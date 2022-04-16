@@ -7,10 +7,12 @@ import (
     "gorec/func"
     "gorec/token"
     "gorec/types"
+    "gorec/arithmetic"
 )
 
 type OpExpr interface {
     Op
+    Compile(asm *os.File, dest token.Token)
     GetValue() token.Token
 }
 type OpFnCall struct {
@@ -34,10 +36,18 @@ type BinaryExpr struct {
     OperandR OpExpr
 }
 
-func (o *LitExpr)   GetValue() token.Token { return o.Val }
-func (o *IdentExpr) GetValue() token.Token { return o.Ident }
-func (o *UnaryExpr) GetValue() token.Token { return o.Operand.GetValue() }
-func (o *OpFnCall)  GetValue() token.Token { return o.FnName }
+func (o *LitExpr)    GetValue() token.Token { return o.Val }
+func (o *IdentExpr)  GetValue() token.Token { return o.Ident }
+func (o *OpFnCall)   GetValue() token.Token { return token.Token{} }
+func (o *BinaryExpr) GetValue() token.Token { return o.OperandL.GetValue() }
+func (o *UnaryExpr)  GetValue() token.Token {
+    if l, ok := o.Operand.(*LitExpr); ok {
+        l.Val.Str = o.Operator.Str + l.Val.Str
+        return l.Val
+    } else {
+        return o.Operand.GetValue()
+    }
+}
 
 
 func (o *OpFnCall) Readable(indent int) string {
@@ -45,7 +55,6 @@ func (o *OpFnCall) Readable(indent int) string {
     s2 := s + "   "
     return fmt.Sprintf("%sOP_CALL_FN:\n%s%s %v\n", s, s2, o.FnName.Str, o.Values)
 }
-
 func (o *LitExpr) Readable(indent int) string {
     return strings.Repeat("   ", indent) + fmt.Sprintf("%s(%s)\n", o.Val.Str, o.Type.Readable())
 }
@@ -59,22 +68,24 @@ func (o *UnaryExpr) Readable(indent int) string {
     return fmt.Sprintf("%sOP_UNARY:\n%s%s(%s)\n", s, s2, o.Operator.Str, o.Operator.Type.Readable()) +
         o.Operand.Readable(indent+1)
 }
+func (o *BinaryExpr) Readable(indent int) string {
+    s := strings.Repeat("   ", indent)
+    s2 := s + "   "
 
-func (o *LitExpr)   Compile(asm *os.File) {}
-func (o *IdentExpr) Compile(asm *os.File) {}
-func (o *UnaryExpr) Compile(asm *os.File) {
-    if o.Operator.Type == token.Minus {
-        switch e := o.Operand.(type) {
-        case *LitExpr:
-            e.Val.Str = o.Operator.Str + e.Val.Str
-        case *IdentExpr:
-            // TODO: negating variables
-        default:
-            os.Exit(1)
-        }
-    }
+    return fmt.Sprintf("%sOP_BINARY:\n%s%s(%s)\n", s, s2, o.Operator.Str, o.Operator.Type.Readable()) +
+        o.OperandL.Readable(indent+1) +
+        o.OperandR.Readable(indent+1)
 }
-func (o *OpFnCall) Compile(asm *os.File) {
+
+
+func (o *LitExpr)    Compile(asm *os.File, dest token.Token) {}
+func (o *IdentExpr)  Compile(asm *os.File, dest token.Token) {}
+func (o *UnaryExpr)  Compile(asm *os.File, dest token.Token) { /* TODO negating vars */ }
+func (o *BinaryExpr) Compile(asm *os.File, dest token.Token) {
+    arith.BinaryOp(asm, o.Operator.Type, o.OperandR.GetValue(), dest)
+    o.OperandR.Compile(asm, dest)
+}
+func (o *OpFnCall) Compile(asm *os.File, dest token.Token) {
     fn.DefineArgs(asm, o.FnName, o.Values)
     fn.CallFunc(asm, o.FnName)
 }

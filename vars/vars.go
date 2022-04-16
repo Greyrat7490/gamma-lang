@@ -98,6 +98,7 @@ func Declare(varname token.Token, vartype types.Type) {
     }
 }
 
+// TODO: merge Define and Assign
 func Define(asm *os.File, varname token.Token, value token.Token) {
     if v := GetVar(value.Str); v != nil {
         DefineByVar(asm, varname, value)
@@ -185,11 +186,11 @@ func Assign(asm *os.File, varname token.Token, value token.Token) {
             }
 
             strIdx := str.Add(value.Str)
-            asm.WriteString(fmt.Sprintf("mov %s, str%d\n", Registers[v.Regs[0]].Name, strIdx))
-            asm.WriteString(fmt.Sprintf("mov %s, %d\n", Registers[v.Regs[1]].Name, str.GetSize(strIdx)))
+            WriteVar(asm, fmt.Sprintf("mov %s, str%d\n", Registers[v.Regs[0]].Name, strIdx))
+            WriteVar(asm, fmt.Sprintf("mov %s, %d\n", Registers[v.Regs[1]].Name, str.GetSize(strIdx)))
 
         case types.I32:
-            asm.WriteString(fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[0]].Name, value.Str))
+            WriteVar(asm, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[0]].Name, value.Str))
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name)
@@ -199,7 +200,7 @@ func Assign(asm *os.File, varname token.Token, value token.Token) {
         // TODO: check if var is defined
         if otherVar := GetVar(value.Str); otherVar != nil {
             for ri, r := range otherVar.Regs {
-                asm.WriteString(fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[ri]].Name, Registers[r].Name))
+                WriteVar(asm, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[ri]].Name, Registers[r].Name))
             }
         }
     }

@@ -1,12 +1,24 @@
 package prs
 
-/*
 import (
+	"gorec/ast"
 	"gorec/token"
-	"os"
-	"fmt"
 )
 
+func prsBinary(idx int) (*ast.BinaryExpr, int) {
+    tokens := token.GetTokens()
+    expr := ast.BinaryExpr{}
+
+    if (tokens[idx].Type == token.Number) {
+        expr.OperandL, _ = prsLitExpr(idx)
+        expr.Operator = tokens[idx+1]
+        expr.OperandR, idx = prsExpr(idx+2)
+    }
+
+    return &expr, idx
+}
+
+/*
 func sortBinOps(destIdx int) {
     // set assign value to first operant of mul or div
     if Ops[destIdx+1].Type != OP_MUL && Ops[destIdx+1].Type != OP_DIV {

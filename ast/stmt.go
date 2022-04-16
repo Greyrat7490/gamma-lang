@@ -1,16 +1,17 @@
 package ast
 
 import (
-    "fmt"
-    "gorec/token"
-    "gorec/vars"
-    "os"
-    "strings"
+	"fmt"
+	"gorec/token"
+	"gorec/vars"
+	"os"
+	"strings"
 )
 
 type OpStmt interface {
     Op
-    stmt()  // to differenciate OpStmt from OpDecl and OpExpr
+    Compile(asm *os.File)
+    stmt()  // to differenciate OpStmt from OpDecl
 }
 
 type OpDeclStmt struct {
@@ -55,10 +56,8 @@ func (o *OpDeclStmt) Readable(indent int) string {
 }
 
 func (o *OpAssignVar) Compile(asm *os.File) {
-    o.Value.Compile(asm)
-    value := o.Value.GetValue()
-
-    vars.Assign(asm, o.Varname, value)
+    vars.Assign(asm, o.Varname, o.Value.GetValue())
+    o.Value.Compile(asm, o.Varname)
 }
 func (o *OpBlock) Compile(asm *os.File) {
     for _, op := range o.Stmts {
@@ -66,7 +65,7 @@ func (o *OpBlock) Compile(asm *os.File) {
     }
 }
 func (o *OpExprStmt) Compile(asm *os.File) {
-    o.Expr.Compile(asm)
+    o.Expr.Compile(asm, token.Token{})
 }
 func (o *OpDeclStmt) Compile(asm *os.File) {
     o.Decl.Compile(asm)

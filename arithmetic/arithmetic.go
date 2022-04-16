@@ -1,170 +1,117 @@
-package arithmetic
+package arith
 
 import (
     "fmt"
-    "gorec/types"
     "gorec/vars"
     "gorec/token"
     "os"
 )
 
-// TODO: to one function
+func UnaryOp(operator token.Token, operand token.Token) {
+    /* TODO negating vars */
+}
 
-func Add(asm *os.File, varname token.Token, value token.Token) {
-    if v := vars.GetVar(varname.Str); v != nil {
-        if len(v.Regs) != 1 {
-            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) variable should have 1 register\n")
+func BinaryOp(asm *os.File, opType token.TokenType, src token.Token, dest token.Token) {
+    var s string
+    var d string
+
+    // TODO get regs method
+    if src.Type == token.Name {
+        v := vars.GetVar(src.Str)
+        if v == nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", src.Str)
+            fmt.Fprintln(os.Stderr, "\t" + src.At())
             os.Exit(1)
         }
 
-        dest := vars.Registers[v.Regs[0]].Name
-        var val string
+        s = vars.Registers[v.Regs[0]].Name
+    } else {
+        s = src.Str
+    }
 
-        if otherVar := vars.GetVar(value.Str); otherVar != nil {
-            if otherVar.Vartype != types.I32 {
-                fmt.Fprintf(os.Stderr, "[ERROR] you cannot add I32 and %s (type of %s)\n", otherVar.Vartype.Readable(), otherVar.Name)
-                fmt.Fprintln(os.Stderr, "\t" + value.At())
-                os.Exit(1)
-            }
-
-            val = vars.Registers[otherVar.Regs[0]].Name
-        } else {
-            val = value.Str
+    if dest.Type == token.Name {
+        v := vars.GetVar(dest.Str)
+        if v == nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", dest.Str)
+            fmt.Fprintln(os.Stderr, "\t" + dest.At())
+            os.Exit(1)
         }
 
-        vars.WriteVar(asm, fmt.Sprintf("add %s, %s\n", dest, val))
+        d = vars.Registers[v.Regs[0]].Name
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) variable \"%s\" is not declared\n", varname.Str)
+        d = dest.Str
+    }
+
+    switch opType {
+    case token.Plus:
+        add(asm, s, d);
+    case token.Minus:
+        sub(asm, s, d);
+    case token.Mul:
+        mul(asm, s, d);
+    case token.Div:
+        div(asm, s, d);
+    default:
+        fmt.Fprintf(os.Stderr, "Error: only +,-,*,/ are supported binary operators (got %s)\n", opType.Readable())
         os.Exit(1)
     }
 }
 
-func Sub(asm *os.File, varname token.Token, value token.Token) {
-    if v := vars.GetVar(varname.Str); v != nil {
-        if len(v.Regs) != 1 {
-            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) variable should have 1 register\n")
-            os.Exit(1)
-        }
+func add(asm *os.File, src string, dest string) {
+    vars.WriteVar(asm, fmt.Sprintf("add %s, %s\n", dest, src))
+}
 
-        dest := vars.Registers[v.Regs[0]].Name
-        var val string
+func sub(asm *os.File, src string, dest string) {
+    vars.WriteVar(asm, fmt.Sprintf("add %s, %s\n", dest, src))
+}
 
-        if otherVar := vars.GetVar(value.Str); otherVar != nil {
-            if otherVar.Vartype != types.I32 {
-                fmt.Fprintf(os.Stderr, "[ERROR] you cannot sub I32 and %s (type of %s)\n", otherVar.Vartype.Readable(), otherVar.Name)
-                fmt.Fprintln(os.Stderr, "\t" + value.At())
-                os.Exit(1)
-            }
+func mul(asm *os.File, src string, dest string) {
+    if dest != "rbx" {
+        vars.WriteVar(asm, "push rbx\n")
+    }
+    if dest != "rax" {
+        vars.WriteVar(asm, "push rax\n")
+        vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", dest))
+    }
 
-            val = vars.Registers[otherVar.Regs[0]].Name
-        } else {
-            val = value.Str
-        }
+    vars.WriteVar(asm, fmt.Sprintf("mov rbx, %s\n", src))
+    vars.WriteVar(asm, "imul rbx\n")
 
-        vars.WriteVar(asm, fmt.Sprintf("sub %s, %s\n", dest, val))
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) variable \"%s\" is not declared\n", varname.Str)
-        os.Exit(1)
+    if dest != "rax" {
+        vars.WriteVar(asm, fmt.Sprintf("mov %s, rax\n", dest))
+        vars.WriteVar(asm, "pop rax\n")
+    }
+    if dest != "rbx" {
+        vars.WriteVar(asm, "pop rbx\n")
     }
 }
 
-func Mul(asm *os.File, varname token.Token, value token.Token) {
-    if v := vars.GetVar(varname.Str); v != nil {
-        if len(v.Regs) != 1 {
-            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) variable should have 1 register\n")
-            os.Exit(1)
-        }
-
-        dest := vars.Registers[v.Regs[0]].Name
-        var val string
-
-        if otherVar := vars.GetVar(value.Str); otherVar != nil {
-            if otherVar.Vartype != types.I32 {
-                fmt.Fprintf(os.Stderr, "[ERROR] you cannot mul I32 and %s (type of %s)\n", otherVar.Vartype.Readable(), otherVar.Name)
-                fmt.Fprintln(os.Stderr, "\t" + value.At())
-                os.Exit(1)
-            }
-
-            val = vars.Registers[otherVar.Regs[0]].Name
-        } else {
-            val = value.Str
-        }
-
-        if dest != "rbx" {
-            vars.WriteVar(asm, "push rbx\n")
-        }
-        if dest != "rax" {
-            vars.WriteVar(asm, "push rax\n")
-            vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", dest))
-        }
-
-        vars.WriteVar(asm, fmt.Sprintf("mov rbx, %s\n", val))
-        vars.WriteVar(asm, "imul rbx\n")
-
-        if dest != "rax" {
-            vars.WriteVar(asm, fmt.Sprintf("mov %s, rax\n", dest))
-            vars.WriteVar(asm, "pop rax\n")
-        }
-        if dest != "rbx" {
-            vars.WriteVar(asm, "pop rbx\n")
-        }
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) variable \"%s\" is not declared\n", varname.Str)
-        os.Exit(1)
+func div(asm *os.File, src string, dest string) {
+    if dest != "rdx" {
+        vars.WriteVar(asm, "push rdx\n")
     }
-}
+    if dest != "rbx" {
+        vars.WriteVar(asm, "push rbx\n")
+    }
+    if dest != "rax" {
+        vars.WriteVar(asm, "push rax\n")
+        vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", dest))
+    }
 
-func Div(asm *os.File, varname token.Token, value token.Token) {
-    if v := vars.GetVar(varname.Str); v != nil {
-        if len(v.Regs) != 1 {
-            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) variable should have 1 register\n")
-            os.Exit(1)
-        }
+    // TODO: check if dest is signed or unsigned (use either idiv or div)
+    // for now only signed integers are supported
+    vars.WriteVar(asm, fmt.Sprintf("mov rbx, %s\n", src))
+    vars.WriteVar(asm, "cqo\n") // sign extend rax into rdx (div with 64bit regs -> 128bit div)
+    vars.WriteVar(asm, "idiv rbx\n")
 
-        dest := vars.Registers[v.Regs[0]].Name
-        var val string
-
-        if otherVar := vars.GetVar(value.Str); otherVar != nil {
-            if otherVar.Vartype != types.I32 {
-                fmt.Fprintf(os.Stderr, "[ERROR] you cannot div I32 and %s (type of %s)\n", otherVar.Vartype.Readable(), otherVar.Name)
-                fmt.Fprintln(os.Stderr, "\t" + value.At())
-                os.Exit(1)
-            }
-
-            val = vars.Registers[otherVar.Regs[0]].Name
-        } else {
-            val = value.Str
-        }
-
-        if dest != "rdx" {
-            vars.WriteVar(asm, "push rdx\n")
-        }
-        if dest != "rbx" {
-            vars.WriteVar(asm, "push rbx\n")
-        }
-        if dest != "rax" {
-            vars.WriteVar(asm, "push rax\n")
-            vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", dest))
-        }
-
-        // TODO: check if dest is signed or unsigned (use either idiv or div)
-        // for now only signed integers are supported
-        vars.WriteVar(asm, fmt.Sprintf("mov rbx, %s\n", val))
-        vars.WriteVar(asm, "cqo\n") // sign extend rax into rdx (div with 64bit regs -> 128bit div)
-        vars.WriteVar(asm, "idiv rbx\n")
-
-        if dest != "rax" {
-            vars.WriteVar(asm, fmt.Sprintf("mov %s, rax\n", dest))
-            vars.WriteVar(asm, "pop rax\n")
-        }
-        if dest != "rbx" {
-            vars.WriteVar(asm, "pop rbx\n")
-        }
-        if dest != "rdx" {
-            vars.WriteVar(asm, "pop rdx\n")
-        }
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) variable \"%s\" is not declared\n", varname.Str)
-        os.Exit(1)
+    if dest != "rax" {
+        vars.WriteVar(asm, fmt.Sprintf("mov %s, rax\n", dest))
+        vars.WriteVar(asm, "pop rax\n")
+    }
+    if dest != "rbx" {
+        vars.WriteVar(asm, "pop rbx\n")
+    }
+    if dest != "rdx" {
+        vars.WriteVar(asm, "pop rdx\n")
     }
 }
