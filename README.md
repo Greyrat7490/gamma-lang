@@ -29,10 +29,17 @@ And because it is written in Go...
 * [x] generate executable
 * [x] variables
 * [x] syscalls
-* [ ] examples
 * [x] tests
-* [ ] turing complete (with Rule 110 programm) -> actual programming language
+* [ ] arithmetics
+  * [x] unary ops
+  * [ ] binary ops
+    * [x] parse by precedence
+  * [ ] parentheses
+* [ ] pointer
+* [ ] turing complete -> actual programming language
+  * [ ] proof with Rule 110 programm 
 * [ ] type checking
+* [ ] examples
 * [ ] self-hosted
 * [ ] cross-platform
 
