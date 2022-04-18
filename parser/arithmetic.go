@@ -1,146 +1,65 @@
 package prs
 
 import (
-	"gorec/ast"
-	"gorec/token"
+    "fmt"
+    "gorec/ast"
+    "gorec/token"
 )
 
-func prsBinary(idx int) (*ast.BinaryExpr, int) {
+func isBinaryExpr(idx int) bool {
     tokens := token.GetTokens()
-    expr := ast.BinaryExpr{}
 
-    if (tokens[idx].Type == token.Number) {
-        expr.OperandL, _ = prsLitExpr(idx)
-        expr.Operator = tokens[idx+1]
-        expr.OperandR, idx = prsExpr(idx+2)
+    if idx + 1 >= len(tokens) {
+        return false
     }
 
-    return &expr, idx
+    return tokens[idx+1].Type == token.Plus || tokens[idx+1].Type == token.Minus ||
+                tokens[idx+1].Type == token.Mul || tokens[idx+1].Type == token.Div
 }
 
-/*
-func sortBinOps(destIdx int) {
-    // set assign value to first operant of mul or div
-    if Ops[destIdx+1].Type != OP_MUL && Ops[destIdx+1].Type != OP_DIV {
-        srcIdx := len(Ops)-2
+func getPrecedence(t token.TokenType) int {
+    if t == token.Plus || t == token.Minus {
+        return 1
+    } else {
+        return 2
+    }
+}
 
-        tmp := Ops[destIdx].Operants[1]
+// https://en.wikipedia.org/wiki/Operator-precedence_parser
+func prsBinary(idx int, lhs ast.OpExpr, min_precedence int) (ast.OpExpr, int) {
+    tokens := token.GetTokens()
 
-        if Ops[srcIdx].Type == OP_SUB {
-            Ops[destIdx].Operants[1] = "-" + Ops[srcIdx].Operants[1]
-            Ops[srcIdx].Type = OP_ADD
-        } else {
-            Ops[destIdx].Operants[1] = Ops[srcIdx].Operants[1]
+    for isBinaryExpr(idx) && getPrecedence(tokens[idx+1].Type) >= min_precedence {
+        precedence := getPrecedence(tokens[idx+1].Type)
+
+        // TODO detect if 2 or more registers are needed
+        // 2
+        // 1
+        // 2
+        // -> 2 regs needed
+        fmt.Println(precedence)
+
+        var b ast.BinaryExpr
+        b.Operator = tokens[idx+1]
+        b.OperandR, idx = prsLitExpr(idx+2)
+
+        for isBinaryExpr(idx) && getPrecedence(tokens[idx+1].Type) > precedence {
+            //
+            if b.Operator.Type == token.Minus {
+                b.Operator.Type = token.Plus
+                b.Operator.Str = "+"
+
+                t := token.Token{ Type: token.Minus, Str: "-", Pos: lhs.GetValue().Pos }
+                b.OperandR = &ast.UnaryExpr{ Operator: t, Operand: b.OperandR }
+            }
+
+            b.OperandR, idx = prsBinary(idx, b.OperandR, precedence + 1)
         }
 
-        Ops[srcIdx].Operants[1] = tmp
+        b.OperandL = lhs
+
+        lhs = &b
     }
 
-    // put OP_MUL and OP_DIV before OP_ADD and OP_SUB
-    for i := len(Ops)-1; Ops[i-1].Type == OP_ADD || Ops[i-1].Type == OP_SUB; i-- {
-        tmp := Ops[i]
-        Ops[i] = Ops[i-1]
-        Ops[i-1] = tmp
-    }
+    return lhs, idx
 }
-
-func prsAdd(idx int) int {
-    tokens := token.GetTokens()
-
-    if len(tokens) < idx + 1 {
-        fmt.Fprintln(os.Stderr, "[ERROR] '+' needs 2 operants")
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
-        os.Exit(1)
-    }
-
-    destOpIdx := len(Ops)-1
-    for isBinaryOp(Ops[destOpIdx].Type) { destOpIdx-- }
-
-    if Ops[destOpIdx].Type == OP_DEF_VAR || Ops[destOpIdx].Type == OP_ASSIGN_VAR {
-        op := Op{ Type: OP_ADD, Token: tokens[idx], Operants: []string{ Ops[destOpIdx].Operants[0], tokens[idx+1].Str } }
-        Ops = append(Ops, op)
-    } else {
-        fmt.Fprintln(os.Stderr, "[ERROR] not using result (assigning or defining a var)")
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
-        os.Exit(1)
-    }
-
-    return idx + 1
-}
-
-func prsSub(idx int) int {
-    tokens := token.GetTokens()
-
-    if len(tokens) < idx + 1 {
-        fmt.Fprintln(os.Stderr, "[ERROR] '-' needs 2 operants")
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
-        os.Exit(1)
-    }
-
-    destOpIdx := len(Ops)-1
-    for isBinaryOp(Ops[destOpIdx].Type) { destOpIdx-- }
-
-    if Ops[destOpIdx].Type == OP_DEF_VAR || Ops[destOpIdx].Type == OP_ASSIGN_VAR {
-        op := Op{ Type: OP_SUB, Token: tokens[idx], Operants: []string{ Ops[destOpIdx].Operants[0], tokens[idx+1].Str } }
-        Ops = append(Ops, op)
-    } else {
-        fmt.Fprintln(os.Stderr, "[ERROR] not using result (assigning or defining a var)")
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
-        os.Exit(1)
-    }
-
-    return idx + 1
-}
-
-func prsMul(idx int) int {
-    tokens := token.GetTokens()
-
-    if len(tokens) < idx + 1 {
-        fmt.Fprintln(os.Stderr, "[ERROR] '*' needs 2 operants")
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
-        os.Exit(1)
-    }
-
-    destOpIdx := len(Ops)-1
-    for isBinaryOp(Ops[destOpIdx].Type) { destOpIdx-- }
-
-    if Ops[destOpIdx].Type == OP_DEF_VAR || Ops[destOpIdx].Type == OP_ASSIGN_VAR {
-        op := Op{ Type: OP_MUL, Token: tokens[idx], Operants: []string{ Ops[destOpIdx].Operants[0], tokens[idx+1].Str } }
-        Ops = append(Ops, op)
-    } else {
-        fmt.Fprintln(os.Stderr, "[ERROR] not using result (assigning or defining a var)")
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
-        os.Exit(1)
-    }
-
-    // sortBinOps(destOpIdx)
-
-    return idx + 1
-}
-
-func prsDiv(idx int) int {
-    tokens := token.GetTokens()
-
-    if len(tokens) < idx + 1 {
-        fmt.Fprintln(os.Stderr, "[ERROR] '/' needs 2 operants")
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
-        os.Exit(1)
-    }
-
-    destOpIdx := len(Ops)-1
-    for isBinaryOp(Ops[destOpIdx].Type) { destOpIdx-- }
-
-    if Ops[destOpIdx].Type == OP_DEF_VAR || Ops[destOpIdx].Type == OP_ASSIGN_VAR {
-        op := Op{ Type: OP_DIV, Token: tokens[idx], Operants: []string{ Ops[destOpIdx].Operants[0], tokens[idx+1].Str } }
-        Ops = append(Ops, op)
-    } else {
-        fmt.Fprintln(os.Stderr, "[ERROR] not using result (assigning or defining a var)")
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
-        os.Exit(1)
-    }
-
-    // sortBinOps(destOpIdx)
-
-    return idx + 1
-}
-*/

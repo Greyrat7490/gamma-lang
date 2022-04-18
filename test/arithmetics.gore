@@ -1,25 +1,21 @@
-var v1 i32 := 40 + 46
-var v2 i32 := -420
-
-fn test1() {
-    printStr("40 + 46")
-    printInt(v1)
-
-    printStr("40 + 46 - 10")
-    v1 = 40 + 46 - 10
-    printInt(v1)
-
-    printStr("40 + 46 - 10 * 2")
-    v1 = 40 + 46 - 10 * 2
-    printInt(v1)
-
-    printStr("40 + 46 - 10 * 2 / 2")
-    v1 = 40 + 46 - 10 * 2 / 2
-    printInt(v1)
-}
-
 fn main() {
-    printInt(v2)
+   // printInt(40 + 46) // not yet supported (TODO)
 
-    test1()
+    var l1 i32
+
+    printStr("76 + 10")                      // 86
+    l1 = 76 + 10
+    printInt(l1)
+
+    printStr("76 + 10 - 20")                 // 66
+    l1 = 76 + 10 - 20
+    printInt(l1)
+
+    printStr("76 + 10 - 20 * 10")            // -114
+    l1 = 76 + 10 - 20 * 10
+    printInt(l1)
+
+    printStr("76 + 10 - 20 * 10 / 2")        // -14
+    l1 = 76 + 10 - 20 * 10 / 2
+    printInt(l1)
 }

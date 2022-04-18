@@ -62,7 +62,7 @@ func add(asm *os.File, src string, dest string) {
 }
 
 func sub(asm *os.File, src string, dest string) {
-    vars.WriteVar(asm, fmt.Sprintf("add %s, %s\n", dest, src))
+    vars.WriteVar(asm, fmt.Sprintf("sub %s, %s\n", dest, src))
 }
 
 func mul(asm *os.File, src string, dest string) {

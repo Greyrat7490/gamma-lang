@@ -1,11 +1,11 @@
 package prs
 
 import (
-    "os"
     "fmt"
+    "gorec/ast"
     "gorec/token"
     "gorec/types"
-    "gorec/ast"
+    "os"
 )
 
 
@@ -67,7 +67,7 @@ func prsDefVar(idx int) (ast.OpDefVar, int) {
     }
 
     name := tokens[idx-2]
-    value, idx := prsExpr(idx+1)
+    value, idx := prsExpr(idx+1, 0)
 
     if (!(tokens[idx].Type == token.Name || tokens[idx].Type == token.Number || tokens[idx].Type == token.Str)) {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name or a literal but got %s(\"%s\")\n", tokens[idx].Type.Readable(), tokens[idx].Str)
@@ -94,12 +94,12 @@ func prsUnaryExpr(idx int) (*ast.UnaryExpr, int) {
     tokens := token.GetTokens()
     expr := ast.UnaryExpr{ Operator: tokens[idx] }
 
-    expr.Operand, idx = prsExpr(idx+1)
+    expr.Operand, idx = prsExpr(idx+1, 0)
 
     return &expr, idx
 }
 
-func prsExpr(idx int) (ast.OpExpr, int) {
+func prsExpr(idx int, min_precedent int) (ast.OpExpr, int) {
     tokens := token.GetTokens()
     value := tokens[idx]
 
@@ -112,14 +112,8 @@ func prsExpr(idx int) (ast.OpExpr, int) {
 
     case token.Number, token.Str:
         var expr ast.OpExpr
-        if tokens[idx+1].Type == token.Plus || tokens[idx+1].Type == token.Minus ||
-            tokens[idx+1].Type == token.Mul || tokens[idx+1].Type == token.Div {
-            expr, idx = prsBinary(idx)
-            return expr, idx
-        } else {
-            expr, idx = prsLitExpr(idx)
-            return expr, idx
-        }
+        expr, idx = prsLitExpr(idx)
+        return prsBinary(idx, expr, 0)
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] no valid expression (got type %s)\n", value.Type.Readable())
         fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
@@ -138,7 +132,7 @@ func prsAssignVar(idx int) (ast.OpAssignVar, int) {
     }
 
     v := tokens[idx-1]
-    value, idx := prsExpr(idx+1)
+    value, idx := prsExpr(idx+1, 0)
 
     op := ast.OpAssignVar{ Varname: v, Value: value }
 

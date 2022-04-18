@@ -1,11 +1,11 @@
 package ast
 
 import (
-	"fmt"
-	"gorec/token"
-	"gorec/vars"
-	"os"
-	"strings"
+    "fmt"
+    "gorec/token"
+    "gorec/vars"
+    "os"
+    "strings"
 )
 
 type OpStmt interface {
@@ -56,6 +56,7 @@ func (o *OpDeclStmt) Readable(indent int) string {
 }
 
 func (o *OpAssignVar) Compile(asm *os.File) {
+    fmt.Printf("assign: %s = %s\n", o.Varname.Str, o.Value.GetValue().Str)
     vars.Assign(asm, o.Varname, o.Value.GetValue())
     o.Value.Compile(asm, o.Varname)
 }

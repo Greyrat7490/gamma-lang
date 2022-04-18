@@ -52,7 +52,7 @@ func compile() {
     nasm_header(asm)
 
     sys.DefineBuildIns(asm)
- 
+
     ast.Compile(asm)
 
     nasm_footer(asm)
@@ -110,7 +110,7 @@ func main() {
     prs.Parse()
     // TODO: type checking step
     // TODO: optimization step
-    // ast.ShowAst()
+    ast.ShowAst()
     compile()
     genExe()
 }

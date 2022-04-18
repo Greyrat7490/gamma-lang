@@ -1,13 +1,13 @@
 package ast
 
 import (
-    "os"
     "fmt"
-    "strings"
+    "gorec/arithmetic"
     "gorec/func"
     "gorec/token"
     "gorec/types"
-    "gorec/arithmetic"
+    "os"
+    "strings"
 )
 
 type OpExpr interface {
@@ -39,7 +39,17 @@ type BinaryExpr struct {
 func (o *LitExpr)    GetValue() token.Token { return o.Val }
 func (o *IdentExpr)  GetValue() token.Token { return o.Ident }
 func (o *OpFnCall)   GetValue() token.Token { return token.Token{} }
-func (o *BinaryExpr) GetValue() token.Token { return o.OperandL.GetValue() }
+func (o *BinaryExpr) GetValue() token.Token {
+    // deepest left side literal value (in work)
+    // should be left literal value of the first mul/div expr
+    if _, ok := o.OperandL.(*LitExpr); ok {
+        if _, ok := o.OperandR.(*LitExpr); !ok {
+            return o.OperandR.GetValue()
+        }
+    }
+
+    return o.OperandL.GetValue()
+}
 func (o *UnaryExpr)  GetValue() token.Token {
     if l, ok := o.Operand.(*LitExpr); ok {
         l.Val.Str = o.Operator.Str + l.Val.Str
@@ -72,8 +82,9 @@ func (o *BinaryExpr) Readable(indent int) string {
     s := strings.Repeat("   ", indent)
     s2 := s + "   "
 
-    return fmt.Sprintf("%sOP_BINARY:\n%s%s(%s)\n", s, s2, o.Operator.Str, o.Operator.Type.Readable()) +
+    return s + "OP_BINARY:\n" +
         o.OperandL.Readable(indent+1) +
+        s2 + o.Operator.Str + o.Operator.Type.Readable() + "\n" +
         o.OperandR.Readable(indent+1)
 }
 
@@ -82,8 +93,18 @@ func (o *LitExpr)    Compile(asm *os.File, dest token.Token) {}
 func (o *IdentExpr)  Compile(asm *os.File, dest token.Token) {}
 func (o *UnaryExpr)  Compile(asm *os.File, dest token.Token) { /* TODO negating vars */ }
 func (o *BinaryExpr) Compile(asm *os.File, dest token.Token) {
-    arith.BinaryOp(asm, o.Operator.Type, o.OperandR.GetValue(), dest)
+    o.OperandL.Compile(asm, dest)
     o.OperandR.Compile(asm, dest)
+
+    if l, ok := o.OperandL.(*LitExpr); ok {
+        if r, ok := o.OperandR.(*LitExpr); ok {
+            arith.BinaryOp(asm, o.Operator.Type, r.Val, dest)
+        } else {
+            arith.BinaryOp(asm, o.Operator.Type, l.Val, dest)
+        }
+    } else if r, ok := o.OperandR.(*LitExpr); ok {
+        arith.BinaryOp(asm, o.Operator.Type, r.Val, dest)
+    }
 }
 func (o *OpFnCall) Compile(asm *os.File, dest token.Token) {
     fn.DefineArgs(asm, o.FnName, o.Values)
