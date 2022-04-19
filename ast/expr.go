@@ -40,20 +40,15 @@ func (o *LitExpr)    GetValue() token.Token { return o.Val }
 func (o *IdentExpr)  GetValue() token.Token { return o.Ident }
 func (o *OpFnCall)   GetValue() token.Token { return token.Token{} }
 func (o *BinaryExpr) GetValue() token.Token {
-    // deepest left side literal value (in work)
-    // should be left literal value of the first mul/div expr
-    if _, ok := o.OperandL.(*LitExpr); ok {
-        if _, ok := o.OperandR.(*LitExpr); !ok {
-            return o.OperandR.GetValue()
-        }
-    }
-
+    // first literal of Operation with highest precedence
+    // deepest left op (see prsBinary)
     return o.OperandL.GetValue()
 }
 func (o *UnaryExpr)  GetValue() token.Token {
     if l, ok := o.Operand.(*LitExpr); ok {
-        l.Val.Str = o.Operator.Str + l.Val.Str
-        return l.Val
+        t := l.Val
+        t.Str = o.Operator.Str + l.Val.Str
+        return t
     } else {
         return o.Operand.GetValue()
     }
@@ -96,15 +91,7 @@ func (o *BinaryExpr) Compile(asm *os.File, dest token.Token) {
     o.OperandL.Compile(asm, dest)
     o.OperandR.Compile(asm, dest)
 
-    if l, ok := o.OperandL.(*LitExpr); ok {
-        if r, ok := o.OperandR.(*LitExpr); ok {
-            arith.BinaryOp(asm, o.Operator.Type, r.Val, dest)
-        } else {
-            arith.BinaryOp(asm, o.Operator.Type, l.Val, dest)
-        }
-    } else if r, ok := o.OperandR.(*LitExpr); ok {
-        arith.BinaryOp(asm, o.Operator.Type, r.Val, dest)
-    }
+    arith.BinaryOp(asm, o.Operator.Type, o.OperandR.GetValue(), dest)
 }
 func (o *OpFnCall) Compile(asm *os.File, dest token.Token) {
     fn.DefineArgs(asm, o.FnName, o.Values)

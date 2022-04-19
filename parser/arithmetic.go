@@ -1,7 +1,6 @@
 package prs
 
 import (
-    "fmt"
     "gorec/ast"
     "gorec/token"
 )
@@ -33,30 +32,29 @@ func prsBinary(idx int, lhs ast.OpExpr, min_precedence int) (ast.OpExpr, int) {
         precedence := getPrecedence(tokens[idx+1].Type)
 
         // TODO detect if 2 or more registers are needed
-        // 2
-        // 1
-        // 2
-        // -> 2 regs needed
-        fmt.Println(precedence)
+        // if an OperandR is a BinaryExpr
+        // i.e. 2 * 2 + 3 * 3
 
         var b ast.BinaryExpr
         b.Operator = tokens[idx+1]
+        b.OperandL = lhs
         b.OperandR, idx = prsLitExpr(idx+2)
 
+        // TODO test later with parentheses expr
         for isBinaryExpr(idx) && getPrecedence(tokens[idx+1].Type) > precedence {
-            //
             if b.Operator.Type == token.Minus {
                 b.Operator.Type = token.Plus
                 b.Operator.Str = "+"
 
-                t := token.Token{ Type: token.Minus, Str: "-", Pos: lhs.GetValue().Pos }
+                t := token.Token{ Type: token.Minus, Str: "-", Pos: tokens[idx+1].Pos }
                 b.OperandR = &ast.UnaryExpr{ Operator: t, Operand: b.OperandR }
             }
 
-            b.OperandR, idx = prsBinary(idx, b.OperandR, precedence + 1)
+            // left to right as correct order of operations
+            // OperandL has lower precedence so put it right (swap with OperandR)
+            b.OperandL, idx = prsBinary(idx, b.OperandR, precedence + 1)
+            b.OperandR = lhs
         }
-
-        b.OperandL = lhs
 
         lhs = &b
     }

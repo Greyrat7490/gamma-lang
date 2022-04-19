@@ -1,11 +1,27 @@
 var v1 i32
 
 fn test1() {
-    printStr("21 - 10 * 2 + 2")
-    v1 = 21 - 10 * 2 + 2
+    printStr("-3 * 3 + 2 = -7")
+    v1 = -3 * 3 + 2
+    printInt(v1)
+}
+
+fn test2() {
+    printStr("2 * 2 - 4 * 2 = -4")
+    // needs 2 regs to calc
+    v1 = 2 * 2 - 4 * 2
+    printInt(v1)
+}
+
+fn test3() {
+    printStr("2 * 2 - 4 * 4 + 3 * 3 = -3")
+    // needs 3 regs to calc
+    v1 = 2 * 2 - 4 * 4 + 3 * 3
     printInt(v1)
 }
 
 fn main() {
     test1()
+    test2()
+    test3()
 }

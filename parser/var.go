@@ -67,7 +67,7 @@ func prsDefVar(idx int) (ast.OpDefVar, int) {
     }
 
     name := tokens[idx-2]
-    value, idx := prsExpr(idx+1, 0)
+    value, idx := prsExpr(idx+1)
 
     if (!(tokens[idx].Type == token.Name || tokens[idx].Type == token.Number || tokens[idx].Type == token.Str)) {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name or a literal but got %s(\"%s\")\n", tokens[idx].Type.Readable(), tokens[idx].Str)
@@ -94,12 +94,13 @@ func prsUnaryExpr(idx int) (*ast.UnaryExpr, int) {
     tokens := token.GetTokens()
     expr := ast.UnaryExpr{ Operator: tokens[idx] }
 
-    expr.Operand, idx = prsExpr(idx+1, 0)
+    // TODO: higher precedence (check if binary expr)
+    expr.Operand, idx = prsExpr(idx+1)
 
     return &expr, idx
 }
 
-func prsExpr(idx int, min_precedent int) (ast.OpExpr, int) {
+func prsExpr(idx int) (ast.OpExpr, int) {
     tokens := token.GetTokens()
     value := tokens[idx]
 
@@ -132,7 +133,7 @@ func prsAssignVar(idx int) (ast.OpAssignVar, int) {
     }
 
     v := tokens[idx-1]
-    value, idx := prsExpr(idx+1, 0)
+    value, idx := prsExpr(idx+1)
 
     op := ast.OpAssignVar{ Varname: v, Value: value }
 
