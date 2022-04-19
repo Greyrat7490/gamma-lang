@@ -1,9 +1,36 @@
 package prs
 
 import (
+    "os"
+    "fmt"
     "gorec/ast"
     "gorec/token"
+    "gorec/types"
 )
+
+func prsExpr(idx int) (ast.OpExpr, int) {
+    tokens := token.GetTokens()
+    value := tokens[idx]
+
+    switch value.Type {
+    case token.Plus, token.Minus:
+        return prsUnaryExpr(idx)
+
+    case token.Name:
+        return prsIdentExpr(idx)
+
+    case token.Number, token.Str:
+        var expr ast.OpExpr
+        expr, idx = prsLitExpr(idx)
+        return prsBinary(idx, expr, 0)
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] no valid expression (got type %s)\n", value.Type.Readable())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+        os.Exit(1)
+        return &ast.BadExpr{}, -1
+    }
+}
 
 func isBinaryExpr(idx int) bool {
     tokens := token.GetTokens()
@@ -24,7 +51,26 @@ func getPrecedence(t token.TokenType) int {
     }
 }
 
-// https://en.wikipedia.org/wiki/Operator-precedence_parser
+func prsIdentExpr(idx int) (*ast.IdentExpr, int) {
+    tokens := token.GetTokens()
+    return &ast.IdentExpr{ Ident: tokens[idx] }, idx
+}
+
+func prsLitExpr(idx int) (*ast.LitExpr, int) {
+    tokens := token.GetTokens()
+    return &ast.LitExpr{ Val: tokens[idx], Type: types.TypeOfVal(tokens[idx].Str) }, idx
+}
+
+func prsUnaryExpr(idx int) (*ast.UnaryExpr, int) {
+    tokens := token.GetTokens()
+    expr := ast.UnaryExpr{ Operator: tokens[idx] }
+
+    // TODO: higher precedence (check if binary expr)
+    expr.Operand, idx = prsExpr(idx+1)
+
+    return &expr, idx
+}
+
 func prsBinary(idx int, lhs ast.OpExpr, min_precedence int) (ast.OpExpr, int) {
     tokens := token.GetTokens()
 

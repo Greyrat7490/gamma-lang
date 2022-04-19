@@ -10,11 +10,14 @@ import (
     "gorec/func"
 )
 
+
 type OpDecl interface {
     Op
     Compile(asm *os.File)
     decl()  // to differenciate OpDecl from OpStmt
 }
+
+type BadDecl struct {}
 
 type OpDecVar struct {
     Varname token.Token
@@ -36,6 +39,7 @@ type OpDefFn struct {
 func (o *OpDecVar) decl() {}
 func (o *OpDefVar) decl() {}
 func (o *OpDefFn)  decl() {}
+func (o *BadDecl)  decl() {}
 
 
 func (o *OpDecVar) Compile(asm *os.File) {
@@ -54,6 +58,11 @@ func (o *OpDefFn) Compile(asm *os.File) {
     o.Block.Compile(asm)
 
     fn.End(asm);
+}
+
+func (o *BadDecl) Compile(asm *os.File) {
+    fmt.Fprintln(os.Stderr, "[ERROR] bad declaration")
+    os.Exit(1)
 }
 
 
@@ -83,4 +92,9 @@ func (o *OpDefFn) Readable(indent int) string {
         o.Block.Readable(indent+2)
 
     return res
+}
+func (o *BadDecl) Readable(indent int) string {
+    fmt.Fprintln(os.Stderr, "[ERROR] bad declaration")
+    os.Exit(1)
+    return ""
 }
