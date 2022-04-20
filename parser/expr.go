@@ -13,11 +13,13 @@ func prsExpr(idx int) (ast.OpExpr, int) {
     value := tokens[idx]
 
     switch value.Type {
-    case token.Plus, token.Minus:
-        return prsUnaryExpr(idx)
-
     case token.Name:
         return prsIdentExpr(idx)
+
+    case token.Plus, token.Minus:
+        var expr ast.OpExpr
+        expr, idx = prsUnaryExpr(idx)
+        return prsBinary(idx, expr, 0)
 
     case token.Number, token.Str:
         var expr ast.OpExpr
@@ -30,6 +32,11 @@ func prsExpr(idx int) (ast.OpExpr, int) {
         os.Exit(1)
         return &ast.BadExpr{}, -1
     }
+}
+
+func isUnaryExpr(idx int) bool {
+    tokens := token.GetTokens()
+    return tokens[idx].Type == token.Plus || tokens[idx].Type == token.Minus
 }
 
 func isBinaryExpr(idx int) bool {
@@ -65,8 +72,7 @@ func prsUnaryExpr(idx int) (*ast.UnaryExpr, int) {
     tokens := token.GetTokens()
     expr := ast.UnaryExpr{ Operator: tokens[idx] }
 
-    // TODO: higher precedence (check if binary expr)
-    expr.Operand, idx = prsExpr(idx+1)
+    expr.Operand, idx = prsLitExpr(idx+1)
 
     return &expr, idx
 }
@@ -84,7 +90,12 @@ func prsBinary(idx int, lhs ast.OpExpr, min_precedence int) (ast.OpExpr, int) {
         var b ast.BinaryExpr
         b.Operator = tokens[idx+1]
         b.OperandL = lhs
-        b.OperandR, idx = prsLitExpr(idx+2)
+
+        if isUnaryExpr(idx+2) {
+            b.OperandR, idx = prsUnaryExpr(idx+2)
+        } else {
+            b.OperandR, idx = prsLitExpr(idx+2)
+        }
 
         // TODO test later with parentheses expr
         for isBinaryExpr(idx) && getPrecedence(tokens[idx+1].Type) > precedence {

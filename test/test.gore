@@ -1,6 +1,10 @@
 var v1 i32
 
 fn test1() {
+    printStr("-3 * -3 + 2 = 11")
+    v1 = -3 * -3 + 2
+    printInt(v1)
+
     printStr("-3 * 3 + 2 = -7")
     v1 = -3 * 3 + 2
     printInt(v1)
@@ -22,6 +26,8 @@ fn test3() {
 
 fn main() {
     test1()
+    printStr("")
     test2()
+    printStr("")
     test3()
 }

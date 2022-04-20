@@ -43,7 +43,7 @@ type BinaryExpr struct {
     OperandR OpExpr
 }
 
-
+// TODO: use always rax as dest
 func (o *LitExpr)    Compile(asm *os.File, dest token.Token) {}
 func (o *IdentExpr)  Compile(asm *os.File, dest token.Token) {}
 func (o *UnaryExpr)  Compile(asm *os.File, dest token.Token) { /* TODO negating vars */ }
