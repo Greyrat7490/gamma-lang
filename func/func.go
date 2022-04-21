@@ -12,8 +12,8 @@ import (
 
 // calling convention (temporary):
 // - one argument max
-// - i32 -> r9 = num
-// - str -> r9 = addr, r10 = size
+// - i32 -> r10 = num
+// - str -> r10 = addr, r11 = size
 // TODO: C calling convention
 
 var funcs []fnHead
@@ -95,14 +95,14 @@ func DeclareArgs(args []Arg) {
         f.args = append(f.args, Arg{ Name: a.Name, Type: a.Type })
 
         // see calling convention
-        // 5 = r9, 6 = r10
+        // 6 = r10, 7 = r11
         var regs []int
         const _ uint = 2 - types.TypesCount
         switch a.Type {
         case types.Str:
-            regs = []int { 5, 6 }
+            regs = []int { 6, 7 }
         case types.I32:
-            regs = []int { 5 }
+            regs = []int { 6 }
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) TODO")
             os.Exit(1)
@@ -129,7 +129,7 @@ func DefineArgs(asm *os.File, fnName token.Token, values []string) {
                     os.Exit(1)
                 }
 
-                // skip if r9 is already set correct
+                // skip if r10 is already set correct
                 if otherVar.Regs[0] == 5 {
                     return
                 }
@@ -137,11 +137,11 @@ func DefineArgs(asm *os.File, fnName token.Token, values []string) {
                 const _ uint = 2 - types.TypesCount
                 switch otherVar.Vartype {
                 case types.Str:
-                    asm.WriteString(fmt.Sprintf("mov r9, %s\n", vars.Registers[otherVar.Regs[0]].Name))
-                    asm.WriteString(fmt.Sprintf("mov r10, %s\n", vars.Registers[otherVar.Regs[1]].Name))
+                    asm.WriteString(fmt.Sprintf("mov r10, %s\n", vars.Registers[otherVar.Regs[0]].Name))
+                    asm.WriteString(fmt.Sprintf("mov r11, %s\n", vars.Registers[otherVar.Regs[1]].Name))
 
                 case types.I32:
-                    asm.WriteString(fmt.Sprintf("mov r9, %s\n", vars.Registers[otherVar.Regs[0]].Name))
+                    asm.WriteString(fmt.Sprintf("mov r10, %s\n", vars.Registers[otherVar.Regs[0]].Name))
 
                 default:
                     fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", otherVar.Name)
@@ -158,12 +158,12 @@ func DefineArgs(asm *os.File, fnName token.Token, values []string) {
                 switch t {
                 case types.Str:
                     strIdx := str.Add(val)
-                    asm.WriteString(fmt.Sprintf("mov r9, str%d\n", strIdx))
-                    asm.WriteString(fmt.Sprintf("mov r10, %d\n", str.GetSize(strIdx)))
+                    asm.WriteString(fmt.Sprintf("mov r10, str%d\n", strIdx))
+                    asm.WriteString(fmt.Sprintf("mov r11, %d\n", str.GetSize(strIdx)))
 
                 case types.I32:
                     i, _ := strconv.Atoi(val)
-                    asm.WriteString(fmt.Sprintf("mov r9, %d\n", i))
+                    asm.WriteString(fmt.Sprintf("mov r10, %d\n", i))
 
                 default:
                     fmt.Fprintf(os.Stderr, "[ERROR] could not get type of value \"%s\"\n", val)
