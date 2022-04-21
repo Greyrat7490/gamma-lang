@@ -32,7 +32,7 @@ And because it is written in Go...
 * [x] tests
 * [ ] arithmetics
   * [x] unary ops
-  * [ ] binary ops
+  * [x] binary ops
     * [x] parse by precedence
   * [ ] parentheses
 * [ ] pointer
