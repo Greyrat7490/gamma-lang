@@ -4,16 +4,17 @@ import (
     "os"
     "fmt"
     "strings"
+    "gorec/arithmetic"
     "gorec/func"
     "gorec/token"
     "gorec/types"
-    "gorec/arithmetic"
+    "gorec/vars"
 )
 
 type OpExpr interface {
     Op
-    Compile(asm *os.File, dest token.Token)
-    GetValue() token.Token
+    Compile(asm *os.File)
+    expr()  // to differenciate OpExpr from OpDecl and OpStmt
 }
 
 type BadExpr struct{}
@@ -43,23 +44,82 @@ type BinaryExpr struct {
     OperandR OpExpr
 }
 
-// TODO: use always rax as dest
-func (o *LitExpr)    Compile(asm *os.File, dest token.Token) {}
-func (o *IdentExpr)  Compile(asm *os.File, dest token.Token) {}
-func (o *UnaryExpr)  Compile(asm *os.File, dest token.Token) { /* TODO negating vars */ }
-func (o *BinaryExpr) Compile(asm *os.File, dest token.Token) {
-    o.OperandL.Compile(asm, dest)
-    o.OperandR.Compile(asm, dest)
+func (o *BadExpr)    expr() {}
+func (o *LitExpr)    expr() {}
+func (o *IdentExpr)  expr() {}
+func (o *OpFnCall)   expr() {}
+func (o *UnaryExpr)  expr() {}
+func (o *BinaryExpr) expr() {}
 
-    arith.BinaryOp(asm, o.Operator.Type, o.OperandR.GetValue(), dest)
+
+func (o *LitExpr)   Compile(asm *os.File) {}
+func (o *IdentExpr) Compile(asm *os.File) {}
+func (o *UnaryExpr) Compile(asm *os.File) { 
+    if l, ok := o.Operand.(*LitExpr); ok {
+        vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", l.Val.Str))
+    } else if ident, ok := o.Operand.(*IdentExpr); ok {
+        if v := vars.GetVar(ident.Ident.Str); v != nil {
+            // TODO is i32
+            reg := vars.Registers[v.Regs[0]].Name
+            vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", reg))
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str) 
+            fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
+            os.Exit(1)
+        }
+    }
+
+    o.Operand.Compile(asm)
+
+    if o.Operator.Type == token.Minus {
+        vars.WriteVar(asm, "neg rax\n")
+    }
+}
+func (o *BinaryExpr) Compile(asm *os.File) {
+    if l, ok := o.OperandL.(*LitExpr); ok {
+        vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", l.Val.Str))
+    } else if ident, ok := o.OperandL.(*IdentExpr); ok {
+        if v := vars.GetVar(ident.Ident.Str); v != nil {
+            // TODO is i32
+            reg := vars.Registers[v.Regs[0]].Name
+            vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", reg))
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str) 
+            fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
+            os.Exit(1)
+        }
+    }
+
+    o.OperandL.Compile(asm)
+
+    if l, ok := o.OperandR.(*LitExpr); ok {
+        arith.BinaryOp(asm, o.Operator.Type, l.Val.Str)
+    } else if ident, ok := o.OperandR.(*IdentExpr); ok {
+        if v := vars.GetVar(ident.Ident.Str); v != nil {
+            // TODO is i32
+            reg := vars.Registers[v.Regs[0]].Name
+            arith.BinaryOp(asm, o.Operator.Type, reg)
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str) 
+            fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
+            os.Exit(1)
+        }
+    } else {
+        vars.WriteVar(asm, "push rbx\n")
+        vars.WriteVar(asm, "mov rbx, rax\n")
+        o.OperandR.Compile(asm)
+
+        arith.BinaryOp(asm, o.Operator.Type, "rbx")
+        vars.WriteVar(asm, "pop rbx\n")
+    }
 }
 
-func (o *OpFnCall) Compile(asm *os.File, dest token.Token) {
+func (o *OpFnCall) Compile(asm *os.File) {
     fn.DefineArgs(asm, o.FnName, o.Values)
     fn.CallFunc(asm, o.FnName)
 }
 
-func (o *BadExpr) Compile(asm *os.File, dest token.Token) {
+func (o *BadExpr) Compile(asm *os.File) {
     fmt.Fprintln(os.Stderr, "[ERROR] bad expression")
     os.Exit(1)
 }
@@ -101,30 +161,4 @@ func (o *BadExpr) Readable(indent int) string {
     fmt.Fprintln(os.Stderr, "[ERROR] bad expression")
     os.Exit(1)
     return ""
-}
-
-
-func (o *LitExpr)    GetValue() token.Token { return o.Val }
-func (o *IdentExpr)  GetValue() token.Token { return o.Ident }
-func (o *OpFnCall)   GetValue() token.Token { return token.Token{} }
-func (o *BinaryExpr) GetValue() token.Token {
-    // first literal of Operation with highest precedence
-    // deepest left op (see prsBinary)
-    return o.OperandL.GetValue()
-}
-
-func (o *UnaryExpr) GetValue() token.Token {
-    if l, ok := o.Operand.(*LitExpr); ok {
-        t := l.Val
-        t.Str = o.Operator.Str + l.Val.Str
-        return t
-    } else {
-        return o.Operand.GetValue()
-    }
-}
-
-func (o *BadExpr) GetValue() token.Token {
-    fmt.Fprintln(os.Stderr, "[ERROR] bad expression")
-    os.Exit(1)
-    return token.Token{}
 }

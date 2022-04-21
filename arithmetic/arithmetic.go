@@ -11,46 +11,16 @@ func UnaryOp(operator token.Token, operand token.Token) {
     /* TODO negating vars */
 }
 
-func BinaryOp(asm *os.File, opType token.TokenType, src token.Token, dest token.Token) {
-    var s string
-    var d string
-
-    // TODO get regs method
-    if src.Type == token.Name {
-        v := vars.GetVar(src.Str)
-        if v == nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", src.Str)
-            fmt.Fprintln(os.Stderr, "\t" + src.At())
-            os.Exit(1)
-        }
-
-        s = vars.Registers[v.Regs[0]].Name
-    } else {
-        s = src.Str
-    }
-
-    if dest.Type == token.Name {
-        v := vars.GetVar(dest.Str)
-        if v == nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", dest.Str)
-            fmt.Fprintln(os.Stderr, "\t" + dest.At())
-            os.Exit(1)
-        }
-
-        d = vars.Registers[v.Regs[0]].Name
-    } else {
-        d = dest.Str
-    }
-
+func BinaryOp(asm *os.File, opType token.TokenType, src string) {
     switch opType {
     case token.Plus:
-        add(asm, s, d);
+        add(asm, src, "rax");
     case token.Minus:
-        sub(asm, s, d);
+        sub(asm, src, "rax");
     case token.Mul:
-        mul(asm, s, d);
+        mul(asm, src, "rax");
     case token.Div:
-        div(asm, s, d);
+        div(asm, src, "rax");
     default:
         fmt.Fprintf(os.Stderr, "Error: only +,-,*,/ are supported binary operators (got %s)\n", opType.Readable())
         os.Exit(1)

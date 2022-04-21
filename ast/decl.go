@@ -14,7 +14,7 @@ import (
 type OpDecl interface {
     Op
     Compile(asm *os.File)
-    decl()  // to differenciate OpDecl from OpStmt
+    decl()  // to differenciate OpDecl from OpStmt and OpExpr
 }
 
 type BadDecl struct {}
@@ -47,8 +47,14 @@ func (o *OpDecVar) Compile(asm *os.File) {
 }
 
 func (o *OpDefVar) Compile(asm *os.File) {
-    vars.Define(asm, o.Varname, o.Value.GetValue())
-    o.Value.Compile(asm, o.Varname)
+    if l, ok := o.Value.(*LitExpr); ok {
+        vars.DefineByValue(asm, o.Varname, l.Val)
+    } else if ident, ok := o.Value.(*IdentExpr); ok {
+        vars.DefineByVar(asm, o.Varname, ident.Ident)
+    } else {
+        o.Value.Compile(asm)
+        vars.AssignByReg(asm, o.Varname, "rax")
+    }
 }
 
 func (o *OpDefFn) Compile(asm *os.File) {

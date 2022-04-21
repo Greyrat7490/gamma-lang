@@ -20,6 +20,7 @@ func Compile(asm *os.File) {
 }
 
 
+// TODO At() for Op
 type Op interface {
     Readable(indent int) string
 }

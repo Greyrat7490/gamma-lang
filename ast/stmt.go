@@ -11,7 +11,7 @@ import (
 type OpStmt interface {
     Op
     Compile(asm *os.File)
-    stmt()  // to differenciate OpStmt from OpDecl
+    stmt()  // to differenciate OpStmt from OpDecl and OpExpr
 }
 
 type BadStmt struct {}
@@ -34,16 +34,22 @@ type OpBlock struct {
 }
 
 
+func (o *BadStmt)     stmt() {}
 func (o *OpBlock)     stmt() {}
 func (o *OpDeclStmt)  stmt() {}
 func (o *OpExprStmt)  stmt() {}
 func (o *OpAssignVar) stmt() {}
-func (o *BadStmt)     stmt() {}
 
 
 func (o *OpAssignVar) Compile(asm *os.File) {
-    vars.Assign(asm, o.Varname, o.Value.GetValue())
-    o.Value.Compile(asm, o.Varname)
+    if l, ok := o.Value.(*LitExpr); ok {
+        vars.DefineByValue(asm, o.Varname, l.Val)
+    } else if ident, ok := o.Value.(*IdentExpr); ok {
+        vars.DefineByVar(asm, o.Varname, ident.Ident)
+    } else {
+        o.Value.Compile(asm)
+        vars.AssignByReg(asm, o.Varname, "rax")
+    }
 }
 
 func (o *OpBlock) Compile(asm *os.File) {
@@ -53,7 +59,7 @@ func (o *OpBlock) Compile(asm *os.File) {
 }
 
 func (o *OpExprStmt) Compile(asm *os.File) {
-    o.Expr.Compile(asm, token.Token{})
+    o.Expr.Compile(asm)
 }
 
 func (o *OpDeclStmt) Compile(asm *os.File) {

@@ -8,8 +8,8 @@ import (
     "gorec/token"
 )
 
-const maxRegs int = 5
-var availReg int = 0
+const maxRegs int = 6           // 4
+var availReg int = 2            // rax and rbx are reserved for expr (only tmp maybe)
 
 var IsGlobalScope bool = true
 
@@ -159,6 +159,16 @@ func DefineByVar(asm *os.File, destVar token.Token, srcVar token.Token) {
                 WriteVar(asm, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[ri]].Name, Registers[r].Name))
             }
         }
+    }
+}
+
+func AssignByReg(asm *os.File, destVar token.Token, reg string) {
+    if v := GetVar(destVar.Str); v == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", destVar.Str)
+        fmt.Fprintln(os.Stderr, "\t" + destVar.At())
+        os.Exit(1)
+    } else {
+        WriteVar(asm, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[0]].Name, reg))
     }
 }
 
