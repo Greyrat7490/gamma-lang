@@ -1,6 +1,17 @@
-var v1 i32
+var v1 i32 := 86
+var v2 i32
 
 fn test1() {
+    printStr("v2 = -v1 * 2 + -v1   = -258")
+    v2 = -v1 * 2 + -v1
+    printInt(v2)
+
+    printStr("v2 = -v1 * 2 + v1   = -86")
+    v2 = -v1 * 2 + v1
+    printInt(v2)
+}
+
+fn test2() {
     printStr("-3 * -3 + 2 = 11")
     v1 = -3 * -3 + 2
     printInt(v1)
@@ -10,14 +21,14 @@ fn test1() {
     printInt(v1)
 }
 
-fn test2() {
+fn test3() {
     printStr("2 * 2 - 4 * 2 = -4")
     // needs 2 regs to calc
     v1 = 2 * 2 - 4 * 2
     printInt(v1)
 }
 
-fn test3() {
+fn test4() {
     printStr("2 * 2 - 4 * 4 + 3 * 3 = -3")
     // needs 3 regs to calc
     v1 = 2 * 2 - 4 * 4 + 3 * 3
@@ -30,4 +41,6 @@ fn main() {
     test2()
     printStr("")
     test3()
+    printStr("")
+    test4()
 }

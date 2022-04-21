@@ -66,52 +66,82 @@ func sub(asm *os.File, src string, dest string) {
 }
 
 func mul(asm *os.File, src string, dest string) {
-    if dest != "rbx" {
-        vars.WriteVar(asm, "push rbx\n")
-    }
-    if dest != "rax" {
+    if src == "rax" && dest == "rbx" {
         vars.WriteVar(asm, "push rax\n")
         vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", dest))
-    }
+        vars.WriteVar(asm, "pop rbx\n")
+        vars.WriteVar(asm, "push rbx\n")
 
-    vars.WriteVar(asm, fmt.Sprintf("mov rbx, %s\n", src))
-    vars.WriteVar(asm, "imul rbx\n")
+        vars.WriteVar(asm, "imul rbx\n")
 
-    if dest != "rax" {
         vars.WriteVar(asm, fmt.Sprintf("mov %s, rax\n", dest))
         vars.WriteVar(asm, "pop rax\n")
-    }
-    if dest != "rbx" {
-        vars.WriteVar(asm, "pop rbx\n")
+    } else {
+        if dest != "rbx" {
+            vars.WriteVar(asm, "push rbx\n")
+        }
+        if dest != "rax" {
+            vars.WriteVar(asm, "push rax\n")
+            vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", dest))
+        }
+
+        vars.WriteVar(asm, fmt.Sprintf("mov rbx, %s\n", src))
+        vars.WriteVar(asm, "imul rbx\n")
+
+        if dest != "rax" {
+            vars.WriteVar(asm, fmt.Sprintf("mov %s, rax\n", dest))
+            vars.WriteVar(asm, "pop rax\n")
+        }
+        if dest != "rbx" {
+            vars.WriteVar(asm, "pop rbx\n")
+        }
     }
 }
 
 func div(asm *os.File, src string, dest string) {
-    if dest != "rdx" {
+    if src == "rax" && dest == "rbx" {
         vars.WriteVar(asm, "push rdx\n")
-    }
-    if dest != "rbx" {
-        vars.WriteVar(asm, "push rbx\n")
-    }
-    if dest != "rax" {
         vars.WriteVar(asm, "push rax\n")
         vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", dest))
-    }
+        vars.WriteVar(asm, "pop rbx\n")
+        vars.WriteVar(asm, "push rbx\n")
 
-    // TODO: check if dest is signed or unsigned (use either idiv or div)
-    // for now only signed integers are supported
-    vars.WriteVar(asm, fmt.Sprintf("mov rbx, %s\n", src))
-    vars.WriteVar(asm, "cqo\n") // sign extend rax into rdx (div with 64bit regs -> 128bit div)
-    vars.WriteVar(asm, "idiv rbx\n")
+        // TODO: check if dest is signed or unsigned (use either idiv or div)
+        // for now only signed integers are supported
+        vars.WriteVar(asm, fmt.Sprintf("mov rbx, %s\n", src))
+        vars.WriteVar(asm, "cqo\n") // sign extend rax into rdx (div with 64bit regs -> 128bit div)
+        vars.WriteVar(asm, "idiv rbx\n")
 
-    if dest != "rax" {
         vars.WriteVar(asm, fmt.Sprintf("mov %s, rax\n", dest))
         vars.WriteVar(asm, "pop rax\n")
-    }
-    if dest != "rbx" {
-        vars.WriteVar(asm, "pop rbx\n")
-    }
-    if dest != "rdx" {
         vars.WriteVar(asm, "pop rdx\n")
+    } else {
+        if dest != "rdx" {
+            vars.WriteVar(asm, "push rdx\n")
+        }
+        if dest != "rbx" {
+            vars.WriteVar(asm, "push rbx\n")
+        }
+        if dest != "rax" {
+            vars.WriteVar(asm, "push rax\n")
+            vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", dest))
+        }
+
+        // TODO: check if dest is signed or unsigned (use either idiv or div)
+        // for now only signed integers are supported
+        vars.WriteVar(asm, fmt.Sprintf("mov rbx, %s\n", src))
+        vars.WriteVar(asm, "cqo\n") // sign extend rax into rdx (div with 64bit regs -> 128bit div)
+        vars.WriteVar(asm, "idiv rbx\n")
+
+        if dest != "rax" {
+            vars.WriteVar(asm, fmt.Sprintf("mov %s, rax\n", dest))
+            vars.WriteVar(asm, "pop rax\n")
+        }
+        if dest != "rbx" {
+            vars.WriteVar(asm, "pop rbx\n")
+        }
+        if dest != "rdx" {
+            vars.WriteVar(asm, "pop rdx\n")
+        }
     }
 }

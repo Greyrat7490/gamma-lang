@@ -68,11 +68,20 @@ func prsLitExpr(idx int) (*ast.LitExpr, int) {
     return &ast.LitExpr{ Val: tokens[idx], Type: types.TypeOfVal(tokens[idx].Str) }, idx
 }
 
+func prsValue(idx int) (ast.OpExpr, int) {
+    tokens := token.GetTokens()
+    if tokens[idx].Type == token.Name {
+        return prsIdentExpr(idx)
+    } else {
+        return prsLitExpr(idx)
+    }
+}
+
 func prsUnaryExpr(idx int) (*ast.UnaryExpr, int) {
     tokens := token.GetTokens()
     expr := ast.UnaryExpr{ Operator: tokens[idx] }
 
-    expr.Operand, idx = prsLitExpr(idx+1)
+    expr.Operand, idx = prsValue(idx+1)
 
     return &expr, idx
 }
@@ -94,7 +103,7 @@ func prsBinary(idx int, lhs ast.OpExpr, min_precedence int) (ast.OpExpr, int) {
         if isUnaryExpr(idx+2) {
             b.OperandR, idx = prsUnaryExpr(idx+2)
         } else {
-            b.OperandR, idx = prsLitExpr(idx+2)
+            b.OperandR, idx = prsValue(idx+2)
         }
 
         // TODO test later with parentheses expr
