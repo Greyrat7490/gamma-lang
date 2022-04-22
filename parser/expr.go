@@ -8,13 +8,28 @@ import (
     "gorec/types"
 )
 
+type precedence int
+const (
+    ADD_SUB_PRECEDENCE  precedence = 1
+    MUL_DIV_PRECEDENCE  precedence = 2
+    EXP_ROOT_PRECEDENCE precedence = 3
+    PAREN_PRECEDENCE    precedence = 4
+)
+
 func prsExpr(idx int) (ast.OpExpr, int) {
     tokens := token.GetTokens()
     value := tokens[idx]
 
     switch value.Type {
     case token.Name:
-        return prsIdentExpr(idx)
+        var expr ast.OpExpr
+        expr, idx = prsIdentExpr(idx)
+        return prsBinary(idx, expr, 0)
+
+    case token.ParenL:
+        var expr ast.OpExpr
+        expr, idx = prsParenExpr(idx)
+        return prsBinary(idx, expr, 0)
 
     case token.Plus, token.Minus:
         var expr ast.OpExpr
@@ -50,11 +65,11 @@ func isBinaryExpr(idx int) bool {
                 tokens[idx+1].Type == token.Mul || tokens[idx+1].Type == token.Div
 }
 
-func getPrecedence(t token.TokenType) int {
+func getPrecedence(t token.TokenType) precedence {
     if t == token.Plus || t == token.Minus {
-        return 1
+        return ADD_SUB_PRECEDENCE
     } else {
-        return 2
+        return MUL_DIV_PRECEDENCE
     }
 }
 
@@ -77,6 +92,24 @@ func prsValue(idx int) (ast.OpExpr, int) {
     }
 }
 
+func prsParenExpr(idx int) (*ast.ParenExpr, int) {
+    tokens := token.GetTokens()
+    expr := ast.ParenExpr{ ParenLPos: tokens[idx].Pos }
+
+    expr.Expr, idx = prsExpr(idx+1)
+    idx++
+
+    if tokens[idx].Type != token.ParenR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected ) but got \"%s\"(%s)\n", tokens[idx].Str, tokens[idx].Type.Readable())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+        os.Exit(1)
+    }
+
+    expr.ParenRPos = tokens[idx].Pos
+
+    return &expr, idx
+}
+
 func prsUnaryExpr(idx int) (*ast.UnaryExpr, int) {
     tokens := token.GetTokens()
     expr := ast.UnaryExpr{ Operator: tokens[idx] }
@@ -86,28 +119,38 @@ func prsUnaryExpr(idx int) (*ast.UnaryExpr, int) {
     return &expr, idx
 }
 
-func prsBinary(idx int, lhs ast.OpExpr, min_precedence int) (ast.OpExpr, int) {
+func prsBinary(idx int, lhs ast.OpExpr, min_precedence precedence) (ast.OpExpr, int) {
     tokens := token.GetTokens()
 
     for isBinaryExpr(idx) && getPrecedence(tokens[idx+1].Type) >= min_precedence {
         precedence := getPrecedence(tokens[idx+1].Type)
 
-        // TODO detect if 2 or more registers are needed
-        // if an OperandR is a BinaryExpr
-        // i.e. 2 * 2 + 3 * 3
-
         var b ast.BinaryExpr
         b.Operator = tokens[idx+1]
         b.OperandL = lhs
 
-        if isUnaryExpr(idx+2) {
+        if tokens[idx+2].Type == token.ParenL {
+            if precedence < PAREN_PRECEDENCE {
+                b.OperandR = lhs
+                b.OperandL, idx = prsParenExpr(idx+2)
+
+                if b.Operator.Type == token.Minus {
+                    b.Operator.Type = token.Plus
+                    b.Operator.Str = "+"
+
+                    t := token.Token{ Type: token.Minus, Str: "-", Pos: tokens[idx+1].Pos }
+                    b.OperandL = &ast.UnaryExpr{ Operator: t, Operand: b.OperandL }
+                }
+            } else {
+                b.OperandR, idx = prsParenExpr(idx+2)
+            }
+        } else if isUnaryExpr(idx+2) {
             b.OperandR, idx = prsUnaryExpr(idx+2)
         } else {
             b.OperandR, idx = prsValue(idx+2)
         }
 
-        // TODO test later with parentheses expr
-        for isBinaryExpr(idx) && getPrecedence(tokens[idx+1].Type) > precedence {
+        if isBinaryExpr(idx) && getPrecedence(tokens[idx+1].Type) > precedence {
             if b.Operator.Type == token.Minus {
                 b.Operator.Type = token.Plus
                 b.Operator.Str = "+"

@@ -44,17 +44,25 @@ type BinaryExpr struct {
     OperandR OpExpr
 }
 
+type ParenExpr struct {
+    ParenLPos token.Pos
+    Expr OpExpr
+    ParenRPos token.Pos
+}
+
 func (o *BadExpr)    expr() {}
 func (o *LitExpr)    expr() {}
 func (o *IdentExpr)  expr() {}
 func (o *OpFnCall)   expr() {}
 func (o *UnaryExpr)  expr() {}
 func (o *BinaryExpr) expr() {}
+func (o *ParenExpr)  expr() {}
 
 
 func (o *LitExpr)   Compile(asm *os.File) {}
 func (o *IdentExpr) Compile(asm *os.File) {}
-func (o *UnaryExpr) Compile(asm *os.File) { 
+func (o *ParenExpr) Compile(asm *os.File) { o.Expr.Compile(asm) }
+func (o *UnaryExpr) Compile(asm *os.File) {
     if l, ok := o.Operand.(*LitExpr); ok {
         vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", l.Val.Str))
     } else if ident, ok := o.Operand.(*IdentExpr); ok {
@@ -63,7 +71,7 @@ func (o *UnaryExpr) Compile(asm *os.File) {
             reg := vars.Registers[v.Regs[0]].Name
             vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", reg))
         } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str) 
+            fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str)
             fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
             os.Exit(1)
         }
@@ -84,7 +92,7 @@ func (o *BinaryExpr) Compile(asm *os.File) {
             reg := vars.Registers[v.Regs[0]].Name
             vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", reg))
         } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str) 
+            fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str)
             fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
             os.Exit(1)
         }
@@ -100,7 +108,7 @@ func (o *BinaryExpr) Compile(asm *os.File) {
             reg := vars.Registers[v.Regs[0]].Name
             arith.BinaryOp(asm, o.Operator.Type, reg)
         } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str) 
+            fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str)
             fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
             os.Exit(1)
         }
@@ -155,6 +163,10 @@ func (o *BinaryExpr) Readable(indent int) string {
         o.OperandL.Readable(indent+1) +
         s2 + o.Operator.Str + o.Operator.Type.Readable() + "\n" +
         o.OperandR.Readable(indent+1)
+}
+
+func (o *ParenExpr) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "PAREN:\n" + o.Expr.Readable(indent+1)
 }
 
 func (o *BadExpr) Readable(indent int) string {
