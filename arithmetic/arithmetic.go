@@ -41,9 +41,11 @@ func mul(asm *os.File, src string, dest string) {
         vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", dest))
         vars.WriteVar(asm, "pop rbx\n")
         vars.WriteVar(asm, "push rbx\n")
+        vars.WriteVar(asm, "push rdx\n") // products higher part gets stored in rdx
 
         vars.WriteVar(asm, "imul rbx\n")
 
+        vars.WriteVar(asm, "pop rdx\n")
         vars.WriteVar(asm, fmt.Sprintf("mov %s, rax\n", dest))
         vars.WriteVar(asm, "pop rax\n")
     } else {
@@ -55,8 +57,12 @@ func mul(asm *os.File, src string, dest string) {
             vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", dest))
         }
 
+        vars.WriteVar(asm, "push rdx\n")
+
         vars.WriteVar(asm, fmt.Sprintf("mov rbx, %s\n", src))
         vars.WriteVar(asm, "imul rbx\n")
+
+        vars.WriteVar(asm, "pop rdx\n")
 
         if dest != "rax" {
             vars.WriteVar(asm, fmt.Sprintf("mov %s, rax\n", dest))
