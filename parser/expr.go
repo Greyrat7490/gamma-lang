@@ -17,29 +17,24 @@ const (
 )
 
 func prsExpr(idx int) (ast.OpExpr, int) {
+    var expr ast.OpExpr
     tokens := token.GetTokens()
     value := tokens[idx]
 
     switch value.Type {
     case token.Name:
-        var expr ast.OpExpr
         expr, idx = prsIdentExpr(idx)
-        return prsBinary(idx, expr, 0)
 
     case token.ParenL:
-        var expr ast.OpExpr
         expr, idx = prsParenExpr(idx)
-        return prsBinary(idx, expr, 0)
 
     case token.Plus, token.Minus:
-        var expr ast.OpExpr
         expr, idx = prsUnaryExpr(idx)
-        return prsBinary(idx, expr, 0)
 
     case token.Number, token.Str:
-        var expr ast.OpExpr
         expr, idx = prsLitExpr(idx)
-        return prsBinary(idx, expr, 0)
+
+    // TODO: OpFnCall
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] no valid expression (got type %s)\n", value.Type.Readable())
@@ -47,6 +42,12 @@ func prsExpr(idx int) (ast.OpExpr, int) {
         os.Exit(1)
         return &ast.BadExpr{}, -1
     }
+
+    if isBinaryExpr(idx) {
+        expr, idx = prsBinary(idx, expr, 0)
+    }
+
+    return expr, idx
 }
 
 func isUnaryExpr(idx int) bool {
@@ -65,11 +66,22 @@ func isBinaryExpr(idx int) bool {
                 tokens[idx+1].Type == token.Mul || tokens[idx+1].Type == token.Div
 }
 
-func getPrecedence(t token.TokenType) precedence {
-    if t == token.Plus || t == token.Minus {
+func isParenExpr(idx int) bool {
+    tokens := token.GetTokens()
+    return tokens[idx].Type == token.ParenL
+}
+
+func getPrecedence(idx int) precedence {
+    tokens := token.GetTokens()
+
+    if tokens[idx+1].Type == token.Plus || tokens[idx+1].Type == token.Minus {
         return ADD_SUB_PRECEDENCE
-    } else {
+    } else if tokens[idx+1].Type == token.Mul || tokens[idx+1].Type == token.Div {
         return MUL_DIV_PRECEDENCE
+    } else if tokens[idx].Type == token.ParenL {
+        return PAREN_PRECEDENCE
+    } else {
+        return precedence(0)
     }
 }
 
@@ -119,54 +131,51 @@ func prsUnaryExpr(idx int) (*ast.UnaryExpr, int) {
     return &expr, idx
 }
 
-func prsBinary(idx int, lhs ast.OpExpr, min_precedence precedence) (ast.OpExpr, int) {
+func prsBinary(idx int, expr ast.OpExpr, min_precedence precedence) (ast.OpExpr, int) {
     tokens := token.GetTokens()
 
-    for isBinaryExpr(idx) && getPrecedence(tokens[idx+1].Type) >= min_precedence {
-        precedence := getPrecedence(tokens[idx+1].Type)
-
+    for isBinaryExpr(idx) && getPrecedence(idx) >= min_precedence {
         var b ast.BinaryExpr
+
+        precedenceL := getPrecedence(idx)
+        precedenceR := getPrecedence(idx+2)
+
         b.Operator = tokens[idx+1]
-        b.OperandL = lhs
+        b.OperandL = expr
 
-        if tokens[idx+2].Type == token.ParenL {
-            if precedence < PAREN_PRECEDENCE {
-                b.OperandR = lhs
-                b.OperandL, idx = prsParenExpr(idx+2)
-
-                if b.Operator.Type == token.Minus {
-                    b.Operator.Type = token.Plus
-                    b.Operator.Str = "+"
-
-                    t := token.Token{ Type: token.Minus, Str: "-", Pos: tokens[idx+1].Pos }
-                    b.OperandL = &ast.UnaryExpr{ Operator: t, Operand: b.OperandL }
-                }
-            } else {
-                b.OperandR, idx = prsParenExpr(idx+2)
-            }
+        if isParenExpr(idx+2) {
+            b.OperandR, idx = prsParenExpr(idx+2)
         } else if isUnaryExpr(idx+2) {
             b.OperandR, idx = prsUnaryExpr(idx+2)
         } else {
             b.OperandR, idx = prsValue(idx+2)
         }
 
-        if isBinaryExpr(idx) && getPrecedence(tokens[idx+1].Type) > precedence {
-            if b.Operator.Type == token.Minus {
-                b.Operator.Type = token.Plus
-                b.Operator.Str = "+"
-
-                t := token.Token{ Type: token.Minus, Str: "-", Pos: tokens[idx+1].Pos }
-                b.OperandR = &ast.UnaryExpr{ Operator: t, Operand: b.OperandR }
-            }
-
-            // left to right as correct order of operations
-            // OperandL has lower precedence so put it right (swap with OperandR)
-            b.OperandL, idx = prsBinary(idx, b.OperandR, precedence + 1)
-            b.OperandR = lhs
+        if isBinaryExpr(idx) {
+            b.OperandR, idx = prsBinary(idx, b.OperandR, precedenceL+1)
         }
 
-        lhs = &b
+        // left to right as correct order of operations
+        if precedenceR > precedenceL {
+            swap(&b)
+        }
+
+        expr = &b
     }
 
-    return lhs, idx
+    return expr, idx
+}
+
+func swap(expr *ast.BinaryExpr) {
+    if expr.Operator.Type == token.Minus {
+        expr.Operator.Type = token.Plus
+        expr.Operator.Str = "+"
+
+        t := token.Token{ Type: token.Minus, Str: "-" }
+        expr.OperandR = &ast.UnaryExpr{ Operator: t, Operand: expr.OperandR }
+    }
+
+    tmp := expr.OperandR
+    expr.OperandR = expr.OperandL
+    expr.OperandL = tmp
 }
