@@ -30,11 +30,11 @@ And because it is written in Go...
 * [x] variables
 * [x] syscalls
 * [x] tests
-* [ ] arithmetics
+* [x] arithmetics
   * [x] unary ops
   * [x] binary ops
     * [x] parse by precedence
-  * [ ] parentheses
+  * [x] parentheses
 * [ ] pointer
 * [ ] turing complete -> actual programming language
   * [ ] proof with Rule 110 programm 
