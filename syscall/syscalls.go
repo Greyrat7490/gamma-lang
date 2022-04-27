@@ -30,9 +30,15 @@ func syscall(asm *os.File, syscallNum uint, args... interface{}) {
     for i, arg := range args {
         asm.WriteString(fmt.Sprintf("mov %s, %s\n", regs[i], fmt.Sprint(arg)))
     }
-
     asm.WriteString(fmt.Sprintf("mov rax, %d\n", syscallNum))
+
+    asm.WriteString("push rcx\n")
+    asm.WriteString("push r11\n")   // syscall can change r11 and rcx
+
     asm.WriteString("syscall\n")
+
+    asm.WriteString("pop r11\n")
+    asm.WriteString("pop rcx\n")
 }
 
 func defineWriteInt(asm *os.File) {
@@ -41,15 +47,13 @@ func defineWriteInt(asm *os.File) {
     asm.WriteString("printInt:\n")
     asm.WriteString("push rax\n")
     asm.WriteString("push rbx\n")
-    asm.WriteString("push rcx\n")
     asm.WriteString("push rdx\n")
-    asm.WriteString("push r10\n")
+
     asm.WriteString("mov rax, r10\n")
     asm.WriteString("call int_to_str\n")
     syscall(asm, SYS_WRITE, STDOUT, "rbx", "rax")
-    asm.WriteString("pop r10\n")
+
     asm.WriteString("pop rdx\n")
-    asm.WriteString("pop rcx\n")
     asm.WriteString("pop rbx\n")
     asm.WriteString("pop rax\n")
     asm.WriteString("ret\n\n")
@@ -60,13 +64,11 @@ func defineWriteStr(asm *os.File) {
 
     asm.WriteString("printStr:\n")
     asm.WriteString("push rax\n")
-    asm.WriteString("push rcx\n")
     asm.WriteString("push rdx\n")
-    asm.WriteString("push r10\n")
+
     syscall(asm, SYS_WRITE, STDOUT, "r10", "r11")
-    asm.WriteString("pop r10\n")
+
     asm.WriteString("pop rdx\n")
-    asm.WriteString("pop rcx\n")
     asm.WriteString("pop rax\n")
     asm.WriteString("ret\n\n")
 }

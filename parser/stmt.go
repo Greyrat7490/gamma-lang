@@ -78,6 +78,13 @@ func prsCallFn(idx int) (ast.OpFnCall, int) {
     tokens := token.GetTokens()
 
     var op ast.OpFnCall = ast.OpFnCall{ FnName: tokens[idx] }
+    op.Values, idx = prsDefArgs(idx)
+
+    return op, idx
+}
+
+func prsDefArgs(idx int) ([]ast.OpExpr, int) {
+    tokens := token.GetTokens()
 
     if len(tokens) < idx + 1 {
         fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
@@ -90,42 +97,25 @@ func prsCallFn(idx int) (ast.OpFnCall, int) {
         os.Exit(1)
     }
 
-    op.Values, idx = prsDefArgs(idx)
-
-    return op, idx
-}
-
-func prsDefArgs(idx int) ([]string, int) {
-    tokens := token.GetTokens()
-
-    var values []string
-
-    b := false
-    for _, w := range tokens[idx+2:] {
-        if w.Type == token.ParenR {
-            b = true
-            break
+    // TODO: "," seperated args
+    var values []ast.OpExpr
+    for idx+=2; idx < len(tokens); idx++ {
+        if tokens[idx].Type == token.ParenR {
+            return values, idx
         }
-
-        if w.Type == token.BraceL || w.Type == token.BraceR {
+        if tokens[idx].Type == token.BraceL || tokens[idx].Type == token.BraceR {
             fmt.Fprintln(os.Stderr, "[ERROR] missing \")\"")
-            fmt.Fprintln(os.Stderr, "\t" + w.At())
+            fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
             os.Exit(1)
         }
 
-        if !(w.Type == token.Number || w.Type == token.Str || w.Type == token.Name) {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected a Name or a literal but got %s(\"%s\")\n", w.Type.Readable(), w.Str)
-            fmt.Fprintln(os.Stderr, "\t" + w.At())
-            os.Exit(1)
-        }
+        var expr ast.OpExpr
+        expr, idx = prsExpr(idx)
 
-        values = append(values, w.Str)
+        values = append(values, expr)
     }
 
-    if !b {
-        fmt.Fprintf(os.Stderr, "[ERROR] missing \")\"\n")
-        os.Exit(1)
-    }
-
-    return values, idx + len(values) + 2
+    fmt.Fprintf(os.Stderr, "[ERROR] missing \")\"\n")
+    os.Exit(1)
+    return nil, -1
 }

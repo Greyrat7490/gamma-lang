@@ -118,62 +118,83 @@ func DeclareArgs(args []Arg) {
     }
 }
 
-func DefineArgs(asm *os.File, fnName token.Token, values []string) {
+func DefineArgByValue(asm *os.File, fnName token.Token, argNum int, value token.Token) {
     if f := GetFn(fnName.Str); f != nil {
-        for i, val := range values {
-            if otherVar := vars.GetVar(val); otherVar != nil {
-                if otherVar.Vartype != f.args[i].Type {
-                    fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
-                        f.name.Str, i, f.args[i].Type.Readable(), otherVar.Vartype.Readable())
-                    fmt.Fprintln(os.Stderr, "\t" + fnName.At())
-                    os.Exit(1)
-                }
+       if t := types.TypeOfVal(value.Str); t != -1 {
+            if t != f.args[argNum].Type {
+                fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
+                    f.name.Str, argNum, f.args[argNum].Type.Readable(), t.Readable())
+                os.Exit(1)
+            }
 
-                // skip if r10 is already set correct
-                if otherVar.Regs[0] == 5 {
-                    return
-                }
+            const _ uint = 2 - types.TypesCount
+            switch t {
+            case types.Str:
+                strIdx := str.Add(value.Str)
+                asm.WriteString(fmt.Sprintf("mov r10, str%d\n", strIdx))
+                asm.WriteString(fmt.Sprintf("mov r11, %d\n", str.GetSize(strIdx)))
 
-                const _ uint = 2 - types.TypesCount
-                switch otherVar.Vartype {
-                case types.Str:
-                    asm.WriteString(fmt.Sprintf("mov r10, %s\n", vars.Registers[otherVar.Regs[0]].Name))
-                    asm.WriteString(fmt.Sprintf("mov r11, %s\n", vars.Registers[otherVar.Regs[1]].Name))
+            case types.I32:
+                i, _ := strconv.Atoi(value.Str)
+                asm.WriteString(fmt.Sprintf("mov r10, %d\n", i))
 
-                case types.I32:
-                    asm.WriteString(fmt.Sprintf("mov r10, %s\n", vars.Registers[otherVar.Regs[0]].Name))
+            default:
+                fmt.Fprintf(os.Stderr, "[ERROR] could not get type of value \"%s\"\n", value.Str)
+                os.Exit(1)
+            }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", value.Str)
+            fmt.Fprintln(os.Stderr, "\t" + fnName.At())
+            os.Exit(1)
+        }
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", fnName.Str)
+        os.Exit(1)
+    }
+}
 
-                default:
-                    fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", otherVar.Name)
-                    os.Exit(1)
-                }
-            } else if t := types.TypeOfVal(val); t != -1 {
-                if t != f.args[i].Type {
-                    fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
-                        f.name.Str, i, f.args[i].Type.Readable(), t.Readable())
-                    os.Exit(1)
-                }
-
-                const _ uint = 2 - types.TypesCount
-                switch t {
-                case types.Str:
-                    strIdx := str.Add(val)
-                    asm.WriteString(fmt.Sprintf("mov r10, str%d\n", strIdx))
-                    asm.WriteString(fmt.Sprintf("mov r11, %d\n", str.GetSize(strIdx)))
-
-                case types.I32:
-                    i, _ := strconv.Atoi(val)
-                    asm.WriteString(fmt.Sprintf("mov r10, %d\n", i))
-
-                default:
-                    fmt.Fprintf(os.Stderr, "[ERROR] could not get type of value \"%s\"\n", val)
-                    os.Exit(1)
-                }
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", val)
+func DefineArgByVar(asm *os.File, fnName token.Token, argNum int, varname token.Token) {
+    if f := GetFn(fnName.Str); f != nil {
+        if otherVar := vars.GetVar(varname.Str); otherVar != nil {
+            if otherVar.Vartype != f.args[argNum].Type {
+                fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
+                    f.name.Str, argNum, f.args[argNum].Type.Readable(), otherVar.Vartype.Readable())
                 fmt.Fprintln(os.Stderr, "\t" + fnName.At())
                 os.Exit(1)
             }
+
+            // skip if r10 is already set correct
+            if otherVar.Regs[0] == 5 {
+                return
+            }
+
+            const _ uint = 2 - types.TypesCount
+            switch otherVar.Vartype {
+            case types.Str:
+                asm.WriteString(fmt.Sprintf("mov r10, %s\n", vars.Registers[otherVar.Regs[0]].Name))
+                asm.WriteString(fmt.Sprintf("mov r11, %s\n", vars.Registers[otherVar.Regs[1]].Name))
+
+            case types.I32:
+                asm.WriteString(fmt.Sprintf("mov r10, %s\n", vars.Registers[otherVar.Regs[0]].Name))
+
+            default:
+                fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", otherVar.Name)
+                os.Exit(1)
+            }
+        }
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", fnName.Str)
+        os.Exit(1)
+    }
+}
+
+func DefineArgByReg(asm *os.File, fnName token.Token, argNum int, reg string) {
+    if f := GetFn(fnName.Str); f != nil {
+        if f.args[argNum].Type == types.I32 {
+            asm.WriteString(fmt.Sprintf("mov r10, %s\n", reg))
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected function \"%s\" arg%d to be an i32 but got %v\n", fnName.Str, argNum, f.args[argNum].Type)
+            os.Exit(1)
         }
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", fnName.Str)

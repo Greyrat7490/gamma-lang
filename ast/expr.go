@@ -21,7 +21,7 @@ type BadExpr struct{}
 
 type OpFnCall struct {
     FnName token.Token
-    Values []string
+    Values []OpExpr
 }
 
 type LitExpr struct {
@@ -123,7 +123,17 @@ func (o *BinaryExpr) Compile(asm *os.File) {
 }
 
 func (o *OpFnCall) Compile(asm *os.File) {
-    fn.DefineArgs(asm, o.FnName, o.Values)
+    for i, val := range o.Values {
+        if l, ok := val.(*LitExpr); ok {
+            fn.DefineArgByValue(asm, o.FnName, i, l.Val)
+        } else if ident, ok := val.(*IdentExpr); ok {
+            fn.DefineArgByVar(asm, o.FnName, i, ident.Ident)
+        } else {
+            val.Compile(asm)
+            fn.DefineArgByReg(asm, o.FnName, i, "rax")
+        }
+    }
+
     fn.CallFunc(asm, o.FnName)
 }
 
@@ -144,7 +154,13 @@ func (o *IdentExpr) Readable(indent int) string {
 func (o *OpFnCall) Readable(indent int) string {
     s := strings.Repeat("   ", indent)
     s2 := s + "   "
-    return fmt.Sprintf("%sOP_CALL_FN:\n%s%s %v\n", s, s2, o.FnName.Str, o.Values)
+
+    res := fmt.Sprintf("%sOP_CALL_FN:\n%s%s\n", s, s2, o.FnName.Str)
+    for _, e := range o.Values {
+        res += e.Readable(indent+1)
+    }
+
+    return res
 }
 
 func (o *UnaryExpr) Readable(indent int) string {
