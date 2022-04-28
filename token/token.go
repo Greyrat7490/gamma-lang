@@ -19,6 +19,7 @@ const (
     Typename        // i32, str
     Str             // "string"
     Number          // 1234
+    Boolean         // true/false
 
     Plus            // +
     Minus           // -
@@ -44,6 +45,9 @@ const (
 
 func TokenTypeOfStr(s string) TokenType {
     switch s {
+    case "true", "false":
+        return Boolean
+
     case "+":
         return Plus
     case "-":
@@ -133,6 +137,8 @@ func (t TokenType) Readable() string {
         return "Str"
     case Number:
         return "Number"
+    case Boolean:
+        return "Boolean"
     case Name:
         return "Name"
 

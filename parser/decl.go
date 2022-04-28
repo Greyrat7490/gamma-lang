@@ -148,7 +148,7 @@ func prsDefVar(idx int) (ast.OpDefVar, int) {
     name := tokens[idx-2]
     value, idx := prsExpr(idx+1)
 
-    if (!(tokens[idx].Type == token.Name || tokens[idx].Type == token.Number || tokens[idx].Type == token.Str)) {
+    if (!(tokens[idx].Type == token.Name || tokens[idx].Type == token.Boolean || tokens[idx].Type == token.Number || tokens[idx].Type == token.Str)) {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name or a literal but got %s(\"%s\")\n", tokens[idx].Type.Readable(), tokens[idx].Str)
         fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)

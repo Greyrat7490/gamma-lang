@@ -97,11 +97,11 @@ func DeclareArgs(args []Arg) {
         // see calling convention
         // 6 = r10, 7 = r11
         var regs []int
-        const _ uint = 2 - types.TypesCount
+        const _ uint = 3 - types.TypesCount
         switch a.Type {
         case types.Str:
             regs = []int { 6, 7 }
-        case types.I32:
+        case types.I32, types.Bool:
             regs = []int { 6 }
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) TODO")
@@ -127,7 +127,7 @@ func DefineArgByValue(asm *os.File, fnName token.Token, argNum int, value token.
                 os.Exit(1)
             }
 
-            const _ uint = 2 - types.TypesCount
+            const _ uint = 3 - types.TypesCount
             switch t {
             case types.Str:
                 strIdx := str.Add(value.Str)
@@ -137,6 +137,13 @@ func DefineArgByValue(asm *os.File, fnName token.Token, argNum int, value token.
             case types.I32:
                 i, _ := strconv.Atoi(value.Str)
                 asm.WriteString(fmt.Sprintf("mov r10, %d\n", i))
+
+            case types.Bool:
+                if value.Str == "true" {
+                    asm.WriteString(fmt.Sprintf("mov r10, %d\n", 1))
+                } else {
+                    asm.WriteString(fmt.Sprintf("mov r10, %d\n", 0))
+                }
 
             default:
                 fmt.Fprintf(os.Stderr, "[ERROR] could not get type of value \"%s\"\n", value.Str)
@@ -168,13 +175,13 @@ func DefineArgByVar(asm *os.File, fnName token.Token, argNum int, varname token.
                 return
             }
 
-            const _ uint = 2 - types.TypesCount
+            const _ uint = 3 - types.TypesCount
             switch otherVar.Vartype {
             case types.Str:
                 asm.WriteString(fmt.Sprintf("mov r10, %s\n", vars.Registers[otherVar.Regs[0]].Name))
                 asm.WriteString(fmt.Sprintf("mov r11, %s\n", vars.Registers[otherVar.Regs[1]].Name))
 
-            case types.I32:
+            case types.I32, types.Bool:
                 asm.WriteString(fmt.Sprintf("mov r10, %s\n", vars.Registers[otherVar.Regs[0]].Name))
 
             default:

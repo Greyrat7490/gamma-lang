@@ -31,7 +31,7 @@ func prsExpr(idx int) (ast.OpExpr, int) {
     case token.Plus, token.Minus:
         expr, idx = prsUnaryExpr(idx)
 
-    case token.Number, token.Str:
+    case token.Boolean, token.Number, token.Str:
         expr, idx = prsLitExpr(idx)
 
     // TODO: OpFnCall

@@ -1,13 +1,7 @@
+var v1 bool := true
+var v2 bool := false
+
 fn main() {
-    printStr("40 + 46 = 86")
-    printInt(40 + 46)
-
-    printStr("2 - (3 + 3) = -4")
-    printInt(2 - (3 + 3))
-
-    printStr("2 - (3 + 3) + -2 * (-1 + 3) = -8")
-    printInt(2 - (3 + 3) + -2 * (-1 + 3))
-
-    printStr("2 + 3 * (1 + 2 * 3) = 23")
-    printInt(2 + 3 * (1 + 2 * 3))
+    printBool(v1)
+    printBool(v2)
 }

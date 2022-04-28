@@ -35,11 +35,7 @@ func Add(s string) (idx int) {
 }
 
 func WriteStrLits(asm *os.File) {
-    if len(strLits) > 0 {
-        asm.WriteString("\nsection .data\n")
-
-        for i, str := range strLits {
-            asm.WriteString(fmt.Sprintf("str%d: db %s\n", i, str.value))
-        }
+    for i, str := range strLits {
+        asm.WriteString(fmt.Sprintf("str%d: db %s\n", i, str.value))
     }
 }

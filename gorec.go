@@ -34,6 +34,9 @@ func nasm_footer(asm *os.File) {
     asm.WriteString(fmt.Sprintf("mov rax, %d\n", sys.SYS_EXIT))
     asm.WriteString("syscall\n")
 
+    asm.WriteString("\nsection .data\n")
+    asm.WriteString("str_true: db \"true\", 0xa\n")
+    asm.WriteString("str_false: db \"false\", 0xa\n")
     str.WriteStrLits(asm)
 
     asm.WriteString("\nsection .bss\n")

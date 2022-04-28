@@ -67,7 +67,7 @@ func Declare(varname token.Token, vartype types.Type) {
 
     v := Var{ Name: varname.Str, Vartype: vartype }
 
-    const _ uint = 2 - types.TypesCount
+    const _ uint = 3 - types.TypesCount
     switch vartype {
     case types.Str:
         if availReg + 1 >= maxRegs {
@@ -83,6 +83,17 @@ func Declare(varname token.Token, vartype types.Type) {
     case types.I32:
         if availReg >= maxRegs {
             fmt.Fprintf(os.Stderr, "[ERROR] not enough registers left for var \"%s\"(i32)", v.Name)
+            fmt.Fprintln(os.Stderr, "\t" + varname.At())
+            os.Exit(1)
+        }
+
+        v.Regs = []int{ availReg }
+
+        vars = append(vars, v)
+        availReg++
+    case types.Bool:
+        if availReg >= maxRegs {
+            fmt.Fprintf(os.Stderr, "[ERROR] not enough registers left for var \"%s\"(bool)", v.Name)
             fmt.Fprintln(os.Stderr, "\t" + varname.At())
             os.Exit(1)
         }
@@ -121,8 +132,8 @@ func DefineByValue(asm *os.File, varname token.Token, value token.Token) {
         os.Exit(1)
     }
 
-    if value.Type == token.Number || value.Type == token.Str {
-        const _ uint = 2 - types.TypesCount
+    if value.Type == token.Boolean || value.Type == token.Number || value.Type == token.Str {
+        const _ uint = 3 - types.TypesCount
         switch v.Vartype {
         case types.Str:
             if len(v.Regs) != 2 {
@@ -136,6 +147,13 @@ func DefineByValue(asm *os.File, varname token.Token, value token.Token) {
 
         case types.I32:
             WriteVar(asm, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[0]].Name, value.Str))
+
+        case types.Bool:
+            if value.Str == "true" {
+                WriteVar(asm, fmt.Sprintf("mov %s, %d\n", Registers[v.Regs[0]].Name, 1))
+            } else {
+                WriteVar(asm, fmt.Sprintf("mov %s, %d\n", Registers[v.Regs[0]].Name, 0))
+            }
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name)
@@ -187,7 +205,7 @@ func Assign(asm *os.File, varname token.Token, value token.Token) {
     }
 
     if value.Type == token.Number || value.Type == token.Str {
-        const _ uint = 2 - types.TypesCount
+        const _ uint = 3 - types.TypesCount
         switch v.Vartype {
         case types.Str:
             if len(v.Regs) != 2 {
@@ -199,7 +217,7 @@ func Assign(asm *os.File, varname token.Token, value token.Token) {
             WriteVar(asm, fmt.Sprintf("mov %s, str%d\n", Registers[v.Regs[0]].Name, strIdx))
             WriteVar(asm, fmt.Sprintf("mov %s, %d\n", Registers[v.Regs[1]].Name, str.GetSize(strIdx)))
 
-        case types.I32:
+        case types.I32, types.Bool:
             WriteVar(asm, fmt.Sprintf("mov %s, %s\n", Registers[v.Regs[0]].Name, value.Str))
 
         default:
