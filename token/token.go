@@ -25,6 +25,13 @@ const (
     Minus           // -
     Mul             // *
     Div             // /
+    
+    Eql             // ==
+    Neq             // !=
+    Geq             // >=
+    Leq             // <=
+    Lss             // <
+    Grt             // >
 
     ParenL          // (
     ParenR          // )
@@ -56,6 +63,19 @@ func TokenTypeOfStr(s string) TokenType {
         return Mul
     case "/":
         return Div
+
+    case "==":
+        return Eql
+    case "!=":
+        return Neq
+    case ">=":
+        return Geq
+    case "<=":
+        return Leq
+    case ">":
+        return Grt
+    case "<":
+        return Lss
 
     case "(":
         return ParenL
@@ -105,6 +125,19 @@ func (t TokenType) Readable() string {
         return "Mul"
     case Div:
         return "Div"
+
+    case Eql:
+        return "Eql"
+    case Neq:
+        return "Neq"
+    case Geq:
+        return "Geq"
+    case Leq:
+        return "Leq"
+    case Grt:
+        return "Grt"
+    case Lss:
+        return "Lss"
 
     case ParenL:
         return "ParenL"

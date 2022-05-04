@@ -10,6 +10,7 @@ import (
 
 type precedence int
 const (
+    COMPARE_PRECEDENCE  precedence = 0
     ADD_SUB_PRECEDENCE  precedence = 1
     MUL_DIV_PRECEDENCE  precedence = 2
     EXP_ROOT_PRECEDENCE precedence = 3
@@ -18,28 +19,28 @@ const (
 
 func prsExpr(idx int) (ast.OpExpr, int) {
     var expr ast.OpExpr
-    tokens := token.GetTokens()
-    value := tokens[idx]
+    switch {
+    case isLitExpr(idx):
+        expr, idx = prsLitExpr(idx)
 
-    switch value.Type {
-    case token.Name:
+    case isIdentExpr(idx):
         expr, idx = prsIdentExpr(idx)
 
-    case token.ParenL:
+    case isParenExpr(idx):
         expr, idx = prsParenExpr(idx)
 
-    case token.Plus, token.Minus:
+    case isUnaryExpr(idx):
         expr, idx = prsUnaryExpr(idx)
-
-    case token.Boolean, token.Number, token.Str:
-        expr, idx = prsLitExpr(idx)
 
     // TODO: OpFnCall
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] no valid expression (got type %s)\n", value.Type.Readable())
+        tokens := token.GetTokens()
+
+        fmt.Fprintf(os.Stderr, "[ERROR] no valid expression (got type %s)\n", tokens[idx].Type.Readable())
         fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
+
         return &ast.BadExpr{}, -1
     }
 
@@ -50,6 +51,15 @@ func prsExpr(idx int) (ast.OpExpr, int) {
     return expr, idx
 }
 
+func isLitExpr(idx int) bool {
+    tokens := token.GetTokens()
+    return tokens[idx].Type == token.Number || tokens[idx].Type == token.Str || tokens[idx].Type == token.Boolean
+}
+func isIdentExpr(idx int) bool {
+    tokens := token.GetTokens()
+    return tokens[idx].Type == token.Name
+}
+
 func isUnaryExpr(idx int) bool {
     tokens := token.GetTokens()
     return tokens[idx].Type == token.Plus || tokens[idx].Type == token.Minus
@@ -58,12 +68,13 @@ func isUnaryExpr(idx int) bool {
 func isBinaryExpr(idx int) bool {
     tokens := token.GetTokens()
 
-    if idx + 1 >= len(tokens) {
+    if idx + 2 >= len(tokens) {
         return false
     }
 
-    return tokens[idx+1].Type == token.Plus || tokens[idx+1].Type == token.Minus ||
-                tokens[idx+1].Type == token.Mul || tokens[idx+1].Type == token.Div
+    return  tokens[idx+1].Type == token.Plus || tokens[idx+1].Type == token.Minus ||
+            tokens[idx+1].Type == token.Mul  || tokens[idx+1].Type == token.Div ||
+            isCompareExpr(idx)
 }
 
 func isParenExpr(idx int) bool {
@@ -71,14 +82,28 @@ func isParenExpr(idx int) bool {
     return tokens[idx].Type == token.ParenL
 }
 
+func isCompareExpr(idx int) bool {
+    tokens := token.GetTokens()
+
+    if idx + 2 >= len(tokens) {
+        return false
+    }
+
+    return  tokens[idx+1].Type == token.Eql || tokens[idx+1].Type == token.Neq ||
+            tokens[idx+1].Type == token.Grt || tokens[idx+1].Type == token.Lss ||
+            tokens[idx+1].Type == token.Geq || tokens[idx+1].Type == token.Leq
+}
+
 func getPrecedence(idx int) precedence {
     tokens := token.GetTokens()
 
-    if tokens[idx+1].Type == token.Plus || tokens[idx+1].Type == token.Minus {
+    if isCompareExpr(idx) {
+        return COMPARE_PRECEDENCE
+    } else if tokens[idx+1].Type == token.Plus || tokens[idx+1].Type == token.Minus {
         return ADD_SUB_PRECEDENCE
     } else if tokens[idx+1].Type == token.Mul || tokens[idx+1].Type == token.Div {
         return MUL_DIV_PRECEDENCE
-    } else if tokens[idx].Type == token.ParenL {
+    } else if isParenExpr(idx) {
         return PAREN_PRECEDENCE
     } else {
         return precedence(0)

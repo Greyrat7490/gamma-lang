@@ -177,7 +177,7 @@ func (o *BinaryExpr) Readable(indent int) string {
 
     return s + "OP_BINARY:\n" +
         o.OperandL.Readable(indent+1) +
-        s2 + o.Operator.Str + o.Operator.Type.Readable() + "\n" +
+        s2 + fmt.Sprintf("%s(%s)\n", o.Operator.Str, o.Operator.Type.Readable()) +
         o.OperandR.Readable(indent+1)
 }
 
