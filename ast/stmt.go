@@ -42,9 +42,16 @@ type IfStmt struct {
     Block OpBlock
 }
 
+type IfElseStmt struct {
+    If IfStmt
+    ElsePos token.Pos
+    Block OpBlock
+}
+
 
 func (o *BadStmt)     stmt() {}
 func (o *IfStmt)      stmt() {}
+func (o *IfElseStmt)  stmt() {}
 func (o *OpBlock)     stmt() {}
 func (o *OpDeclStmt)  stmt() {}
 func (o *OpExprStmt)  stmt() {}
@@ -74,14 +81,44 @@ func (o *IfStmt) Compile(asm *os.File) {
             o.Block.Compile(asm)
         }
     } else if ident, ok := o.Cond.(*IdentExpr); ok {
-        cond.IfIdent(asm, ident.Ident)
+        count := cond.IfIdent(asm, ident.Ident)
         o.Block.Compile(asm)
-        cond.IfEnd(asm)
+        cond.IfEnd(asm, count)
     } else {
         o.Cond.Compile(asm)
-        cond.IfReg(asm, "rax")
+        count := cond.IfReg(asm, "rax")
+
         o.Block.Compile(asm)
-        cond.IfEnd(asm)
+        cond.IfEnd(asm, count)
+    }
+}
+
+func (o *IfElseStmt) Compile(asm *os.File) {
+    if l, ok := o.If.Cond.(*LitExpr); ok {
+        if l.Val.Str == "true" {
+            o.If.Block.Compile(asm)
+        } else {
+            o.Block.Compile(asm)
+        }
+    } else if ident, ok := o.If.Cond.(*IdentExpr); ok {
+        count := cond.IfIdent(asm, ident.Ident)
+
+        o.If.Block.Compile(asm)
+
+        cond.ElseStart(asm, count)
+        o.Block.Compile(asm)
+
+        cond.ElseEnd(asm, count)
+    } else {
+        o.If.Cond.Compile(asm)
+        count := cond.IfReg(asm, "rax")
+
+        o.If.Block.Compile(asm)
+
+        cond.ElseStart(asm, count)
+        o.Block.Compile(asm)
+
+        cond.ElseEnd(asm, count)
     }
 }
 
@@ -116,6 +153,13 @@ func (o *IfStmt) Readable(indent int) string {
     return strings.Repeat("   ", indent) + "IF:\n" +
         o.Cond.Readable(indent+1) +
         o.Block.Readable(indent+1)
+}
+
+func (o *IfElseStmt) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "IF_ELSE:\n" +
+        o.If.Readable(indent+1) +
+        strings.Repeat("   ", indent+1) + "ELSE:\n" +
+        o.Block.Readable(indent+2)
 }
 
 func (o *OpExprStmt) Readable(indent int) string {

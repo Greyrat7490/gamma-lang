@@ -11,13 +11,41 @@ fn test1() {
 }
 
 fn test2() {
+    printStr("before if")
     if v1 == 420 {
         printStr("v1 == 420")
     }
     printStr("after if")
 }
 
+fn t() {
+    if v1 == 86 {
+        printStr("v1 == 86")
+    } else {
+        printStr("v1 != 86")
+
+        if v1 == 420 {
+            printStr("v1 == 420")
+        }
+    }
+}
+
+fn test3() {
+    v1 = 86
+    t()
+    printStr("---------")
+    v1 = 420
+    t()
+    printStr("---------")
+    v1 = 69
+    t()
+}
+
 fn main() {
+    printStr("------ test 1 ------")
     test1()
+    printStr("------ test 2 ------")
     test2()
+    printStr("------ test 3 ------")
+    test3()
 }

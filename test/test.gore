@@ -1,13 +1,24 @@
-var v1 i32 := 420
+var v1 i32
+
+fn test() {
+    if v1 == 86 {
+        printStr("v1 == 86")
+    } else {
+        printStr("v1 != 86")
+
+        if v1 == 420 {
+            printStr("v1 == 420")
+        }
+    }
+}
 
 fn main() {
-    var l1 bool := v1 == 86
-
-    if l1 {
-        printStr("v1 == 86")
-    }
-
-    if v1 == 420 {
-        printStr("v1 == 420")
-    }
+    v1 = 86
+    test()
+    printStr("---------")
+    v1 = 420
+    test()
+    printStr("---------")
+    v1 = 69
+    test()
 }

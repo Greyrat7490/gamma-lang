@@ -24,6 +24,13 @@ func prsStmt(idx int) (ast.OpStmt, int) {
     case token.If:
         var ifStmt ast.IfStmt
         ifStmt, idx = prsIfStmt(idx)
+
+        if tokens[idx+1].Type == token.Else {
+            var ifElse ast.IfElseStmt
+            ifElse, idx = prsIfElse(ifStmt, idx+1)
+            return &ifElse, idx
+        }
+        
         return &ifStmt, idx
 
     case token.Name:
@@ -41,6 +48,12 @@ func prsStmt(idx int) (ast.OpStmt, int) {
             os.Exit(1)
             return &ast.BadStmt{}, -1
         }
+
+    case token.Else:
+        fmt.Fprintf(os.Stderr, "[ERROR] missing if (else without an if before)\n")
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+        os.Exit(1)
+        return &ast.BadStmt{}, -1
 
     case token.Assign:
         fmt.Fprintf(os.Stderr, "[ERROR] no destination for assignment\n")
@@ -131,6 +144,15 @@ func prsIfStmt(idx int) (ast.IfStmt, int) {
     var op ast.IfStmt = ast.IfStmt{ IfPos: tokens[idx].Pos }
 
     op.Cond, idx = prsExpr(idx+1)
+    op.Block, idx = prsBlock(idx+1)
+
+    return op, idx
+}
+
+func prsIfElse(If ast.IfStmt, idx int) (ast.IfElseStmt, int) {
+    tokens := token.GetTokens()
+    var op ast.IfElseStmt = ast.IfElseStmt{ If: If, ElsePos: tokens[idx].Pos }
+
     op.Block, idx = prsBlock(idx+1)
 
     return op, idx
