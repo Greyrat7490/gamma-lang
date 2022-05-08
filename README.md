@@ -35,6 +35,12 @@ And because it is written in Go...
   * [x] binary ops
     * [x] parse by precedence
   * [x] parentheses
+* [ ] controll structures
+  * [x] if
+  * [x] else
+  * [ ] elif
+  * [ ] while
+  * [ ] for
 * [ ] pointer
 * [ ] turing complete -> actual programming language
   * [ ] proof with Rule 110 programm 
