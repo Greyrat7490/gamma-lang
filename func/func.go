@@ -8,6 +8,7 @@ import (
     "gorec/vars"
     "gorec/token"
     "gorec/types"
+    "gorec/conditions"
 )
 
 // calling convention (temporary):
@@ -69,6 +70,8 @@ func End(asm *os.File) {
     }
     curFunc = -1
     vars.IsGlobalScope = true
+
+    cond.ResetCount()
 
     asm.WriteString("ret\n\n")
 }

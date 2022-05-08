@@ -25,7 +25,7 @@ const (
     Minus           // -
     Mul             // *
     Div             // /
-    
+
     Eql             // ==
     Neq             // !=
     Geq             // >=
@@ -46,6 +46,8 @@ const (
     Def_var         // :=
     Assign          // =
     Def_fn          // fn
+    If              // if
+    Else            // else
 
     TokenTypeCount uint = iota
 )
@@ -101,6 +103,10 @@ func TokenTypeOfStr(s string) TokenType {
         return Assign
     case "fn":
         return Def_fn
+    case "if":
+        return If
+    case "else":
+        return Else
 
     default:
         if types.ToType(s) != -1 {
@@ -163,6 +169,10 @@ func (t TokenType) Readable() string {
         return "Assign"
     case Def_fn:
         return "Def_fn"
+    case If:
+        return "If"
+    case Else:
+        return "Else"
 
     case Typename:
         return "Typename"

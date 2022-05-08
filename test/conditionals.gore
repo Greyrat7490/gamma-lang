@@ -1,13 +1,23 @@
 var v1 i32 := 420
 
-fn main() {
+fn test1() {
     var l1 bool := v1 == 86
 
+    printStr("before if")
     if l1 {
         printStr("v1 == 86")
     }
+    printStr("after if")
+}
 
+fn test2() {
     if v1 == 420 {
         printStr("v1 == 420")
     }
+    printStr("after if")
+}
+
+fn main() {
+    test1()
+    test2()
 }

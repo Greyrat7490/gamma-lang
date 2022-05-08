@@ -6,6 +6,7 @@ import (
     "strings"
     "gorec/token"
     "gorec/vars"
+    "gorec/conditions"
 )
 
 type OpStmt interface {
@@ -30,11 +31,20 @@ type OpAssignVar struct {
 }
 
 type OpBlock struct {
+    BraceLPos token.Pos
     Stmts []OpStmt
+    BraceRPos token.Pos
+}
+
+type IfStmt struct {
+    IfPos token.Pos
+    Cond OpExpr
+    Block OpBlock
 }
 
 
 func (o *BadStmt)     stmt() {}
+func (o *IfStmt)      stmt() {}
 func (o *OpBlock)     stmt() {}
 func (o *OpDeclStmt)  stmt() {}
 func (o *OpExprStmt)  stmt() {}
@@ -54,7 +64,24 @@ func (o *OpAssignVar) Compile(asm *os.File) {
 
 func (o *OpBlock) Compile(asm *os.File) {
     for _, op := range o.Stmts {
-        op.Compile(asm);
+        op.Compile(asm)
+    }
+}
+
+func (o *IfStmt) Compile(asm *os.File) {
+    if l, ok := o.Cond.(*LitExpr); ok {
+        if l.Val.Str == "true" {
+            o.Block.Compile(asm)
+        }
+    } else if ident, ok := o.Cond.(*IdentExpr); ok {
+        cond.IfIdent(asm, ident.Ident)
+        o.Block.Compile(asm)
+        cond.IfEnd(asm)
+    } else {
+        o.Cond.Compile(asm)
+        cond.IfReg(asm, "rax")
+        o.Block.Compile(asm)
+        cond.IfEnd(asm)
     }
 }
 
@@ -83,6 +110,12 @@ func (o *OpBlock) Readable(indent int) string {
     }
 
     return res
+}
+
+func (o *IfStmt) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "IF:\n" +
+        o.Cond.Readable(indent+1) +
+        o.Block.Readable(indent+1)
 }
 
 func (o *OpExprStmt) Readable(indent int) string {

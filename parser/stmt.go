@@ -21,6 +21,11 @@ func prsStmt(idx int) (ast.OpStmt, int) {
         defOp, idx = prsDefVar(idx)
         return &ast.OpDeclStmt{ Decl: &defOp }, idx
 
+    case token.If:
+        var ifStmt ast.IfStmt
+        ifStmt, idx = prsIfStmt(idx)
+        return &ifStmt, idx
+
     case token.Name:
         if tokens[idx+1].Type == token.ParenL {
             var callOp ast.OpFnCall
@@ -118,4 +123,15 @@ func prsDefArgs(idx int) ([]ast.OpExpr, int) {
     fmt.Fprintf(os.Stderr, "[ERROR] missing \")\"\n")
     os.Exit(1)
     return nil, -1
+}
+
+func prsIfStmt(idx int) (ast.IfStmt, int) {
+    tokens := token.GetTokens()
+
+    var op ast.IfStmt = ast.IfStmt{ IfPos: tokens[idx].Pos }
+
+    op.Cond, idx = prsExpr(idx+1)
+    op.Block, idx = prsBlock(idx+1)
+
+    return op, idx
 }

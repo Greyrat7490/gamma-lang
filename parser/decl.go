@@ -55,10 +55,12 @@ func prsDecl(idx int) (ast.OpDecl, int) {
 
 func prsBlock(idx int) (ast.OpBlock, int) {
     tokens := token.GetTokens()
-    block := ast.OpBlock{}
+    block := ast.OpBlock{ BraceLPos: tokens[idx].Pos }
+    idx++
 
     for ; idx < len(tokens); idx++ {
         if tokens[idx].Type == token.BraceR {
+            block.BraceRPos = tokens[idx].Pos
             return block, idx
         }
 
@@ -218,5 +220,5 @@ func prsDecArgs(idx int) ([]fn.Arg, int) {
         os.Exit(1)
     }
 
-    return args, idx + len(args) * 2 + 5
+    return args, idx + len(args) * 2 + 4
 }
