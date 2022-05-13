@@ -1,13 +1,13 @@
 package ast
 
 import (
-	"fmt"
-	"gorec/conditions"
-	"gorec/loops"
-	"gorec/token"
-	"gorec/vars"
-	"os"
-	"strings"
+    "os"
+    "fmt"
+    "strings"
+    "gorec/vars"
+    "gorec/token"
+    "gorec/loops"
+    "gorec/conditions"
 )
 
 type OpStmt interface {
@@ -55,10 +55,20 @@ type WhileStmt struct {
     Block OpBlock
 }
 
+type ForStmt struct {
+    ForPos token.Pos
+    Dec OpDecVar
+    Def OpDefVar
+    Cond OpExpr
+    Stmt OpStmt
+    Block OpBlock
+}
+
 
 func (o *BadStmt)     stmt() {}
 func (o *IfStmt)      stmt() {}
 func (o *IfElseStmt)  stmt() {}
+func (o *ForStmt)     stmt() {}
 func (o *WhileStmt)   stmt() {}
 func (o *OpBlock)     stmt() {}
 func (o *OpDeclStmt)  stmt() {}
@@ -152,6 +162,39 @@ func (o *WhileStmt) Compile(asm *os.File) {
     }
 }
 
+func (o *ForStmt) Compile(asm *os.File) {
+    o.Dec.Compile(asm)
+    o.Def.Compile(asm)
+
+    if l, ok := o.Cond.(*LitExpr); ok {
+        if l.Val.Str == "true" {
+            count := loops.ForStart(asm)
+            o.Block.Compile(asm)
+            o.Stmt.Compile(asm)
+            loops.ForEnd(asm, count)
+        }
+    } else if ident, ok := o.Cond.(*IdentExpr); ok {
+        count := loops.ForStart(asm)
+        loops.ForIdent(asm, ident.Ident)
+
+        o.Block.Compile(asm)
+
+        o.Stmt.Compile(asm)
+        loops.ForEnd(asm, count)
+    } else {
+        count := loops.ForStart(asm)
+        o.Cond.Compile(asm)
+        loops.ForReg(asm, "rax")
+
+        o.Block.Compile(asm)
+
+        o.Stmt.Compile(asm)
+        loops.ForEnd(asm, count)
+    }
+
+    vars.Remove(o.Dec.Varname.Str)
+}
+
 func (o *OpExprStmt) Compile(asm *os.File) {
     o.Expr.Compile(asm)
 }
@@ -195,6 +238,15 @@ func (o *IfElseStmt) Readable(indent int) string {
 func (o *WhileStmt) Readable(indent int) string {
     return strings.Repeat("   ", indent) + "WHILE:\n" +
         o.Cond.Readable(indent+1) +
+        o.Block.Readable(indent+1)
+}
+
+func (o *ForStmt) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "FOR:\n" +
+        o.Dec.Readable(indent+1) +
+        o.Def.Readable(indent+1) +
+        o.Cond.Readable(indent+1) +
+        o.Stmt.Readable(indent+1) +
         o.Block.Readable(indent+1)
 }
 

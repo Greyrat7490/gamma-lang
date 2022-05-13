@@ -1,14 +1,15 @@
 package fn
 
 import (
-    "os"
-    "fmt"
-    "strconv"
-    "gorec/str"
-    "gorec/vars"
-    "gorec/token"
-    "gorec/types"
-    "gorec/conditions"
+	"fmt"
+	"gorec/conditions"
+	"gorec/loops"
+	"gorec/str"
+	"gorec/token"
+	"gorec/types"
+	"gorec/vars"
+	"os"
+	"strconv"
 )
 
 // calling convention (temporary):
@@ -72,6 +73,7 @@ func End(asm *os.File) {
     vars.IsGlobalScope = true
 
     cond.ResetCount()
+    loops.ResetCount()
 
     asm.WriteString("ret\n\n")
 }
