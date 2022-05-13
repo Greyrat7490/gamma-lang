@@ -1,12 +1,13 @@
 package ast
 
 import (
-    "os"
-    "fmt"
-    "strings"
-    "gorec/token"
-    "gorec/vars"
-    "gorec/conditions"
+	"fmt"
+	"gorec/conditions"
+	"gorec/loops"
+	"gorec/token"
+	"gorec/vars"
+	"os"
+	"strings"
 )
 
 type OpStmt interface {
@@ -48,10 +49,17 @@ type IfElseStmt struct {
     Block OpBlock
 }
 
+type WhileStmt struct {
+    WhilePos token.Pos
+    Cond OpExpr
+    Block OpBlock
+}
+
 
 func (o *BadStmt)     stmt() {}
 func (o *IfStmt)      stmt() {}
 func (o *IfElseStmt)  stmt() {}
+func (o *WhileStmt)   stmt() {}
 func (o *OpBlock)     stmt() {}
 func (o *OpDeclStmt)  stmt() {}
 func (o *OpExprStmt)  stmt() {}
@@ -122,6 +130,28 @@ func (o *IfElseStmt) Compile(asm *os.File) {
     }
 }
 
+func (o *WhileStmt) Compile(asm *os.File) {
+    if l, ok := o.Cond.(*LitExpr); ok {
+        if l.Val.Str == "true" {
+            count := loops.WhileStart(asm)
+            o.Block.Compile(asm)
+            loops.WhileEnd(asm, count)
+        }
+    } else if ident, ok := o.Cond.(*IdentExpr); ok {
+        count := loops.WhileStart(asm)
+        loops.WhileIdent(asm, ident.Ident)
+        o.Block.Compile(asm)
+        loops.WhileEnd(asm, count)
+    } else {
+        count := loops.WhileStart(asm)
+        o.Cond.Compile(asm)
+        loops.WhileReg(asm, "rax")
+
+        o.Block.Compile(asm)
+        loops.WhileEnd(asm, count)
+    }
+}
+
 func (o *OpExprStmt) Compile(asm *os.File) {
     o.Expr.Compile(asm)
 }
@@ -160,6 +190,12 @@ func (o *IfElseStmt) Readable(indent int) string {
         o.If.Readable(indent+1) +
         strings.Repeat("   ", indent+1) + "ELSE:\n" +
         o.Block.Readable(indent+2)
+}
+
+func (o *WhileStmt) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "WHILE:\n" +
+        o.Cond.Readable(indent+1) +
+        o.Block.Readable(indent+1)
 }
 
 func (o *OpExprStmt) Readable(indent int) string {

@@ -48,6 +48,7 @@ const (
     Def_fn          // fn
     If              // if
     Else            // else
+    While           // while
 
     TokenTypeCount uint = iota
 )
@@ -107,6 +108,8 @@ func TokenTypeOfStr(s string) TokenType {
         return If
     case "else":
         return Else
+    case "while":
+        return While
 
     default:
         if types.ToType(s) != -1 {
@@ -173,6 +176,8 @@ func (t TokenType) Readable() string {
         return "If"
     case Else:
         return "Else"
+    case While:
+        return "While"
 
     case Typename:
         return "Typename"

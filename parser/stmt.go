@@ -33,6 +33,11 @@ func prsStmt(idx int) (ast.OpStmt, int) {
         
         return &ifStmt, idx
 
+    case token.While:
+        var whileStmt ast.WhileStmt
+        whileStmt, idx = prsWhileStmt(idx)
+        return &whileStmt, idx
+
     case token.Name:
         if tokens[idx+1].Type == token.ParenL {
             var callOp ast.OpFnCall
@@ -153,6 +158,17 @@ func prsIfElse(If ast.IfStmt, idx int) (ast.IfElseStmt, int) {
     tokens := token.GetTokens()
     var op ast.IfElseStmt = ast.IfElseStmt{ If: If, ElsePos: tokens[idx].Pos }
 
+    op.Block, idx = prsBlock(idx+1)
+
+    return op, idx
+}
+
+func prsWhileStmt(idx int) (ast.WhileStmt, int) {
+    tokens := token.GetTokens()
+
+    var op ast.WhileStmt = ast.WhileStmt{ WhilePos: tokens[idx].Pos }
+
+    op.Cond, idx = prsExpr(idx+1)
     op.Block, idx = prsBlock(idx+1)
 
     return op, idx

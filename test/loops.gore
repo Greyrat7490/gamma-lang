@@ -1,0 +1,23 @@
+fn main() {
+    var i i32 := 0
+
+    while i < 10 {
+        printInt(i)
+        i = i + 1
+    }
+
+    while false {
+        printStr("dead code")
+    }
+
+    i = 0
+    while true {
+        printStr("endless loop")
+ 
+        if i >= 100 {
+            printStr("aborted endless loop")
+            exit(0)       // TODO break
+        }
+        i = i + 1
+    }
+}
