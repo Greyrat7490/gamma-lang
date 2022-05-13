@@ -241,6 +241,7 @@ func Add(v Var) {
 func Remove(varname string) {
     if len(vars) == 1 && vars[0].Name == varname {
         vars = []Var{}
+        availReg = maxRegs
         return
     }
 
@@ -248,9 +249,17 @@ func Remove(varname string) {
         if v.Name == varname {
             v = vars[len(vars)-1]
             vars = vars[:len(vars)-1]
+
+            // "free" registers
+            if v.Vartype == types.Str {
+                availReg-=2
+            } else {
+                availReg--
+            }
             return
         }
     }
+
 }
 
 func WriteVar(asm *os.File, s string) {
