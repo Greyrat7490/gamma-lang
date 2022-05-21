@@ -2,7 +2,7 @@ fn testWhile() {
     var idx i32 := 0
 
     while idx < 10 {
-        printInt(i)     // TODO should throw error "i is not defined"
+        printInt(i)     // TODO should throw error "i is not declared"
         idx = idx + 1
     }
 
@@ -23,8 +23,7 @@ fn testWhile() {
 }
 
 fn testFor() {
-    // TODO: more readable
-    for var i i32 := -4  i <= 86  i = i + 6 {
+    for i i32, 87, -4, i+6 {
         printInt(i)
     }
 }

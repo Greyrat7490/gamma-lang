@@ -3,8 +3,9 @@ package prs
 import (
     "os"
     "fmt"
-    "gorec/token"
     "gorec/ast"
+    "gorec/token"
+    "gorec/types"
 )
 
 func prsStmt(idx int) (ast.OpStmt, int) {
@@ -182,12 +183,38 @@ func prsWhileStmt(idx int) (ast.WhileStmt, int) {
 func prsForStmt(idx int) (ast.ForStmt, int) {
     tokens := token.GetTokens()
 
-    var op ast.ForStmt = ast.ForStmt{ ForPos: tokens[idx].Pos }
+    var op ast.ForStmt = ast.ForStmt{
+        ForPos: tokens[idx].Pos,
+        Limit: nil,
+        Start: &ast.LitExpr{
+            Val: token.Token{ Str: "0", Type: token.Number },
+            Type: types.I32,
+        },
+    }
 
-    op.Dec, idx = prsDecVar(idx+1)
-    op.Def, idx = prsDefVar(idx+1)
-    op.Cond, idx = prsExpr(idx+1)
-    op.Stmt, idx = prsStmt(idx+1)
+    op.Dec, idx = prsDecVar(idx)
+
+    op.Step = &ast.BinaryExpr{
+        Operator: token.Token{ Type: token.Plus },
+        OperandL: &ast.IdentExpr{ Ident: op.Dec.Varname },
+        OperandR: &ast.LitExpr{
+            Val: token.Token{ Str: "1", Type: token.Number },
+            Type: types.I32,
+        },
+    }
+
+    if tokens[idx+1].Type == token.Comma {
+        op.Limit, idx = prsExpr(idx+2)
+
+        if tokens[idx+1].Type == token.Comma {
+            op.Start, idx = prsExpr(idx+2)
+
+            if tokens[idx+1].Type == token.Comma {
+                op.Step, idx = prsExpr(idx+2)
+            }
+        }
+    }
+
     op.Block, idx = prsBlock(idx+1)
 
     return op, idx

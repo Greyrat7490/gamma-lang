@@ -16,7 +16,7 @@ fn testWhile() {
 
     idx = 0
     while true {
-        printStr("endless loop")
+        printStr("endless while loop")
 
         if idx >= 30 {
             printStr("aborted endless loop")
@@ -27,22 +27,37 @@ fn testWhile() {
 }
 
 fn testFor() {
-    // TODO: more readable
-    for var i i32 := 0 i < 4 i = i + 1 {
+    // for (int i = 0; i < 4; i++)
+    for i i32, 4 {
         printInt(i)
     }
 
     printStr("------------")
 
-    for var i i32 := 0 i != 0 i = i {
+    // for (int i = 4; i < 4; i++)
+    for i i32, 4, 4 {
         printStr("dead code")
     }
 
     printStr("------------")
 
-    for var i i32 := -4 i <= 86 i = i + 6 {
+    // for (int i = -4; i < 87; i+=6)
+    for i i32, 87, -4, i+6 {
         printInt(i)
     }
+
+    printStr("------------")
+    printStr("endless for loop")
+
+    // endless loop but with an iterator (starts with 0)
+    /*for i i32 {
+        printInt(i)
+
+        if i >= 30 {
+            printStr("aborted endless loop")
+            exit(0)       // TODO break
+        }
+    }*/
 }
 
 fn main() {

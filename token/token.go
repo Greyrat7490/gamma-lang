@@ -40,6 +40,9 @@ const (
     BraceL          // {
     BraceR          // }
 
+    Comma           // ,
+    SemiCol         // ;
+
     Comment         // // ..., /* ... */
 
     Dec_var         // var
@@ -93,6 +96,11 @@ func TokenTypeOfStr(s string) TokenType {
         return BraceL
     case "}":
         return BraceR
+
+    case ",":
+        return Comma
+    case ";":
+        return SemiCol
 
     case "//", "/*", "*/":
         return Comment
@@ -164,6 +172,11 @@ func (t TokenType) Readable() string {
     case BraceR:
         return "BraceR"
 
+    case Comma:
+        return "Comma"
+    case SemiCol:
+        return "SemiCol"
+
     case Comment:
         return "Comment"
 
@@ -222,7 +235,7 @@ func (t Token) At() string {
 
 // escape chars (TODO: \n, \t, \r, ...) (done: \\, \")
 func Tokenize(file []byte) {
-    keySigns := "(){}+-*/"
+    keySigns := "(){}+-*/,;"
     f := string(file)
 
     start := 0

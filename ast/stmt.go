@@ -58,9 +58,9 @@ type WhileStmt struct {
 type ForStmt struct {
     ForPos token.Pos
     Dec OpDecVar
-    Def OpDefVar
-    Cond OpExpr
-    Stmt OpStmt
+    Limit OpExpr
+    Start OpExpr
+    Step OpExpr
     Block OpBlock
 }
 
@@ -164,33 +164,21 @@ func (o *WhileStmt) Compile(asm *os.File) {
 
 func (o *ForStmt) Compile(asm *os.File) {
     o.Dec.Compile(asm)
-    o.Def.Compile(asm)
+    def := OpDefVar{ Varname: o.Dec.Varname, Value: o.Start }
+    def.Compile(asm)
 
-    if l, ok := o.Cond.(*LitExpr); ok {
-        if l.Val.Str == "true" {
-            count := loops.ForStart(asm)
-            o.Block.Compile(asm)
-            o.Stmt.Compile(asm)
-            loops.ForEnd(asm, count)
-        }
-    } else if ident, ok := o.Cond.(*IdentExpr); ok {
-        count := loops.ForStart(asm)
-        loops.ForIdent(asm, ident.Ident)
-
-        o.Block.Compile(asm)
-
-        o.Stmt.Compile(asm)
-        loops.ForEnd(asm, count)
-    } else {
-        count := loops.ForStart(asm)
-        o.Cond.Compile(asm)
+    count := loops.ForStart(asm)
+    if o.Limit != nil {
+        cond := BinaryExpr{ Operator: token.Token{ Type: token.Lss }, OperandL: &IdentExpr{ Ident: o.Dec.Varname }, OperandR: o.Limit }
+        cond.Compile(asm)
         loops.ForReg(asm, "rax")
-
-        o.Block.Compile(asm)
-
-        o.Stmt.Compile(asm)
-        loops.ForEnd(asm, count)
     }
+
+    o.Block.Compile(asm)
+
+    step := OpAssignVar{ Varname: o.Dec.Varname, Value: o.Step }
+    step.Compile(asm)
+    loops.ForEnd(asm, count)
 
     vars.Remove(o.Dec.Varname.Str)
 }
@@ -242,12 +230,17 @@ func (o *WhileStmt) Readable(indent int) string {
 }
 
 func (o *ForStmt) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + "FOR:\n" +
-        o.Dec.Readable(indent+1) +
-        o.Def.Readable(indent+1) +
-        o.Cond.Readable(indent+1) +
-        o.Stmt.Readable(indent+1) +
-        o.Block.Readable(indent+1)
+    res := strings.Repeat("   ", indent) + "FOR:\n" +
+        o.Dec.Readable(indent+1)
+    if o.Limit != nil {
+        res += o.Limit.Readable(indent+1)
+    }
+
+    res += o.Start.Readable(indent+1) +
+    o.Step.Readable(indent+1) +
+    o.Block.Readable(indent+1)
+
+    return res
 }
 
 func (o *OpExprStmt) Readable(indent int) string {
