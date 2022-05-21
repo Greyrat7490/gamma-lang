@@ -87,6 +87,9 @@ func ForReg(asm *os.File, reg string) {
     asm.WriteString(fmt.Sprintf("jne .for%dEnd\n", forCount))
 }
 
+func ForBlockEnd(asm *os.File, count uint) {
+    asm.WriteString(fmt.Sprintf(".for%dBlockEnd:\n", count))
+}
 func ForEnd(asm *os.File, count uint) {
     asm.WriteString(fmt.Sprintf("jmp .for%d\n", count))
     asm.WriteString(fmt.Sprintf(".for%dEnd:\n", count))
@@ -99,5 +102,13 @@ func Break(asm *os.File) {
         asm.WriteString(fmt.Sprintf("jmp .for%dEnd\n", forCount))
     } else {
         asm.WriteString(fmt.Sprintf("jmp .while%dEnd\n", whileCount))
+    }
+}
+
+func Continue(asm *os.File) {
+    if inForLoop {
+        asm.WriteString(fmt.Sprintf("jmp .for%dBlockEnd\n", forCount))
+    } else {
+        asm.WriteString(fmt.Sprintf("jmp .while%d\n", whileCount))
     }
 }

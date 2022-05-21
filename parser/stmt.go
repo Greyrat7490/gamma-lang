@@ -49,6 +49,11 @@ func prsStmt(idx int) (ast.OpStmt, int) {
         breakStmt, idx = prsBreak(idx)
         return &breakStmt, idx
 
+    case token.Continue:
+        var continueStmt ast.ContinueStmt
+        continueStmt, idx = prsContinue(idx)
+        return &continueStmt, idx
+
     case token.Name:
         if tokens[idx+1].Type == token.ParenL {
             var callOp ast.OpFnCall
@@ -229,5 +234,12 @@ func prsBreak(idx int) (ast.BreakStmt, int) {
     tokens := token.GetTokens()
 
     var op ast.BreakStmt = ast.BreakStmt{ Pos: tokens[idx].Pos }
+    return op, idx
+}
+
+func prsContinue(idx int) (ast.ContinueStmt, int) {
+    tokens := token.GetTokens()
+
+    var op ast.ContinueStmt = ast.ContinueStmt{ Pos: tokens[idx].Pos }
     return op, idx
 }

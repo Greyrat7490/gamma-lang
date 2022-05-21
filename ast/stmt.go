@@ -68,17 +68,22 @@ type BreakStmt struct {
     Pos token.Pos
 }
 
+type ContinueStmt struct {
+    Pos token.Pos
+}
 
-func (o *BadStmt)     stmt() {}
-func (o *IfStmt)      stmt() {}
-func (o *IfElseStmt)  stmt() {}
-func (o *ForStmt)     stmt() {}
-func (o *WhileStmt)   stmt() {}
-func (o *BreakStmt)   stmt() {}
-func (o *OpBlock)     stmt() {}
-func (o *OpDeclStmt)  stmt() {}
-func (o *OpExprStmt)  stmt() {}
-func (o *OpAssignVar) stmt() {}
+
+func (o *BadStmt)      stmt() {}
+func (o *IfStmt)       stmt() {}
+func (o *IfElseStmt)   stmt() {}
+func (o *ForStmt)      stmt() {}
+func (o *WhileStmt)    stmt() {}
+func (o *BreakStmt)    stmt() {}
+func (o *ContinueStmt) stmt() {}
+func (o *OpBlock)      stmt() {}
+func (o *OpDeclStmt)   stmt() {}
+func (o *OpExprStmt)   stmt() {}
+func (o *OpAssignVar)  stmt() {}
 
 
 func (o *OpAssignVar) Compile(asm *os.File) {
@@ -180,6 +185,7 @@ func (o *ForStmt) Compile(asm *os.File) {
     }
 
     o.Block.Compile(asm)
+    loops.ForBlockEnd(asm, count)
 
     step := OpAssignVar{ Varname: o.Dec.Varname, Value: o.Step }
     step.Compile(asm)
@@ -190,6 +196,10 @@ func (o *ForStmt) Compile(asm *os.File) {
 
 func (o *BreakStmt) Compile(asm *os.File) {
     loops.Break(asm)
+}
+
+func (o *ContinueStmt) Compile(asm *os.File) {
+    loops.Continue(asm)
 }
 
 func (o *OpExprStmt) Compile(asm *os.File) {
@@ -254,6 +264,10 @@ func (o *ForStmt) Readable(indent int) string {
 
 func (o *BreakStmt) Readable(indent int) string {
     return strings.Repeat("   ", indent) + "BREAK\n"
+}
+
+func (o *ContinueStmt) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "CONTINUE\n"
 }
 
 func (o *OpExprStmt) Readable(indent int) string {

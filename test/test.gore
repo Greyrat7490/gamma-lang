@@ -1,6 +1,6 @@
-fn testWhile() {
-    var idx i32 := 0
+var idx i32 := 0
 
+fn testWhile() {
     while idx < 10 {
         printInt(i)     // TODO should throw error "i is not declared"
         idx = idx + 1
@@ -28,10 +28,35 @@ fn testFor() {
     }
 }
 
+fn testContinue() {
+    for i i32, 10 {
+        printInt(i)
+
+        if i > 5 {
+            continue
+        }
+
+        printStr("i <= 5")
+    }
+
+    idx = 69
+    while idx <= 86 {
+        printInt(idx)
+
+        idx = idx + 1
+        continue
+
+        printStr("dead code")
+    }
+}
+
 fn main() {
     printStr("while tests")
     testWhile()
     printStr("------------")
     printStr("for tests")
     testFor()
+    printStr("------------")
+    printStr("continue tests")
+    testContinue()
 }

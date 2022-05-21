@@ -54,6 +54,7 @@ const (
     While           // while
     For             // for
     Break           // break
+    Continue        // continue
 
     TokenTypeCount uint = iota
 )
@@ -124,6 +125,8 @@ func TokenTypeOfStr(s string) TokenType {
         return For
     case "break":
         return Break
+    case "continue":
+        return Continue
 
     default:
         if types.ToType(s) != -1 {
@@ -201,6 +204,8 @@ func (t TokenType) Readable() string {
         return "For"
     case Break:
         return "Break"
+    case Continue:
+        return "continue"
 
     case Typename:
         return "Typename"
