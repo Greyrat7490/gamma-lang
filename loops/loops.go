@@ -12,6 +12,8 @@ import (
 var whileCount uint = 0
 var forCount   uint = 0
 
+var inForLoop bool = false
+
 func ResetCount() {
     whileCount = 0
     forCount   = 0
@@ -54,6 +56,8 @@ func WhileEnd(asm *os.File, count uint) {
 
 
 func ForStart(asm *os.File) uint {
+    inForLoop = true
+
     forCount++
     asm.WriteString(fmt.Sprintf(".for%d:\n", forCount))
     return forCount
@@ -86,4 +90,14 @@ func ForReg(asm *os.File, reg string) {
 func ForEnd(asm *os.File, count uint) {
     asm.WriteString(fmt.Sprintf("jmp .for%d\n", count))
     asm.WriteString(fmt.Sprintf(".for%dEnd:\n", count))
+
+    inForLoop = false
+}
+
+func Break(asm *os.File) {
+    if inForLoop {
+        asm.WriteString(fmt.Sprintf("jmp .for%dEnd\n", forCount))
+    } else {
+        asm.WriteString(fmt.Sprintf("jmp .while%dEnd\n", whileCount))
+    }
 }

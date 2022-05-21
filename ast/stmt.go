@@ -64,12 +64,17 @@ type ForStmt struct {
     Block OpBlock
 }
 
+type BreakStmt struct {
+    Pos token.Pos
+}
+
 
 func (o *BadStmt)     stmt() {}
 func (o *IfStmt)      stmt() {}
 func (o *IfElseStmt)  stmt() {}
 func (o *ForStmt)     stmt() {}
 func (o *WhileStmt)   stmt() {}
+func (o *BreakStmt)   stmt() {}
 func (o *OpBlock)     stmt() {}
 func (o *OpDeclStmt)  stmt() {}
 func (o *OpExprStmt)  stmt() {}
@@ -183,6 +188,10 @@ func (o *ForStmt) Compile(asm *os.File) {
     vars.Remove(o.Dec.Varname.Str)
 }
 
+func (o *BreakStmt) Compile(asm *os.File) {
+    loops.Break(asm)
+}
+
 func (o *OpExprStmt) Compile(asm *os.File) {
     o.Expr.Compile(asm)
 }
@@ -241,6 +250,10 @@ func (o *ForStmt) Readable(indent int) string {
     o.Block.Readable(indent+1)
 
     return res
+}
+
+func (o *BreakStmt) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "BREAK\n"
 }
 
 func (o *OpExprStmt) Readable(indent int) string {

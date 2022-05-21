@@ -16,7 +16,7 @@ fn testWhile() {
 
         if idx >= 30 {
             printStr("aborted endless loop")
-            exit(0)       // TODO break
+            break
         }
         idx = idx + 1
     }
@@ -29,9 +29,9 @@ fn testFor() {
 }
 
 fn main() {
-    printStr("for tests")
-    testFor()
-    printStr("------------")
     printStr("while tests")
     testWhile()
+    printStr("------------")
+    printStr("for tests")
+    testFor()
 }

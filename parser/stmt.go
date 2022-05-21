@@ -44,6 +44,11 @@ func prsStmt(idx int) (ast.OpStmt, int) {
         forStmt, idx = prsForStmt(idx)
         return &forStmt, idx
 
+    case token.Break:
+        var breakStmt ast.BreakStmt
+        breakStmt, idx = prsBreak(idx)
+        return &breakStmt, idx
+
     case token.Name:
         if tokens[idx+1].Type == token.ParenL {
             var callOp ast.OpFnCall
@@ -217,5 +222,12 @@ func prsForStmt(idx int) (ast.ForStmt, int) {
 
     op.Block, idx = prsBlock(idx+1)
 
+    return op, idx
+}
+
+func prsBreak(idx int) (ast.BreakStmt, int) {
+    tokens := token.GetTokens()
+
+    var op ast.BreakStmt = ast.BreakStmt{ Pos: tokens[idx].Pos }
     return op, idx
 }
