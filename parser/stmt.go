@@ -182,9 +182,31 @@ func prsIfElse(If ast.IfStmt, idx int) (ast.IfElseStmt, int) {
 func prsWhileStmt(idx int) (ast.WhileStmt, int) {
     tokens := token.GetTokens()
 
-    var op ast.WhileStmt = ast.WhileStmt{ WhilePos: tokens[idx].Pos }
+    var op ast.WhileStmt = ast.WhileStmt{ WhilePos: tokens[idx].Pos, InitVal: nil }
 
-    op.Cond, idx = prsExpr(idx+1)
+    if isDec(idx) {
+        op.Dec, idx = prsDecVar(idx)
+
+        if tokens[idx+1].Type != token.Comma {
+            fmt.Fprintln(os.Stderr, "[ERROR] missing \",\"")
+            fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+            os.Exit(1)
+        }
+
+        var expr ast.OpExpr
+        expr, idx = prsExpr(idx+2)
+        
+        if tokens[idx+1].Type == token.Comma {
+            op.Cond, idx = prsExpr(idx+2)
+            op.InitVal = expr
+        } else {
+            op.InitVal = &ast.LitExpr{ Val: token.Token{ Type: token.Number, Str: "0" }, Type: types.I32 }
+            op.Cond = expr
+        }
+    } else {
+        op.Cond, idx = prsExpr(idx+1)
+    }
+    
     op.Block, idx = prsBlock(idx+1)
 
     return op, idx

@@ -24,6 +24,23 @@ fn testWhile() {
         }
         idx = idx + 1
     }
+
+    printStr("------------")
+
+    // declare i32 i with default init value 0 
+    // and loop as long as the condition is true
+    while i i32, i != 10 {
+        printInt(i)
+        i = i + 1
+    }
+
+    printStr("------------")
+
+    // set init value of i
+    while i i32, 69, i != 87 {
+        printInt(i)
+        i = i + 1
+    }
 }
 
 fn testFor() {

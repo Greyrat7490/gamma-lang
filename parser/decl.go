@@ -9,6 +9,11 @@ import (
     "gorec/func"
 )
 
+func isDec(idx int) bool {
+    tokens := token.GetTokens()
+    return tokens[idx+1].Type == token.Name && tokens[idx+2].Type == token.Typename
+}
+
 func prsDecl(idx int) (ast.OpDecl, int) {
     tokens := token.GetTokens()
 

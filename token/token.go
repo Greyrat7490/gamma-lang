@@ -16,7 +16,7 @@ const (
     Unknown TokenType = iota
 
     Name            // var/func name
-    Typename        // i32, str
+    Typename        // i32, str, bool
     Str             // "string"
     Number          // 1234
     Boolean         // true/false

@@ -52,6 +52,8 @@ type IfElseStmt struct {
 type WhileStmt struct {
     WhilePos token.Pos
     Cond OpExpr
+    Dec OpDecVar
+    InitVal OpExpr
     Block OpBlock
 }
 
@@ -151,6 +153,12 @@ func (o *IfElseStmt) Compile(asm *os.File) {
 }
 
 func (o *WhileStmt) Compile(asm *os.File) {
+    if o.InitVal != nil {
+        o.Dec.Compile(asm)
+        def := OpDefVar{ Varname: o.Dec.Varname, Value: o.InitVal }
+        def.Compile(asm)
+    }
+
     if l, ok := o.Cond.(*LitExpr); ok {
         if l.Val.Str == "true" {
             count := loops.WhileStart(asm)
@@ -169,6 +177,10 @@ func (o *WhileStmt) Compile(asm *os.File) {
 
         o.Block.Compile(asm)
         loops.WhileEnd(asm, count)
+    }
+
+    if o.InitVal != nil {
+        vars.Remove(o.Dec.Varname.Str)
     }
 }
 
@@ -243,9 +255,15 @@ func (o *IfElseStmt) Readable(indent int) string {
 }
 
 func (o *WhileStmt) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + "WHILE:\n" +
-        o.Cond.Readable(indent+1) +
-        o.Block.Readable(indent+1)
+    res := strings.Repeat("   ", indent) + "WHILE:\n" +
+        o.Cond.Readable(indent+1)
+    if o.InitVal != nil {
+        res += o.Dec.Readable(indent+1) +
+        o.InitVal.Readable(indent+1)
+    }
+    res += o.Block.Readable(indent+1)
+
+    return res
 }
 
 func (o *ForStmt) Readable(indent int) string {
