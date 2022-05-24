@@ -48,9 +48,11 @@ func (o *OpDecVar) Compile(asm *os.File) {
 
 func (o *OpDefVar) Compile(asm *os.File) {
     if l, ok := o.Value.(*LitExpr); ok {
-        vars.DefineByValue(asm, o.Varname, l.Val)
-    } else if ident, ok := o.Value.(*IdentExpr); ok {
-        vars.DefineByVar(asm, o.Varname, ident.Ident)
+        vars.DefineByVal(asm, o.Varname, l.Val)
+    } else if _, ok := o.Value.(*IdentExpr); ok {
+        fmt.Fprintf(os.Stderr, "[ERROR] you cannot define a global var with another var(yet)")
+        fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
+        os.Exit(1)
     } else {
         o.Value.Compile(asm)
         vars.AssignByReg(asm, o.Varname, "rax")

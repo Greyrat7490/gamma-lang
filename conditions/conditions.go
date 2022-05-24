@@ -29,7 +29,7 @@ func IfIdent(asm *os.File, ident token.Token) uint {
 
     count++
 
-    asm.WriteString(fmt.Sprintf("cmp %s, 1\n", vars.Registers[v.Regs[0]].Name))
+    asm.WriteString(fmt.Sprintf("cmp QWORD [%s], 1\n", v.Name))
     asm.WriteString(fmt.Sprintf("jne .if%dEnd\n", count)) // skip block if false
 
     return count

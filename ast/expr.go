@@ -66,15 +66,13 @@ func (o *UnaryExpr) Compile(asm *os.File) {
     if l, ok := o.Operand.(*LitExpr); ok {
         vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", l.Val.Str))
     } else if ident, ok := o.Operand.(*IdentExpr); ok {
-        if v := vars.GetVar(ident.Ident.Str); v != nil {
-            // TODO is i32
-            reg := vars.Registers[v.Regs[0]].Name
-            vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", reg))
-        } else {
+        if vars.GetVar(ident.Ident.Str) == nil {
             fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str)
             fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
             os.Exit(1)
         }
+
+        vars.WriteVar(asm, fmt.Sprintf("mov rax, QWORD [%s]\n", ident.Ident.Str))
     }
 
     o.Operand.Compile(asm)
@@ -87,15 +85,13 @@ func (o *BinaryExpr) Compile(asm *os.File) {
     if l, ok := o.OperandL.(*LitExpr); ok {
         vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", l.Val.Str))
     } else if ident, ok := o.OperandL.(*IdentExpr); ok {
-        if v := vars.GetVar(ident.Ident.Str); v != nil {
-            // TODO is i32
-            reg := vars.Registers[v.Regs[0]].Name
-            vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", reg))
-        } else {
+        if v := vars.GetVar(ident.Ident.Str); v == nil {
             fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str)
             fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
             os.Exit(1)
         }
+
+        vars.WriteVar(asm, fmt.Sprintf("mov rax, QWORD [%s]\n", ident.Ident.Str))
     }
 
     o.OperandL.Compile(asm)
@@ -103,15 +99,13 @@ func (o *BinaryExpr) Compile(asm *os.File) {
     if l, ok := o.OperandR.(*LitExpr); ok {
         arith.BinaryOp(asm, o.Operator.Type, l.Val.Str)
     } else if ident, ok := o.OperandR.(*IdentExpr); ok {
-        if v := vars.GetVar(ident.Ident.Str); v != nil {
-            // TODO is i32
-            reg := vars.Registers[v.Regs[0]].Name
-            arith.BinaryOp(asm, o.Operator.Type, reg)
-        } else {
+        if v := vars.GetVar(ident.Ident.Str); v == nil {
             fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str)
             fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
             os.Exit(1)
         }
+
+        arith.BinaryOp(asm, o.Operator.Type, fmt.Sprintf("QWORD [%s]", ident.Ident.Str))
     } else {
         vars.WriteVar(asm, "push rbx\n")
         vars.WriteVar(asm, "mov rbx, rax\n")

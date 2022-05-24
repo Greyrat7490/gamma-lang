@@ -90,9 +90,9 @@ func (o *OpAssignVar)  stmt() {}
 
 func (o *OpAssignVar) Compile(asm *os.File) {
     if l, ok := o.Value.(*LitExpr); ok {
-        vars.DefineByValue(asm, o.Varname, l.Val)
+        vars.AssignByVal(asm, o.Varname, l.Val)
     } else if ident, ok := o.Value.(*IdentExpr); ok {
-        vars.DefineByVar(asm, o.Varname, ident.Ident)
+        vars.AssignByVar(asm, o.Varname, ident.Ident)
     } else {
         o.Value.Compile(asm)
         vars.AssignByReg(asm, o.Varname, "rax")
@@ -179,9 +179,7 @@ func (o *WhileStmt) Compile(asm *os.File) {
         loops.WhileEnd(asm, count)
     }
 
-    if o.InitVal != nil {
-        vars.Remove(o.Dec.Varname.Str)
-    }
+    // TODO remove declared variable
 }
 
 func (o *ForStmt) Compile(asm *os.File) {
@@ -203,7 +201,7 @@ func (o *ForStmt) Compile(asm *os.File) {
     step.Compile(asm)
     loops.ForEnd(asm, count)
 
-    vars.Remove(o.Dec.Varname.Str)
+    // TODO remove declared variable
 }
 
 func (o *BreakStmt) Compile(asm *os.File) {

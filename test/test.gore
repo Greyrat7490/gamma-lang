@@ -1,72 +1,22 @@
-var idx i32 := 0
-
-fn testWhile() {
-    while idx < 10 {
-        printInt(i)     // TODO should throw error "i is not declared"
-        idx = idx + 1
-    }
-
-    while false {
-        printStr("dead code")
-    }
-
-    idx = 0
-    while true {
-        printStr("endless loop")
-
-        if idx >= 30 {
-            printStr("aborted endless loop")
-            break
-        }
-        idx = idx + 1
-    }
-
-    while i i32, i != 10 {
-        printInt(i)
-        i = i + 1
-    }
-
-    while i i32, 69, i != 87 {
-        printInt(i)
-        i = i + 1
-    }
-}
-
-fn testFor() {
-    for i i32, 87, -4, i+6 {
-        printInt(i)
-    }
-}
-
-fn testContinue() {
-    for i i32, 10 {
-        printInt(i)
-
-        if i > 5 {
-            continue
-        }
-
-        printStr("i <= 5")
-    }
-
-    idx = 69
-    while idx <= 86 {
-        printInt(idx)
-
-        idx = idx + 1
-        continue
-
-        printStr("dead code")
-    }
-}
+var idx i32 := 86
+var testStr str := "test string"
 
 fn main() {
-    printStr("while tests")
-    testWhile()
+    printInt(idx)
+    idx = 420
+    printInt(idx)
+
     printStr("------------")
-    printStr("for tests")
-    testFor()
+
+    printStr(testStr)
+    testStr = "new string"
+    printStr(testStr)
+
     printStr("------------")
-    printStr("continue tests")
-    testContinue()
+
+    printInt(idx)
+    idx = 6 + 20 * 2 * 2
+    printInt(idx)
+    idx = idx - 10
+    printInt(idx)
 }

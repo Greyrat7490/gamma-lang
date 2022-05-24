@@ -1,9 +1,9 @@
 package str
 
 import (
-    "strings"
     "os"
     "fmt"
+    "strings"
 )
 
 type data struct {
@@ -28,6 +28,10 @@ func Add(s string) (idx int) {
     size := len(s) - i - 2 + 1 // -2 (don't count ""), -i (don't count ",0x22,"), +1 (for \n)
     s += ",0xa"
 
+    if idx = find(s); idx != -1 {
+        return idx
+    }
+
     idx = len(strLits)
     strLits = append(strLits, data{s, size})
 
@@ -38,4 +42,14 @@ func WriteStrLits(asm *os.File) {
     for i, str := range strLits {
         asm.WriteString(fmt.Sprintf("str%d: db %s\n", i, str.value))
     }
+}
+
+func find(s string) int {
+    for i, v := range strLits {
+        if v.value == s {
+            return i
+        }
+    }
+
+    return -1
 }

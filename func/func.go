@@ -1,20 +1,20 @@
 package fn
 
 import (
-	"fmt"
-	"gorec/conditions"
-	"gorec/loops"
-	"gorec/str"
-	"gorec/token"
-	"gorec/types"
-	"gorec/vars"
-	"os"
-	"strconv"
+    "os"
+    "fmt"
+    "strconv"
+    "gorec/conditions"
+    "gorec/loops"
+    "gorec/str"
+    "gorec/token"
+    "gorec/types"
+    "gorec/vars"
 )
 
 // calling convention (temporary):
 // - one argument max
-// - i32 -> r10 = num
+// - i32,bool -> r10 = num
 // - str -> r10 = addr, r11 = size
 // TODO: C calling convention
 
@@ -63,12 +63,9 @@ func Define(asm *os.File, fnName token.Token) {
 }
 
 func End(asm *os.File) {
-    f := funcs[curFunc]
+    // f := funcs[curFunc]
 
-    // TODO: later local variables
-    for _, a := range f.args {
-        vars.Remove(a.Name)
-    }
+    // TODO: remove local variables and args
     curFunc = -1
     vars.IsGlobalScope = true
 
@@ -99,21 +96,7 @@ func DeclareArgs(args []Arg) {
     for _, a := range args {
         f.args = append(f.args, Arg{ Name: a.Name, Type: a.Type })
 
-        // see calling convention
-        // 6 = r10, 7 = r11
-        var regs []int
-        const _ uint = 3 - types.TypesCount
-        switch a.Type {
-        case types.Str:
-            regs = []int { 6, 7 }
-        case types.I32, types.Bool:
-            regs = []int { 6 }
-        default:
-            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) TODO")
-            os.Exit(1)
-        }
-
-        vars.Add(vars.Var{Name: a.Name, Regs: regs, Vartype: a.Type})
+        vars.Add(vars.Var{Name: a.Name, Vartype: a.Type})
     }
 
     if len(f.args) > 1 {
@@ -175,19 +158,14 @@ func DefineArgByVar(asm *os.File, fnName token.Token, argNum int, varname token.
                 os.Exit(1)
             }
 
-            // skip if r10 is already set correct
-            if otherVar.Regs[0] == 5 {
-                return
-            }
-
             const _ uint = 3 - types.TypesCount
             switch otherVar.Vartype {
             case types.Str:
-                asm.WriteString(fmt.Sprintf("mov r10, %s\n", vars.Registers[otherVar.Regs[0]].Name))
-                asm.WriteString(fmt.Sprintf("mov r11, %s\n", vars.Registers[otherVar.Regs[1]].Name))
+                asm.WriteString(fmt.Sprintf("mov r10, QWORD [%s]\n", otherVar.Name))
+                asm.WriteString(fmt.Sprintf("mov r11, QWORD [%s+8]\n", otherVar.Name))
 
             case types.I32, types.Bool:
-                asm.WriteString(fmt.Sprintf("mov r10, %s\n", vars.Registers[otherVar.Regs[0]].Name))
+                asm.WriteString(fmt.Sprintf("mov r10, QWORD [%s]\n", otherVar.Name))
 
             default:
                 fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", otherVar.Name)
@@ -201,27 +179,25 @@ func DefineArgByVar(asm *os.File, fnName token.Token, argNum int, varname token.
 }
 
 func DefineArgByReg(asm *os.File, fnName token.Token, argNum int, reg string) {
-    if f := GetFn(fnName.Str); f != nil {
-        if f.args[argNum].Type == types.I32 {
-            asm.WriteString(fmt.Sprintf("mov r10, %s\n", reg))
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected function \"%s\" arg%d to be an i32 but got %v\n", fnName.Str, argNum, f.args[argNum].Type)
-            os.Exit(1)
-        }
-    } else {
+    f := GetFn(fnName.Str)
+
+    if f == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", fnName.Str)
         os.Exit(1)
+
     }
+
+    if f.args[argNum].Type != types.I32 {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected function \"%s\" arg%d to be an i32 but got %v\n", fnName.Str, argNum, f.args[argNum].Type)
+        os.Exit(1)
+    }
+
+    asm.WriteString(fmt.Sprintf("mov r10, %s\n", reg))
 }
 
 func AddBuildIn(name string, argname string, argtype types.Type) {
     funcs = append(funcs, fnHead{
-        name: token.Token{
-            Str: name,
-            Pos: token.Pos{Col: -1, Line: -1},
-        },
-        args: []Arg{{
-            Name: argname, Type: argtype,
-        }},
+        name: token.Token{ Str: name },
+        args: []Arg{{ Name: argname, Type: argtype }},
     })
 }
