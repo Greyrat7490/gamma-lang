@@ -1,11 +1,11 @@
 var v1 i32 := 86
 var v2 i32 := -69
 var v3 str := "some string"
-// var v4 str := "some string 2" // not enough registers left (2 more needed)
+var v4 str := "some string 2"
 
 fn main() {
     printInt(v1)
     printInt(v2)
     printStr(v3)
-    // printStr(v4)
+    printStr(v4)
 }

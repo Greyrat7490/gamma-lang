@@ -55,7 +55,7 @@ func (o *OpDefVar) Compile(asm *os.File) {
         os.Exit(1)
     } else {
         o.Value.Compile(asm)
-        vars.AssignByReg(asm, o.Varname, "rax")
+        vars.DefineByReg(asm, o.Varname, "rax")
     }
 }
 

@@ -57,7 +57,7 @@ func Define(asm *os.File, fnName token.Token) {
     }
     curFunc = len(funcs)
     funcs = append(funcs, f)
-    vars.IsGlobalScope = false
+    vars.InGlobalScope = false
 
     asm.WriteString(fnName.Str + ":\n")
 }
@@ -67,7 +67,7 @@ func End(asm *os.File) {
 
     // TODO: remove local variables and args
     curFunc = -1
-    vars.IsGlobalScope = true
+    vars.InGlobalScope = true
 
     cond.ResetCount()
     loops.ResetCount()

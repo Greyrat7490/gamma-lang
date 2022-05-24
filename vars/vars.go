@@ -8,10 +8,11 @@ import (
     "gorec/token"
 )
 
-var IsGlobalScope bool = true
+var InGlobalScope bool = true
 
 var vars []Var
 var globalScope []string
+var preMain []string
 
 // TODO: register allocator
 
@@ -47,6 +48,18 @@ func Declare(varname token.Token, vartype types.Type) {
     vars = append(vars, Var{ Name: varname.Str, Vartype: vartype })
 }
 
+func DefineByReg(asm *os.File, varname token.Token, reg string) {
+    v := GetVar(varname.Str)
+    if v == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot define var \"%s\" (is not declared)\n", varname.Str)
+        fmt.Fprintln(os.Stderr, "\t" + varname.At())
+        os.Exit(1)
+    }
+
+    globalScope = append(globalScope, fmt.Sprintf("%s: dq 0\n", v.Name))
+    WriteVar(asm, fmt.Sprintf("mov QWORD [%s], %s\n", v.Name, reg))
+}
+
 func DefineByVal(asm *os.File, varname token.Token, value token.Token) {
     v := GetVar(varname.Str)
     if v == nil {
@@ -66,16 +79,16 @@ func DefineByVal(asm *os.File, varname token.Token, value token.Token) {
         switch v.Vartype {
         case types.Str:
             strIdx := str.Add(value.Str)
-            WriteVar(asm, fmt.Sprintf("%s: dq str%d, %d\n", v.Name, strIdx, str.GetSize(strIdx)))
+            WriteDefine(asm, fmt.Sprintf("%s: dq str%d, %d\n", v.Name, strIdx, str.GetSize(strIdx)))
 
         case types.I32:
-            WriteVar(asm, fmt.Sprintf("%s: dq %s\n", v.Name, value.Str))
+            WriteDefine(asm, fmt.Sprintf("%s: dq %s\n", v.Name, value.Str))
 
         case types.Bool:
             if value.Str == "true" {
-                WriteVar(asm, fmt.Sprintf("%s: dq %d\n", v.Name, 1))
+                WriteDefine(asm, fmt.Sprintf("%s: dq %d\n", v.Name, 1))
             } else {
-                WriteVar(asm, fmt.Sprintf("%s: dq %d\n", v.Name, 0))
+                WriteDefine(asm, fmt.Sprintf("%s: dq %d\n", v.Name, 0))
             }
 
         default:
@@ -145,16 +158,31 @@ func Add(v Var) {
     vars = append(vars, v)
 }
 
+
 func WriteVar(asm *os.File, s string) {
-    if IsGlobalScope {
+    if InGlobalScope {
+        preMain = append(preMain, s)
+    } else {
+        asm.WriteString(s)
+    }
+}
+
+func WriteDefine(asm *os.File, s string) {
+    if InGlobalScope {
         globalScope = append(globalScope, s)
     } else {
         asm.WriteString(s)
     }
 }
 
-func WriteGlobalVars(asm *os.File) {
+func DefineGlobalVars(asm *os.File) {
     for _, s := range globalScope {
+        asm.WriteString(s)
+    }
+}
+
+func InitVarWithExpr(asm *os.File) {
+    for _, s := range preMain {
         asm.WriteString(s)
     }
 }

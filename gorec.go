@@ -26,7 +26,7 @@ func nasm_footer(asm *os.File) {
     asm.WriteString("mov rsp, stack_top\n")
     asm.WriteString("mov byte [intBuf + 11], 0xa\n\n")
 
-
+    vars.InitVarWithExpr(asm)
     asm.WriteString("call main\n")
 
     asm.WriteString("\nmov rdi, 0\n")
@@ -34,7 +34,7 @@ func nasm_footer(asm *os.File) {
     asm.WriteString("syscall\n")
 
     asm.WriteString("\nsection .data\n")
-    vars.WriteGlobalVars(asm)
+    vars.DefineGlobalVars(asm)
     str.WriteStrLits(asm)
     asm.WriteString("str_true: db \"true\", 0xa\n")
     asm.WriteString("str_false: db \"false\", 0xa\n")

@@ -27,7 +27,7 @@ fn testWhile() {
 
     printStr("------------")
 
-    // declare i32 i with default init value 0 
+    // declare i32 i with default init value 0
     // and loop as long as the condition is true
     while i i32, i != 10 {
         printInt(i)

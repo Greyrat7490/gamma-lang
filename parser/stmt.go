@@ -195,7 +195,7 @@ func prsWhileStmt(idx int) (ast.WhileStmt, int) {
 
         var expr ast.OpExpr
         expr, idx = prsExpr(idx+2)
-        
+
         if tokens[idx+1].Type == token.Comma {
             op.Cond, idx = prsExpr(idx+2)
             op.InitVal = expr
@@ -206,7 +206,7 @@ func prsWhileStmt(idx int) (ast.WhileStmt, int) {
     } else {
         op.Cond, idx = prsExpr(idx+1)
     }
-    
+
     op.Block, idx = prsBlock(idx+1)
 
     return op, idx

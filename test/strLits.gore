@@ -1,10 +1,10 @@
 var v1 str := "some\" string"
 var v2 str := "some\\ string"
-// var v3 str := "86" // not enough register left (1 more needed)
+var v3 str := "86"
 
 fn main() {
     printStr(v1)
     printStr("\" \"")
     printStr(v2)
-    // printStr(v3)
+    printStr(v3)
 }
