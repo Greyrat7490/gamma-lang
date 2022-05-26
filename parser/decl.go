@@ -6,8 +6,10 @@ import (
     "gorec/ast"
     "gorec/token"
     "gorec/types"
-    "gorec/func"
+    "gorec/vars"
 )
+
+var decCount int = 0
 
 func isDec(idx int) bool {
     tokens := token.GetTokens()
@@ -88,9 +90,12 @@ func prsDefFn(idx int) (ast.OpDefFn, int) {
         isMainDefined = true
     }
 
+    decCount = 0
+
     op := ast.OpDefFn{ FnName: tokens[idx+1] }
     op.Args, idx = prsDecArgs(idx)
     op.Block, idx = prsBlock(idx)
+    op.LocalVarsCount = decCount
 
     return op, idx
 }
@@ -124,13 +129,14 @@ func prsDecVar(idx int) (ast.OpDecVar, int) {
         os.Exit(1)
     }
 
-
     t := types.ToType(tokens[idx+2].Str)
     if t == -1 {
         fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", tokens[idx+2].Str)
         fmt.Fprintln(os.Stderr, "\t" + tokens[idx+2].At())
         os.Exit(1)
     }
+
+    decCount++
 
     op := ast.OpDecVar{ Varname: tokens[idx+1], Vartype: t }
 
@@ -166,7 +172,7 @@ func prsDefVar(idx int) (ast.OpDefVar, int) {
     return op, idx
 }
 
-func prsDecArgs(idx int) ([]fn.Arg, int) {
+func prsDecArgs(idx int) ([]vars.Var, int) {
     tokens := token.GetTokens()
 
     if len(tokens) < idx + 2 {
@@ -181,9 +187,9 @@ func prsDecArgs(idx int) ([]fn.Arg, int) {
         os.Exit(1)
     }
 
-    var args []fn.Arg
+    var args []vars.Var
 
-    var a fn.Arg
+    var a vars.Var
     b := false
     for _, w := range tokens[idx+3:] {
         if w.Type == token.ParenR {
@@ -197,14 +203,14 @@ func prsDecArgs(idx int) ([]fn.Arg, int) {
             os.Exit(1)
         }
 
-        if a.Name == "" {
+        if a.Name.Str == "" {
             if w.Type != token.Name {
                 fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %s(\"%s\")\n", w.Type.Readable(), w.Str)
                 fmt.Fprintln(os.Stderr, "\t" + w.At())
                 os.Exit(1)
             }
 
-            a.Name = w.Str
+            a.Name.Str = w.Str
         } else {
             if w.Type != token.Typename {
                 fmt.Fprintf(os.Stderr, "[ERROR] expected a Typename but got %s(\"%s\")\n", w.Type.Readable(), w.Str)
@@ -215,7 +221,7 @@ func prsDecArgs(idx int) ([]fn.Arg, int) {
             a.Type = types.ToType(w.Str)
             args = append(args, a)
 
-            a.Name = ""
+            a.Name.Str = ""
         }
     }
 

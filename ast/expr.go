@@ -64,7 +64,7 @@ func (o *IdentExpr) Compile(asm *os.File) {}
 func (o *ParenExpr) Compile(asm *os.File) { o.Expr.Compile(asm) }
 func (o *UnaryExpr) Compile(asm *os.File) {
     if l, ok := o.Operand.(*LitExpr); ok {
-        vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", l.Val.Str))
+        vars.Write(asm, fmt.Sprintf("mov rax, %s\n", l.Val.Str))
     } else if ident, ok := o.Operand.(*IdentExpr); ok {
         if vars.GetVar(ident.Ident.Str) == nil {
             fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str)
@@ -72,18 +72,19 @@ func (o *UnaryExpr) Compile(asm *os.File) {
             os.Exit(1)
         }
 
-        vars.WriteVar(asm, fmt.Sprintf("mov rax, QWORD [%s]\n", ident.Ident.Str))
+        vars.Write(asm, fmt.Sprintf("mov rax, %s\n", vars.GetVar(ident.Ident.Str).Get()))
     }
 
     o.Operand.Compile(asm)
 
     if o.Operator.Type == token.Minus {
-        vars.WriteVar(asm, "neg rax\n")
+        vars.Write(asm, "neg rax\n")
     }
 }
 func (o *BinaryExpr) Compile(asm *os.File) {
     if l, ok := o.OperandL.(*LitExpr); ok {
-        vars.WriteVar(asm, fmt.Sprintf("mov rax, %s\n", l.Val.Str))
+
+        vars.Write(asm, fmt.Sprintf("mov rax, %s\n", l.Val.Str))
     } else if ident, ok := o.OperandL.(*IdentExpr); ok {
         if v := vars.GetVar(ident.Ident.Str); v == nil {
             fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str)
@@ -91,7 +92,7 @@ func (o *BinaryExpr) Compile(asm *os.File) {
             os.Exit(1)
         }
 
-        vars.WriteVar(asm, fmt.Sprintf("mov rax, QWORD [%s]\n", ident.Ident.Str))
+        vars.Write(asm, fmt.Sprintf("mov rax, %s\n", vars.GetVar(ident.Ident.Str).Get()))
     }
 
     o.OperandL.Compile(asm)
@@ -107,12 +108,12 @@ func (o *BinaryExpr) Compile(asm *os.File) {
 
         arith.BinaryOp(asm, o.Operator.Type, fmt.Sprintf("QWORD [%s]", ident.Ident.Str))
     } else {
-        vars.WriteVar(asm, "push rbx\n")
-        vars.WriteVar(asm, "mov rbx, rax\n")
+        vars.Write(asm, "push rbx\n")
+        vars.Write(asm, "mov rbx, rax\n")
         o.OperandR.Compile(asm)
 
         arith.BinaryOp(asm, o.Operator.Type, "rbx")
-        vars.WriteVar(asm, "pop rbx\n")
+        vars.Write(asm, "pop rbx\n")
     }
 }
 

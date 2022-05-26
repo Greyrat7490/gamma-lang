@@ -21,17 +21,11 @@ func DefineBuildIns(asm *os.File) {
     defineExit(asm)
 }
 
-func syscall(asm *os.File, syscallNum uint, args... interface{}) {
-    regs := []string{"rdi", "rsi", "rdx", "r10", "r8", "r9"}
-
-    if len(args) > len(regs) {
-        fmt.Fprintf(os.Stderr, "[ERROR] syscall only supports %d args\n", len(regs))
-        os.Exit(1)
-    }
-
-    for i, arg := range args {
-        asm.WriteString(fmt.Sprintf("mov %s, %s\n", regs[i], fmt.Sprint(arg)))
-    }
+// linux syscall calling convention
+// arg: 0    1    2    3   4   5
+//     rdi, rsi, rdx, r10, r8, r9
+// return: rax
+func syscall(asm *os.File, syscallNum uint) {
     asm.WriteString(fmt.Sprintf("mov rax, %d\n", syscallNum))
 
     asm.WriteString("push rcx\n")
@@ -47,17 +41,14 @@ func defineWriteInt(asm *os.File) {
     fn.AddBuildIn("printInt", "i", types.I32)
 
     asm.WriteString("printInt:\n")
-    asm.WriteString("push rax\n")
-    asm.WriteString("push rbx\n")
-    asm.WriteString("push rdx\n")
-
-    asm.WriteString("mov rax, r10\n")
+    asm.WriteString("mov rax, rdi\n")
     asm.WriteString("call int_to_str\n")
-    syscall(asm, SYS_WRITE, STDOUT, "rbx", "rax")
 
-    asm.WriteString("pop rdx\n")
-    asm.WriteString("pop rbx\n")
-    asm.WriteString("pop rax\n")
+    asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
+    asm.WriteString("mov rdx, rax\n")
+    asm.WriteString("mov rsi, rbx\n")
+    syscall(asm, SYS_WRITE)
+
     asm.WriteString("ret\n\n")
 }
 
@@ -65,17 +56,15 @@ func defineWriteBool(asm *os.File) {
     fn.AddBuildIn("printBool", "b", types.Bool)
 
     asm.WriteString("printBool:\n")
-    asm.WriteString("push rax\n")
-    asm.WriteString("push rbx\n")
-    asm.WriteString("push rdx\n")
 
-    asm.WriteString("mov rax, r10\n")
+    asm.WriteString("mov rax, rdi\n")
     asm.WriteString("call bool_to_str\n")
-    syscall(asm, SYS_WRITE, STDOUT, "rbx", "rax")
 
-    asm.WriteString("pop rdx\n")
-    asm.WriteString("pop rbx\n")
-    asm.WriteString("pop rax\n")
+    asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
+    asm.WriteString("mov rdx, rax\n")
+    asm.WriteString("mov rsi, rbx\n")
+    syscall(asm, SYS_WRITE)
+
     asm.WriteString("ret\n\n")
 }
 
@@ -83,13 +72,12 @@ func defineWriteStr(asm *os.File) {
     fn.AddBuildIn("printStr", "s", types.Str)
 
     asm.WriteString("printStr:\n")
-    asm.WriteString("push rax\n")
-    asm.WriteString("push rdx\n")
 
-    syscall(asm, SYS_WRITE, STDOUT, "r10", "r11")
+    asm.WriteString("mov rdx, rsi\n")
+    asm.WriteString("mov rsi, rdi\n")
+    asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
+    syscall(asm, SYS_WRITE)
 
-    asm.WriteString("pop rdx\n")
-    asm.WriteString("pop rax\n")
     asm.WriteString("ret\n\n")
 }
 
@@ -97,7 +85,8 @@ func defineExit(asm *os.File) {
     fn.AddBuildIn("exit", "i", types.I32)
 
     asm.WriteString("exit:\n")
-    syscall(asm, SYS_EXIT, "r9")
+    asm.WriteString(fmt.Sprintf("mov rax, %d\n", SYS_EXIT))
+    asm.WriteString("syscall\n")
     asm.WriteString("ret\n\n")
 }
 

@@ -4,13 +4,13 @@ var v2 str := "some string"
 fn test1(a1 i32) {
     printInt(a1)
     printInt(v1)
-    printInt(a1) // r9 will be overwritten by the print before (TODO: push and pop if used later)
+    printInt(a1)
 }
 
 fn test2(a1 str) {
     printStr(a1)
     printStr(v2)
-    printStr(a1) // same here with r9 and r10
+    printStr(a1)
 }
 
 fn test3() {

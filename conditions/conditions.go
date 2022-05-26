@@ -21,15 +21,15 @@ func IfIdent(asm *os.File, ident token.Token) uint {
         os.Exit(1)
     }
 
-    if v.Vartype != types.Bool {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"%s\" to be of type bool but got \"%s\"\n", ident.Str, v.Vartype.Readable())
+    if v.Type != types.Bool {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"%s\" to be of type bool but got \"%s\"\n", ident.Str, v.Type.Readable())
         fmt.Fprintln(os.Stderr, "\t" + ident.At())
         os.Exit(1)
     }
 
     count++
 
-    asm.WriteString(fmt.Sprintf("cmp QWORD [%s], 1\n", v.Name))
+    asm.WriteString(fmt.Sprintf("cmp %s, 1\n", v.Get()))
     asm.WriteString(fmt.Sprintf("jne .if%dEnd\n", count)) // skip block if false
 
     return count

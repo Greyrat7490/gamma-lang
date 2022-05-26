@@ -31,8 +31,9 @@ type OpDefVar struct {
 
 type OpDefFn struct {
     FnName token.Token
-    Args []fn.Arg
+    Args []vars.Var
     Block OpBlock
+    LocalVarsCount int
 }
 
 
@@ -61,11 +62,12 @@ func (o *OpDefVar) Compile(asm *os.File) {
 
 func (o *OpDefFn) Compile(asm *os.File) {
     fn.Define(asm, o.FnName)
-    fn.DeclareArgs(o.Args)
+    fn.ReserveSpace(asm, len(o.Args), o.LocalVarsCount)
+    fn.DeclareArgs(asm, o.Args)
 
     o.Block.Compile(asm)
 
-    fn.End(asm);
+    fn.End(asm, o.LocalVarsCount);
 }
 
 func (o *BadDecl) Compile(asm *os.File) {
