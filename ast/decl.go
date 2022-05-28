@@ -33,7 +33,6 @@ type OpDefFn struct {
     FnName token.Token
     Args []vars.Var
     Block OpBlock
-    LocalVarsCount int
 }
 
 
@@ -61,13 +60,16 @@ func (o *OpDefVar) Compile(asm *os.File) {
 }
 
 func (o *OpDefFn) Compile(asm *os.File) {
+    vars.CreateScope()
+
     fn.Define(asm, o.FnName)
-    fn.ReserveSpace(asm, len(o.Args), o.LocalVarsCount)
+    fn.ReserveSpace(asm, argsSize(o.Args), o.Block.maxFrameSize())
     fn.DeclareArgs(asm, o.Args)
 
     o.Block.Compile(asm)
 
-    fn.End(asm, o.LocalVarsCount);
+    vars.RemoveScope()
+    fn.End(asm);
 }
 
 func (o *BadDecl) Compile(asm *os.File) {
@@ -107,4 +109,65 @@ func (o *BadDecl) Readable(indent int) string {
     fmt.Fprintln(os.Stderr, "[ERROR] bad declaration")
     os.Exit(1)
     return ""
+}
+
+
+func argsSize(args []vars.Var) (res int) {
+    for _,a := range args {
+        res += a.Type.Size()
+    }
+
+    return res
+}
+
+func (o *OpBlock) maxFrameSize() int {
+    res := 0
+    maxInnerSize := 0
+
+    for _,s := range o.Stmts {
+        switch stmt := s.(type) {
+        case *OpDeclStmt:
+            if dec, ok := stmt.Decl.(*OpDecVar); ok {
+                res += dec.Vartype.Size()
+            }
+        case *OpBlock:
+            size := stmt.maxFrameSize()
+            if size > maxInnerSize {
+                maxInnerSize = size
+            }
+        case *ForStmt:
+            size := stmt.Dec.Vartype.Size()
+            size += stmt.Block.maxFrameSize()
+            if size > maxInnerSize {
+                maxInnerSize = size
+            }
+        case *WhileStmt:
+            size := stmt.Block.maxFrameSize()
+            if stmt.InitVal != nil {
+                size += stmt.Dec.Vartype.Size()
+            }
+            if size > maxInnerSize {
+                maxInnerSize = size
+            }
+        case *IfStmt:
+            size := stmt.Block.maxFrameSize()
+            if size > maxInnerSize {
+                maxInnerSize = size
+            }
+        case *IfElseStmt:
+            size := stmt.Block.maxFrameSize()
+            size2 := stmt.If.Block.maxFrameSize()
+            if size < size2 {
+                size = size2
+            }
+
+            if size > maxInnerSize {
+                maxInnerSize = size
+            }
+        }
+    }
+
+    res += maxInnerSize
+
+    return res
 }

@@ -96,6 +96,29 @@ func prsStmt(idx int) (ast.OpStmt, int) {
     }
 }
 
+func prsBlock(idx int) (ast.OpBlock, int) {
+    tokens := token.GetTokens()
+    block := ast.OpBlock{ BraceLPos: tokens[idx].Pos }
+    idx++
+
+    for ; idx < len(tokens); idx++ {
+        if tokens[idx].Type == token.BraceR {
+            block.BraceRPos = tokens[idx].Pos
+            return block, idx
+        }
+
+        var stmt ast.OpStmt
+        stmt, idx = prsStmt(idx)
+        block.Stmts = append(block.Stmts, stmt)
+    }
+
+    fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" was not closed (missing \"}\")\n", tokens[idx+1].Str)
+    fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
+    os.Exit(1)
+
+    return ast.OpBlock{}, -1
+}
+
 func prsAssignVar(idx int) (ast.OpAssignVar, int) {
     tokens := token.GetTokens()
 

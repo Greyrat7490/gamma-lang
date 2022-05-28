@@ -9,8 +9,6 @@ import (
     "gorec/vars"
 )
 
-var decCount int = 0
-
 func isDec(idx int) bool {
     tokens := token.GetTokens()
     return tokens[idx+1].Type == token.Name && tokens[idx+2].Type == token.Typename
@@ -60,29 +58,6 @@ func prsDecl(idx int) (ast.OpDecl, int) {
     }
 }
 
-func prsBlock(idx int) (ast.OpBlock, int) {
-    tokens := token.GetTokens()
-    block := ast.OpBlock{ BraceLPos: tokens[idx].Pos }
-    idx++
-
-    for ; idx < len(tokens); idx++ {
-        if tokens[idx].Type == token.BraceR {
-            block.BraceRPos = tokens[idx].Pos
-            return block, idx
-        }
-
-        var stmt ast.OpStmt
-        stmt, idx = prsStmt(idx)
-        block.Stmts = append(block.Stmts, stmt)
-    }
-
-    fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" was not closed (missing \"}\")\n", tokens[idx+1].Str)
-    fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
-    os.Exit(1)
-
-    return ast.OpBlock{}, -1
-}
-
 func prsDefFn(idx int) (ast.OpDefFn, int) {
     tokens := token.GetTokens()
 
@@ -90,12 +65,9 @@ func prsDefFn(idx int) (ast.OpDefFn, int) {
         isMainDefined = true
     }
 
-    decCount = 0
-
     op := ast.OpDefFn{ FnName: tokens[idx+1] }
     op.Args, idx = prsDecArgs(idx)
     op.Block, idx = prsBlock(idx)
-    op.LocalVarsCount = decCount
 
     return op, idx
 }
@@ -136,8 +108,6 @@ func prsDecVar(idx int) (ast.OpDecVar, int) {
         os.Exit(1)
     }
 
-    decCount++
-
     op := ast.OpDecVar{ Varname: tokens[idx+1], Vartype: t }
 
     return op, idx + 2
@@ -160,12 +130,6 @@ func prsDefVar(idx int) (ast.OpDefVar, int) {
 
     name := tokens[idx-2]
     value, idx := prsExpr(idx+1)
-
-    if (!(tokens[idx].Type == token.Name || tokens[idx].Type == token.Boolean || tokens[idx].Type == token.Number || tokens[idx].Type == token.Str)) {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name or a literal but got %s(\"%s\")\n", tokens[idx].Type.Readable(), tokens[idx].Str)
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
-        os.Exit(1)
-    }
 
     op := ast.OpDefVar{ Varname: name, Value: value }
 

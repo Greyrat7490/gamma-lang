@@ -106,6 +106,8 @@ func (o *OpBlock) Compile(asm *os.File) {
 }
 
 func (o *IfStmt) Compile(asm *os.File) {
+    vars.CreateScope()
+
     if l, ok := o.Cond.(*LitExpr); ok {
         if l.Val.Str == "true" {
             o.Block.Compile(asm)
@@ -121,9 +123,13 @@ func (o *IfStmt) Compile(asm *os.File) {
         o.Block.Compile(asm)
         cond.IfEnd(asm, count)
     }
+
+    vars.RemoveScope()
 }
 
 func (o *IfElseStmt) Compile(asm *os.File) {
+    vars.CreateScope()
+
     if l, ok := o.If.Cond.(*LitExpr); ok {
         if l.Val.Str == "true" {
             o.If.Block.Compile(asm)
@@ -150,9 +156,13 @@ func (o *IfElseStmt) Compile(asm *os.File) {
 
         cond.ElseEnd(asm, count)
     }
+
+    vars.RemoveScope()
 }
 
 func (o *WhileStmt) Compile(asm *os.File) {
+    vars.CreateScope()
+
     if o.InitVal != nil {
         o.Dec.Compile(asm)
         def := OpDefVar{ Varname: o.Dec.Varname, Value: o.InitVal }
@@ -179,10 +189,12 @@ func (o *WhileStmt) Compile(asm *os.File) {
         loops.WhileEnd(asm, count)
     }
 
-    // TODO remove declared variable
+    vars.RemoveScope()
 }
 
 func (o *ForStmt) Compile(asm *os.File) {
+    vars.CreateScope()
+
     o.Dec.Compile(asm)
     def := OpDefVar{ Varname: o.Dec.Varname, Value: o.Start }
     def.Compile(asm)
@@ -201,7 +213,7 @@ func (o *ForStmt) Compile(asm *os.File) {
     step.Compile(asm)
     loops.ForEnd(asm, count)
 
-    // TODO remove declared variable
+    vars.RemoveScope()
 }
 
 func (o *BreakStmt) Compile(asm *os.File) {

@@ -28,6 +28,15 @@ func (t Type) Readable() string {
     }
 }
 
+// TODO: correct sizes for i32 and bool (not just 64bit)
+func (t Type) Size() int {
+    if t == Str { 
+        return 16 // ptr + size
+    }
+
+    return 8
+}
+
 // -1 if string does not contain a valid type
 func ToType(s string) Type {
     const _ uint = 3 - TypesCount

@@ -40,7 +40,7 @@ func WhileIdent(asm *os.File, ident token.Token) {
         os.Exit(1)
     }
 
-    asm.WriteString(fmt.Sprintf("cmp QWORD [%s], 1\n", v.Name))
+    asm.WriteString(fmt.Sprintf("cmp QWORD [%s], 1\n", v.Get()))
     asm.WriteString(fmt.Sprintf("jne .while%dEnd\n", whileCount))
 }
 
@@ -78,7 +78,7 @@ func ForIdent(asm *os.File, ident token.Token) {
         os.Exit(1)
     }
 
-    asm.WriteString(fmt.Sprintf("cmp QWORD [%s], 1\n", v.Name))
+    asm.WriteString(fmt.Sprintf("cmp QWORD [%s], 1\n", v.Get()))
     asm.WriteString(fmt.Sprintf("jne .for%dEnd\n", forCount))
 }
 

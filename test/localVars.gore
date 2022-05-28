@@ -1,0 +1,50 @@
+var g1 i32 := -86
+
+// 0 args, 3 local vars
+// -> 3 * 8byte = 24byte
+// -> (multiple of 16) = 32byte frame
+fn test() {
+    var l1 bool := true
+    var l2 i32 := 420
+
+    for i i32, 4 {
+        var i2 i32 := i * 2
+        printInt(i2)
+    }
+}
+
+// 1 args, 2 local vars
+// -> 3 * 8byte = 24byte
+// -> (multiple of 16) = 32byte frame
+fn test2(a1 i32) {
+    var l1 i32 := a1 - 2 * a1
+    var l2 i32 := l1 * -2
+
+    printInt(l1)
+    printInt(l2)
+}
+
+// 0 args, 0 local vars
+// -> 0 * 8byte = 0byte
+// -> (multiple of 16) = 0byte frame
+fn test3() {
+    printInt(g1)
+}
+
+fn test4() {
+    var s str := "test string"
+    printStr(s)
+
+    s = "new string"
+    printStr(s)
+}
+
+fn main() {
+    test()
+    printStr("-------")
+    test2(g1)
+    printStr("-------")
+    test3()
+    printStr("-------")
+    test4()
+}

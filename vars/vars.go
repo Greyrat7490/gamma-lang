@@ -8,15 +8,11 @@ import (
     "gorec/token"
 )
 
-var InGlobalScope bool = true
 
 var vars []Var
-var globalScope []string
+
+var globalDefines []string
 var preMain []string
-
-// TODO: register allocator
-
-const VarSize int = 8
 
 type Var struct {
     Name token.Token
@@ -39,18 +35,11 @@ func Add(v Var) {
     vars = append(vars, v)
 }
 
-func RemoveLast(count int) {
-    if len(vars) == count {
-        vars = nil
-    } else if len(vars) > count {
-        vars = vars[:len(vars)-count]
-    }
-}
-
 func GetVar(varname string) *Var {
     for _, v := range vars {
         if v.Name.Str == varname {
-            return &v }
+            return &v
+        }
     }
 
     return nil
@@ -86,8 +75,37 @@ func (v *Var) Gets() (string, string) {
     return fmt.Sprintf("QWORD [%s]", v.Name.Str), fmt.Sprintf("QWORD [%s+8]", v.Name.Str)
 }
 
+
+var localVarOffset int = 0
+func calcOffset(vartype types.Type) (offset int) {
+    if !InGlobalScope() {
+        if vartype == types.Str {
+            offset = localVarOffset + 8
+        } else {
+            offset = localVarOffset + vartype.Size()
+        }
+
+        localVarOffset += vartype.Size()
+    }
+
+    return offset
+}
+
+func removeLocalVars() {
+    localVarOffset = 0
+
+    if len(vars) == scopes[curScope].localStartIdx || len(vars) == 0 {
+        return
+    } else if scopes[curScope].localStartIdx == 0 {
+        vars = nil
+    }
+
+    vars = vars[:scopes[curScope].localStartIdx]
+}
+
+
 func Write(asm *os.File, s string) {
-    if InGlobalScope {
+    if InGlobalScope() {
         preMain = append(preMain, s)
     } else {
         asm.WriteString(s)
@@ -95,15 +113,15 @@ func Write(asm *os.File, s string) {
 }
 
 func WriteDefine(asm *os.File, v *Var, val string) {
-    if InGlobalScope {
-        globalScope = append(globalScope, fmt.Sprintf("%s: dq %s\n", v.Name.Str, val))
+    if InGlobalScope() {
+        globalDefines = append(globalDefines, fmt.Sprintf("%s: dq %s\n", v.Name.Str, val))
     } else {
         asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", v.Offset, val))
     }
 }
 
 func DefineGlobalVars(asm *os.File) {
-    for _, s := range globalScope {
+    for _, s := range globalDefines {
         asm.WriteString(s)
     }
 }
@@ -123,16 +141,7 @@ func Declare(varname token.Token, vartype types.Type) {
         os.Exit(1)
     }
 
-    offset := 0
-    if !InGlobalScope {
-        if len(vars) > 0 {
-            offset = vars[len(vars)-1].Offset
-        }
-
-        offset += VarSize
-    }
-
-    vars = append(vars, Var{ Name: varname, Type: vartype, IsLocal: !InGlobalScope, Offset: offset })
+    vars = append(vars, Var{ Name: varname, Type: vartype, IsLocal: !InGlobalScope(), Offset: calcOffset(vartype) })
 }
 
 func DefineByReg(asm *os.File, varname token.Token, reg string) {
@@ -143,8 +152,8 @@ func DefineByReg(asm *os.File, varname token.Token, reg string) {
         os.Exit(1)
     }
 
-    if InGlobalScope {
-        globalScope = append(globalScope, fmt.Sprintf("%s: dq 0\n", v.Name.Str))
+    if InGlobalScope() {
+        globalDefines = append(globalDefines, fmt.Sprintf("%s: dq 0\n", v.Name.Str))
         preMain = append(preMain, fmt.Sprintf("mov QWORD [%s], %s\n", v.Name.Str, reg))
     } else {
         asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", v.Offset, reg))
@@ -170,7 +179,12 @@ func DefineByVal(asm *os.File, varname token.Token, value token.Token) {
         switch v.Type {
         case types.Str:
             strIdx := str.Add(value.Str)
-            WriteDefine(asm, v, fmt.Sprintf("str%d, %d", strIdx, str.GetSize(strIdx)))
+            if InGlobalScope() {
+                globalDefines = append(globalDefines, fmt.Sprintf("%s: dq str%d, %d\n", v.Name.Str, strIdx, str.GetSize(strIdx)))
+            } else {
+                asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], str%d\n", v.Offset, strIdx))
+                asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %d\n", v.Offset+8, str.GetSize(strIdx)))
+            }
 
         case types.I32:
             WriteDefine(asm, v, value.Str)

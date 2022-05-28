@@ -56,11 +56,10 @@ func Define(asm *os.File, fnName token.Token) {
     var f function = function{ Name: fnName }
     curFunc = len(funcs)
     funcs = append(funcs, f)
-    vars.InGlobalScope = false
 }
 
-func ReserveSpace(asm *os.File, argsCount int, localVarsCount int) {
-    size := (argsCount + localVarsCount) * 8
+func ReserveSpace(asm *os.File, argsSize int, blockSize int) {
+    size := argsSize + blockSize
     if size > 0 {
         // size has to be the multiple of 16byte
         size += size % 16
@@ -68,15 +67,7 @@ func ReserveSpace(asm *os.File, argsCount int, localVarsCount int) {
     }
 }
 
-func removeLocalVars(localVarsCount int) {
-    count := localVarsCount + len(funcs[curFunc].Args)
-    vars.RemoveLast(count)
-}
-
-func End(asm *os.File, localVarsCount int) {
-    removeLocalVars(localVarsCount)
-
-    vars.InGlobalScope = true
+func End(asm *os.File) {
     curFunc = -1
 
     cond.ResetCount()
@@ -110,7 +101,7 @@ func DeclareArgs(asm *os.File, args []vars.Var) {
 
         asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastVar().Offset, regs[i]))
         if a.Type == types.Str {
-            asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastVar().Offset+vars.VarSize, regs[i+1]))
+            asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastVar().Offset+types.I32.Size(), regs[i+1]))
         }
     }
 

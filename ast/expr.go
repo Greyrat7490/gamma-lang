@@ -106,7 +106,7 @@ func (o *BinaryExpr) Compile(asm *os.File) {
             os.Exit(1)
         }
 
-        arith.BinaryOp(asm, o.Operator.Type, fmt.Sprintf("QWORD [%s]", ident.Ident.Str))
+        arith.BinaryOp(asm, o.Operator.Type, vars.GetVar(ident.Ident.Str).Get())
     } else {
         vars.Write(asm, "push rbx\n")
         vars.Write(asm, "mov rbx, rax\n")
