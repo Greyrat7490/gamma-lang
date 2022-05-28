@@ -48,12 +48,24 @@ func IfEnd(asm *os.File, count uint) {
     asm.WriteString(fmt.Sprintf(".if%dEnd:\n", count))
 }
 
+func IfElseIdent(asm *os.File, ident token.Token) uint {
+    count := IfIdent(asm, ident)
+    asm.WriteString("pushfq\n")
+    return count
+}
+
+func IfElseReg(asm *os.File, reg string) uint {
+    count := IfReg(asm, reg)
+    asm.WriteString("pushfq\n")
+    return count
+}
 
 func ElseStart(asm *os.File, count uint) {
+    asm.WriteString("popfq\n")
     asm.WriteString(fmt.Sprintf("je .else%dEnd\n", count))
     asm.WriteString(fmt.Sprintf(".if%dEnd:\n", count))
 }
 
-func ElseEnd(asm *os.File, count uint) {
+func IfElseEnd(asm *os.File, count uint) {
     asm.WriteString(fmt.Sprintf(".else%dEnd:\n", count))
 }

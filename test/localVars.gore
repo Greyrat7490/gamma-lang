@@ -39,6 +39,26 @@ fn test4() {
     printStr(s)
 }
 
+fn test5() {
+    printStr("g1 > 69")
+    if g1 > 69 {
+        var l1 i32 := -69
+        printInt(l1)
+    } else {
+        var l1 i32 := 69
+        printInt(l1)
+    }
+
+    printStr("g1 < 69")
+    if g1 < 69 {
+        var l1 i32 := -69
+        printInt(l1)
+    } else {
+        var l1 i32 := 69
+        printInt(l1)
+    }
+}
+
 fn main() {
     test()
     printStr("-------")
@@ -47,4 +67,6 @@ fn main() {
     test3()
     printStr("-------")
     test4()
+    printStr("-------")
+    test5()
 }

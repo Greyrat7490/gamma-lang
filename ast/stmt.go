@@ -128,36 +128,47 @@ func (o *IfStmt) Compile(asm *os.File) {
 }
 
 func (o *IfElseStmt) Compile(asm *os.File) {
-    vars.CreateScope()
 
     if l, ok := o.If.Cond.(*LitExpr); ok {
+        vars.CreateScope()
+
         if l.Val.Str == "true" {
             o.If.Block.Compile(asm)
         } else {
             o.Block.Compile(asm)
         }
-    } else if ident, ok := o.If.Cond.(*IdentExpr); ok {
-        count := cond.IfIdent(asm, ident.Ident)
 
+        vars.RemoveScope()
+    } else if ident, ok := o.If.Cond.(*IdentExpr); ok {
+        count := cond.IfElseIdent(asm, ident.Ident)
+
+        vars.CreateScope()
         o.If.Block.Compile(asm)
+        vars.RemoveScope()
 
         cond.ElseStart(asm, count)
+        
+        vars.CreateScope()
         o.Block.Compile(asm)
+        vars.RemoveScope()
 
-        cond.ElseEnd(asm, count)
+        cond.IfElseEnd(asm, count)
     } else {
         o.If.Cond.Compile(asm)
-        count := cond.IfReg(asm, "rax")
+        count := cond.IfElseReg(asm, "rax")
 
+        vars.CreateScope()
         o.If.Block.Compile(asm)
+        vars.RemoveScope()
 
         cond.ElseStart(asm, count)
+        
+        vars.CreateScope()
         o.Block.Compile(asm)
+        vars.RemoveScope()
 
-        cond.ElseEnd(asm, count)
+        cond.IfElseEnd(asm, count)
     }
-
-    vars.RemoveScope()
 }
 
 func (o *WhileStmt) Compile(asm *os.File) {
