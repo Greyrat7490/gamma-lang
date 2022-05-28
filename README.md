@@ -2,7 +2,7 @@
 
 > Fun Project to write my own language, to learn Go and to see how a good language would look like for me. So it will probably end up like a modern C ... so Go
 
-A statically and strongly typed programming language similar to Go, but with more focus on memory. It is more like a mix of C, Go and Rust. 
+A statically and strongly typed programming language similar to Go, but with more focus on memory. It is more like a mix of C, Go and Rust.
 It is named Gore, because I took everything out of C, Go and Rust I like to write this bloody mess.
 And because it is written in Go...
 
@@ -39,11 +39,11 @@ And because it is written in Go...
   * [x] if
   * [x] else
   * [ ] elif
-  * [ ] while
-  * [ ] for
+  * [x] while
+  * [x] for
 * [ ] pointer
 * [ ] turing complete -> actual programming language
-  * [ ] proof with Rule 110 programm 
+  * [ ] proof with Rule 110 programm
 * [ ] type checking
 * [ ] examples
 * [ ] self-hosted
