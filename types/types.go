@@ -30,7 +30,7 @@ func (t Type) Readable() string {
 
 // TODO: correct sizes for i32 and bool (not just 64bit)
 func (t Type) Size() int {
-    if t == Str { 
+    if t == Str {
         return 16 // ptr + size
     }
 

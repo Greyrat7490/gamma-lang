@@ -137,7 +137,7 @@ func prsParenExpr(idx int) (*ast.ParenExpr, int) {
     idx++
 
     if tokens[idx].Type != token.ParenR {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected ) but got \"%s\"(%s)\n", tokens[idx].Str, tokens[idx].Type.Readable())
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got \"%s\"(%s)\n", tokens[idx].Str, tokens[idx].Type.Readable())
         fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
     }
@@ -203,4 +203,47 @@ func swap(expr *ast.BinaryExpr) {
     tmp := expr.OperandR
     expr.OperandR = expr.OperandL
     expr.OperandL = tmp
+}
+
+
+func prsCallFn(idx int) (ast.OpFnCall, int) {
+    tokens := token.GetTokens()
+
+    var op ast.OpFnCall = ast.OpFnCall{ FnName: tokens[idx] }
+    op.Values, idx = prsDefArgs(idx+1)
+
+    return op, idx
+}
+
+func prsDefArgs(idx int) ([]ast.OpExpr, int) {
+    tokens := token.GetTokens()
+
+    if tokens[idx].Type != token.ParenL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got \"%s\"(%s)\n", tokens[idx].Str, tokens[idx].Type.Readable())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+        os.Exit(1)
+    }
+
+    var values []ast.OpExpr
+
+    if tokens[idx+1].Type != token.ParenR {
+        var expr ast.OpExpr
+        expr, idx = prsExpr(idx+1)
+        values = append(values, expr)
+
+        for tokens[idx+1].Type == token.Comma {
+            expr, idx = prsExpr(idx+2)
+            values = append(values, expr)
+        }
+    } else {
+        return values, idx+1
+    }
+
+    if tokens[idx+1].Type != token.ParenR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got \"%s\"(%s)\n", tokens[idx+1].Str, tokens[idx+1].Type.Readable())
+        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
+        os.Exit(1)
+    }
+
+    return values, idx+1
 }

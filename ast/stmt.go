@@ -90,12 +90,12 @@ func (o *OpAssignVar)  stmt() {}
 
 func (o *OpAssignVar) Compile(asm *os.File) {
     if l, ok := o.Value.(*LitExpr); ok {
-        vars.AssignByVal(asm, o.Varname, l.Val)
+        vars.AssignToVal(asm, o.Varname, l.Val)
     } else if ident, ok := o.Value.(*IdentExpr); ok {
-        vars.AssignByVar(asm, o.Varname, ident.Ident)
+        vars.AssignToVar(asm, o.Varname, ident.Ident)
     } else {
         o.Value.Compile(asm)
-        vars.AssignByReg(asm, o.Varname, "rax")
+        vars.AssignToExpr(asm, o.Varname, "rax")
     }
 }
 
@@ -147,7 +147,7 @@ func (o *IfElseStmt) Compile(asm *os.File) {
         vars.RemoveScope()
 
         cond.ElseStart(asm, count)
-        
+
         vars.CreateScope()
         o.Block.Compile(asm)
         vars.RemoveScope()
@@ -162,7 +162,7 @@ func (o *IfElseStmt) Compile(asm *os.File) {
         vars.RemoveScope()
 
         cond.ElseStart(asm, count)
-        
+
         vars.CreateScope()
         o.Block.Compile(asm)
         vars.RemoveScope()

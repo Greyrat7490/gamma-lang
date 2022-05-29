@@ -31,7 +31,7 @@ type OpDefVar struct {
 
 type OpDefFn struct {
     FnName token.Token
-    Args []vars.Var
+    Args []OpDecVar
     Block OpBlock
 }
 
@@ -48,14 +48,14 @@ func (o *OpDecVar) Compile(asm *os.File) {
 
 func (o *OpDefVar) Compile(asm *os.File) {
     if l, ok := o.Value.(*LitExpr); ok {
-        vars.DefineByVal(asm, o.Varname, l.Val)
+        vars.DefWithVal(asm, o.Varname, l.Val)
     } else if _, ok := o.Value.(*IdentExpr); ok {
         fmt.Fprintf(os.Stderr, "[ERROR] you cannot define a global var with another var(yet)")
         fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
         os.Exit(1)
     } else {
         o.Value.Compile(asm)
-        vars.DefineByReg(asm, o.Varname, "rax")
+        vars.DefWithExpr(asm, o.Varname, "rax")
     }
 }
 
@@ -64,7 +64,11 @@ func (o *OpDefFn) Compile(asm *os.File) {
 
     fn.Define(asm, o.FnName)
     fn.ReserveSpace(asm, argsSize(o.Args), o.Block.maxFrameSize())
-    fn.DeclareArgs(asm, o.Args)
+    for i, a := range o.Args {
+        fn.AddArg(a.Vartype)
+        a.Compile(asm)
+        fn.DefArg(asm, i, a.Varname, a.Vartype)
+    }
 
     o.Block.Compile(asm)
 
@@ -96,11 +100,15 @@ func (o *OpDefVar) Readable(indent int) string {
 }
 
 func (o *OpDefFn) Readable(indent int) string {
-    s := strings.Repeat("   ", indent)
-    s2 := s + "   "
+    res := strings.Repeat("   ", indent) + "OP_DEF_FN:\n"
 
-    res := fmt.Sprintf("%sOP_DEF_FN:\n%s%s(%s) %v\n", s, s2,
-        o.FnName.Str, o.FnName.Type.Readable(), o.Args) +
+    s := ""
+    for _,a := range o.Args {
+        s += fmt.Sprintf("%s(Name) %s(Typename), ", a.Varname.Str, a.Vartype.Readable())
+    }
+    if len(s) > 0 { s = s[:len(s)-2] }
+
+    res += fmt.Sprintf("%s%s(%s) [%s]\n", strings.Repeat("   ", indent+1), o.FnName.Str, o.FnName.Type.Readable(), s) +
         o.Block.Readable(indent+2)
 
     return res
@@ -112,9 +120,9 @@ func (o *BadDecl) Readable(indent int) string {
 }
 
 
-func argsSize(args []vars.Var) (res int) {
+func argsSize(args []OpDecVar) (res int) {
     for _,a := range args {
-        res += a.Type.Size()
+        res += a.Vartype.Size()
     }
 
     return res

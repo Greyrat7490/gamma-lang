@@ -136,52 +136,6 @@ func prsAssignVar(idx int) (ast.OpAssignVar, int) {
     return op, idx
 }
 
-func prsCallFn(idx int) (ast.OpFnCall, int) {
-    tokens := token.GetTokens()
-
-    var op ast.OpFnCall = ast.OpFnCall{ FnName: tokens[idx] }
-    op.Values, idx = prsDefArgs(idx)
-
-    return op, idx
-}
-
-func prsDefArgs(idx int) ([]ast.OpExpr, int) {
-    tokens := token.GetTokens()
-
-    if len(tokens) < idx + 1 {
-        fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
-        os.Exit(1)
-    }
-    if tokens[idx+1].Type != token.ParenL {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got %s(\"%s\")\n", tokens[idx+1].Type.Readable(), tokens[idx+1].Str)
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
-        os.Exit(1)
-    }
-
-    // TODO: "," seperated args
-    var values []ast.OpExpr
-    for idx+=2; idx < len(tokens); idx++ {
-        if tokens[idx].Type == token.ParenR {
-            return values, idx
-        }
-        if tokens[idx].Type == token.BraceL || tokens[idx].Type == token.BraceR {
-            fmt.Fprintln(os.Stderr, "[ERROR] missing \")\"")
-            fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
-            os.Exit(1)
-        }
-
-        var expr ast.OpExpr
-        expr, idx = prsExpr(idx)
-
-        values = append(values, expr)
-    }
-
-    fmt.Fprintf(os.Stderr, "[ERROR] missing \")\"\n")
-    os.Exit(1)
-    return nil, -1
-}
-
 func prsIfStmt(idx int) (ast.IfStmt, int) {
     tokens := token.GetTokens()
 

@@ -4,7 +4,7 @@ var scopes []Scope
 var curScope int = -1
 
 type Scope struct {
-    localStartIdx int
+    vars []LocalVar
     maxSize int
 }
 
@@ -14,11 +14,11 @@ func InGlobalScope() bool {
 
 func CreateScope() {
     curScope = len(scopes)
-    scopes = append(scopes, Scope{ maxSize: 0, localStartIdx: len(vars) })
+    scopes = append(scopes, Scope{})
 }
 
 func RemoveScope() {
-    removeLocalVars()
+    localVarOffset = 0
 
     if len(scopes) > 0 {
         scopes = scopes[:len(scopes)-1]

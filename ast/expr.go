@@ -120,12 +120,12 @@ func (o *BinaryExpr) Compile(asm *os.File) {
 func (o *OpFnCall) Compile(asm *os.File) {
     for i, val := range o.Values {
         if l, ok := val.(*LitExpr); ok {
-            fn.DefineArgByValue(asm, o.FnName, i, l.Val)
+            fn.PassVal(asm, o.FnName, i, l.Val)
         } else if ident, ok := val.(*IdentExpr); ok {
-            fn.DefineArgByVar(asm, o.FnName, i, ident.Ident)
+            fn.PassVar(asm, o.FnName, i, ident.Ident)
         } else {
             val.Compile(asm)
-            fn.DefineArgByReg(asm, o.FnName, i, "rax")
+            fn.PassReg(asm, o.FnName, i, "rax")
         }
     }
 

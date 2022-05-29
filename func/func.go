@@ -23,6 +23,8 @@ System V AMD64 ABI calling convention
   * callee reserves space (multiple of 16)
 */
 
+var regs []string = []string{ "rdi", "rsi", "rdx", "rcx", "r8", "r9" }
+
 var funcs []function
 var curFunc int = -1
 
@@ -35,13 +37,9 @@ func (f *function) At() string {
     return f.Name.At()
 }
 
-func GetCurFunc() *function {
-    return &funcs[curFunc]
-}
-
-func GetFn(funcName string) *function {
+func GetFn(name string) *function {
     for _, f := range funcs {
-        if f.Name.Str == funcName {
+        if f.Name.Str == name {
             return &f
         }
     }
@@ -49,11 +47,11 @@ func GetFn(funcName string) *function {
     return nil
 }
 
-func Define(asm *os.File, fnName token.Token) {
-    asm.WriteString(fnName.Str + ":\n")
+func Define(asm *os.File, name token.Token) {
+    asm.WriteString(name.Str + ":\n")
     asm.WriteString("push rbp\nmov rbp, rsp\n")
 
-    var f function = function{ Name: fnName }
+    var f function = function{ Name: name }
     curFunc = len(funcs)
     funcs = append(funcs, f)
 }
@@ -87,32 +85,24 @@ func CallFunc(asm *os.File, fnName token.Token) {
     asm.WriteString("call " + fnName.Str + "\n")
 }
 
-var regs []string = []string{ "rdi", "rsi", "rdx", "rcx", "r8", "r9" }
-func DeclareArgs(asm *os.File, args []vars.Var) {
+func AddArg(argtype types.Type) {
     if curFunc == -1 {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) CurFunc should be set")
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) curFunc should be set")
         os.Exit(1)
     }
 
-    f := &funcs[curFunc]
-    for i, a := range args {
-        f.Args = append(f.Args, a.Type)
-        vars.Declare(a.Name, a.Type)
+    funcs[curFunc].Args = append(funcs[curFunc].Args, argtype)
+}
 
-        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastVar().Offset, regs[i]))
-        if a.Type == types.Str {
-            asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastVar().Offset+types.I32.Size(), regs[i+1]))
-        }
-    }
-
-    if len(f.Args) > 1 {
-        fmt.Fprintln(os.Stderr, "[ERROR] functions only accept one argument max at the moment")
-        fmt.Fprintln(os.Stderr, "\t" + f.At())
-        os.Exit(1)
+func DefArg(asm *os.File, argnum int, argname token.Token, argtype types.Type) {
+    asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastOffset(), regs[argnum]))
+    if argtype == types.Str {
+        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastOffset()+types.I32.Size(), regs[argnum+1]))
     }
 }
 
-func DefineArgByValue(asm *os.File, fnName token.Token, argNum int, value token.Token) {
+
+func PassVal(asm *os.File, fnName token.Token, argNum int, value token.Token) {
     if f := GetFn(fnName.Str); f != nil {
        if t := types.TypeOfVal(value.Str); t != -1 {
             if t != f.Args[argNum] {
@@ -125,18 +115,18 @@ func DefineArgByValue(asm *os.File, fnName token.Token, argNum int, value token.
             switch t {
             case types.Str:
                 strIdx := str.Add(value.Str)
-                asm.WriteString(fmt.Sprintf("mov rdi, str%d\n", strIdx))
-                asm.WriteString(fmt.Sprintf("mov rsi, %d\n", str.GetSize(strIdx)))
+                asm.WriteString(fmt.Sprintf("mov %s, str%d\n", regs[argNum], strIdx))
+                asm.WriteString(fmt.Sprintf("mov %s, %d\n", regs[argNum+1], str.GetSize(strIdx)))
 
             case types.I32:
                 i, _ := strconv.Atoi(value.Str)
-                asm.WriteString(fmt.Sprintf("mov rdi, %d\n", i))
+                asm.WriteString(fmt.Sprintf("mov %s, %d\n", regs[argNum], i))
 
             case types.Bool:
                 if value.Str == "true" {
-                    asm.WriteString(fmt.Sprintf("mov rdi, %d\n", 1))
+                    asm.WriteString(fmt.Sprintf("mov %s, %d\n", regs[argNum], 1))
                 } else {
-                    asm.WriteString(fmt.Sprintf("mov rdi, %d\n", 0))
+                    asm.WriteString(fmt.Sprintf("mov %s, %d\n", regs[argNum], 0))
                 }
 
             default:
@@ -154,28 +144,28 @@ func DefineArgByValue(asm *os.File, fnName token.Token, argNum int, value token.
     }
 }
 
-func DefineArgByVar(asm *os.File, fnName token.Token, argNum int, varname token.Token) {
+func PassVar(asm *os.File, fnName token.Token, argNum int, varname token.Token) {
     if f := GetFn(fnName.Str); f != nil {
         if otherVar := vars.GetVar(varname.Str); otherVar != nil {
-            if otherVar.Type != f.Args[argNum] {
+            if otherVar.GetType() != f.Args[argNum] {
                 fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
-                    f.Name.Str, argNum, f.Args[argNum].Readable(), otherVar.Type.Readable())
+                    f.Name.Str, argNum, f.Args[argNum].Readable(), otherVar.GetType().Readable())
                 fmt.Fprintln(os.Stderr, "\t" + fnName.At())
                 os.Exit(1)
             }
 
             const _ uint = 3 - types.TypesCount
-            switch otherVar.Type {
+            switch otherVar.GetType() {
             case types.Str:
                 s1, s2 := otherVar.Gets()
-                asm.WriteString(fmt.Sprintf("mov rdi, %s\n", s1))
-                asm.WriteString(fmt.Sprintf("mov rsi, %s\n", s2))
+                asm.WriteString(fmt.Sprintf("mov %s, %s\n", regs[argNum], s1))
+                asm.WriteString(fmt.Sprintf("mov %s, %s\n", regs[argNum+1], s2))
 
             case types.I32, types.Bool:
-                asm.WriteString(fmt.Sprintf("mov rdi, %s\n", otherVar.Get()))
+                asm.WriteString(fmt.Sprintf("mov %s, %s\n", regs[argNum], otherVar.Get()))
 
             default:
-                fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", otherVar.Name.Str)
+                fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", varname.Str)
                 os.Exit(1)
             }
         }
@@ -185,7 +175,7 @@ func DefineArgByVar(asm *os.File, fnName token.Token, argNum int, varname token.
     }
 }
 
-func DefineArgByReg(asm *os.File, fnName token.Token, argNum int, reg string) {
+func PassReg(asm *os.File, fnName token.Token, argNum int, reg string) {
     f := GetFn(fnName.Str)
 
     if f == nil {
@@ -198,8 +188,9 @@ func DefineArgByReg(asm *os.File, fnName token.Token, argNum int, reg string) {
         os.Exit(1)
     }
 
-    asm.WriteString(fmt.Sprintf("mov rdi, %s\n", reg))
+    asm.WriteString(fmt.Sprintf("mov %s, %s\n", regs[argNum], reg))
 }
+
 
 func AddBuildIn(name string, argname string, argtype types.Type) {
     funcs = append(funcs, function{

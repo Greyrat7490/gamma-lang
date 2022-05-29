@@ -6,7 +6,6 @@ import (
     "gorec/ast"
     "gorec/token"
     "gorec/types"
-    "gorec/vars"
 )
 
 func isDec(idx int) bool {
@@ -66,8 +65,8 @@ func prsDefFn(idx int) (ast.OpDefFn, int) {
     }
 
     op := ast.OpDefFn{ FnName: tokens[idx+1] }
-    op.Args, idx = prsDecArgs(idx)
-    op.Block, idx = prsBlock(idx)
+    op.Args, idx = prsDecArgs(idx+2)
+    op.Block, idx = prsBlock(idx+1)
 
     return op, idx
 }
@@ -136,64 +135,33 @@ func prsDefVar(idx int) (ast.OpDefVar, int) {
     return op, idx
 }
 
-func prsDecArgs(idx int) ([]vars.Var, int) {
+func prsDecArgs(idx int) ([]ast.OpDecVar, int) {
     tokens := token.GetTokens()
 
-    if len(tokens) < idx + 2 {
-        fmt.Fprintln(os.Stderr, "[ERROR] missing \"(\"")
+    decs := []ast.OpDecVar{}
+
+    if (tokens[idx].Type != token.ParenL) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got \"%s\"(%s)\n", tokens[idx].Str, tokens[idx].Type.Readable())
         fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
         os.Exit(1)
     }
 
-    if tokens[idx+2].Type != token.ParenL {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got %s(\"%s\")\n", tokens[idx+2].Type.Readable(), tokens[idx+2].Str)
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+2].At())
-        os.Exit(1)
-    }
+    if isDec(idx) {
+        var dec ast.OpDecVar
+        dec, idx = prsDecVar(idx)
+        decs = append(decs, dec)
 
-    var args []vars.Var
-
-    var a vars.Var
-    b := false
-    for _, w := range tokens[idx+3:] {
-        if w.Type == token.ParenR {
-            b = true
-            break
-        }
-
-        if w.Type == token.BraceL || w.Type == token.BraceR {
-            fmt.Fprintln(os.Stderr, "[ERROR] missing \")\"")
-            fmt.Fprintln(os.Stderr, "\t" + w.At())
-            os.Exit(1)
-        }
-
-        if a.Name.Str == "" {
-            if w.Type != token.Name {
-                fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %s(\"%s\")\n", w.Type.Readable(), w.Str)
-                fmt.Fprintln(os.Stderr, "\t" + w.At())
-                os.Exit(1)
-            }
-
-            a.Name.Str = w.Str
-        } else {
-            if w.Type != token.Typename {
-                fmt.Fprintf(os.Stderr, "[ERROR] expected a Typename but got %s(\"%s\")\n", w.Type.Readable(), w.Str)
-                fmt.Fprintln(os.Stderr, "\t" + w.At())
-                os.Exit(1)
-            }
-
-            a.Type = types.ToType(w.Str)
-            args = append(args, a)
-
-            a.Name.Str = ""
+        for tokens[idx+1].Type == token.Comma {
+            dec, idx = prsDecVar(idx+1)
+            decs = append(decs, dec)
         }
     }
 
-    if !b {
-        fmt.Fprintf(os.Stderr, "[ERROR] missing \")\" for function \"%s\"\n", tokens[idx+1].Str)
+    if (tokens[idx+1].Type != token.ParenR) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got \"%s\"(%s)\n", tokens[idx+1].Str, tokens[idx+1].Type.Readable())
         fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
         os.Exit(1)
     }
 
-    return args, idx + len(args) * 2 + 4
+    return decs, idx+1
 }
