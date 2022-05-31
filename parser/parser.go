@@ -1,21 +1,17 @@
 package prs
 
 import (
+    "os"
     "fmt"
     "gorec/ast"
     "gorec/token"
-    "os"
 )
 
 var isMainDefined bool = false
 
 func Parse() {
-    tokensCount := len(token.GetTokens())
-
-    for idx := 0; idx < tokensCount; idx++ {
-        var decl ast.OpDecl
-        decl, idx = prsDecl(idx)
-        ast.AddOp(decl)
+    for token.Peek().Type != token.EOF {
+        ast.AddOp(prsDecl())
     }
 
     if !isMainDefined {

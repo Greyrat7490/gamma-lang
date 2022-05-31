@@ -10,11 +10,14 @@ import (
 )
 
 var tokens []Token
+var idx int = -1
 
 type TokenType uint
 const (
     Unknown TokenType = iota
 
+    EOF             // end of file
+    
     Name            // var/func name
     Typename        // i32, str, bool
     Str             // "string"
@@ -143,6 +146,9 @@ func TokenTypeOfStr(s string) TokenType {
 
 func (t TokenType) Readable() string {
     switch t {
+    case EOF:
+        return "EOF"
+        
     case Plus:
         return "Plus"
     case Minus:
@@ -322,12 +328,61 @@ func Tokenize(file []byte) {
         col++
     }
 
+    tokens = append(tokens, Token{EOF, "EOF", Pos{line, col}})
+    
     if mlSkip {
         fmt.Fprintln(os.Stderr, "you have not terminated your comment (missing \"*/\")")
         os.Exit(1)
     }
 }
 
-func GetTokens() []Token {
-    return tokens
+func Cur() Token {
+    return tokens[idx]
+}
+
+func Next() Token {
+    idx++
+
+    if idx >= len(tokens) {
+        fmt.Fprintln(os.Stderr, "[ERROR] unexpected end of file")
+        os.Exit(1)
+    }
+
+    return tokens[idx]
+}
+
+func Peek() Token {
+    if idx+1 >= len(tokens) {
+        fmt.Fprintln(os.Stderr, "[ERROR] unexpected end of file")
+        os.Exit(1)
+    }
+
+    return tokens[idx+1]
+}
+
+func Peek2() Token {
+    if idx+2 >= len(tokens) {
+        fmt.Fprintln(os.Stderr, "[ERROR] unexpected end of file")
+        os.Exit(1)
+    }
+
+    return tokens[idx+2]
+}
+
+func Last() Token {
+    if idx < 1 {
+        fmt.Fprintln(os.Stderr, "[ERROR] unexpected beginning of file (expected 1 word more at the start of the file)")
+        os.Exit(1)
+    }
+
+    return tokens[idx-1]
+}
+
+func Last2() Token {
+    if idx < 2 {
+        fmt.Fprintf(os.Stderr, "[ERROR] unexpected beginning of file (expected %d words more at the start of the file)\n", 2-idx)
+        os.Exit(1)
+    }
+
+    return tokens[idx-2]
 }

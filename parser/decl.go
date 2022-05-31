@@ -8,160 +8,133 @@ import (
     "gorec/types"
 )
 
-func isDec(idx int) bool {
-    tokens := token.GetTokens()
-    return tokens[idx+1].Type == token.Name && tokens[idx+2].Type == token.Typename
+func isDec() bool {
+    return token.Peek().Type == token.Name && token.Peek2().Type == token.Typename
 }
 
-func prsDecl(idx int) (ast.OpDecl, int) {
-    tokens := token.GetTokens()
-
-    switch tokens[idx].Type {
+func prsDecl() ast.OpDecl {
+    
+    switch t := token.Next(); t.Type {
     case token.Dec_var:
-        var op ast.OpDecVar
-        op, idx = prsDecVar(idx)
-        return &op, idx
+        d := prsDecVar()
+        return &d
 
     case token.Def_var:
-        var op ast.OpDefVar
-        op, idx = prsDefVar(idx)
-        return &op, idx
+        d := prsDefVar()
+        return &d
 
     case token.Def_fn:
-        var op ast.OpDefFn
-        op, idx = prsDefFn(idx)
-        return &op, idx
+        d := prsDefFn()
+        return &d
 
     case token.Name:
-        if tokens[idx+1].Type == token.ParenL {
+        if token.Peek().Type == token.ParenL {
             fmt.Fprintln(os.Stderr, "[ERROR] function calls are not allowed in global scope")
-            fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+            fmt.Fprintln(os.Stderr, "\t" + token.Peek().At())
             os.Exit(1)
-        } else if tokens[idx+1].Type == token.Assign {
+        } else if token.Peek().Type == token.Assign {
             fmt.Fprintln(os.Stderr, "[ERROR] assigning variables is not allowed in global scope (but defining)")
-            fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+            fmt.Fprintln(os.Stderr, "\t" + token.Peek().At())
             os.Exit(1)
         } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] variable \"%s\" is not used\n", tokens[idx].Str)
-            fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+            fmt.Fprintf(os.Stderr, "[ERROR] variable \"%s\" is not used\n", token.Peek().Str)
+            fmt.Fprintln(os.Stderr, "\t" + token.Peek().At())
             os.Exit(1)
         }
-        return &ast.BadDecl{}, idx
+        return &ast.BadDecl{}
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] unknown word \"%s\"\n", tokens[idx].Str)
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+        fmt.Fprintf(os.Stderr, "[ERROR] unknown word \"%s\"\n", t.Str)
+        fmt.Fprintln(os.Stderr, "\t" + t.At())
         os.Exit(1)
 
-        return &ast.BadDecl{}, idx
+        return &ast.BadDecl{}
     }
 }
 
-func prsDefFn(idx int) (ast.OpDefFn, int) {
-    tokens := token.GetTokens()
+func prsDefFn() ast.OpDefFn {
+    name := token.Next()
 
-    if tokens[idx+1].Str == "main" {
+    if name.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got \"%s\"(%s)\n", name.Str, name.Type.Readable())
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+    }
+
+    if name.Str == "main" {
         isMainDefined = true
     }
 
-    op := ast.OpDefFn{ FnName: tokens[idx+1] }
-    op.Args, idx = prsDecArgs(idx+2)
-    op.Block, idx = prsBlock(idx+1)
+    op := ast.OpDefFn{ FnName: name }
+    token.Next()
+    op.Args = prsDecArgs()
+    token.Next()
+    op.Block = prsBlock()
 
-    return op, idx
+    return op
 }
 
-func prsDecVar(idx int) (ast.OpDecVar, int) {
-    tokens := token.GetTokens()
+func prsDecVar() ast.OpDecVar {
+    name := token.Next()
+    vartype := token.Next()
 
-    if len(tokens) < idx + 1 {
-        fmt.Fprintln(os.Stderr, "[ERROR] neither name nor type provided for the variable declaration")
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+    if name.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got \"%s\"(%s)\n", name.Str, name.Type.Readable())
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
-    if len(tokens) < idx + 2 {
-        if tokens[idx+1].Type == token.Name {
-            fmt.Fprintln(os.Stderr, "[ERROR] no type provided for the variable")
-        } else {
-            fmt.Fprintln(os.Stderr, "[ERROR] no name provided for the variable")
-        }
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
+    if vartype.Type != token.Typename {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Typename but got \"%s\"(%s)\n", vartype.Str, vartype.Type.Readable())
+        fmt.Fprintln(os.Stderr, "\t" + vartype.At())
         os.Exit(1)
     }
 
-    if (tokens[idx+1].Type != token.Name) {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %s(\"%s\")\n", tokens[idx+1].Type.Readable(), tokens[idx+1].Str)
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
-        os.Exit(1)
-    }
-    if (tokens[idx+2].Type != token.Typename) {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Typename but got %s(\"%s\")\n", tokens[idx+2].Type.Readable(), tokens[idx+2].Str)
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+2].At())
-        os.Exit(1)
-    }
-
-    t := types.ToType(tokens[idx+2].Str)
+    t := types.ToType(vartype.Str)
     if t == -1 {
-        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", tokens[idx+2].Str)
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+2].At())
+        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", vartype.Str)
+        fmt.Fprintln(os.Stderr, "\t" + vartype.At())
         os.Exit(1)
     }
 
-    op := ast.OpDecVar{ Varname: tokens[idx+1], Vartype: t }
-
-    return op, idx + 2
+    return ast.OpDecVar{ Varname: name, Vartype: t }
 }
 
-func prsDefVar(idx int) (ast.OpDefVar, int) {
-    tokens := token.GetTokens()
+func prsDefVar() ast.OpDefVar {
+    name := token.Last2()
 
-    if len(tokens) < idx + 1 {
-        fmt.Fprintf(os.Stderr, "[ERROR] no value provided to define the variable\n")
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+    if name.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got \"%s\"(%s)\n", name.Type.Readable(), name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
 
-    if (tokens[idx-2].Type != token.Name) {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %s(\"%s\")\n", tokens[idx-2].Type.Readable(), tokens[idx-2].Str)
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx-2].At())
-        os.Exit(1)
-    }
-
-    name := tokens[idx-2]
-    value, idx := prsExpr(idx+1)
-
-    op := ast.OpDefVar{ Varname: name, Value: value }
-
-    return op, idx
+    token.Next()
+    return ast.OpDefVar{ Varname: name, Value: prsExpr() }
 }
 
-func prsDecArgs(idx int) ([]ast.OpDecVar, int) {
-    tokens := token.GetTokens()
-
+func prsDecArgs() []ast.OpDecVar {
     decs := []ast.OpDecVar{}
 
-    if (tokens[idx].Type != token.ParenL) {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got \"%s\"(%s)\n", tokens[idx].Str, tokens[idx].Type.Readable())
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx].At())
+    if token.Cur().Type != token.ParenL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got \"%s\"(%s)\n", token.Cur().Str, token.Cur().Type.Readable())
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)
     }
 
-    if isDec(idx) {
-        var dec ast.OpDecVar
-        dec, idx = prsDecVar(idx)
-        decs = append(decs, dec)
+    if isDec() {
+        decs = append(decs, prsDecVar())
 
-        for tokens[idx+1].Type == token.Comma {
-            dec, idx = prsDecVar(idx+1)
-            decs = append(decs, dec)
+        for token.Peek().Type == token.Comma {
+            token.Next()
+            decs = append(decs, prsDecVar())
         }
     }
 
-    if (tokens[idx+1].Type != token.ParenR) {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got \"%s\"(%s)\n", tokens[idx+1].Str, tokens[idx+1].Type.Readable())
-        fmt.Fprintln(os.Stderr, "\t" + tokens[idx+1].At())
+    if token.Next().Type != token.ParenR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got \"%s\"(%s)\n", token.Cur().Str, token.Cur().Type.Readable())
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)
     }
 
-    return decs, idx+1
+    return decs
 }
