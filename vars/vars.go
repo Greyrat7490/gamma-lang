@@ -107,7 +107,7 @@ func DefPtrWithVar(asm *os.File, ptrName token.Token, otherVar token.Token) {
         fmt.Fprintln(os.Stderr, "\t" + ptrName.At())
         os.Exit(1)
     }
- 
+
     if _, ok := v.(*GlobalVar); ok {
         globalDefines = append(globalDefines, fmt.Sprintf("%s: dq %s\n", ptrName.Str, otherVar.Str))
         return
@@ -173,7 +173,7 @@ func AssignToVal(asm *os.File, deref bool, name token.Token, value token.Token) 
         } else {
             asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), value.Str))
         }
-        
+
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", name.Str)
         os.Exit(1)

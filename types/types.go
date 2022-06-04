@@ -38,7 +38,7 @@ func ToType(s string) Type {
         s = s[1:]
         isPtr = true
     }
-    
+
     var base Type
     switch s {
     case "str":

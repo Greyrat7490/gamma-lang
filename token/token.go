@@ -17,7 +17,7 @@ const (
     Unknown TokenType = iota
 
     EOF             // end of file
-    
+
     Name            // var/func name
     Typename        // i32, str, bool
     Str             // "string"
@@ -148,7 +148,7 @@ func (t TokenType) Readable() string {
     switch t {
     case EOF:
         return "EOF"
-        
+
     case Plus:
         return "Plus"
     case Minus:
@@ -335,7 +335,7 @@ func Tokenize(file []byte) {
     }
 
     tokens = append(tokens, Token{EOF, "EOF", Pos{line, col}})
-    
+
     if mlSkip {
         fmt.Fprintln(os.Stderr, "you have not terminated your comment (missing \"*/\")")
         os.Exit(1)

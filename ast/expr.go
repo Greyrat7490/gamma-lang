@@ -69,7 +69,7 @@ func (o *UnaryExpr) Compile(asm *os.File) {
             fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
             os.Exit(1)
         } else {
-            v := vars.GetVar(ident.Ident.Str) 
+            v := vars.GetVar(ident.Ident.Str)
             if v == nil {
                 fmt.Fprintf(os.Stderr, "[ERROR] variable \"%s\" is not declared\n", ident.Ident.Str)
                 fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
@@ -87,7 +87,7 @@ func (o *UnaryExpr) Compile(asm *os.File) {
         return
     }
 
-    
+
     if l, ok := o.Operand.(*LitExpr); ok {
         vars.Write(asm, fmt.Sprintf("mov rax, %s\n", l.Val.Str))
     } else if ident, ok := o.Operand.(*IdentExpr); ok {

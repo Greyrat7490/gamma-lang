@@ -131,7 +131,7 @@ func PassVal(asm *os.File, fnName token.Token, argNum int, value token.Token) {
             case types.PtrType:
                 fmt.Fprintln(os.Stderr, "TODO PtrType in PassVal")
                 os.Exit(1)
-                
+
             default:
                 fmt.Fprintf(os.Stderr, "[ERROR] could not get type of value \"%s\"\n", value.Str)
                 os.Exit(1)
@@ -169,7 +169,7 @@ func PassVar(asm *os.File, fnName token.Token, argNum int, varname token.Token) 
             case types.PtrType:
                 fmt.Fprintln(os.Stderr, "TODO PassVar PtrType")
                 os.Exit(1)
-                
+
             default:
                 fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", varname.Str)
                 os.Exit(1)
