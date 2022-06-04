@@ -35,7 +35,7 @@ func GetLastOffset() int {
 
 func calcOffset(vartype types.Type) (offset int) {
     if !InGlobalScope() {
-        if _, ok := vartype.(types.StrType); ok {
+        if vartype.GetKind() == types.Str {
             offset = localVarOffset + 8
         } else {
             offset = localVarOffset + vartype.Size()
@@ -72,20 +72,20 @@ func declareLocal(varname token.Token, vartype types.Type) {
 }
 
 func defLocalVal(asm *os.File, v *LocalVar, val string) {
-    switch v.Type.(type) {
-    case types.StrType:
+    switch v.Type.GetKind() {
+    case types.Str:
         strIdx := str.Add(val)
         asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], str%d\n", v.offset, strIdx))
         asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %d\n", v.offset+8, str.GetSize(strIdx)))
 
-    case types.I32Type:
+    case types.I32:
         asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", v.offset, val))
 
-    case types.BoolType:
+    case types.Bool:
         if val == "true" { val = "1" } else { val = "0" }
         asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", v.offset, val))
 
-    case types.PtrType:
+    case types.Ptr:
         fmt.Fprintln(os.Stderr, "TODO defLocalVal PtrType")
         os.Exit(1)
 

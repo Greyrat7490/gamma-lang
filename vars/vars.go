@@ -135,7 +135,7 @@ func AssignToExpr(asm *os.File, deref bool, destVar token.Token, reg string) {
         os.Exit(1)
     }
 
-    if _,ok := v.GetType().(types.PtrType); deref && ok {
+    if deref && v.GetType().GetKind() == types.Ptr {
         if reg == "rax" {
             asm.WriteString(fmt.Sprintf("mov rbx, %s\n", v.Get()))
             asm.WriteString(fmt.Sprintf("mov QWORD [rbx], %s\n", reg))
@@ -156,17 +156,17 @@ func AssignToVal(asm *os.File, deref bool, name token.Token, value token.Token) 
         os.Exit(1)
     }
 
-    switch v.GetType().(type) {
-    case types.StrType:
+    switch v.GetType().GetKind() {
+    case types.Str:
         strIdx := str.Add(value.Str)
         s1, s2 := v.Gets()
         asm.WriteString(fmt.Sprintf("mov %s, str%d\n", s1, strIdx))
         asm.WriteString(fmt.Sprintf("mov %s, %d\n",    s2, str.GetSize(strIdx)))
 
-    case types.I32Type, types.BoolType:
+    case types.I32, types.Bool:
         asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), value.Str))
 
-    case types.PtrType:
+    case types.Ptr:
         if deref {
             asm.WriteString(fmt.Sprintf("mov rax, %s\n", v.Get()))
             asm.WriteString(fmt.Sprintf("mov QWORD [rax], %s\n", value.Str))
@@ -193,17 +193,17 @@ func AssignToVar(asm *os.File, deref bool, name token.Token, otherName token.Tok
 
     // TODO: check if var is defined
     if otherVar := GetVar(otherName.Str); otherVar != nil {
-        switch v.GetType().(type) {
-        case types.StrType:
+        switch v.GetType().GetKind() {
+        case types.Str:
             vS1, vS2 := v.Gets()
             otherS1, otherS2 := otherVar.Gets()
             asm.WriteString(fmt.Sprintf("mov %s, %s\n", vS1, otherS1))
             asm.WriteString(fmt.Sprintf("mov %s, %s\n", vS2, otherS2))
 
-        case types.I32Type, types.BoolType:
+        case types.I32, types.Bool:
             asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), otherVar.Get()))
 
-        case types.PtrType:
+        case types.Ptr:
             if deref {
                 asm.WriteString(fmt.Sprintf("mov rax, %s\n", v.Get()))
                 asm.WriteString(fmt.Sprintf("mov rbx, %s\n", otherVar.Get()))

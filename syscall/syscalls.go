@@ -15,9 +15,10 @@ const SYS_EXIT = 60
 func DefineBuildIns(asm *os.File) {
     defineItoS(asm)
     defineBtoS(asm)
-    defineWriteStr(asm)
-    defineWriteInt(asm)
-    defineWriteBool(asm)
+    definePrintStr(asm)
+    definePrintInt(asm)
+    definePrintPtr(asm)
+    definePrintBool(asm)
     defineExit(asm)
 }
 
@@ -37,7 +38,7 @@ func syscall(asm *os.File, syscallNum uint) {
     asm.WriteString("pop rcx\n")
 }
 
-func defineWriteInt(asm *os.File) {
+func definePrintInt(asm *os.File) {
     fn.AddBuildIn("printInt", "i", types.I32Type{})
 
     asm.WriteString("printInt:\n")
@@ -52,7 +53,22 @@ func defineWriteInt(asm *os.File) {
     asm.WriteString("ret\n\n")
 }
 
-func defineWriteBool(asm *os.File) {
+func definePrintPtr(asm *os.File) {
+    fn.AddBuildIn("printPtr", "i", types.PtrType{})
+
+    asm.WriteString("printPtr:\n")
+    asm.WriteString("mov rax, rdi\n")
+    asm.WriteString("call int_to_str\n")
+
+    asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
+    asm.WriteString("mov rdx, rax\n")
+    asm.WriteString("mov rsi, rbx\n")
+    syscall(asm, SYS_WRITE)
+
+    asm.WriteString("ret\n\n")
+}
+
+func definePrintBool(asm *os.File) {
     fn.AddBuildIn("printBool", "b", types.BoolType{})
 
     asm.WriteString("printBool:\n")
@@ -68,7 +84,7 @@ func defineWriteBool(asm *os.File) {
     asm.WriteString("ret\n\n")
 }
 
-func defineWriteStr(asm *os.File) {
+func definePrintStr(asm *os.File) {
     fn.AddBuildIn("printStr", "s", types.StrType{})
 
     asm.WriteString("printStr:\n")
@@ -118,7 +134,7 @@ uint_to_str:
 
     mov ecx, 10
 
-    mov rbx, intBuf + 10
+    mov rbx, intBuf + 20
     .l1:
         xor edx, edx
         div ecx
@@ -141,7 +157,7 @@ int_to_str:
     push rax
 
     mov ecx, 10
-    mov rbx, intBuf + 10
+    mov rbx, intBuf + 20
 
     cmp rax, 0
     jge .l1

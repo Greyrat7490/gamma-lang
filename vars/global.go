@@ -70,19 +70,19 @@ func defGlobalVal(asm *os.File, v *GlobalVar, val token.Token) {
         os.Exit(1)
     }
 
-    switch v.Type.(type) {
-    case types.StrType:
+    switch v.Type.GetKind() {
+    case types.Str:
         strIdx := str.Add(val.Str)
         globalDefines = append(globalDefines, fmt.Sprintf("%s: dq str%d, %d\n", v.Name.Str, strIdx, str.GetSize(strIdx)))
 
-    case types.I32Type:
+    case types.I32:
         globalDefines = append(globalDefines, fmt.Sprintf("%s: dq %s\n", v.Name.Str, val.Str))
 
-    case types.BoolType:
+    case types.Bool:
         if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
         globalDefines = append(globalDefines, fmt.Sprintf("%s: dq %s\n", v.Name.Str, val.Str))
 
-    case types.PtrType:
+    case types.Ptr:
         fmt.Fprintln(os.Stderr, "TODO defGlobalVal PtrType")
         os.Exit(1)
 

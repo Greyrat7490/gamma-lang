@@ -2,11 +2,20 @@ package types
 
 import "strconv"
 
+type TypeKind int
+const (
+    I32 TypeKind = iota
+    Bool TypeKind = iota
+    Ptr TypeKind = iota
+    Str TypeKind = iota
+)
+
 // TODO: correct sizes for i32 and bool (not just 64bit)
 
 type Type interface {
     Size() int
     String() string
+    GetKind() TypeKind
 }
 
 type I32Type struct {}
@@ -20,16 +29,25 @@ type StrType struct {
     size I32Type
 }
 
+func (t I32Type)  GetKind() TypeKind { return I32  }
+func (t BoolType) GetKind() TypeKind { return Bool }
+func (t PtrType)  GetKind() TypeKind { return Ptr  }
+func (t StrType)  GetKind() TypeKind { return Str  }
 
 func (t I32Type)  Size() int { return 8 }
 func (t BoolType) Size() int { return 8 }
 func (t PtrType)  Size() int { return 8 }
 func (t StrType)  Size() int { return t.ptr.Size() + t.size.Size() }
 
-func (t I32Type)  String() string { return "i32" }
+func (t I32Type)  String() string { return "i32"  }
 func (t BoolType) String() string { return "bool" }
-func (t PtrType)  String() string { return "*" + t.BaseType.String() }
-func (t StrType)  String() string { return "str" }
+func (t StrType)  String() string { return "str"  }
+func (t PtrType)  String() string {
+    if t.BaseType == nil {
+        return "ptr(generic)"
+    }
+    return "*" + t.BaseType.String()
+}
 
 
 func ToType(s string) Type {
