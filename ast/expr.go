@@ -63,11 +63,36 @@ func (o *LitExpr)   Compile(asm *os.File) {}
 func (o *IdentExpr) Compile(asm *os.File) {}
 func (o *ParenExpr) Compile(asm *os.File) { o.Expr.Compile(asm) }
 func (o *UnaryExpr) Compile(asm *os.File) {
+    if o.Operator.Type == token.Mul {
+        if ident, ok := o.Operand.(*IdentExpr); !ok {
+            fmt.Fprintln(os.Stderr, "[ERROR] expected a variable after \"*\"")
+            fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
+            os.Exit(1)
+        } else {
+            v := vars.GetVar(ident.Ident.Str) 
+            if v == nil {
+                fmt.Fprintf(os.Stderr, "[ERROR] variable \"%s\" is not declared\n", ident.Ident.Str)
+                fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
+                os.Exit(1)
+            }
+
+            if _, ok := v.(*vars.GlobalVar); ok {
+                asm.WriteString(fmt.Sprintf("mov rax, QWORD [%s]\n", ident.Ident.Str))
+            } else {
+                asm.WriteString(fmt.Sprintf("mov rax, %s\n", v.Get()))
+            }
+            asm.WriteString("mov rax, QWORD [rax]\n")
+        }
+
+        return
+    }
+
+    
     if l, ok := o.Operand.(*LitExpr); ok {
         vars.Write(asm, fmt.Sprintf("mov rax, %s\n", l.Val.Str))
     } else if ident, ok := o.Operand.(*IdentExpr); ok {
         if vars.GetVar(ident.Ident.Str) == nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str)
+            fmt.Fprintf(os.Stderr, "[ERROR] variable \"%s\" is not declared\n", ident.Ident.Str)
             fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
             os.Exit(1)
         }

@@ -58,7 +58,7 @@ func (o *OpDefVar) Compile(asm *os.File) {
                 os.Exit(1)
             }
 
-            vars.DefPtrWithVar(asm, o.Varname.Str, ident.Ident.Str)
+            vars.DefPtrWithVar(asm, o.Varname, ident.Ident)
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] you can only define global pointer with another global var")
             fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())

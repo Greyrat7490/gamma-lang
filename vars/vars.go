@@ -100,8 +100,31 @@ func DefWithVal(asm *os.File, varname token.Token, value token.Token) {
     }
 }
 
-func DefPtrWithVar(asm *os.File, ptrName string, otherVar string) {
-    globalDefines = append(globalDefines, fmt.Sprintf("%s: dq %s\n", ptrName, otherVar))
+func DefPtrWithVar(asm *os.File, ptrName token.Token, otherVar token.Token) {
+    v := GetVar(ptrName.Str)
+    if v == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot define var \"%s\" (is not declared)\n", ptrName.Str)
+        fmt.Fprintln(os.Stderr, "\t" + ptrName.At())
+        os.Exit(1)
+    }
+ 
+    if _, ok := v.(*GlobalVar); ok {
+        globalDefines = append(globalDefines, fmt.Sprintf("%s: dq %s\n", ptrName.Str, otherVar.Str))
+        return
+    }
+
+    if v, ok := v.(*LocalVar); ok {
+        other := GetVar(otherVar.Str)
+        if other == nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] cannot define var \"%s\" with \"%s\"(is not declared)\n", ptrName.Str, otherVar.Str)
+            fmt.Fprintln(os.Stderr, "\t" + otherVar.At())
+            os.Exit(1)
+        }
+
+        asm.WriteString(fmt.Sprintf("lea rax, %s\n", other.Get()))
+        asm.WriteString(fmt.Sprintf("mov %s, rax\n", v.Get()))
+        return
+    }
 }
 
 func AssignToExpr(asm *os.File, deref bool, destVar token.Token, reg string) {
@@ -189,10 +212,9 @@ func AssignToVar(asm *os.File, deref bool, name token.Token, otherName token.Tok
                 if _, ok := otherVar.(*GlobalVar); ok {
                     asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), otherName.Str))
                 } else {
-                    fmt.Fprintln(os.Stderr, "TODO AssignToVar local var ptr")
-                    os.Exit(1)
+                    asm.WriteString(fmt.Sprintf("lea rax, %s\n", otherVar.Get()))
+                    asm.WriteString(fmt.Sprintf("mov %s, rax\n", v.Get()))
                 }
-                
             }
 
         default:
