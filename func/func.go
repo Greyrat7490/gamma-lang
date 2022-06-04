@@ -96,39 +96,42 @@ func AddArg(argtype types.Type) {
 
 func DefArg(asm *os.File, argnum int, argname token.Token, argtype types.Type) {
     asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastOffset(), regs[argnum]))
-    if argtype == types.Str {
-        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastOffset()+types.I32.Size(), regs[argnum+1]))
+    if _, ok := argtype.(types.StrType); ok {
+        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastOffset() + types.I32Type{}.Size(), regs[argnum+1]))
     }
 }
 
 
 func PassVal(asm *os.File, fnName token.Token, argNum int, value token.Token) {
     if f := GetFn(fnName.Str); f != nil {
-       if t := types.TypeOfVal(value.Str); t != -1 {
+       if t := types.TypeOfVal(value.Str); t != nil {
             if t != f.Args[argNum] {
-                fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
-                    f.Name.Str, argNum, f.Args[argNum].Readable(), t.Readable())
+                fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%v\" but got \"%v\"\n",
+                    f.Name.Str, argNum, f.Args[argNum], t)
                 os.Exit(1)
             }
 
-            const _ uint = 3 - types.TypesCount
-            switch t {
-            case types.Str:
+            switch t.(type) {
+            case types.StrType:
                 strIdx := str.Add(value.Str)
                 asm.WriteString(fmt.Sprintf("mov %s, str%d\n", regs[argNum], strIdx))
                 asm.WriteString(fmt.Sprintf("mov %s, %d\n", regs[argNum+1], str.GetSize(strIdx)))
 
-            case types.I32:
+            case types.I32Type:
                 i, _ := strconv.Atoi(value.Str)
                 asm.WriteString(fmt.Sprintf("mov %s, %d\n", regs[argNum], i))
 
-            case types.Bool:
+            case types.BoolType:
                 if value.Str == "true" {
                     asm.WriteString(fmt.Sprintf("mov %s, %d\n", regs[argNum], 1))
                 } else {
                     asm.WriteString(fmt.Sprintf("mov %s, %d\n", regs[argNum], 0))
                 }
 
+            case types.PtrType:
+                fmt.Fprintln(os.Stderr, "TODO PtrType in PassVal")
+                os.Exit(1)
+                
             default:
                 fmt.Fprintf(os.Stderr, "[ERROR] could not get type of value \"%s\"\n", value.Str)
                 os.Exit(1)
@@ -148,22 +151,25 @@ func PassVar(asm *os.File, fnName token.Token, argNum int, varname token.Token) 
     if f := GetFn(fnName.Str); f != nil {
         if otherVar := vars.GetVar(varname.Str); otherVar != nil {
             if otherVar.GetType() != f.Args[argNum] {
-                fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%s\" but got \"%s\"\n",
-                    f.Name.Str, argNum, f.Args[argNum].Readable(), otherVar.GetType().Readable())
+                fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%v\" but got \"%v\"\n",
+                    f.Name.Str, argNum, f.Args[argNum], otherVar.GetType())
                 fmt.Fprintln(os.Stderr, "\t" + fnName.At())
                 os.Exit(1)
             }
 
-            const _ uint = 3 - types.TypesCount
-            switch otherVar.GetType() {
-            case types.Str:
+            switch otherVar.GetType().(type) {
+            case types.StrType:
                 s1, s2 := otherVar.Gets()
                 asm.WriteString(fmt.Sprintf("mov %s, %s\n", regs[argNum], s1))
                 asm.WriteString(fmt.Sprintf("mov %s, %s\n", regs[argNum+1], s2))
 
-            case types.I32, types.Bool:
+            case types.I32Type, types.BoolType:
                 asm.WriteString(fmt.Sprintf("mov %s, %s\n", regs[argNum], otherVar.Get()))
 
+            case types.PtrType:
+                fmt.Fprintln(os.Stderr, "TODO PassVar PtrType")
+                os.Exit(1)
+                
             default:
                 fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", varname.Str)
                 os.Exit(1)
@@ -183,7 +189,7 @@ func PassReg(asm *os.File, fnName token.Token, argNum int, reg string) {
         os.Exit(1)
     }
 
-    if f.Args[argNum] == types.Str {
+    if _, ok := f.Args[argNum].(types.StrType); ok {
         fmt.Fprintf(os.Stderr, "[ERROR] expected function \"%s\" arg%d to be an i32 or bool but got str\n", fnName.Str, argNum)
         os.Exit(1)
     }

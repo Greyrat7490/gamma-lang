@@ -46,6 +46,23 @@ func prsStmt() ast.OpStmt {
         c := prsContinue()
         return &c
 
+    case token.Mul:
+        if token.Peek().Type != token.Name {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a variable after \"*\" but got \"%s\"\n", token.Peek().Str)
+            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+            os.Exit(1)
+            return &ast.BadStmt{}
+        }
+        if token.Peek2().Type != token.Assign {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected an assignment after dereferencing a pointer variable but got \"%s\"\n", token.Peek2().Str)
+            fmt.Fprintln(os.Stderr, "\t" + token.Peek().At())
+            os.Exit(1)
+            return &ast.BadStmt{}
+        }
+
+        a := prsAssignVar()
+        return &a
+
     case token.Name:
         if token.Peek().Type == token.ParenL {
             c := prsCallFn()
@@ -99,12 +116,15 @@ func prsBlock() ast.OpBlock {
 }
 
 func prsAssignVar() ast.OpAssignVar {
+    deref := token.Cur().Type == token.Mul
+    if deref { token.Next() }
+
     name := token.Cur()
     token.Next()
     token.Next()
     val := prsExpr()
 
-    return ast.OpAssignVar{ Varname: name, Value: val }
+    return ast.OpAssignVar{ Deref: deref, Varname: name, Value: val }
 }
 
 func prsIfStmt() ast.IfStmt {
@@ -128,7 +148,7 @@ func prsIfElse(If ast.IfStmt) ast.IfElseStmt {
 func prsWhileStmt() ast.WhileStmt {
     var op ast.WhileStmt = ast.WhileStmt{ WhilePos: token.Cur().Pos, InitVal: nil }
 
-    if isDec() {
+    if token.Peek().Type == token.Name && token.Peek2().Type == token.Typename {
         op.Dec = prsDecVar()
 
         if token.Next().Type != token.Comma {
@@ -140,21 +160,21 @@ func prsWhileStmt() ast.WhileStmt {
         token.Next()
         expr := prsExpr()
 
-        if token.Peek().Type == token.Comma {
-            token.Next()
+        if token.Next().Type == token.Comma {
             token.Next()
             op.Cond = prsExpr()
             op.InitVal = expr
+            token.Next()
         } else {
-            op.InitVal = &ast.LitExpr{ Val: token.Token{ Type: token.Number, Str: "0" }, Type: types.I32 }
+            op.InitVal = &ast.LitExpr{ Val: token.Token{ Type: token.Number, Str: "0" }, Type: types.I32Type{} }
             op.Cond = expr
         }
     } else {
         token.Next()
         op.Cond = prsExpr()
+        token.Next()
     }
 
-    token.Next()
     op.Block = prsBlock()
 
     return op
@@ -166,7 +186,7 @@ func prsForStmt() ast.ForStmt {
         Limit: nil,
         Start: &ast.LitExpr{
             Val: token.Token{ Str: "0", Type: token.Number },
-            Type: types.I32,
+            Type: types.I32Type{},
         },
     }
 
@@ -177,7 +197,7 @@ func prsForStmt() ast.ForStmt {
         OperandL: &ast.IdentExpr{ Ident: op.Dec.Varname },
         OperandR: &ast.LitExpr{
             Val: token.Token{ Str: "1", Type: token.Number },
-            Type: types.I32,
+            Type: types.I32Type{},
         },
     }
 

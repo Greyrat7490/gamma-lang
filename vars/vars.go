@@ -100,8 +100,11 @@ func DefWithVal(asm *os.File, varname token.Token, value token.Token) {
     }
 }
 
+func DefPtrWithVar(asm *os.File, ptrName string, otherVar string) {
+    globalDefines = append(globalDefines, fmt.Sprintf("%s: dq %s\n", ptrName, otherVar))
+}
 
-func AssignToExpr(asm *os.File, destVar token.Token, reg string) {
+func AssignToExpr(asm *os.File, deref bool, destVar token.Token, reg string) {
     v := GetVar(destVar.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", destVar.Str)
@@ -109,10 +112,20 @@ func AssignToExpr(asm *os.File, destVar token.Token, reg string) {
         os.Exit(1)
     }
 
-    asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), reg))
+    if _,ok := v.GetType().(types.PtrType); deref && ok {
+        if reg == "rax" {
+            asm.WriteString(fmt.Sprintf("mov rbx, %s\n", v.Get()))
+            asm.WriteString(fmt.Sprintf("mov QWORD [rbx], %s\n", reg))
+        } else {
+            asm.WriteString(fmt.Sprintf("mov rax, %s\n", v.Get()))
+            asm.WriteString(fmt.Sprintf("mov QWORD [rax], %s\n", reg))
+        }
+    } else {
+        asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), reg))
+    }
 }
 
-func AssignToVal(asm *os.File, name token.Token, value token.Token) {
+func AssignToVal(asm *os.File, deref bool, name token.Token, value token.Token) {
     v := GetVar(name.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] cannot assign var \"%s\" is not declared\n", name.Str)
@@ -120,24 +133,31 @@ func AssignToVal(asm *os.File, name token.Token, value token.Token) {
         os.Exit(1)
     }
 
-    const _ uint = 3 - types.TypesCount
-    switch v.GetType() {
-    case types.Str:
+    switch v.GetType().(type) {
+    case types.StrType:
         strIdx := str.Add(value.Str)
         s1, s2 := v.Gets()
         asm.WriteString(fmt.Sprintf("mov %s, str%d\n", s1, strIdx))
         asm.WriteString(fmt.Sprintf("mov %s, %d\n",    s2, str.GetSize(strIdx)))
 
-    case types.I32, types.Bool:
+    case types.I32Type, types.BoolType:
         asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), value.Str))
 
+    case types.PtrType:
+        if deref {
+            asm.WriteString(fmt.Sprintf("mov rax, %s\n", v.Get()))
+            asm.WriteString(fmt.Sprintf("mov QWORD [rax], %s\n", value.Str))
+        } else {
+            asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), value.Str))
+        }
+        
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", name.Str)
         os.Exit(1)
     }
 }
 
-func AssignToVar(asm *os.File, name token.Token, otherName token.Token) {
+func AssignToVar(asm *os.File, deref bool, name token.Token, otherName token.Token) {
     v := GetVar(name.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] cannot assign var \"%s\" is not declared\n", name.Str)
@@ -150,16 +170,30 @@ func AssignToVar(asm *os.File, name token.Token, otherName token.Token) {
 
     // TODO: check if var is defined
     if otherVar := GetVar(otherName.Str); otherVar != nil {
-        const _ uint = 3 - types.TypesCount
-        switch v.GetType() {
-        case types.Str:
+        switch v.GetType().(type) {
+        case types.StrType:
             vS1, vS2 := v.Gets()
             otherS1, otherS2 := otherVar.Gets()
             asm.WriteString(fmt.Sprintf("mov %s, %s\n", vS1, otherS1))
             asm.WriteString(fmt.Sprintf("mov %s, %s\n", vS2, otherS2))
 
-        case types.I32, types.Bool:
+        case types.I32Type, types.BoolType:
             asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), otherVar.Get()))
+
+        case types.PtrType:
+            if deref {
+                asm.WriteString(fmt.Sprintf("mov rax, %s\n", v.Get()))
+                asm.WriteString(fmt.Sprintf("mov rbx, %s\n", otherVar.Get()))
+                asm.WriteString("mov QWORD [rax], rbx\n")
+            } else {
+                if _, ok := otherVar.(*GlobalVar); ok {
+                    asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), otherName.Str))
+                } else {
+                    fmt.Fprintln(os.Stderr, "TODO AssignToVar local var ptr")
+                    os.Exit(1)
+                }
+                
+            }
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", name.Str)

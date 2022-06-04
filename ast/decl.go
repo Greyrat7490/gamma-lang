@@ -49,10 +49,21 @@ func (o *OpDecVar) Compile(asm *os.File) {
 func (o *OpDefVar) Compile(asm *os.File) {
     if l, ok := o.Value.(*LitExpr); ok {
         vars.DefWithVal(asm, o.Varname, l.Val)
-    } else if _, ok := o.Value.(*IdentExpr); ok {
-        fmt.Fprintf(os.Stderr, "[ERROR] you cannot define a global var with another var(yet)")
-        fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
-        os.Exit(1)
+    } else if ident, ok := o.Value.(*IdentExpr); ok {
+        if ptr, ok := vars.GetVar(o.Varname.Str).GetType().(types.PtrType); ok {
+            otherType := vars.GetVar(ident.Ident.Str).GetType()
+            if ptr.BaseType != otherType {
+                fmt.Fprintf(os.Stderr, "[ERROR] %s points to %v not should be %v\n", o.Varname.Str, otherType, ptr.BaseType)
+                fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
+                os.Exit(1)
+            }
+
+            vars.DefPtrWithVar(asm, o.Varname.Str, ident.Ident.Str)
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] you can only define global pointer with another global var")
+            fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
+            os.Exit(1)
+        }
     } else {
         o.Value.Compile(asm)
         vars.DefWithExpr(asm, o.Varname, "rax")
@@ -86,9 +97,9 @@ func (o *OpDecVar) Readable(indent int) string {
     s := strings.Repeat("   ", indent)
     s2 := s + "   "
 
-    return fmt.Sprintf("%sOP_DEC_VAR:\n%s%s(%s) %s(Typename)\n", s, s2,
+    return fmt.Sprintf("%sOP_DEC_VAR:\n%s%s(%s) %v(Typename)\n", s, s2,
         o.Varname.Str, o.Varname.Type.Readable(),
-        o.Vartype.Readable())
+        o.Vartype)
 }
 
 func (o *OpDefVar) Readable(indent int) string {
@@ -104,7 +115,7 @@ func (o *OpDefFn) Readable(indent int) string {
 
     s := ""
     for _,a := range o.Args {
-        s += fmt.Sprintf("%s(Name) %s(Typename), ", a.Varname.Str, a.Vartype.Readable())
+        s += fmt.Sprintf("%s(Name) %v(Typename), ", a.Varname.Str, a.Vartype)
     }
     if len(s) > 0 { s = s[:len(s)-2] }
 

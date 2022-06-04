@@ -34,8 +34,8 @@ func WhileIdent(asm *os.File, ident token.Token) {
         os.Exit(1)
     }
 
-    if v.GetType() != types.Bool {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"%s\" to be of type bool but got \"%s\"\n", ident.Str, v.GetType().Readable())
+    if _,ok := v.GetType().(types.BoolType); !ok {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"%s\" to be of type bool but got \"%v\"\n", ident.Str, v.GetType())
         fmt.Fprintln(os.Stderr, "\t" + ident.At())
         os.Exit(1)
     }
@@ -72,8 +72,8 @@ func ForIdent(asm *os.File, ident token.Token) {
         os.Exit(1)
     }
 
-    if v.GetType() != types.Bool {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"%s\" to be of type bool but got \"%s\"\n", ident.Str, v.GetType().Readable())
+    if _,ok := v.GetType().(types.BoolType); !ok {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"%s\" to be of type bool but got \"%v\"\n", ident.Str, v.GetType())
         fmt.Fprintln(os.Stderr, "\t" + ident.At())
         os.Exit(1)
     }

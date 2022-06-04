@@ -8,10 +8,6 @@ import (
     "gorec/types"
 )
 
-func isDec() bool {
-    return token.Peek().Type == token.Name && token.Peek2().Type == token.Typename
-}
-
 func prsDecl() ast.OpDecl {
     
     switch t := token.Next(); t.Type {
@@ -90,7 +86,7 @@ func prsDecVar() ast.OpDecVar {
     }
 
     t := types.ToType(vartype.Str)
-    if t == -1 {
+    if t == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", vartype.Str)
         fmt.Fprintln(os.Stderr, "\t" + vartype.At())
         os.Exit(1)
@@ -121,7 +117,7 @@ func prsDecArgs() []ast.OpDecVar {
         os.Exit(1)
     }
 
-    if isDec() {
+    if token.Peek().Type != token.ParenR {
         decs = append(decs, prsDecVar())
 
         for token.Peek().Type == token.Comma {

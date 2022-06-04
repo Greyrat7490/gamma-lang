@@ -38,7 +38,7 @@ func syscall(asm *os.File, syscallNum uint) {
 }
 
 func defineWriteInt(asm *os.File) {
-    fn.AddBuildIn("printInt", "i", types.I32)
+    fn.AddBuildIn("printInt", "i", types.I32Type{})
 
     asm.WriteString("printInt:\n")
     asm.WriteString("mov rax, rdi\n")
@@ -53,7 +53,7 @@ func defineWriteInt(asm *os.File) {
 }
 
 func defineWriteBool(asm *os.File) {
-    fn.AddBuildIn("printBool", "b", types.Bool)
+    fn.AddBuildIn("printBool", "b", types.BoolType{})
 
     asm.WriteString("printBool:\n")
 
@@ -69,7 +69,7 @@ func defineWriteBool(asm *os.File) {
 }
 
 func defineWriteStr(asm *os.File) {
-    fn.AddBuildIn("printStr", "s", types.Str)
+    fn.AddBuildIn("printStr", "s", types.StrType{})
 
     asm.WriteString("printStr:\n")
 
@@ -82,7 +82,7 @@ func defineWriteStr(asm *os.File) {
 }
 
 func defineExit(asm *os.File) {
-    fn.AddBuildIn("exit", "i", types.I32)
+    fn.AddBuildIn("exit", "i", types.I32Type{})
 
     asm.WriteString("exit:\n")
     asm.WriteString(fmt.Sprintf("mov rax, %d\n", SYS_EXIT))

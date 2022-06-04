@@ -27,6 +27,7 @@ type OpExprStmt struct {
 }
 
 type OpAssignVar struct {
+    Deref bool
     Varname token.Token
     Value OpExpr
 }
@@ -90,12 +91,12 @@ func (o *OpAssignVar)  stmt() {}
 
 func (o *OpAssignVar) Compile(asm *os.File) {
     if l, ok := o.Value.(*LitExpr); ok {
-        vars.AssignToVal(asm, o.Varname, l.Val)
+        vars.AssignToVal(asm, o.Deref, o.Varname, l.Val)
     } else if ident, ok := o.Value.(*IdentExpr); ok {
-        vars.AssignToVar(asm, o.Varname, ident.Ident)
+        vars.AssignToVar(asm, o.Deref, o.Varname, ident.Ident)
     } else {
         o.Value.Compile(asm)
-        vars.AssignToExpr(asm, o.Varname, "rax")
+        vars.AssignToExpr(asm, o.Deref, o.Varname, "rax")
     }
 }
 

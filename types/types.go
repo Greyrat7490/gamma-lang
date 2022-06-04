@@ -2,66 +2,70 @@ package types
 
 import "strconv"
 
-type Type int
-const (
-    I32 Type = iota
-    Str Type = iota
-    Bool Type = iota
-
-    TypesCount uint = iota
-)
-
-// TODO: string()
-func (t Type) Readable() string {
-    // compile time reminder to add cases when Types are added
-    const _ uint = 3 - TypesCount
-
-    switch t {
-    case Str:
-        return "str"
-    case I32:
-        return "i32"
-    case Bool:
-        return "bool"
-    default:
-        return ""
-    }
-}
-
 // TODO: correct sizes for i32 and bool (not just 64bit)
-func (t Type) Size() int {
-    if t == Str {
-        return 16 // ptr + size
-    }
 
-    return 8
+type Type interface {
+    Size() int
+    String() string
 }
 
-// -1 if string does not contain a valid type
-func ToType(s string) Type {
-    const _ uint = 3 - TypesCount
+type I32Type struct {}
+type BoolType struct {}
 
+type PtrType struct {
+    BaseType Type
+}
+type StrType struct {
+    ptr PtrType
+    size I32Type
+}
+
+
+func (t I32Type)  Size() int { return 8 }
+func (t BoolType) Size() int { return 8 }
+func (t PtrType)  Size() int { return 8 }
+func (t StrType)  Size() int { return t.ptr.Size() + t.size.Size() }
+
+func (t I32Type)  String() string { return "i32" }
+func (t BoolType) String() string { return "bool" }
+func (t PtrType)  String() string { return "*" + t.BaseType.String() }
+func (t StrType)  String() string { return "str" }
+
+
+func ToType(s string) Type {
+    isPtr := false
+    if s[0] == '*' {
+        s = s[1:]
+        isPtr = true
+    }
+    
+    var base Type
     switch s {
     case "str":
-        return Str
+        base = StrType{} // TODO: set ptr to *char
     case "i32":
-        return I32
+        base = I32Type{}
     case "bool":
-        return Bool
+        base = BoolType{}
     default:
-        return -1
+        base = nil
     }
+
+    if isPtr {
+        return PtrType{ BaseType: base }
+    }
+
+    return base
 }
 
-// -1 if neigther str, bool nor i32
 func TypeOfVal(val string) Type {
     if val[0] == '"' && val[len(val) - 1] == '"' {
-        return Str
+        return StrType{}
     } else if _, err := strconv.Atoi(val); err == nil {
-        return I32
+        return I32Type{}
     } else if val == "true" || val == "false" {
-        return Bool
+        return BoolType{}
     } else {
-        return -1
+        return nil
     }
 }

@@ -139,7 +139,7 @@ func (o *BadExpr) Compile(asm *os.File) {
 
 
 func (o *LitExpr) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + fmt.Sprintf("%s(%s)\n", o.Val.Str, o.Type.Readable())
+    return strings.Repeat("   ", indent) + fmt.Sprintf("%s(%v)\n", o.Val.Str, o.Type)
 }
 
 func (o *IdentExpr) Readable(indent int) string {

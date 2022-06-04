@@ -17,7 +17,7 @@ type LocalVar struct {
 }
 
 func (v *LocalVar) String() string {
-    return fmt.Sprintf("{%s %s}", v.Name.Str, v.Type.Readable())
+    return fmt.Sprintf("{%s %v}", v.Name.Str, v.Type)
 }
 func (v *LocalVar) Get() string {
     return fmt.Sprintf("QWORD [rbp-%d]", v.offset)
@@ -35,7 +35,7 @@ func GetLastOffset() int {
 
 func calcOffset(vartype types.Type) (offset int) {
     if !InGlobalScope() {
-        if vartype == types.Str {
+        if _, ok := vartype.(types.StrType); ok {
             offset = localVarOffset + 8
         } else {
             offset = localVarOffset + vartype.Size()
@@ -72,22 +72,26 @@ func declareLocal(varname token.Token, vartype types.Type) {
 }
 
 func defLocalVal(asm *os.File, v *LocalVar, val string) {
-    const _ uint = 3 - types.TypesCount
-    switch v.Type {
-    case types.Str:
+    switch v.Type.(type) {
+    case types.StrType:
         strIdx := str.Add(val)
         asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], str%d\n", v.offset, strIdx))
         asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %d\n", v.offset+8, str.GetSize(strIdx)))
 
-    case types.I32:
+    case types.I32Type:
         asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", v.offset, val))
 
-    case types.Bool:
+    case types.BoolType:
         if val == "true" { val = "1" } else { val = "0" }
         asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", v.offset, val))
 
+    case types.PtrType:
+        fmt.Fprintln(os.Stderr, "TODO defLocalVal PtrType")
+        os.Exit(1)
+
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name.Str)
+        os.Exit(1)
     }
 }
 

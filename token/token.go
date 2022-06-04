@@ -132,7 +132,7 @@ func TokenTypeOfStr(s string) TokenType {
         return Continue
 
     default:
-        if types.ToType(s) != -1 {
+        if types.ToType(s) != nil {
             return Typename
         } else if s[0] == '"' && s[len(s) - 1] == '"' {
             return Str
@@ -310,7 +310,13 @@ func Tokenize(file []byte) {
                 if start != i {
                     s := f[start:i]
 
-                    tokens = append(tokens, Token{TokenTypeOfStr(s), s, Pos{line, col + start - i} })
+                    t := TokenTypeOfStr(s)
+                    if t == Typename && tokens[len(tokens)-1].Type == Mul {
+                        tokens[len(tokens)-1].Str += s
+                        tokens[len(tokens)-1].Type = Typename
+                    } else {
+                        tokens = append(tokens, Token{t, s, Pos{line, col + start - i} })
+                    }
                 }
                 start = i + 1
 

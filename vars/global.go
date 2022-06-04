@@ -19,7 +19,7 @@ type GlobalVar struct {
 }
 
 func (v *GlobalVar) String() string {
-    return fmt.Sprintf("{%s %s}", v.Name.Str, v.Type.Readable())
+    return fmt.Sprintf("{%s %s}", v.Name.Str, v.Type)
 }
 func (v *GlobalVar) Get() string {
     return fmt.Sprintf("QWORD [%s]", v.Name.Str)
@@ -70,21 +70,25 @@ func defGlobalVal(asm *os.File, v *GlobalVar, val token.Token) {
         os.Exit(1)
     }
 
-    const _ uint = 3 - types.TypesCount
-    switch v.Type {
-    case types.Str:
+    switch v.Type.(type) {
+    case types.StrType:
         strIdx := str.Add(val.Str)
         globalDefines = append(globalDefines, fmt.Sprintf("%s: dq str%d, %d\n", v.Name.Str, strIdx, str.GetSize(strIdx)))
 
-    case types.I32:
+    case types.I32Type:
         globalDefines = append(globalDefines, fmt.Sprintf("%s: dq %s\n", v.Name.Str, val.Str))
 
-    case types.Bool:
+    case types.BoolType:
         if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
         globalDefines = append(globalDefines, fmt.Sprintf("%s: dq %s\n", v.Name.Str, val.Str))
 
+    case types.PtrType:
+        fmt.Fprintln(os.Stderr, "TODO defGlobalVal PtrType")
+        os.Exit(1)
+
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name.Str)
+        os.Exit(1)
     }
 }
 
