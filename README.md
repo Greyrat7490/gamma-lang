@@ -42,6 +42,10 @@ And because it is written in Go...
   * [x] while
   * [x] for
 * [ ] pointer
+  * [x] define/assign
+  * [x] deref
+  * [ ] get addr (via "&")
+  * [ ] arithmetic
 * [ ] turing complete -> actual programming language
   * [ ] proof with Rule 110 programm
 * [ ] type checking
