@@ -23,7 +23,7 @@ func (v *LocalVar) Get() string {
     return fmt.Sprintf("QWORD [rbp-%d]", v.offset)
 }
 func (v *LocalVar) Gets() (string, string) {
-    return fmt.Sprintf("QWORD [rbp-%d]", v.offset), fmt.Sprintf("QWORD [rbp-%d]", v.offset+8)
+    return fmt.Sprintf("QWORD [rbp-%d]", v.offset+8), fmt.Sprintf("QWORD [rbp-%d]", v.offset)
 }
 func (v *LocalVar) GetType() types.Type {
     return v.Type
@@ -75,8 +75,8 @@ func defLocalVal(asm *os.File, v *LocalVar, val string) {
     switch v.Type.GetKind() {
     case types.Str:
         strIdx := str.Add(val)
-        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], str%d\n", v.offset, strIdx))
-        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %d\n", v.offset+8, str.GetSize(strIdx)))
+        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], str%d\n", v.offset+8, strIdx))
+        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %d\n", v.offset, str.GetSize(strIdx)))
 
     case types.I32:
         asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", v.offset, val))

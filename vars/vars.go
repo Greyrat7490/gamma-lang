@@ -121,7 +121,14 @@ func DefPtrWithVar(asm *os.File, ptrName token.Token, otherVar token.Token) {
             os.Exit(1)
         }
 
-        asm.WriteString(fmt.Sprintf("lea rax, %s\n", other.Get()))
+        var s string
+        if other.GetType().GetKind() == types.Str {
+            s,_ = other.Gets()
+        } else {
+            s = other.Get()
+        }
+
+        asm.WriteString(fmt.Sprintf("lea rax, %s\n", s))
         asm.WriteString(fmt.Sprintf("mov %s, rax\n", v.Get()))
         return
     }
@@ -168,8 +175,17 @@ func AssignToVal(asm *os.File, deref bool, name token.Token, value token.Token) 
 
     case types.Ptr:
         if deref {
-            asm.WriteString(fmt.Sprintf("mov rax, %s\n", v.Get()))
-            asm.WriteString(fmt.Sprintf("mov QWORD [rax], %s\n", value.Str))
+            if p,ok := v.GetType().(types.PtrType); ok && p.BaseType.GetKind() == types.Str {
+                strIdx := str.Add(value.Str)
+                s1 := v.Get()
+
+                asm.WriteString(fmt.Sprintf("mov rax, %s\n", s1))
+                asm.WriteString(fmt.Sprintf("mov QWORD [rax], str%d\n", strIdx))
+                asm.WriteString(fmt.Sprintf("mov QWORD [rax+8], %d\n", str.GetSize(strIdx)))
+            } else {
+                asm.WriteString(fmt.Sprintf("mov rax, %s\n", v.Get()))
+                asm.WriteString(fmt.Sprintf("mov QWORD [rax], %s\n", value.Str))
+            }
         } else {
             asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), value.Str))
         }
@@ -205,9 +221,22 @@ func AssignToVar(asm *os.File, deref bool, name token.Token, otherName token.Tok
 
         case types.Ptr:
             if deref {
-                asm.WriteString(fmt.Sprintf("mov rax, %s\n", v.Get()))
-                asm.WriteString(fmt.Sprintf("mov rbx, %s\n", otherVar.Get()))
-                asm.WriteString("mov QWORD [rax], rbx\n")
+                if p,ok := v.GetType().(types.PtrType); ok && p.BaseType.GetKind() == types.Str {
+                    s1 := v.Get()
+                    otherS1, otherS2 := otherVar.Gets()
+
+                    asm.WriteString(fmt.Sprintf("mov rax, %s\n", s1))
+
+                    asm.WriteString(fmt.Sprintf("mov rbx, %s\n", otherS1))
+                    asm.WriteString("mov QWORD [rax], rbx\n")
+
+                    asm.WriteString(fmt.Sprintf("mov rbx, %s\n", otherS2))
+                    asm.WriteString("mov QWORD [rax+8], rbx\n")
+                } else {
+                    asm.WriteString(fmt.Sprintf("mov rax, %s\n", v.Get()))
+                    asm.WriteString(fmt.Sprintf("mov rbx, %s\n", otherVar.Get()))
+                    asm.WriteString("mov QWORD [rax], rbx\n")
+                }
             } else {
                 if _, ok := otherVar.(*GlobalVar); ok {
                     asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), otherName.Str))
