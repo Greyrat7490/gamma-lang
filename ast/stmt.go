@@ -27,8 +27,7 @@ type OpExprStmt struct {
 }
 
 type OpAssignVar struct {
-    Deref bool
-    Varname token.Token
+    Dest OpExpr
     Value OpExpr
 }
 
@@ -90,13 +89,27 @@ func (o *OpAssignVar)  stmt() {}
 
 
 func (o *OpAssignVar) Compile(asm *os.File) {
-    if l, ok := o.Value.(*LitExpr); ok {
-        vars.AssignToVal(asm, o.Deref, o.Varname, l.Val)
-    } else if ident, ok := o.Value.(*IdentExpr); ok {
-        vars.AssignToVar(asm, o.Deref, o.Varname, ident.Ident)
-    } else {
-        o.Value.Compile(asm)
-        vars.AssignToExpr(asm, o.Deref, o.Varname, "rax")
+    if deref,ok := o.Dest.(*UnaryExpr); ok {
+        deref.Compile(asm)
+
+        if l, ok := o.Value.(*LitExpr); ok {
+            vars.DerefSetVal(asm, l.Val)
+        } else if ident, ok := o.Value.(*IdentExpr); ok {
+            vars.DerefSetVar(asm, ident.Ident)
+        } else {
+            asm.WriteString("mov rdx, rax\n")
+            o.Value.Compile(asm)
+            asm.WriteString("mov QWORD [rdx], rax\n")
+        }
+    } else if ident, ok := o.Dest.(*IdentExpr); ok {
+        if l, ok := o.Value.(*LitExpr); ok {
+            vars.VarSetVal(asm, ident.Ident, l.Val)
+        } else if other, ok := o.Value.(*IdentExpr); ok {
+            vars.VarSetVar(asm, ident.Ident, other.Ident)
+        } else {
+            o.Value.Compile(asm)
+            vars.VarSetExpr(asm, ident.Ident)
+        }
     }
 }
 
@@ -221,7 +234,7 @@ func (o *ForStmt) Compile(asm *os.File) {
     o.Block.Compile(asm)
     loops.ForBlockEnd(asm, count)
 
-    step := OpAssignVar{ Varname: o.Dec.Varname, Value: o.Step }
+    step := OpAssignVar{ Dest: &IdentExpr{ Ident: o.Dec.Varname }, Value: o.Step }
     step.Compile(asm)
     loops.ForEnd(asm, count)
 
@@ -251,7 +264,9 @@ func (o *BadStmt) Compile(asm *os.File) {
 
 
 func (o *OpAssignVar) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + fmt.Sprintf("OP_ASSIGN: %s\n", o.Varname.Str) + o.Value.Readable(indent+1)
+    return strings.Repeat("   ", indent) + "OP_ASSIGN:\n" +
+        o.Dest.Readable(indent+1) +
+        o.Value.Readable(indent+1)
 }
 
 func (o *OpBlock) Readable(indent int) string {

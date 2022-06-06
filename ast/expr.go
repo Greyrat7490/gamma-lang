@@ -64,11 +64,7 @@ func (o *IdentExpr) Compile(asm *os.File) {}
 func (o *ParenExpr) Compile(asm *os.File) { o.Expr.Compile(asm) }
 func (o *UnaryExpr) Compile(asm *os.File) {
     if o.Operator.Type == token.Mul {
-        if ident, ok := o.Operand.(*IdentExpr); !ok {
-            fmt.Fprintln(os.Stderr, "[ERROR] expected a variable after \"*\"")
-            fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
-            os.Exit(1)
-        } else {
+        if ident, ok := o.Operand.(*IdentExpr); ok {
             v := vars.GetVar(ident.Ident.Str)
             if v == nil {
                 fmt.Fprintf(os.Stderr, "[ERROR] variable \"%s\" is not declared\n", ident.Ident.Str)
@@ -81,10 +77,18 @@ func (o *UnaryExpr) Compile(asm *os.File) {
             } else {
                 asm.WriteString(fmt.Sprintf("mov rax, %s\n", v.Get()))
             }
-            asm.WriteString("mov rax, QWORD [rax]\n")
+
+            return
         }
 
-        return
+        if _, ok := o.Operand.(*ParenExpr); ok {
+            o.Operand.Compile(asm)
+            return
+        }
+
+        fmt.Fprintln(os.Stderr, "[ERROR] expected a variable or parentheses after \"*\"")
+        fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+        os.Exit(1)
     }
 
 
@@ -108,7 +112,6 @@ func (o *UnaryExpr) Compile(asm *os.File) {
 }
 func (o *BinaryExpr) Compile(asm *os.File) {
     if l, ok := o.OperandL.(*LitExpr); ok {
-
         vars.Write(asm, fmt.Sprintf("mov rax, %s\n", l.Val.Str))
     } else if ident, ok := o.OperandL.(*IdentExpr); ok {
         if v := vars.GetVar(ident.Ident.Str); v == nil {
@@ -121,6 +124,11 @@ func (o *BinaryExpr) Compile(asm *os.File) {
     }
 
     o.OperandL.Compile(asm)
+    if u, ok := o.OperandL.(*UnaryExpr); ok {
+        if u.Operator.Type == token.Mul {
+            vars.Write(asm, "mov rax, QWORD [rax]\n")
+        }
+    }
 
     if l, ok := o.OperandR.(*LitExpr); ok {
         arith.BinaryOp(asm, o.Operator.Type, l.Val.Str)
@@ -136,6 +144,11 @@ func (o *BinaryExpr) Compile(asm *os.File) {
         vars.Write(asm, "push rbx\n")
         vars.Write(asm, "mov rbx, rax\n")
         o.OperandR.Compile(asm)
+        if u, ok := o.OperandR.(*UnaryExpr); ok {
+            if u.Operator.Type == token.Mul {
+                vars.Write(asm, "mov rax, QWORD [rax]\n")
+            }
+        }
 
         arith.BinaryOp(asm, o.Operator.Type, "rbx")
         vars.Write(asm, "pop rbx\n")
@@ -148,6 +161,11 @@ func (o *OpFnCall) Compile(asm *os.File) {
             fn.PassVal(asm, o.FnName, i, l.Val)
         } else if ident, ok := val.(*IdentExpr); ok {
             fn.PassVar(asm, o.FnName, i, ident.Ident)
+        } else if u, ok := val.(*UnaryExpr); ok {
+            if u.Operator.Type == token.Mul {
+                val.Compile(asm)
+                fn.PassReg(asm, o.FnName, i, "QWORD [rax]")
+            }
         } else {
             val.Compile(asm)
             fn.PassReg(asm, o.FnName, i, "rax")

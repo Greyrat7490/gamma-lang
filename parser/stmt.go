@@ -47,20 +47,16 @@ func prsStmt() ast.OpStmt {
         return &c
 
     case token.Mul:
-        if token.Peek().Type != token.Name {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected a variable after \"*\" but got \"%s\"\n", token.Peek().Str)
-            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
-            os.Exit(1)
-            return &ast.BadStmt{}
-        }
-        if token.Peek2().Type != token.Assign {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected an assignment after dereferencing a pointer variable but got \"%s\"\n", token.Peek2().Str)
+        expr := prsUnaryExpr()
+
+        if token.Peek().Type != token.Assign {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected an assignment after dereferencing a pointer variable but got \"%s\"\n", token.Peek().Str)
             fmt.Fprintln(os.Stderr, "\t" + token.Peek().At())
             os.Exit(1)
             return &ast.BadStmt{}
         }
 
-        a := prsAssignVar()
+        a := prsAssignVar(expr)
         return &a
 
     case token.Name:
@@ -68,7 +64,8 @@ func prsStmt() ast.OpStmt {
             c := prsCallFn()
             return &ast.OpExprStmt{ Expr: &c }
         } else if token.Peek().Type == token.Assign {
-            a := prsAssignVar()
+            name := prsIdentExpr()
+            a := prsAssignVar(name)
             return &a
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] variable \"%s\" is not used\n", token.Cur().Str)
@@ -115,16 +112,12 @@ func prsBlock() ast.OpBlock {
     return block
 }
 
-func prsAssignVar() ast.OpAssignVar {
-    deref := token.Cur().Type == token.Mul
-    if deref { token.Next() }
-
-    name := token.Cur()
-    token.Next()
+func prsAssignVar(dest ast.OpExpr) ast.OpAssignVar {
+    token.Next() // TODO set equals pos
     token.Next()
     val := prsExpr()
 
-    return ast.OpAssignVar{ Deref: deref, Varname: name, Value: val }
+    return ast.OpAssignVar{ Dest: dest, Value: val }
 }
 
 func prsIfStmt() ast.IfStmt {

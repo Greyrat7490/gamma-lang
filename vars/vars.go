@@ -134,7 +134,7 @@ func DefPtrWithVar(asm *os.File, ptrName token.Token, otherVar token.Token) {
     }
 }
 
-func AssignToExpr(asm *os.File, deref bool, destVar token.Token, reg string) {
+func VarSetExpr(asm *os.File, destVar token.Token) {
     v := GetVar(destVar.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", destVar.Str)
@@ -142,20 +142,21 @@ func AssignToExpr(asm *os.File, deref bool, destVar token.Token, reg string) {
         os.Exit(1)
     }
 
-    if deref && v.GetType().GetKind() == types.Ptr {
-        if reg == "rax" {
-            asm.WriteString(fmt.Sprintf("mov rbx, %s\n", v.Get()))
-            asm.WriteString(fmt.Sprintf("mov QWORD [rbx], %s\n", reg))
-        } else {
-            asm.WriteString(fmt.Sprintf("mov rax, %s\n", v.Get()))
-            asm.WriteString(fmt.Sprintf("mov QWORD [rax], %s\n", reg))
-        }
+    asm.WriteString(fmt.Sprintf("mov %s, rax\n", v.Get()))
+}
+
+func DerefSetVal(asm *os.File, value token.Token) {
+    if value.Type == token.Str {
+        strIdx := str.Add(value.Str)
+
+        asm.WriteString(fmt.Sprintf("mov QWORD [rax], str%d\n", strIdx))
+        asm.WriteString(fmt.Sprintf("mov QWORD [rax+8], %d\n", str.GetSize(strIdx)))
     } else {
-        asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), reg))
+        asm.WriteString(fmt.Sprintf("mov QWORD [rax], %s\n", value.Str))
     }
 }
 
-func AssignToVal(asm *os.File, deref bool, name token.Token, value token.Token) {
+func DerefSetVar(asm *os.File, name token.Token) {
     v := GetVar(name.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] cannot assign var \"%s\" is not declared\n", name.Str)
@@ -163,40 +164,40 @@ func AssignToVal(asm *os.File, deref bool, name token.Token, value token.Token) 
         os.Exit(1)
     }
 
-    switch v.GetType().GetKind() {
-    case types.Str:
-        strIdx := str.Add(value.Str)
+    if p,ok := v.GetType().(types.PtrType); ok && p.BaseType.GetKind() == types.Str {
         s1, s2 := v.Gets()
-        asm.WriteString(fmt.Sprintf("mov %s, str%d\n", s1, strIdx))
-        asm.WriteString(fmt.Sprintf("mov %s, %d\n",    s2, str.GetSize(strIdx)))
 
-    case types.I32, types.Bool:
-        asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), value.Str))
+        asm.WriteString(fmt.Sprintf("mov rbx, %s\n", s1))
+        asm.WriteString("mov QWORD [rax], rbx\n")
 
-    case types.Ptr:
-        if deref {
-            if p,ok := v.GetType().(types.PtrType); ok && p.BaseType.GetKind() == types.Str {
-                strIdx := str.Add(value.Str)
-                s1 := v.Get()
-
-                asm.WriteString(fmt.Sprintf("mov rax, %s\n", s1))
-                asm.WriteString(fmt.Sprintf("mov QWORD [rax], str%d\n", strIdx))
-                asm.WriteString(fmt.Sprintf("mov QWORD [rax+8], %d\n", str.GetSize(strIdx)))
-            } else {
-                asm.WriteString(fmt.Sprintf("mov rax, %s\n", v.Get()))
-                asm.WriteString(fmt.Sprintf("mov QWORD [rax], %s\n", value.Str))
-            }
-        } else {
-            asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), value.Str))
-        }
-
-    default:
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", name.Str)
-        os.Exit(1)
+        asm.WriteString(fmt.Sprintf("mov rbx, %s\n", s2))
+        asm.WriteString("mov QWORD [rax+8], rbx\n")
+    } else {
+        asm.WriteString(fmt.Sprintf("mov rbx, %s\n", v.Get()))
+        asm.WriteString("mov QWORD [rax], rbx\n")
     }
 }
 
-func AssignToVar(asm *os.File, deref bool, name token.Token, otherName token.Token) {
+func VarSetVal(asm *os.File, name token.Token, value token.Token) {
+    v := GetVar(name.Str)
+    if v == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot assign var \"%s\" is not declared\n", name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+    }
+
+    if v.GetType().GetKind() == types.Str {
+        strIdx := str.Add(value.Str)
+        s1, s2 := v.Gets()
+
+        asm.WriteString(fmt.Sprintf("mov %s, str%d\n", s1, strIdx))
+        asm.WriteString(fmt.Sprintf("mov %s, %d\n",    s2, str.GetSize(strIdx)))
+    } else {
+        asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), value.Str))
+    }
+}
+
+func VarSetVar(asm *os.File, name token.Token, otherName token.Token) {
     v := GetVar(name.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] cannot assign var \"%s\" is not declared\n", name.Str)
@@ -220,30 +221,11 @@ func AssignToVar(asm *os.File, deref bool, name token.Token, otherName token.Tok
             asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), otherVar.Get()))
 
         case types.Ptr:
-            if deref {
-                if p,ok := v.GetType().(types.PtrType); ok && p.BaseType.GetKind() == types.Str {
-                    s1 := v.Get()
-                    otherS1, otherS2 := otherVar.Gets()
-
-                    asm.WriteString(fmt.Sprintf("mov rax, %s\n", s1))
-
-                    asm.WriteString(fmt.Sprintf("mov rbx, %s\n", otherS1))
-                    asm.WriteString("mov QWORD [rax], rbx\n")
-
-                    asm.WriteString(fmt.Sprintf("mov rbx, %s\n", otherS2))
-                    asm.WriteString("mov QWORD [rax+8], rbx\n")
-                } else {
-                    asm.WriteString(fmt.Sprintf("mov rax, %s\n", v.Get()))
-                    asm.WriteString(fmt.Sprintf("mov rbx, %s\n", otherVar.Get()))
-                    asm.WriteString("mov QWORD [rax], rbx\n")
-                }
+            if _, ok := otherVar.(*GlobalVar); ok {
+                asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), otherName.Str))
             } else {
-                if _, ok := otherVar.(*GlobalVar); ok {
-                    asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), otherName.Str))
-                } else {
-                    asm.WriteString(fmt.Sprintf("lea rax, %s\n", otherVar.Get()))
-                    asm.WriteString(fmt.Sprintf("mov %s, rax\n", v.Get()))
-                }
+                asm.WriteString(fmt.Sprintf("lea rax, %s\n", otherVar.Get()))
+                asm.WriteString(fmt.Sprintf("mov %s, rax\n", v.Get()))
             }
 
         default:

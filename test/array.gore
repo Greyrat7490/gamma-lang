@@ -3,43 +3,34 @@ var dummy i32 := 0
 // temporary way to create and use arrays
 // UNSAFE!!
 
-// array "grows" from stack end   (smallest stack address) 
+// array "grows" from stack end   (smallest stack address)
 //                 to stack start (biggest stack address / stack_top)
 
 fn main() {
     var arr *i32 := dummy
 
+    printStr("write to \"array\"")
+
+    printStr("arr[0] = dummy -> 0")
+
+    printStr("arr[1] = -86")
+    *(arr+8) = -86
+
+    printStr("arr[2] = 69420")
+    *(arr+16) = 69420
+
+
+    printStr("read from \"array\"")
+
     printStr("arr[0]")
     printPtr(arr)
     printInt(*arr)
 
     printStr("arr[1]")
-    arr = arr + 8
-    printPtr(arr)
-
-    *arr = -86
-    printInt(*arr)
+    printPtr(arr+8)
+    printInt(*(arr+8))
 
     printStr("arr[2]")
-    arr = arr + 8
-    printPtr(arr)
-
-    *arr = 69420
-    printInt(*arr)
-
-
-    printStr("-------")
-
-
-    printStr("arr[0]")
-    arr = arr - 16
-    printInt(*arr)
-    
-    printStr("arr[1]")
-    arr = arr + 8
-    printInt(*arr)
-
-    printStr("arr[2]")
-    arr = arr + 8
-    printInt(*arr)
+    printPtr(arr+16)
+    printInt(*(arr+16))
 }

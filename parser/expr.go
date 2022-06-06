@@ -124,8 +124,11 @@ func prsUnaryExpr() *ast.UnaryExpr {
     expr := ast.UnaryExpr{ Operator: token.Cur() }
 
     if expr.Operator.Type == token.Mul {
-        token.Next()
-        expr.Operand = prsIdentExpr()
+        if token.Next().Type == token.ParenL {
+            expr.Operand = prsParenExpr()
+        } else {
+            expr.Operand = prsIdentExpr()
+        }
 
         return &expr
     } else {
