@@ -1,0 +1,45 @@
+var dummy i32 := 0
+
+// temporary way to create and use arrays
+// UNSAFE!!
+
+// array "grows" from stack end   (smallest stack address) 
+//                 to stack start (biggest stack address / stack_top)
+
+fn main() {
+    var arr *i32 := dummy
+
+    printStr("arr[0]")
+    printPtr(arr)
+    printInt(*arr)
+
+    printStr("arr[1]")
+    arr = arr + 8
+    printPtr(arr)
+
+    *arr = -86
+    printInt(*arr)
+
+    printStr("arr[2]")
+    arr = arr + 8
+    printPtr(arr)
+
+    *arr = 69420
+    printInt(*arr)
+
+
+    printStr("-------")
+
+
+    printStr("arr[0]")
+    arr = arr - 16
+    printInt(*arr)
+    
+    printStr("arr[1]")
+    arr = arr + 8
+    printInt(*arr)
+
+    printStr("arr[2]")
+    arr = arr + 8
+    printInt(*arr)
+}
