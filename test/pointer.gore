@@ -3,8 +3,6 @@ var v2 i32 := 420
 var p1 *i32 := v1       // TODO "&" to get addr
 var s str := "global string"
 
-// TODO test pointer arithmetic
-
 fn global_test() {
     printStr("p1 = &v1")
 
