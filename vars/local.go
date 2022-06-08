@@ -30,7 +30,8 @@ func (v *LocalVar) GetType() types.Type {
 }
 
 func GetLastOffset() int {
-    return scopes[curScope].vars[len(scopes[curScope].vars)-1].offset
+    vars := scopes[len(scopes)-1].vars
+    return vars[len(vars)-1].offset
 }
 
 func calcOffset(vartype types.Type) (offset int) {
@@ -48,7 +49,7 @@ func calcOffset(vartype types.Type) (offset int) {
 }
 
 func inCurScope(name string) bool {
-    for _,v := range scopes[curScope].vars {
+    for _,v := range scopes[len(scopes)-1].vars {
         if v.Name.Str == name {
             return true
         }
@@ -64,7 +65,7 @@ func declareLocal(varname token.Token, vartype types.Type) {
         os.Exit(1)
     }
 
-    scopes[curScope].vars = append(scopes[curScope].vars, LocalVar{
+    scopes[len(scopes)-1].vars = append(scopes[len(scopes)-1].vars, LocalVar{
         Name: varname,
         Type: vartype,
         offset: calcOffset(vartype),

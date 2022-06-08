@@ -64,109 +64,96 @@ func (o *IdentExpr) Compile(asm *os.File) {}
 func (o *ParenExpr) Compile(asm *os.File) { o.Expr.Compile(asm) }
 func (o *UnaryExpr) Compile(asm *os.File) {
     if o.Operator.Type == token.Mul {
-        if ident, ok := o.Operand.(*IdentExpr); ok {
-            v := vars.GetVar(ident.Ident.Str)
-            if v == nil {
-                fmt.Fprintf(os.Stderr, "[ERROR] variable \"%s\" is not declared\n", ident.Ident.Str)
-                fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
-                os.Exit(1)
-            }
+        switch e := o.Operand.(type) {
+        case *IdentExpr:
+            vars.SetRax(asm, e.Ident)
 
-            if _, ok := v.(*vars.GlobalVar); ok {
-                asm.WriteString(fmt.Sprintf("mov rax, QWORD [%s]\n", ident.Ident.Str))
-            } else {
-                asm.WriteString(fmt.Sprintf("mov rax, %s\n", v.Get()))
-            }
-
-            return
-        }
-
-        if _, ok := o.Operand.(*ParenExpr); ok {
+        case *ParenExpr:
             o.Operand.Compile(asm)
-            return
-        }
 
-        fmt.Fprintln(os.Stderr, "[ERROR] expected a variable or parentheses after \"*\"")
-        fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
-        os.Exit(1)
-    }
-
-
-    if l, ok := o.Operand.(*LitExpr); ok {
-        vars.Write(asm, fmt.Sprintf("mov rax, %s\n", l.Val.Str))
-    } else if ident, ok := o.Operand.(*IdentExpr); ok {
-        if vars.GetVar(ident.Ident.Str) == nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] variable \"%s\" is not declared\n", ident.Ident.Str)
-            fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
+        default:
+            fmt.Fprintln(os.Stderr, "[ERROR] expected a variable or parentheses after \"*\"")
+            fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
             os.Exit(1)
         }
+    } else {
+        switch e := o.Operand.(type) {
+        case *IdentExpr:
+            vars.SetRax(asm, e.Ident)
 
-        vars.Write(asm, fmt.Sprintf("mov rax, %s\n", vars.GetVar(ident.Ident.Str).Get()))
-    }
+        case *LitExpr:
+            vars.Write(asm, fmt.Sprintf("mov rax, %s\n", e.Val.Str))
 
-    o.Operand.Compile(asm)
+        default:
+            o.Operand.Compile(asm)
+        }
 
-    if o.Operator.Type == token.Minus {
-        vars.Write(asm, "neg rax\n")
+        if o.Operator.Type == token.Minus {
+            vars.Write(asm, "neg rax\n")
+        }
     }
 }
 func (o *BinaryExpr) Compile(asm *os.File) {
-    if l, ok := o.OperandL.(*LitExpr); ok {
-        vars.Write(asm, fmt.Sprintf("mov rax, %s\n", l.Val.Str))
-    } else if ident, ok := o.OperandL.(*IdentExpr); ok {
-        if v := vars.GetVar(ident.Ident.Str); v == nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str)
-            fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
-            os.Exit(1)
-        }
-
-        vars.Write(asm, fmt.Sprintf("mov rax, %s\n", vars.GetVar(ident.Ident.Str).Get()))
-    }
-
-    o.OperandL.Compile(asm)
-    if u, ok := o.OperandL.(*UnaryExpr); ok {
-        if u.Operator.Type == token.Mul {
+    switch e := o.OperandL.(type) {
+    case *LitExpr:
+        vars.Write(asm, fmt.Sprintf("mov rax, %s\n", e.Val.Str))
+    case *IdentExpr:
+        vars.SetRax(asm, e.Ident)
+    case *UnaryExpr:
+        o.OperandL.Compile(asm)
+        if e.Operator.Type == token.Mul {
             vars.Write(asm, "mov rax, QWORD [rax]\n")
         }
+    default:
+        o.OperandL.Compile(asm)
     }
+ 
 
-    if l, ok := o.OperandR.(*LitExpr); ok {
-        arith.BinaryOp(asm, o.Operator.Type, l.Val.Str)
-    } else if ident, ok := o.OperandR.(*IdentExpr); ok {
-        if v := vars.GetVar(ident.Ident.Str); v == nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", ident.Ident.Str)
-            fmt.Fprintln(os.Stderr, "\t" + ident.Ident.At())
+    switch e := o.OperandR.(type) {
+    case *LitExpr:
+        arith.BinaryOp(asm, o.Operator.Type, e.Val.Str)
+    case *IdentExpr: 
+        v := vars.GetVar(e.Ident.Str)
+        if v == nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", e.Ident.Str)
+            fmt.Fprintln(os.Stderr, "\t" + e.Ident.At())
             os.Exit(1)
         }
 
-        arith.BinaryOp(asm, o.Operator.Type, vars.GetVar(ident.Ident.Str).Get())
-    } else {
+        arith.BinaryOp(asm, o.Operator.Type, v.Get())
+
+    default:
         vars.Write(asm, "push rbx\n")
         vars.Write(asm, "mov rbx, rax\n")
-        o.OperandR.Compile(asm)
-        if u, ok := o.OperandR.(*UnaryExpr); ok {
-            if u.Operator.Type == token.Mul {
-                vars.Write(asm, "mov rax, QWORD [rax]\n")
-            }
-        }
 
+        o.OperandR.Compile(asm)
+        if u,ok := e.(*UnaryExpr); ok && u.Operator.Type == token.Mul {
+            vars.Write(asm, "mov rax, QWORD [rax]\n")
+        }
         arith.BinaryOp(asm, o.Operator.Type, "rbx")
+
         vars.Write(asm, "pop rbx\n")
     }
 }
 
 func (o *OpFnCall) Compile(asm *os.File) {
     for i, val := range o.Values {
-        if l, ok := val.(*LitExpr); ok {
-            fn.PassVal(asm, o.FnName, i, l.Val)
-        } else if ident, ok := val.(*IdentExpr); ok {
-            fn.PassVar(asm, o.FnName, i, ident.Ident)
-        } else if u, ok := val.(*UnaryExpr); ok {
-            if u.Operator.Type == token.Mul {
-                val.Compile(asm)
+        switch e := val.(type) {
+        case *LitExpr:
+            fn.PassVal(asm, o.FnName, i, e.Val)
+
+        case *IdentExpr:
+            fn.PassVar(asm, o.FnName, i, e.Ident)
+
+        case *UnaryExpr:
+            val.Compile(asm)
+            if e.Operator.Type == token.Mul {
                 fn.PassReg(asm, o.FnName, i, "QWORD [rax]")
+            } else {   
+                fn.PassReg(asm, o.FnName, i, "rax")
             }
-        } else {
+
+        default:
             val.Compile(asm)
             fn.PassReg(asm, o.FnName, i, "rax")
         }

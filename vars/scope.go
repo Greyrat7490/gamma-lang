@@ -1,7 +1,6 @@
 package vars
 
 var scopes []Scope
-var curScope int = -1
 
 type Scope struct {
     vars []LocalVar
@@ -9,11 +8,10 @@ type Scope struct {
 }
 
 func InGlobalScope() bool {
-    return curScope == -1
+    return len(scopes) == 0
 }
 
 func CreateScope() {
-    curScope = len(scopes)
     scopes = append(scopes, Scope{})
 }
 
@@ -22,6 +20,5 @@ func RemoveScope() {
 
     if len(scopes) > 0 {
         scopes = scopes[:len(scopes)-1]
-        curScope--
     }
 }

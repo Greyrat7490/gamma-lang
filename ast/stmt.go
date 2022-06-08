@@ -89,27 +89,39 @@ func (o *OpAssignVar)  stmt() {}
 
 
 func (o *OpAssignVar) Compile(asm *os.File) {
-    if deref,ok := o.Dest.(*UnaryExpr); ok {
-        deref.Compile(asm)
+    switch dest := o.Dest.(type) {
+    case *UnaryExpr:
+        dest.Compile(asm)
 
-        if l, ok := o.Value.(*LitExpr); ok {
-            vars.DerefSetVal(asm, l.Val)
-        } else if ident, ok := o.Value.(*IdentExpr); ok {
-            vars.DerefSetVar(asm, ident.Ident)
-        } else {
+        switch e := o.Value.(type) {
+        case *LitExpr:
+            vars.DerefSetVal(asm, e.Val)
+
+        case *IdentExpr:
+            vars.DerefSetVar(asm, e.Ident)
+
+        default:
             asm.WriteString("mov rdx, rax\n")
             o.Value.Compile(asm)
             asm.WriteString("mov QWORD [rdx], rax\n")
         }
-    } else if ident, ok := o.Dest.(*IdentExpr); ok {
-        if l, ok := o.Value.(*LitExpr); ok {
-            vars.VarSetVal(asm, ident.Ident, l.Val)
-        } else if other, ok := o.Value.(*IdentExpr); ok {
-            vars.VarSetVar(asm, ident.Ident, other.Ident)
-        } else {
+
+    case *IdentExpr:
+        switch e := o.Value.(type) {
+        case *LitExpr:
+            vars.VarSetVal(asm, dest.Ident, e.Val)
+
+        case *IdentExpr:
+            vars.VarSetVar(asm, dest.Ident, e.Ident)
+
+        default:
             o.Value.Compile(asm)
-            vars.VarSetExpr(asm, ident.Ident)
+            vars.VarSetExpr(asm, dest.Ident, "rax")
         }
+        
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a variable or a derefenced pointer but got \"%t\"\n", dest)
+        os.Exit(1)
     }
 }
 
@@ -122,18 +134,20 @@ func (o *OpBlock) Compile(asm *os.File) {
 func (o *IfStmt) Compile(asm *os.File) {
     vars.CreateScope()
 
-    if l, ok := o.Cond.(*LitExpr); ok {
-        if l.Val.Str == "true" {
+    switch e := o.Cond.(type) {
+    case *LitExpr:
+        if e.Val.Str == "true" {
             o.Block.Compile(asm)
         }
-    } else if ident, ok := o.Cond.(*IdentExpr); ok {
-        count := cond.IfIdent(asm, ident.Ident)
+
+    case *IdentExpr:
+        count := cond.IfIdent(asm, e.Ident)
         o.Block.Compile(asm)
         cond.IfEnd(asm, count)
-    } else {
+
+    default:
         o.Cond.Compile(asm)
         count := cond.IfReg(asm, "rax")
-
         o.Block.Compile(asm)
         cond.IfEnd(asm, count)
     }
@@ -142,19 +156,20 @@ func (o *IfStmt) Compile(asm *os.File) {
 }
 
 func (o *IfElseStmt) Compile(asm *os.File) {
-
-    if l, ok := o.If.Cond.(*LitExpr); ok {
+    switch e := o.If.Cond.(type) {
+    case *LitExpr:
         vars.CreateScope()
 
-        if l.Val.Str == "true" {
+        if e.Val.Str == "true" {
             o.If.Block.Compile(asm)
         } else {
             o.Block.Compile(asm)
         }
 
         vars.RemoveScope()
-    } else if ident, ok := o.If.Cond.(*IdentExpr); ok {
-        count := cond.IfElseIdent(asm, ident.Ident)
+
+    case *IdentExpr:
+        count := cond.IfElseIdent(asm, e.Ident)
 
         vars.CreateScope()
         o.If.Block.Compile(asm)
@@ -167,7 +182,8 @@ func (o *IfElseStmt) Compile(asm *os.File) {
         vars.RemoveScope()
 
         cond.IfElseEnd(asm, count)
-    } else {
+
+    default:
         o.If.Cond.Compile(asm)
         count := cond.IfElseReg(asm, "rax")
 
@@ -194,22 +210,24 @@ func (o *WhileStmt) Compile(asm *os.File) {
         def.Compile(asm)
     }
 
-    if l, ok := o.Cond.(*LitExpr); ok {
-        if l.Val.Str == "true" {
+    switch e := o.Cond.(type) {
+    case *LitExpr:
+        if e.Val.Str == "true" {
             count := loops.WhileStart(asm)
             o.Block.Compile(asm)
             loops.WhileEnd(asm, count)
         }
-    } else if ident, ok := o.Cond.(*IdentExpr); ok {
+
+    case *IdentExpr:
         count := loops.WhileStart(asm)
-        loops.WhileIdent(asm, ident.Ident)
+        loops.WhileIdent(asm, e.Ident)
         o.Block.Compile(asm)
         loops.WhileEnd(asm, count)
-    } else {
+
+    default:
         count := loops.WhileStart(asm)
         o.Cond.Compile(asm)
         loops.WhileReg(asm, "rax")
-
         o.Block.Compile(asm)
         loops.WhileEnd(asm, count)
     }

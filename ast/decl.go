@@ -47,24 +47,27 @@ func (o *OpDecVar) Compile(asm *os.File) {
 }
 
 func (o *OpDefVar) Compile(asm *os.File) {
-    if l, ok := o.Value.(*LitExpr); ok {
-        vars.DefWithVal(asm, o.Varname, l.Val)
-    } else if ident, ok := o.Value.(*IdentExpr); ok {
+    switch e := o.Value.(type) {
+    case *LitExpr:
+        vars.DefWithVal(asm, o.Varname, e.Val)
+
+    case *IdentExpr:
         if ptr, ok := vars.GetVar(o.Varname.Str).GetType().(types.PtrType); ok {
-            otherType := vars.GetVar(ident.Ident.Str).GetType()
+            otherType := vars.GetVar(e.Ident.Str).GetType()
             if ptr.BaseType != otherType {
                 fmt.Fprintf(os.Stderr, "[ERROR] %s points to %v not should be %v\n", o.Varname.Str, otherType, ptr.BaseType)
                 fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
                 os.Exit(1)
             }
 
-            vars.DefPtrWithVar(asm, o.Varname, ident.Ident)
+            vars.DefPtrWithVar(asm, o.Varname, e.Ident)
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] you can only define global pointer with another global var")
             fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
             os.Exit(1)
         }
-    } else {
+
+    default:
         o.Value.Compile(asm)
         vars.DefWithExpr(asm, o.Varname, "rax")
     }

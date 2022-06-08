@@ -23,7 +23,7 @@ func ShowVars() {
 }
 
 func GetVar(name string) Var {
-    for i := curScope; i >= 0; i-- {
+    for i := len(scopes)-1; i >= 0; i-- {
         for _, v := range scopes[i].vars {
             if v.Name.Str == name {
                 return &v
@@ -100,24 +100,24 @@ func DefWithVal(asm *os.File, varname token.Token, value token.Token) {
     }
 }
 
-func DefPtrWithVar(asm *os.File, ptrName token.Token, otherVar token.Token) {
-    v := GetVar(ptrName.Str)
+func DefPtrWithVar(asm *os.File, name token.Token, otherName token.Token) {
+    v := GetVar(name.Str)
     if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] cannot define var \"%s\" (is not declared)\n", ptrName.Str)
-        fmt.Fprintln(os.Stderr, "\t" + ptrName.At())
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot define var \"%s\" (is not declared)\n", name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
 
     if _, ok := v.(*GlobalVar); ok {
-        globalDefines = append(globalDefines, fmt.Sprintf("%s: dq %s\n", ptrName.Str, otherVar.Str))
+        globalDefines = append(globalDefines, fmt.Sprintf("%s: dq %s\n", name.Str, otherName.Str))
         return
     }
 
     if v, ok := v.(*LocalVar); ok {
-        other := GetVar(otherVar.Str)
+        other := GetVar(otherName.Str)
         if other == nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] cannot define var \"%s\" with \"%s\"(is not declared)\n", ptrName.Str, otherVar.Str)
-            fmt.Fprintln(os.Stderr, "\t" + otherVar.At())
+            fmt.Fprintf(os.Stderr, "[ERROR] cannot define var \"%s\" with \"%s\"(is not declared)\n", name.Str, otherName.Str)
+            fmt.Fprintln(os.Stderr, "\t" + otherName.At())
             os.Exit(1)
         }
 
@@ -128,13 +128,13 @@ func DefPtrWithVar(asm *os.File, ptrName token.Token, otherVar token.Token) {
             s = other.Get()
         }
 
-        asm.WriteString(fmt.Sprintf("lea rax, %s\n", s))
-        asm.WriteString(fmt.Sprintf("mov %s, rax\n", v.Get()))
+        Write(asm, fmt.Sprintf("lea rax, %s\n", s))
+        Write(asm, fmt.Sprintf("mov %s, rax\n", v.Get()))
         return
     }
 }
 
-func VarSetExpr(asm *os.File, destVar token.Token) {
+func VarSetExpr(asm *os.File, destVar token.Token, reg string) {
     v := GetVar(destVar.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", destVar.Str)
@@ -142,7 +142,18 @@ func VarSetExpr(asm *os.File, destVar token.Token) {
         os.Exit(1)
     }
 
-    asm.WriteString(fmt.Sprintf("mov %s, rax\n", v.Get()))
+    Write(asm, fmt.Sprintf("mov %s, %s\n", v.Get(), reg))
+}
+
+func SetRax(asm *os.File, name token.Token) {
+    v := GetVar(name.Str)
+    if v == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] variable \"%s\" is not declared\n", name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+    }
+
+    Write(asm, fmt.Sprintf("mov rax, %s\n", v.Get()))
 }
 
 func DerefSetVal(asm *os.File, value token.Token) {
@@ -164,17 +175,13 @@ func DerefSetVar(asm *os.File, name token.Token) {
         os.Exit(1)
     }
 
+    asm.WriteString(fmt.Sprintf("mov rbx, %s\n", v.Get()))
+    asm.WriteString("mov QWORD [rax], rbx\n")
+
     if p,ok := v.GetType().(types.PtrType); ok && p.BaseType.GetKind() == types.Str {
-        s1, s2 := v.Gets()
-
-        asm.WriteString(fmt.Sprintf("mov rbx, %s\n", s1))
-        asm.WriteString("mov QWORD [rax], rbx\n")
-
-        asm.WriteString(fmt.Sprintf("mov rbx, %s\n", s2))
+        s, _ := v.Gets()
+        asm.WriteString(fmt.Sprintf("mov rbx, %s\n", s))
         asm.WriteString("mov QWORD [rax+8], rbx\n")
-    } else {
-        asm.WriteString(fmt.Sprintf("mov rbx, %s\n", v.Get()))
-        asm.WriteString("mov QWORD [rax], rbx\n")
     }
 }
 
@@ -190,10 +197,10 @@ func VarSetVal(asm *os.File, name token.Token, value token.Token) {
         strIdx := str.Add(value.Str)
         s1, s2 := v.Gets()
 
-        asm.WriteString(fmt.Sprintf("mov %s, str%d\n", s1, strIdx))
-        asm.WriteString(fmt.Sprintf("mov %s, %d\n",    s2, str.GetSize(strIdx)))
+        Write(asm, fmt.Sprintf("mov %s, str%d\n", s1, strIdx))
+        Write(asm, fmt.Sprintf("mov %s, %d\n",    s2, str.GetSize(strIdx)))
     } else {
-        asm.WriteString(fmt.Sprintf("mov %s, %s\n", v.Get(), value.Str))
+        Write(asm, fmt.Sprintf("mov %s, %s\n", v.Get(), value.Str))
     }
 }
 
