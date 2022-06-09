@@ -1,7 +1,6 @@
 var v1 i32 := -86
 var v2 i32 := 420
 var p1 *i32 := v1       // TODO "&" to get addr
-var s str := "global string"
 
 fn global_test() {
     printStr("p1 = &v1")
@@ -20,13 +19,15 @@ fn global_test() {
     printInt(v2)
     *p1 = v1
     printInt(v2)
+    
+    p1 = v1
 }
 
 fn local_test() {
     var i1 i32 := 86
     var i2 i32 := -69
 
-    printStr("p1 = &i1")
+    printStr("lp1 = &i1")
     var lp1 *i32 := i1
 
     printInt(i1)
@@ -35,7 +36,7 @@ fn local_test() {
     *lp1 = i2
     printInt(i1)
 
-    printStr("p1 = &i2")
+    printStr("lp1 = &i2")
     lp1 = i2
 
     printInt(i2)
@@ -43,45 +44,6 @@ fn local_test() {
     printInt(i2)
     *lp1 = i1
     printInt(i2)
-}
-
-fn test_deref_global() {
-    printStr("(*p1) v2 = 86")
-    v2 = 86
-    printInt(*p1)
-
-
-    printStr("*p1 = 2 * *p1 (2 * 86 = 172)")
-              *p1 = 2 * *p1
-    printInt(*p1)
-
-    printStr("*p1 = *p1 / 2 (172 / 2 = 86)")
-              *p1 = *p1 / 2
-    printInt(*p1)
-
-    printStr("*p1 = 2 * *p1 + 10 * 2 (2 * 86 + 10 * 2 = 192)")
-              *p1 = 2 * *p1 + 10 * 2
-    printInt(*p1)
-}
-
-fn test_deref_local() {
-    var p2 *i32 := v2
-
-    printStr("(*p2) v2 = 86")
-    v2 = 86
-    printInt(*p2)
-
-    printStr("*p2 = 2 * *p2 (2 * 86 = 172)")
-              *p2 = 2 * *p2
-    printInt(*p2)
-
-    printStr("*p2 = *p2 / 2 (172 / 2 = 86)")
-              *p2 = *p2 / 2
-    printInt(*p2)
-
-    printStr("*p2 = 2 * *p2 + 10 * 2 (2 * 86 + 10 * 2 = 192)")
-              *p2 = 2 * *p2 + 10 * 2
-    printInt(*p2)
 }
 
 fn test_prints() {
@@ -101,55 +63,26 @@ fn test_prints() {
     printPtr(p3)
     printPtr(p4)
 
-    var diff i32 := p4 - p1
-    printStr("diff in byte:")
+    var diff i32 := p3 - p1
+    printStr("diff in bytes:")
     printInt(diff)
-    printStr("diff in MB (rounded):")
+    printStr("~1MB difference (size of stack)") // - 2 pushs - 8 (first local var starts at rbp-8)
+
+    printStr("stack size")
+    diff = p3 - p1 + 2 * 8 + 8
+    printStr("in bytes:")
+    printInt(diff)
+    printStr("in MB:")
     printInt(diff / 1024 / 1024)
-    printStr("~1MB difference -> size of stack")
-}
-
-fn test_str() {
-    var s1 str := "local string"
-    var s2 str := "local string2"
-    var p2 *str := s
-    var p3 *str := s1
-
-    printStr("pointer to global str")
-    printStr(s)
-
-    *p2 = "test string"
-    printStr(s)
-
-    *p2 = s2
-    printStr(s)
-
-    printStr("pointer to local str")
-    printStr(s1)
-
-    *p3 = "test string2"
-    printStr(s1)
-
-    *p3 = s2
-    printStr(s1)
 }
 
 fn main() {
-    printStr("global pointer test")
+    printStr("global pointer ----------")
     global_test()
 
-    printStr("local pointer test")
+    printStr("local pointer ----------")
     local_test()
 
-    printStr("test deref global pointer")
-    test_deref_global()
-
-    printStr("test deref local pointer")
-    test_deref_local()
-
-    printStr("test printPtr")
+    printStr("test printPtr ----------")
     test_prints()
-
-    printStr("test *str")
-    test_str()
 }

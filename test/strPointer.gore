@@ -1,0 +1,26 @@
+var s str := "global string"
+
+fn main() {
+    var s1 str := "local string"
+    var s2 str := "local string2"
+    var p2 *str := s
+    var p3 *str := s1
+
+    printStr("pointer to global str")
+    printStr(s)
+
+    *p2 = "test string"
+    printStr(s)
+
+    *p2 = s2
+    printStr(s)
+
+    printStr("pointer to local str")
+    printStr(s1)
+
+    *p3 = "test string2"
+    printStr(s1)
+
+    *p3 = s2
+    printStr(s1)
+}
