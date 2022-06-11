@@ -27,6 +27,7 @@ type OpExprStmt struct {
 }
 
 type OpAssignVar struct {
+    Pos token.Pos
     Dest OpExpr
     Value OpExpr
 }
@@ -89,6 +90,14 @@ func (o *OpAssignVar)  stmt() {}
 
 
 func (o *OpAssignVar) Compile(asm *os.File) {
+    t1 := o.Dest.GetType()
+    t2 := o.Value.GetType()
+    if t1 != t2 {
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot assign a type: %v with type: %v\n",  t1, t2)
+        fmt.Fprintln(os.Stderr, "\t" + o.Pos.At())
+        os.Exit(1)
+    }
+
     switch dest := o.Dest.(type) {
     case *UnaryExpr:
         dest.Compile(asm)
@@ -118,9 +127,10 @@ func (o *OpAssignVar) Compile(asm *os.File) {
             o.Value.Compile(asm)
             vars.VarSetExpr(asm, dest.Ident, "rax")
         }
-        
+
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] expected a variable or a derefenced pointer but got \"%t\"\n", dest)
+        fmt.Fprintln(os.Stderr, "\t" + o.Pos.At())
         os.Exit(1)
     }
 }

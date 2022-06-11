@@ -3,8 +3,8 @@ var s str := "global string"
 fn main() {
     var s1 str := "local string"
     var s2 str := "local string2"
-    var p2 *str := s
-    var p3 *str := s1
+    var p2 *str := &s
+    var p3 *str := &s1
 
     printStr("pointer to global str")
     printStr(s)

@@ -113,11 +113,11 @@ func prsBlock() ast.OpBlock {
 }
 
 func prsAssignVar(dest ast.OpExpr) ast.OpAssignVar {
-    token.Next() // TODO set equals pos
+    pos := token.Next().Pos
     token.Next()
     val := prsExpr()
 
-    return ast.OpAssignVar{ Dest: dest, Value: val }
+    return ast.OpAssignVar{ Pos: pos, Dest: dest, Value: val }
 }
 
 func prsIfStmt() ast.IfStmt {

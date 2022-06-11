@@ -47,6 +47,23 @@ func (o *OpDecVar) Compile(asm *os.File) {
 }
 
 func (o *OpDefVar) Compile(asm *os.File) {
+    v := vars.GetVar(o.Varname.Str)
+    if v == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared)\n", o.Varname.Str)
+        fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
+        os.Exit(1)
+    }
+
+    t1 := v.GetType()
+    t2 := o.Value.GetType()
+
+    if t1 != t2 {
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.Varname.Str, t1, t2)
+        fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
+        os.Exit(1)
+    }
+
+
     switch e := o.Value.(type) {
     case *LitExpr:
         vars.DefWithVal(asm, o.Varname, e.Val)

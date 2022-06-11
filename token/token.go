@@ -29,6 +29,8 @@ const (
     Mul             // *
     Div             // /
 
+    Amp             // &
+
     Eql             // ==
     Neq             // !=
     Geq             // >=
@@ -75,6 +77,9 @@ func TokenTypeOfStr(s string) TokenType {
         return Mul
     case "/":
         return Div
+
+    case "&":
+        return Amp
 
     case "==":
         return Eql
@@ -157,6 +162,9 @@ func (t TokenType) Readable() string {
         return "Mul"
     case Div:
         return "Div"
+
+    case Amp:
+        return "Amp"
 
     case Eql:
         return "Eql"
@@ -251,7 +259,7 @@ func (t Token) At() string {
 
 // escape chars (TODO: \n, \t, \r, ...) (done: \\, \")
 func Tokenize(file []byte) {
-    keySigns := "(){}+-*/,;"
+    keySigns := "(){}+-*/,;&"
     f := string(file)
 
     start := 0

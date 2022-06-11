@@ -29,7 +29,7 @@ func prsExpr() ast.OpExpr {
     case token.ParenL:
         expr = prsParenExpr()
 
-    case token.Plus, token.Minus, token.Mul:
+    case token.Plus, token.Minus, token.Mul, token.Amp:
         expr = prsUnaryExpr()
 
     // TODO: OpFnCall
@@ -50,7 +50,8 @@ func prsExpr() ast.OpExpr {
 }
 
 func isUnaryExpr() bool {
-    return  token.Cur().Type == token.Plus || token.Cur().Type == token.Minus || token.Cur().Type == token.Mul
+    return  token.Cur().Type == token.Plus || token.Cur().Type == token.Minus ||
+            token.Cur().Type == token.Mul  || token.Cur().Type == token.Amp
 }
 
 func isParenExpr() bool {
@@ -123,20 +124,22 @@ func prsParenExpr() *ast.ParenExpr {
 func prsUnaryExpr() *ast.UnaryExpr {
     expr := ast.UnaryExpr{ Operator: token.Cur() }
 
-    if expr.Operator.Type == token.Mul {
+    switch expr.Operator.Type {
+    case token.Mul:
         if token.Next().Type == token.ParenL {
             expr.Operand = prsParenExpr()
         } else {
             expr.Operand = prsIdentExpr()
         }
-
-        return &expr
-    } else {
+    case token.Amp:
+        token.Next()
+        expr.Operand = prsIdentExpr()
+    default:
         token.Next()
         expr.Operand = prsValue()
-
-        return &expr
     }
+
+    return &expr
 }
 
 func prsBinary(expr ast.OpExpr, min_precedence precedence) ast.OpExpr {

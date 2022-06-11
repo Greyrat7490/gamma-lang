@@ -1,6 +1,6 @@
 var v1 i32 := -86
 var v2 i32 := 420
-var p1 *i32 := v1       // TODO "&" to get addr
+var p1 *i32 := &v1
 
 fn global_test() {
     printStr("p1 = &v1")
@@ -12,15 +12,15 @@ fn global_test() {
     printInt(v1)
 
     printStr("p1 = &v2")
-    p1 = v2
+    p1 = &v2
 
     printInt(v2)
     *p1 = -13
     printInt(v2)
     *p1 = v1
     printInt(v2)
-    
-    p1 = v1
+
+    p1 = &v1
 }
 
 fn local_test() {
@@ -28,7 +28,7 @@ fn local_test() {
     var i2 i32 := -69
 
     printStr("lp1 = &i1")
-    var lp1 *i32 := i1
+    var lp1 *i32 := &i1
 
     printInt(i1)
     *lp1 = 420
@@ -37,7 +37,7 @@ fn local_test() {
     printInt(i1)
 
     printStr("lp1 = &i2")
-    lp1 = i2
+    lp1 = &i2
 
     printInt(i2)
     *lp1 = -420
@@ -48,7 +48,7 @@ fn local_test() {
 
 fn test_prints() {
     printStr("pointer to global vars")
-    var p2 *i32 := v2
+    var p2 *i32 := &v2
 
     printPtr(p1)
     printPtr(p2)
@@ -57,8 +57,8 @@ fn test_prints() {
     var l1 i32 := 420
     var l2 i32 := 420
 
-    var p3 *i32 := l1
-    var p4 *i32 := l2
+    var p3 *i32 := &l1
+    var p4 *i32 := &l2
 
     printPtr(p3)
     printPtr(p4)

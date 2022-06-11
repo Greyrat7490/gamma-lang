@@ -14,7 +14,7 @@ import (
 type OpExpr interface {
     Op
     Compile(asm *os.File)
-    expr()  // to differenciate OpExpr from OpDecl and OpStmt
+    GetType() types.Type
 }
 
 type BadExpr struct{}
@@ -50,23 +50,78 @@ type ParenExpr struct {
     ParenRPos token.Pos
 }
 
-func (o *BadExpr)    expr() {}
-func (o *LitExpr)    expr() {}
-func (o *IdentExpr)  expr() {}
-func (o *OpFnCall)   expr() {}
-func (o *UnaryExpr)  expr() {}
-func (o *BinaryExpr) expr() {}
-func (o *ParenExpr)  expr() {}
+func (o *BadExpr)   GetType() types.Type { return nil }
+func (o *OpFnCall)  GetType() types.Type { return nil }
+func (o *LitExpr)   GetType() types.Type { return o.Type }
+func (o *ParenExpr) GetType() types.Type { return o.Expr.GetType() }
+func (o *IdentExpr) GetType() types.Type {
+    v := vars.GetVar(o.Ident.Str)
+    if v == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared)\n", o.Ident.Str)
+        fmt.Fprintln(os.Stderr, "\t" + o.Ident.At())
+        os.Exit(1)
+    }
+
+    return v.GetType()
+}
+
+func (o *UnaryExpr) GetType() types.Type {
+    if o.Operator.Type == token.Amp {
+        return types.PtrType{ BaseType: o.Operand.GetType() }
+    }
+
+    if o.Operator.Type == token.Mul {
+        if ptr, ok := o.Operand.GetType().(types.PtrType); ok {
+            return ptr.BaseType
+        } else {
+            fmt.Fprintln(os.Stderr, "[ERROR] you cannot deref this expre (expected a pointer/address)")
+            fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+            os.Exit(1)
+        }
+    }
+
+    return o.Operand.GetType()
+}
+
+func (o *BinaryExpr) GetType() types.Type {
+    if  o.Operator.Type == token.Eql || o.Operator.Type == token.Neq ||
+        o.Operator.Type == token.Grt || o.Operator.Type == token.Lss ||
+        o.Operator.Type == token.Geq || o.Operator.Type == token.Leq {
+        return types.BoolType{}
+    }
+
+    t := o.OperandL.GetType()
+    if t == nil {
+        return o.OperandR.GetType()
+    }
+
+    // check for cases like 420 + &v1
+    if t.GetKind() == types.I32 {
+        if other := o.OperandR.GetType(); other.GetKind() != types.I32 {
+            return other
+        }
+    }
+
+    // check for cases like ptr1 - ptr2
+    if t.GetKind() == types.Ptr {
+        if other := o.OperandR.GetType(); other.GetKind() == types.Ptr {
+            return types.I32Type{}
+        }
+    }
+
+    return t
+}
 
 
 func (o *LitExpr)   Compile(asm *os.File) {}
 func (o *IdentExpr) Compile(asm *os.File) {}
 func (o *ParenExpr) Compile(asm *os.File) { o.Expr.Compile(asm) }
 func (o *UnaryExpr) Compile(asm *os.File) {
-    if o.Operator.Type == token.Mul {
+    switch o.Operator.Type {
+    case token.Mul:
         switch e := o.Operand.(type) {
         case *IdentExpr:
-            vars.SetRax(asm, e.Ident)
+            vars.ValToRax(asm, e.Ident)
 
         case *ParenExpr:
             o.Operand.Compile(asm)
@@ -76,10 +131,20 @@ func (o *UnaryExpr) Compile(asm *os.File) {
             fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
             os.Exit(1)
         }
-    } else {
+
+    case token.Amp:
+        if e,ok := o.Operand.(*IdentExpr); ok {
+            vars.AddrToRax(asm, e.Ident)
+        } else {
+            fmt.Fprintln(os.Stderr, "[ERROR] expected a variable after \"&\"")
+            fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+            os.Exit(1)
+        }
+
+    default:
         switch e := o.Operand.(type) {
         case *IdentExpr:
-            vars.SetRax(asm, e.Ident)
+            vars.ValToRax(asm, e.Ident)
 
         case *LitExpr:
             vars.Write(asm, fmt.Sprintf("mov rax, %s\n", e.Val.Str))
@@ -98,7 +163,7 @@ func (o *BinaryExpr) Compile(asm *os.File) {
     case *LitExpr:
         vars.Write(asm, fmt.Sprintf("mov rax, %s\n", e.Val.Str))
     case *IdentExpr:
-        vars.SetRax(asm, e.Ident)
+        vars.ValToRax(asm, e.Ident)
     case *UnaryExpr:
         o.OperandL.Compile(asm)
         if e.Operator.Type == token.Mul {
@@ -107,12 +172,12 @@ func (o *BinaryExpr) Compile(asm *os.File) {
     default:
         o.OperandL.Compile(asm)
     }
- 
+
 
     switch e := o.OperandR.(type) {
     case *LitExpr:
         arith.BinaryOp(asm, o.Operator.Type, e.Val.Str)
-    case *IdentExpr: 
+    case *IdentExpr:
         v := vars.GetVar(e.Ident.Str)
         if v == nil {
             fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", e.Ident.Str)
@@ -149,7 +214,7 @@ func (o *OpFnCall) Compile(asm *os.File) {
             val.Compile(asm)
             if e.Operator.Type == token.Mul {
                 fn.PassReg(asm, o.FnName, i, "QWORD [rax]")
-            } else {   
+            } else {
                 fn.PassReg(asm, o.FnName, i, "rax")
             }
 

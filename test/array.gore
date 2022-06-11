@@ -7,7 +7,7 @@ var dummy i32 := 0
 //                 to stack start (biggest stack address / stack_top)
 
 fn main() {
-    var arr *i32 := dummy
+    var arr *i32 := &dummy
 
     printStr("write to \"array\"")
 

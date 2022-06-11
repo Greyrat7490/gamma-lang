@@ -48,6 +48,35 @@ func Write(asm *os.File, s string) {
     }
 }
 
+func ValToRax(asm *os.File, name token.Token) {
+    v := GetVar(name.Str)
+    if v == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] variable \"%s\" is not declared\n", name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+    }
+
+    Write(asm, fmt.Sprintf("mov rax, %s\n", v.Get()))
+}
+
+func AddrToRax(asm *os.File, name token.Token) {
+    v := GetVar(name.Str)
+    if v == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] variable \"%s\" is not declared\n", name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+    }
+
+    var s string
+    if v.GetType().GetKind() == types.Str {
+        s,_ = v.Gets()
+    } else {
+        s = v.Get()
+    }
+
+    Write(asm, fmt.Sprintf("lea rax, %s\n", s))
+}
+
 func Declare(varname token.Token, vartype types.Type) {
     if InGlobalScope() {
         declareGlobal(varname, vartype)
@@ -114,21 +143,7 @@ func DefPtrWithVar(asm *os.File, name token.Token, otherName token.Token) {
     }
 
     if v, ok := v.(*LocalVar); ok {
-        other := GetVar(otherName.Str)
-        if other == nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] cannot define var \"%s\" with \"%s\"(is not declared)\n", name.Str, otherName.Str)
-            fmt.Fprintln(os.Stderr, "\t" + otherName.At())
-            os.Exit(1)
-        }
-
-        var s string
-        if other.GetType().GetKind() == types.Str {
-            s,_ = other.Gets()
-        } else {
-            s = other.Get()
-        }
-
-        Write(asm, fmt.Sprintf("lea rax, %s\n", s))
+        AddrToRax(asm, otherName)
         Write(asm, fmt.Sprintf("mov %s, rax\n", v.Get()))
         return
     }
@@ -143,17 +158,6 @@ func VarSetExpr(asm *os.File, destVar token.Token, reg string) {
     }
 
     Write(asm, fmt.Sprintf("mov %s, %s\n", v.Get(), reg))
-}
-
-func SetRax(asm *os.File, name token.Token) {
-    v := GetVar(name.Str)
-    if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] variable \"%s\" is not declared\n", name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
-    }
-
-    Write(asm, fmt.Sprintf("mov rax, %s\n", v.Get()))
 }
 
 func DerefSetVal(asm *os.File, value token.Token) {
