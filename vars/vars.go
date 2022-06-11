@@ -179,14 +179,17 @@ func DerefSetVar(asm *os.File, name token.Token) {
         os.Exit(1)
     }
 
-    s, _ := v.Gets()
-    asm.WriteString(fmt.Sprintf("mov rbx, %s\n", s))
-    asm.WriteString("mov QWORD [rax], rbx\n")
-
     if v.GetType().GetKind() == types.Str {
-        _, s := v.Gets()
-        asm.WriteString(fmt.Sprintf("mov rbx, %s\n", s))
+        s1, s2 := v.Gets()
+        asm.WriteString(fmt.Sprintf("mov rbx, %s\n", s1))
+        asm.WriteString("mov QWORD [rax], rbx\n")
+
+        asm.WriteString(fmt.Sprintf("mov rbx, %s\n", s2))
         asm.WriteString("mov QWORD [rax+8], rbx\n")
+    } else {
+        s := v.Get()
+        asm.WriteString(fmt.Sprintf("mov rbx, %s\n", s))
+        asm.WriteString("mov QWORD [rax], rbx\n")
     }
 }
 

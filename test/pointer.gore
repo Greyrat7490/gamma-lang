@@ -46,35 +46,6 @@ fn local_test() {
     printInt(i2)
 }
 
-fn test_prints() {
-    printStr("pointer to global vars")
-    var p2 *i32 := &v2
-
-    printPtr(p1)
-    printPtr(p2)
-
-    printStr("pointer to local vars")
-    var l1 i32 := 420
-    var l2 i32 := 420
-
-    var p3 *i32 := &l1
-    var p4 *i32 := &l2
-
-    printPtr(p3)
-    printPtr(p4)
-
-    var diff i32 := p3 - p1
-    printStr("diff in bytes:")
-    printInt(diff)
-    printStr("~1MB difference (size of stack)") // - 2 pushs - 8 (first local var starts at rbp-8)
-
-    printStr("stack size")
-    diff = p3 - p1 + 2 * 8 + 8
-    printStr("in bytes:")
-    printInt(diff)
-    printStr("in MB:")
-    printInt(diff / 1024 / 1024)
-}
 
 fn main() {
     printStr("global pointer ----------")
@@ -82,7 +53,4 @@ fn main() {
 
     printStr("local pointer ----------")
     local_test()
-
-    printStr("test printPtr ----------")
-    test_prints()
 }

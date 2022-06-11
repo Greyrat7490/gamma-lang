@@ -1,0 +1,28 @@
+var v1 i32 := 0
+var pGlobal *i32 := &v1
+
+fn main() {
+    var local i32
+    var pLocal *i32 := &local
+
+    var diff i32 := pLocal - pGlobal
+
+    printPtr(pGlobal)
+    printPtr(pLocal)
+
+    printStr("diff in bytes:")
+    printInt(diff)
+    printStr("~1MB difference (size of stack - 8)")
+    // 1 more global var after v1 -> +8
+    // 1 push (push rbp)          -> -8
+    // 1 call (call main -> push) -> -8
+
+    printStr("stack size")
+
+    diff = pLocal - pGlobal + 8
+
+    printStr("in bytes:")
+    printInt(diff)
+    printStr("in MB:")
+    printInt(diff / 1024 / 1024)
+}
