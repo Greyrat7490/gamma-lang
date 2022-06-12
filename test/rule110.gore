@@ -1,0 +1,71 @@
+var SIZE i32 := 150
+
+var prev *i32 := &SIZE + 3*8        // to skip the 3 global vars
+var cur  *i32 := prev + 8*150       // leave space(SIZE) for prev
+
+
+fn memcpy(dest *i32, src *i32, size i32) {
+    for i i32, size {
+        *(dest+i*8) = *(src+i*8)
+    }
+}
+
+fn printRow() {
+    for i i32, SIZE {
+        if *(cur+i*8) == 0 {
+            printStr(" ")
+        } else {
+            printStr("o")
+        }
+    }
+
+    printStr("\n")
+}
+
+fn setNextRow(round i32) {
+    *(cur+(SIZE-round-1)*8) = 1
+
+    var border i32 := SIZE - 1
+
+    // TODO FIX binary/unary expr as border for for loops
+    for i i32, border, 1 {
+        if *(prev+(i-1)*8) == 0 {
+            if *(prev+i*8) == 0 {
+                if *(prev+(i+1)*8) == 0 {   // 000 -> 0
+                    *(cur+i*8) = 0
+                } else {                    // 001 -> 1
+                    *(cur+i*8) = 1
+                }
+            } else {
+                if *(prev+(i+1)*8) == 0 {   // 010 -> 1
+                    *(cur+i*8) = 1
+                } else {                    // 011 -> 1
+                    *(cur+i*8) = 1
+                }
+            }
+        } else {
+            if *(prev+i*8) == 0 {
+                if *(prev+(i+1)*8) == 0 {   // 100 -> 0
+                    *(cur+i*8) = 0
+                } else {                    // 101 -> 1
+                    *(cur+i*8) = 1
+                }
+            } else {
+                if *(prev+(i+1)*8) == 0 {   // 110 -> 1
+                    *(cur+i*8) = 1
+                } else {                    // 111 -> 0
+                    *(cur+i*8) = 0
+                }
+            }
+        }
+    }
+
+    memcpy(prev, cur, SIZE)
+}
+
+fn main() {
+    for i i32, SIZE {
+        setNextRow(i)
+        printRow()
+    }
+}
