@@ -2,34 +2,42 @@ var v1 i32 := 420
 
 fn main() {
     var l1 bool := v1 == 86
-    printStr("420 == 86")
+    printStr("420 == 86: ")
     printBool(l1)
+    printStr("\n")
 
     l1 = v1 != 86
-    printStr("420 != 86")
+    printStr("420 != 86: ")
     printBool(l1)
+    printStr("\n")
 
     l1 = v1 < 86
-    printStr("420 < 86")
+    printStr("420 < 86: ")
     printBool(l1)
+    printStr("\n")
 
     l1 = v1 > 86
-    printStr("420 > 86")
+    printStr("420 > 86: ")
     printBool(l1)
+    printStr("\n")
 
     l1 = v1 <= 86
-    printStr("420 <= 86")
+    printStr("420 <= 86: ")
     printBool(l1)
+    printStr("\n")
 
     l1 = v1 >= 86
-    printStr("420 >= 86")
+    printStr("420 >= 86: ")
     printBool(l1)
+    printStr("\n")
 
     l1 = v1 >= 420
-    printStr("420 >= 420")
+    printStr("420 >= 420: ")
     printBool(l1)
+    printStr("\n")
 
     l1 = v1 >= v1
-    printStr("v1 >= v1")
+    printStr("v1 >= v1: ")
     printBool(l1)
+    printStr("\n")
 }

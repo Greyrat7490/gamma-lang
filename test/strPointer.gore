@@ -1,24 +1,24 @@
-var s str := "global string"
+var s str := "global string\n"
 
 fn main() {
-    var s1 str := "local string"
-    var s2 str := "local string2"
+    var s1 str := "local string\n"
+    var s2 str := "local string2\n"
     var p2 *str := &s
     var p3 *str := &s1
 
-    printStr("pointer to global str")
+    printStr("pointer to global str\n")
     printStr(s)
 
-    *p2 = "test string"
+    *p2 = "test string\n"
     printStr(s)
 
     *p2 = s2
     printStr(s)
 
-    printStr("pointer to local str")
+    printStr("pointer to local str\n")
     printStr(s1)
 
-    *p3 = "test string2"
+    *p3 = "test string2\n"
     printStr(s1)
 
     *p3 = s2

@@ -3,53 +3,63 @@ var v2 i32 := 420
 var p1 *i32 := &v1
 
 fn test_deref_global() {
-    printStr("(*p1) v1 (-86)")
+    printStr("*p1 = ")
     printInt(*p1)
+    printStr(" (expected: -86 (v1))\n")
 
-    printStr("(*p1) v1 = 86")
+    printStr("v1 = 86 \n*p1 = ")
     v1 = 86
     printInt(*p1)
+    printStr(" (expected: 86 (v1))\n")
 
-    printStr("*p1 = 2 * *p1 (2 * 86 = 172)")
+    printStr("*p1 = 2 * *p1 \n*p1 = ")
               *p1 = 2 * *p1
     printInt(*p1)
+    printStr(" (expected: 172 (2 * 86))\n")
 
-    printStr("*p1 = *p1 / 2 (172 / 2 = 86)")
+    printStr("*p1 = *p1 / 2 \n*p1 = ")
               *p1 = *p1 / 2
     printInt(*p1)
+    printStr(" (expected: 86 (172 / 2))\n")
 
-    printStr("*p1 = 2 * *p1 + 10 * 2 (2 * 86 + 10 * 2 = 192)")
+    printStr("*p1 = 2 * *p1 + 10 * 2 \n*p1 = ")
               *p1 = 2 * *p1 + 10 * 2
     printInt(*p1)
+    printStr(" (expected: 192 (2 * 86 + 10 * 2))\n")
 }
 
 fn test_deref_local() {
     var p2 *i32 := &v2
 
-    printStr("(*p2) v2 (420)")
+    printStr("*p2 = ")
     printInt(*p2)
+    printStr(" (expected: 420 (v2))\n")
 
-    printStr("(*p2) v2 = 86")
+    printStr("v2 = 86 \n*p2 = ")
     v2 = 86
     printInt(*p2)
+    printStr(" (expected: 86 (v2))\n")
 
-    printStr("*p2 = 2 * *p2 (2 * 86 = 172)")
+    printStr("*p2 = 2 * *p2 \n*p2 = ")
               *p2 = 2 * *p2
     printInt(*p2)
+    printStr(" (expected: 172 (2 * 86))\n")
 
-    printStr("*p2 = *p2 / 2 (172 / 2 = 86)")
+    printStr("*p2 = *p2 / 2 \n*p2 = ")
               *p2 = *p2 / 2
     printInt(*p2)
+    printStr(" (expected: 86 (172 / 2))\n")
 
-    printStr("*p2 = 2 * *p2 + 10 * 2 (2 * 86 + 10 * 2 = 192)")
+    printStr("*p2 = 2 * *p2 + 10 * 2 \n*p2 = ")
               *p2 = 2 * *p2 + 10 * 2
     printInt(*p2)
+    printStr(" (expected: 192 (2 * 86 + 10 * 2))\n")
 }
 
 fn main() {
-    printStr("global pointer")
+    printStr("global pointer\n")
     test_deref_global()
 
-    printStr("local pointer")
+    printStr("\nlocal pointer\n")
     test_deref_local()
 }

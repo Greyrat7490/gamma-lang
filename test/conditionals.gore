@@ -3,29 +3,29 @@ var v1 i32 := 420
 fn test1() {
     var l1 bool := v1 == 86
 
-    printStr("before if")
+    printStr("before if\n")
     if l1 {
-        printStr("v1 == 86")
+        printStr("v1 == 86\n")
     }
-    printStr("after if")
+    printStr("after if\n")
 }
 
 fn test2() {
-    printStr("before if")
+    printStr("before if\n")
     if v1 == 420 {
-        printStr("v1 == 420")
+        printStr("v1 == 420\n")
     }
-    printStr("after if")
+    printStr("after if\n")
 }
 
 fn t() {
     if v1 == 86 {
-        printStr("v1 == 86")
+        printStr("v1 == 86\n")
     } else {
-        printStr("v1 != 86")
+        printStr("v1 != 86\n")
 
         if v1 == 420 {
-            printStr("v1 == 420")
+            printStr("v1 == 420\n")
         }
     }
 }
@@ -33,19 +33,19 @@ fn t() {
 fn test3() {
     v1 = 86
     t()
-    printStr("---------")
+    printStr("---------\n")
     v1 = 420
     t()
-    printStr("---------")
+    printStr("---------\n")
     v1 = 69
     t()
 }
 
 fn main() {
-    printStr("------ test 1 ------")
+    printStr("------ test 1 ------\n")
     test1()
-    printStr("------ test 2 ------")
+    printStr("------ test 2 ------\n")
     test2()
-    printStr("------ test 3 ------")
+    printStr("------ test 3 ------\n")
     test3()
 }

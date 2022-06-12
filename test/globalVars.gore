@@ -1,11 +1,13 @@
 var v1 i32 := 86
 var v2 i32 := -69
-var v3 str := "some string"
-var v4 str := "some string 2"
+var v3 str := "some string\n"
+var v4 str := "some string 2\n"
 
 fn main() {
     printInt(v1)
+    printStr("\n")
     printInt(v2)
+    printStr("\n")
     printStr(v3)
     printStr(v4)
 }

@@ -1,12 +1,16 @@
 var v1 i32 := 86
-var v2 str := "some string"
+var v2 str := "some string\n"
 
 fn test1(a1 i32) {
     printInt(a1)
+    printStr("\n")
     printInt(v1)
+    printStr("\n")
     printInt(a1)
+    printStr("\n")
 }
 
+// TODO fix empty a1
 fn test2(a1 str) {
     printStr(a1)
     printStr(v2)
@@ -14,45 +18,52 @@ fn test2(a1 str) {
 }
 
 fn test3() {
-    printStr("40 + 46 = 86")
+    printStr("40 + 46 = ")
     printInt(40 + 46)
+    printStr(" (expected: 86)\n")
 
-    printStr("2 - (3 + 3) = -4")
+    printStr("2 - (3 + 3) = ")
     printInt(2 - (3 + 3))
+    printStr(" (expected: -4)\n")
 
-    printStr("2 - (3 + 3) + -2 * (-1 + 3) = -8")
+    printStr("2 - (3 + 3) + -2 * (-1 + 3) = ")
     printInt(2 - (3 + 3) + -2 * (-1 + 3))
+    printStr(" (expected: -8)\n")
 
-    printStr("2 + 3 * (1 + 2 * 3) = 23")
+    printStr("2 + 3 * (1 + 2 * 3) = ")
     printInt(2 + 3 * (1 + 2 * 3))
+    printStr(" (expected: 23)\n")
 }
 
 fn test4(a1 i32, a2 i32) {
-    printStr("arg1:")
+    printStr("arg1: ")
     printInt(a1)
+    printStr("\n")
 
-    printStr("arg2:")
+    printStr("arg2: ")
     printInt(a2)
+    printStr("\n")
 }
 
 // not working (TODO)
 // caused by different sizes of str and i32
 fn test5(a1 str, a2 i32) {
-    printStr("arg1:")
+    printStr("arg1: ")
     printStr(a1)
 
-    printStr("arg2:")
+    printStr("arg2: ")
     printInt(a2)
+    printStr("\n")
 }
 
 fn main() {
     test1(420)
-    printStr("------------")
-    test2("some arg")
-    printStr("------------")
+    printStr("------------\n")
+    test2("some arg\n")
+    printStr("------------\n")
     test3()
-    printStr("------------")
+    printStr("------------\n")
     test4(-69, 86)
 
-    test5("test", 86)
+    test5("test\n", 5)
 }

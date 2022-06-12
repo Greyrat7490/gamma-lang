@@ -10,7 +10,10 @@ fn test() {
     for i i32, 4 {
         var i2 i32 := i * 2
         printInt(i2)
+        printStr(" ")
     }
+
+    printStr("\n")
 }
 
 // 1 args, 2 local vars
@@ -21,7 +24,9 @@ fn test2(a1 i32) {
     var l2 i32 := l1 * -2
 
     printInt(l1)
+    printStr("\n")
     printInt(l2)
+    printStr("\n")
 }
 
 // 0 args, 0 local vars
@@ -29,18 +34,19 @@ fn test2(a1 i32) {
 // -> (multiple of 16) = 0byte frame
 fn test3() {
     printInt(g1)
+    printStr("\n")
 }
 
 fn test4() {
-    var s str := "test string"
+    var s str := "test string\n"
     printStr(s)
 
-    s = "new string"
+    s = "new string\n"
     printStr(s)
 }
 
 fn test5() {
-    printStr("g1 > 69")
+    printStr("g1 > 69 -> ")
     if g1 > 69 {
         var l1 i32 := -69
         printInt(l1)
@@ -49,7 +55,7 @@ fn test5() {
         printInt(l1)
     }
 
-    printStr("g1 < 69")
+    printStr("\ng1 < 69 -> ")
     if g1 < 69 {
         var l1 i32 := -69
         printInt(l1)
@@ -57,16 +63,18 @@ fn test5() {
         var l1 i32 := 69
         printInt(l1)
     }
+
+    printStr("\n")
 }
 
 fn main() {
     test()
-    printStr("-------")
+    printStr("-------\n")
     test2(g1)
-    printStr("-------")
+    printStr("-------\n")
     test3()
-    printStr("-------")
+    printStr("-------\n")
     test4()
-    printStr("-------")
+    printStr("-------\n")
     test5()
 }

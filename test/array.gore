@@ -9,28 +9,34 @@ var dummy i32 := 0
 fn main() {
     var arr *i32 := &dummy
 
-    printStr("write to \"array\"")
+    printStr("write to \"array\"\n")
 
-    printStr("arr[0] = dummy -> 0")
+    printStr("arr[0] = dummy -> 0\n")
 
-    printStr("arr[1] = -86")
+    printStr("arr[1] = -86\n")
     *(arr+8) = -86
 
-    printStr("arr[2] = 69420")
+    printStr("arr[2] = 69420\n")
     *(arr+16) = 69420
 
 
-    printStr("read from \"array\"")
+    printStr("read from \"array\"\n")
 
-    printStr("arr[0]")
+    printStr("arr[0](addr: ")
     printPtr(arr)
+    printStr("): ")
     printInt(*arr)
+    printStr("\n")
 
-    printStr("arr[1]")
+    printStr("arr[1](addr: ")
     printPtr(arr+8)
+    printStr("): ")
     printInt(*(arr+8))
+    printStr("\n")
 
-    printStr("arr[2]")
+    printStr("arr[2](addr: ")
     printPtr(arr+16)
+    printStr("): ")
     printInt(*(arr+16))
+    printStr("\n")
 }

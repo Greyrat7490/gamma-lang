@@ -1,10 +1,14 @@
 var v1 str := "some\" string"
-var v2 str := "some\\ string"
+var v2 str := "\tsome\\ string"
 var v3 str := "86"
 
 fn main() {
     printStr(v1)
+    printStr("\n")
     printStr("\" \"")
+    printStr("\n")
     printStr(v2)
+    printStr("\n")
     printStr(v3)
+    printStr("\n")
 }
