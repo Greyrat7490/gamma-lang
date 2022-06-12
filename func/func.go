@@ -95,9 +95,11 @@ func AddArg(argtype types.Type) {
 }
 
 func DefArg(asm *os.File, argnum int, argname token.Token, argtype types.Type) {
-    asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastOffset(), regs[argnum]))
     if argtype.GetKind() == types.Str {
-        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastOffset() + types.I32Type{}.Size(), regs[argnum+1]))
+        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastOffset() + types.I32Type{}.Size(), regs[argnum]))
+        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastOffset(), regs[argnum+1]))
+    } else {
+        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastOffset(), regs[argnum]))
     }
 }
 
