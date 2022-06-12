@@ -72,7 +72,7 @@ func declareLocal(varname token.Token, vartype types.Type) {
     })
 }
 
-func defLocalVal(asm *os.File, v *LocalVar, val string) {
+func defLocalVal(asm *os.File, v *LocalVar, val token.Token) {
     switch v.Type.GetKind() {
     case types.Str:
         strIdx := str.Add(val)
@@ -80,11 +80,11 @@ func defLocalVal(asm *os.File, v *LocalVar, val string) {
         asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %d\n", v.offset, str.GetSize(strIdx)))
 
     case types.I32:
-        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", v.offset, val))
+        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", v.offset, val.Str))
 
     case types.Bool:
-        if val == "true" { val = "1" } else { val = "0" }
-        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", v.offset, val))
+        if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
+        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", v.offset, val.Str))
 
     case types.Ptr:
         fmt.Fprintln(os.Stderr, "TODO defLocalVal PtrType")

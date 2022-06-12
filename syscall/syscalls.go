@@ -114,11 +114,11 @@ bool_to_str:
     cmp rax, 0
     jne .c1
     mov rbx, str_false
-    mov rax, 6
+    mov rax, 5
     ret
     .c1:
         mov rbx, str_true
-        mov rax, 5
+        mov rax, 4
         ret
 
 `)

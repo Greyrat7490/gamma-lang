@@ -124,7 +124,7 @@ func DefWithVal(asm *os.File, varname token.Token, value token.Token) {
     }
 
     if v, ok := v.(*LocalVar); ok {
-        defLocalVal(asm, v, value.Str)
+        defLocalVal(asm, v, value)
         return
     }
 }
@@ -162,7 +162,7 @@ func VarSetExpr(asm *os.File, destVar token.Token, reg string) {
 
 func DerefSetVal(asm *os.File, value token.Token) {
     if value.Type == token.Str {
-        strIdx := str.Add(value.Str)
+        strIdx := str.Add(value)
 
         asm.WriteString(fmt.Sprintf("mov QWORD [rax], str%d\n", strIdx))
         asm.WriteString(fmt.Sprintf("mov QWORD [rax+8], %d\n", str.GetSize(strIdx)))
@@ -202,7 +202,7 @@ func VarSetVal(asm *os.File, name token.Token, value token.Token) {
     }
 
     if v.GetType().GetKind() == types.Str {
-        strIdx := str.Add(value.Str)
+        strIdx := str.Add(value)
         s1, s2 := v.Gets()
 
         Write(asm, fmt.Sprintf("mov %s, str%d\n", s1, strIdx))

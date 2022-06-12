@@ -257,7 +257,6 @@ func (t Token) At() string {
     return t.Pos.At()
 }
 
-// escape chars (TODO: \n, \t, \r, ...) (done: \\, \")
 func Tokenize(file []byte) {
     keySigns := "(){}+-*/,;&"
     f := string(file)

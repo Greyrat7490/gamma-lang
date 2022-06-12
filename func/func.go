@@ -113,7 +113,7 @@ func PassVal(asm *os.File, fnName token.Token, argNum int, value token.Token) {
 
             switch t.GetKind() {
             case types.Str:
-                strIdx := str.Add(value.Str)
+                strIdx := str.Add(value)
                 asm.WriteString(fmt.Sprintf("mov %s, str%d\n", regs[argNum], strIdx))
                 asm.WriteString(fmt.Sprintf("mov %s, %d\n", regs[argNum+1], str.GetSize(strIdx)))
 

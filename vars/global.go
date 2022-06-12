@@ -72,7 +72,7 @@ func defGlobalVal(asm *os.File, v *GlobalVar, val token.Token) {
 
     switch v.Type.GetKind() {
     case types.Str:
-        strIdx := str.Add(val.Str)
+        strIdx := str.Add(val)
         globalDefines = append(globalDefines, fmt.Sprintf("%s: dq str%d, %d\n", v.Name.Str, strIdx, str.GetSize(strIdx)))
 
     case types.I32:
