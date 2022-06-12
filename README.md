@@ -46,8 +46,8 @@ And because it is written in Go...
   * [x] deref
   * [x] get addr (via "&")
   * [x] arithmetic
-* [ ] turing complete -> actual programming language
-  * [ ] proof with Rule 110 programm
+* [x] turing complete -> actual programming language
+  * [x] proof with Rule 110 programm
 * [ ] type checking
 * [ ] examples
 * [ ] self-hosted
