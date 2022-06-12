@@ -109,6 +109,14 @@ func (o *OpAssignVar) Compile(asm *os.File) {
         case *IdentExpr:
             vars.DerefSetVar(asm, e.Ident)
 
+        case *UnaryExpr:
+            asm.WriteString("mov rdx, rax\n")
+            o.Value.Compile(asm)
+            if e.Operator.Type == token.Mul {
+                asm.WriteString("mov rax, QWORD [rax]\n")
+            }
+            asm.WriteString("mov QWORD [rdx], rax\n")
+
         default:
             asm.WriteString("mov rdx, rax\n")
             o.Value.Compile(asm)
@@ -122,6 +130,13 @@ func (o *OpAssignVar) Compile(asm *os.File) {
 
         case *IdentExpr:
             vars.VarSetVar(asm, dest.Ident, e.Ident)
+
+        case *UnaryExpr:
+            o.Value.Compile(asm)
+            if e.Operator.Type == token.Mul {
+                asm.WriteString("mov rax, QWORD [rax]\n")
+            }
+            vars.VarSetExpr(asm, dest.Ident, "rax")
 
         default:
             o.Value.Compile(asm)
