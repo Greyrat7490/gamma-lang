@@ -10,7 +10,7 @@ fn global_test() {
     printStr("v2: ")
     printInt(v2)
     printStr("\n")
- 
+
 
     printStr("p1 = &v1\n")
 
@@ -22,7 +22,7 @@ fn global_test() {
 
     printInt(v1)
     printStr("\n")
-    
+
     printStr("*p1 = v2\n")
     *p1 = v2
 
@@ -35,16 +35,16 @@ fn global_test() {
 
     printInt(v2)
     printStr("\n")
-    
+
     printStr("*p1 = -13\n")
     *p1 = -13
-    
+
     printInt(v2)
     printStr("\n")
-    
+
     printStr("*p1 = v1\n")
     *p1 = v1
-    
+
     printInt(v2)
     printStr("\n")
 

@@ -76,7 +76,7 @@ func defLocalVal(asm *os.File, v *LocalVar, val token.Token) {
     switch v.Type.GetKind() {
     case types.Str:
         strIdx := str.Add(val)
-        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], str%d\n", v.offset+8, strIdx))
+        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], _str%d\n", v.offset+8, strIdx))
         asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %d\n", v.offset, str.GetSize(strIdx)))
 
     case types.I32:

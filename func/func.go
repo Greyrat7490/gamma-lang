@@ -48,6 +48,12 @@ func GetFn(name string) *function {
 }
 
 func Define(asm *os.File, name token.Token) {
+    if name.Str[0] == '_' {
+        fmt.Fprintln(os.Stderr, "[ERROR] function names starting with \"_\" are reserved for the compiler")
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+    }
+
     asm.WriteString(name.Str + ":\n")
     asm.WriteString("push rbp\nmov rbp, rsp\n")
 
@@ -116,7 +122,7 @@ func PassVal(asm *os.File, fnName token.Token, argNum int, value token.Token) {
             switch t.GetKind() {
             case types.Str:
                 strIdx := str.Add(value)
-                asm.WriteString(fmt.Sprintf("mov %s, str%d\n", regs[argNum], strIdx))
+                asm.WriteString(fmt.Sprintf("mov %s, _str%d\n", regs[argNum], strIdx))
                 asm.WriteString(fmt.Sprintf("mov %s, %d\n", regs[argNum+1], str.GetSize(strIdx)))
 
             case types.I32:

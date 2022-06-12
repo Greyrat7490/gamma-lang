@@ -10,7 +10,6 @@ fn test1(a1 i32) {
     printStr("\n")
 }
 
-// TODO fix empty a1
 fn test2(a1 str) {
     printStr(a1)
     printStr(v2)

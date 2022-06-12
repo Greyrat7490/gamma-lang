@@ -23,7 +23,7 @@ func nasm_header(asm *os.File) {
 
 func nasm_footer(asm *os.File) {
     asm.WriteString("\n_start:\n")
-    asm.WriteString("mov rsp, stack_top\n")
+    asm.WriteString("mov rsp, _stack_top\n")
 
     vars.InitVarWithExpr(asm)
     asm.WriteString("call main\n")
@@ -33,16 +33,16 @@ func nasm_footer(asm *os.File) {
     asm.WriteString("syscall\n")
 
     asm.WriteString("\nsection .rodata\n")
-    asm.WriteString("str_true: db \"true\"\n")
-    asm.WriteString("str_false: db \"false\"\n")
+    asm.WriteString("_true: db \"true\"\n")
+    asm.WriteString("_false: db \"false\"\n")
     str.WriteStrLits(asm)
 
     asm.WriteString("\nsection .data\n")
     vars.DefineGlobalVars(asm)
 
     asm.WriteString("\nsection .bss\n")
-    asm.WriteString("\tresb 1024 * 1024\nstack_top:\n") // 1MiB
-    asm.WriteString("intBuf:\n\tresb 21") // max 64bit -> 20 digits max + sign -> 21 char string max
+    asm.WriteString("\tresb 1024 * 1024\n_stack_top:\n") // 1MiB
+    asm.WriteString("_intBuf:\n\tresb 21") // max 64bit -> 20 digits max + sign -> 21 char string max
 }
 
 func compile() {

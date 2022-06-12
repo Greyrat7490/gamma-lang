@@ -4,12 +4,12 @@ var v2 str := "some string2"
 fn main() {
     printInt(86)
     printStr("\n")
-    
+
     printInt(v1)
     printStr("\n")
-    
+
     printStr("some string\n")
-    
+
     printStr(v2)
     printStr("\n")
 

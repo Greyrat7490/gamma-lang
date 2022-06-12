@@ -43,7 +43,7 @@ func definePrintInt(asm *os.File) {
 
     asm.WriteString("printInt:\n")
     asm.WriteString("mov rax, rdi\n")
-    asm.WriteString("call int_to_str\n")
+    asm.WriteString("call _int_to_str\n")
 
     asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
     asm.WriteString("mov rdx, rax\n")
@@ -58,7 +58,7 @@ func definePrintPtr(asm *os.File) {
 
     asm.WriteString("printPtr:\n")
     asm.WriteString("mov rax, rdi\n")
-    asm.WriteString("call int_to_str\n")
+    asm.WriteString("call _int_to_str\n")
 
     asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
     asm.WriteString("mov rdx, rax\n")
@@ -74,7 +74,7 @@ func definePrintBool(asm *os.File) {
     asm.WriteString("printBool:\n")
 
     asm.WriteString("mov rax, rdi\n")
-    asm.WriteString("call bool_to_str\n")
+    asm.WriteString("call _bool_to_str\n")
 
     asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
     asm.WriteString("mov rdx, rax\n")
@@ -110,14 +110,14 @@ func defineBtoS(asm *os.File) {
     asm.WriteString(`; rax = input int
 ; rbx = output string pointer
 ; rax = output string length
-bool_to_str:
+_bool_to_str:
     cmp rax, 0
     jne .c1
-    mov rbx, str_false
+    mov rbx, _false
     mov rax, 5
     ret
     .c1:
-        mov rbx, str_true
+        mov rbx, _true
         mov rax, 4
         ret
 
@@ -128,13 +128,13 @@ func defineItoS(asm *os.File) {
     asm.WriteString(`; rax = input int
 ; rbx = output string pointer
 ; rax = output string length
-uint_to_str:
+_uint_to_str:
     push rcx
     push rdx
 
     mov ecx, 10
 
-    mov rbx, intBuf + 20
+    mov rbx, _intBuf + 20
     .l1:
         xor edx, edx
         div ecx
@@ -145,19 +145,19 @@ uint_to_str:
         jne .l1
 
     mov rax, rbx
-    sub rax, intBuf
+    sub rax, _intBuf
     inc rax
     pop rdx
     pop rcx
     ret
 
-int_to_str:
+_int_to_str:
     push rcx
     push rdx
     push rax
 
     mov ecx, 10
-    mov rbx, intBuf + 20
+    mov rbx, _intBuf + 20
 
     cmp rax, 0
     jge .l1
@@ -182,7 +182,7 @@ int_to_str:
 
     .end:
         mov rax, rbx
-        sub rax, intBuf
+        sub rax, _intBuf
         inc rax
         pop rdx
         pop rcx

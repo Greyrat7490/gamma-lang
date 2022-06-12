@@ -78,6 +78,12 @@ func AddrToRax(asm *os.File, name token.Token) {
 }
 
 func Declare(varname token.Token, vartype types.Type) {
+    if varname.Str[0] == '_' {
+        fmt.Fprintln(os.Stderr, "[ERROR] variable names starting with \"_\" are reserved for the compiler")
+        fmt.Fprintln(os.Stderr, "\t" + varname.At())
+        os.Exit(1)
+    }
+
     if InGlobalScope() {
         declareGlobal(varname, vartype)
     } else {
@@ -164,7 +170,7 @@ func DerefSetVal(asm *os.File, value token.Token) {
     if value.Type == token.Str {
         strIdx := str.Add(value)
 
-        asm.WriteString(fmt.Sprintf("mov QWORD [rax], str%d\n", strIdx))
+        asm.WriteString(fmt.Sprintf("mov QWORD [rax], _str%d\n", strIdx))
         asm.WriteString(fmt.Sprintf("mov QWORD [rax+8], %d\n", str.GetSize(strIdx)))
     } else {
         asm.WriteString(fmt.Sprintf("mov QWORD [rax], %s\n", value.Str))
@@ -205,7 +211,7 @@ func VarSetVal(asm *os.File, name token.Token, value token.Token) {
         strIdx := str.Add(value)
         s1, s2 := v.Gets()
 
-        Write(asm, fmt.Sprintf("mov %s, str%d\n", s1, strIdx))
+        Write(asm, fmt.Sprintf("mov %s, _str%d\n", s1, strIdx))
         Write(asm, fmt.Sprintf("mov %s, %d\n",    s2, str.GetSize(strIdx)))
     } else {
         Write(asm, fmt.Sprintf("mov %s, %s\n", v.Get(), value.Str))
