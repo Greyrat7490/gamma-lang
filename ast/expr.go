@@ -188,16 +188,17 @@ func (o *BinaryExpr) Compile(asm *os.File) {
         arith.BinaryOp(asm, o.Operator.Type, v.Get())
 
     default:
-        vars.Write(asm, "push rbx\n")
-        vars.Write(asm, "mov rbx, rax\n")
+        vars.Write(asm, "push rax\n")
 
         o.OperandR.Compile(asm)
         if u,ok := e.(*UnaryExpr); ok && u.Operator.Type == token.Mul {
-            vars.Write(asm, "mov rax, QWORD [rax]\n")
+            vars.Write(asm, "mov rbx, QWORD [rax]\n")
+        } else {
+            vars.Write(asm, "mov rbx, rax\n")
         }
-        arith.BinaryOp(asm, o.Operator.Type, "rbx")
 
-        vars.Write(asm, "pop rbx\n")
+        vars.Write(asm, "pop rax\n")
+        arith.BinaryOp(asm, o.Operator.Type, "rbx")
     }
 }
 

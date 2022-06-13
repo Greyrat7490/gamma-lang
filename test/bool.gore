@@ -1,6 +1,6 @@
 var v1 i32 := 420
 
-fn main() {
+fn simple() {
     var l1 bool := v1 == 86
     printStr("420 == 86: ")
     printBool(l1)
@@ -40,4 +40,29 @@ fn main() {
     printStr("v1 >= v1: ")
     printBool(l1)
     printStr("\n")
+}
+
+fn arith() {
+    printStr("410 + 10 == 420: ")
+    printBool(410 + 10 == 420)
+    printStr("\n")
+
+    printStr("410 + 10 != 420: ")
+    printBool(410 + 10 != 420)
+    printStr("\n")
+
+    printStr("40 * 10 + 20 > 69: ")
+    printBool(40 * 10 + 20 > 69)
+    printStr("\n")
+
+    printStr("40 * 10 + 20 < 421: ")
+    printBool(40 * 10 + 20 < 421)
+    printStr("\n")
+}
+
+fn main() {
+    printStr("simple\n")
+    simple()
+    printStr("\narith\n")
+    arith()
 }

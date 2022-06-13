@@ -25,10 +25,7 @@ fn printRow() {
 fn setNextRow(round i32) {
     *(cur+(SIZE-round-1)*8) = 1
 
-    var border i32 := SIZE - 1
-
-    // TODO FIX binary/unary expr as border for for loops
-    for i i32, border, 1 {
+    for i i32, SIZE-1, 1 {
         if *(prev+(i-1)*8) == 0 {
             if *(prev+i*8) == 0 {
                 if *(prev+(i+1)*8) == 0 {   // 000 -> 0
