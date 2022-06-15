@@ -95,10 +95,17 @@ func (o *OpDefFn) Compile(asm *os.File) {
 
     fn.Define(asm, o.FnName)
     fn.ReserveSpace(asm, argsSize(o.Args), o.Block.maxFrameSize())
-    for i, a := range o.Args {
+    regIdx := 0
+    for _, a := range o.Args {
         fn.AddArg(a.Vartype)
         a.Compile(asm)
-        fn.DefArg(asm, i, a.Varname, a.Vartype)
+        fn.DefArg(asm, regIdx, a.Vartype)
+
+        if a.Vartype.GetKind() == types.Str {
+            regIdx += 2
+        } else {
+            regIdx++
+        }
     }
 
     o.Block.Compile(asm)

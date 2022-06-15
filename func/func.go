@@ -100,115 +100,95 @@ func AddArg(argtype types.Type) {
     funcs[curFunc].Args = append(funcs[curFunc].Args, argtype)
 }
 
-func DefArg(asm *os.File, argnum int, argname token.Token, argtype types.Type) {
+func DefArg(asm *os.File, regIdx int, argtype types.Type) {
     if argtype.GetKind() == types.Str {
-        asm.WriteString(fmt.Sprintf("mov %s [rbp-%d], %s\n", vars.GetWord(types.Ptr_Size), vars.GetLastOffset() + types.Ptr_Size,
-            vars.GetReg(regs[argnum], types.Ptr_Size)))
-
-        asm.WriteString(fmt.Sprintf("mov %s [rbp-%d], %s\n", vars.GetWord(types.I32_Size), vars.GetLastOffset(),
-            vars.GetReg(regs[argnum+1], types.I32_Size)))
+        setArg(asm, vars.GetLastOffset() + types.Ptr_Size, regIdx, types.Ptr_Size)
+        setArg(asm, vars.GetLastOffset(), regIdx+1, types.I32_Size)
     } else {
-        asm.WriteString(fmt.Sprintf("mov %s [rbp-%d], %s\n", vars.GetWord(argtype.Size()), vars.GetLastOffset(), vars.GetReg(regs[argnum], argtype.Size())))
+        setArg(asm, vars.GetLastOffset(), regIdx, argtype.Size())
     }
 }
 
+func setArg(asm *os.File, offset int, regIdx int, size int) {
+    if regIdx >= len(regs) {
+        fmt.Fprintf(os.Stderr, "[ERROR] not enough regs left to set args (max 6) %d more needed\n", regIdx - len(regs) + 1)
+        os.Exit(1)
+    }
 
-func PassVal(asm *os.File, fnName token.Token, argNum int, value token.Token) {
-    if f := GetFn(fnName.Str); f != nil {
-       if t := types.TypeOfVal(value.Str); t != nil {
-            if t != f.Args[argNum] {
-                fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%v\" but got \"%v\"\n",
-                    f.Name.Str, argNum, f.Args[argNum], t)
-                os.Exit(1)
+    // adjust offset if reg is bigger than expected (no smaller reg available)
+    if vars.GetSize(regs[regIdx], size) > size {
+        asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(vars.RegA, vars.GetSize(regs[regIdx], size)), vars.GetReg(regs[regIdx], size)))
+        asm.WriteString(fmt.Sprintf("mov %s [rbp-%d], %s\n", vars.GetWord(size), offset, vars.GetReg(vars.RegA, size)))
+    } else {
+        asm.WriteString(fmt.Sprintf("mov %s [rbp-%d], %s\n", vars.GetWord(size), offset, vars.GetReg(regs[regIdx], size)))
+    }
+}
+
+func PassVal(asm *os.File, fnName token.Token, regIdx int, value token.Token) {
+    if f := GetFn(fnName.Str); f == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", fnName.Str)
+        os.Exit(1)
+    }
+
+    if t := types.TypeOfVal(value.Str); t != nil {
+        switch t.GetKind() {
+        case types.Str:
+            strIdx := str.Add(value)
+            asm.WriteString(fmt.Sprintf("mov %s, _str%d\n", vars.GetReg(regs[regIdx],   types.Ptr_Size), strIdx))
+            asm.WriteString(fmt.Sprintf("mov %s, %d\n",     vars.GetReg(regs[regIdx+1], types.I32_Size), str.GetSize(strIdx)))
+
+        case types.I32:
+            i, _ := strconv.Atoi(value.Str)
+            asm.WriteString(fmt.Sprintf("mov %s, %d\n", vars.GetReg(regs[regIdx], types.I32_Size), i))
+
+        case types.Bool:
+            if value.Str == "true" {
+                asm.WriteString(fmt.Sprintf("mov %s, %d\n", vars.GetReg(regs[regIdx], types.Bool_Size), 1))
+            } else {
+                asm.WriteString(fmt.Sprintf("mov %s, %d\n", vars.GetReg(regs[regIdx], types.Bool_Size), 0))
             }
 
-            switch t.GetKind() {
-            case types.Str:
-                strIdx := str.Add(value)
-                asm.WriteString(fmt.Sprintf("mov %s, _str%d\n", vars.GetReg(regs[argNum],   types.Ptr_Size), strIdx))
-                asm.WriteString(fmt.Sprintf("mov %s, %d\n",     vars.GetReg(regs[argNum+1], types.I32_Size), str.GetSize(strIdx)))
+        case types.Ptr:
+            fmt.Fprintln(os.Stderr, "TODO PtrType in PassVal")
+            os.Exit(1)
 
-            case types.I32:
-                i, _ := strconv.Atoi(value.Str)
-                asm.WriteString(fmt.Sprintf("mov %s, %d\n", vars.GetReg(regs[argNum], types.I32_Size), i))
-
-            case types.Bool:
-                if value.Str == "true" {
-                    asm.WriteString(fmt.Sprintf("mov %s, %d\n", vars.GetReg(regs[argNum], types.Bool_Size), 1))
-                } else {
-                    asm.WriteString(fmt.Sprintf("mov %s, %d\n", vars.GetReg(regs[argNum], types.Bool_Size), 0))
-                }
-
-            case types.Ptr:
-                fmt.Fprintln(os.Stderr, "TODO PtrType in PassVal")
-                os.Exit(1)
-
-            default:
-                fmt.Fprintf(os.Stderr, "[ERROR] could not get type of value \"%s\"\n", value.Str)
-                os.Exit(1)
-            }
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", value.Str)
-            fmt.Fprintln(os.Stderr, "\t" + fnName.At())
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] could not get type of value \"%s\"\n", value.Str)
             os.Exit(1)
         }
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", fnName.Str)
+        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", value.Str)
+        fmt.Fprintln(os.Stderr, "\t" + fnName.At())
         os.Exit(1)
     }
 }
 
-func PassVar(asm *os.File, fnName token.Token, argNum int, varname token.Token) {
-    if f := GetFn(fnName.Str); f != nil {
-        if otherVar := vars.GetVar(varname.Str); otherVar != nil {
-            if otherVar.GetType().GetKind() != f.Args[argNum].GetKind() {
-                fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" takes as argument %d the type \"%v\" but got \"%v\"\n",
-                    f.Name.Str, argNum, f.Args[argNum], otherVar.GetType())
-                fmt.Fprintln(os.Stderr, "\t" + fnName.At())
-                os.Exit(1)
-            }
+func PassVar(asm *os.File, regIdx int, varname token.Token) {
+    if otherVar := vars.GetVar(varname.Str); otherVar != nil {
+        switch otherVar.GetType().GetKind() {
+        case types.Str:
+            s1, s2 := otherVar.Gets()
+            asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(regs[regIdx],   types.Ptr_Size), s1))
+            asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(regs[regIdx+1], types.I32_Size), s2))
 
-            switch otherVar.GetType().GetKind() {
-            case types.Str:
-                s1, s2 := otherVar.Gets()
-                asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(regs[argNum], types.Ptr_Size), s1))
-                asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(regs[argNum+1],   types.I32_Size), s2))
+        case types.I32, types.Ptr:
+            asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(regs[regIdx], otherVar.GetType().Size()), otherVar.Get()))
 
-            case types.I32, types.Ptr:
-                asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(regs[argNum], otherVar.GetType().Size()), otherVar.Get()))
+        case types.Bool:
+            asm.WriteString(fmt.Sprintf("movzx %s, %s\n", vars.GetReg(regs[regIdx], otherVar.GetType().Size()), otherVar.Get()))
 
-            case types.Bool:
-                asm.WriteString(fmt.Sprintf("movzx %s, %s\n", vars.GetReg(regs[argNum], otherVar.GetType().Size()), otherVar.Get()))
-
-            default:
-                fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", varname.Str)
-                os.Exit(1)
-            }
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", varname.Str)
+            os.Exit(1)
         }
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", fnName.Str)
-        os.Exit(1)
     }
 }
 
-func PassReg(asm *os.File, fnName token.Token, argNum int, reg vars.RegGroup) {
-    f := GetFn(fnName.Str)
-
-    if f == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", fnName.Str)
-        os.Exit(1)
-    }
-
-    if f.Args[argNum].GetKind() == types.Str {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected function \"%s\" arg%d to be an i32, bool or a pointer but got str\n", fnName.Str, argNum)
-        os.Exit(1)
-    }
-
-    size := f.Args[argNum].Size()
+func PassReg(asm *os.File, regIdx int, size int) {
     if size < 2 {
-        asm.WriteString(fmt.Sprintf("movzx %s, %s\n", vars.GetReg(regs[argNum], size), vars.GetReg(reg, size)))
+        asm.WriteString(fmt.Sprintf("movzx %s, %s\n", vars.GetReg(regs[regIdx], size), vars.GetReg(vars.RegA, size)))
     } else {
-        asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(regs[argNum], size), vars.GetReg(reg, size)))
+        asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(regs[regIdx], size), vars.GetReg(vars.RegA, size)))
     }
 }
 

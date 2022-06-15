@@ -44,8 +44,6 @@ fn test4(a1 i32, a2 i32) {
     printStr("\n")
 }
 
-// not working (TODO)
-// caused by different sizes of str and i32
 fn test5(a1 str, a2 i32) {
     printStr("arg1: ")
     printStr(a1)
@@ -55,14 +53,31 @@ fn test5(a1 str, a2 i32) {
     printStr("\n")
 }
 
+fn test6(a1 str, a2 str, a3 str) {
+    printStr("arg1: ")
+    printStr(a1)
+
+    printStr("arg2: ")
+    printStr(a2)
+
+    printStr("arg3: ")
+    printStr(a3)
+}
+
 fn main() {
     test1(420)
+    
     printStr("------------\n")
+    
     test2("some arg\n")
+    
     printStr("------------\n")
+    
     test3()
+    
     printStr("------------\n")
+    
     test4(-69, 86)
-
-    test5("test\n", 5)
+    test5("test string arg1\n", 8)
+    test6("test string arg1\n", "arg2\n", "string arg3\n")
 }

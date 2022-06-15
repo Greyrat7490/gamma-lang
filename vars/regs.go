@@ -67,3 +67,14 @@ func GetReg(g RegGroup, size int) string {
     }
     return regs[g][size / 2]
 }
+
+func GetSize(g RegGroup, size int) int {
+    switch {
+    case g >= RegR8: 
+        return 8
+    case g >= RegDi && size < 2: 
+        return 2
+    default:
+        return size
+    }
+}

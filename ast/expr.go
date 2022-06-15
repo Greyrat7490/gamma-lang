@@ -210,13 +210,14 @@ func (o *BinaryExpr) Compile(asm *os.File) {
 }
 
 func (o *OpFnCall) Compile(asm *os.File) {
-    for i, val := range o.Values {
+    regIdx := 0
+    for _, val := range o.Values {
         switch e := val.(type) {
         case *LitExpr:
-            fn.PassVal(asm, o.FnName, i, e.Val)
+            fn.PassVal(asm, o.FnName, regIdx, e.Val)
 
         case *IdentExpr:
-            fn.PassVar(asm, o.FnName, i, e.Ident)
+            fn.PassVar(asm, regIdx, e.Ident)
 
         case *UnaryExpr:
             size := val.GetType().Size()
@@ -225,11 +226,17 @@ func (o *OpFnCall) Compile(asm *os.File) {
             if e.Operator.Type == token.Mul {
                 vars.Write(asm, fmt.Sprintf("mov %s, %s [rax]\n", vars.GetReg(vars.RegA, size), vars.GetWord(size)))
             }
-            fn.PassReg(asm, o.FnName, i, vars.RegA)
+            fn.PassReg(asm, regIdx, size)
 
         default:
             val.Compile(asm)
-            fn.PassReg(asm, o.FnName, i, vars.RegA)
+            fn.PassReg(asm, regIdx, val.GetType().Size())
+        }
+
+        if val.GetType().GetKind() == types.Str {
+            regIdx += 2
+        } else {
+            regIdx++
         }
     }
 
