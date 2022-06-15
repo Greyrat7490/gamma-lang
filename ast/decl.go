@@ -86,7 +86,7 @@ func (o *OpDefVar) Compile(asm *os.File) {
 
     default:
         o.Value.Compile(asm)
-        vars.DefWithExpr(asm, o.Varname, "rax")
+        vars.DefWithExpr(asm, o.Varname, vars.RegA)
     }
 }
 

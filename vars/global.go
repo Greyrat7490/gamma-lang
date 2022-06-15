@@ -22,10 +22,11 @@ func (v *GlobalVar) String() string {
     return fmt.Sprintf("{%s %s}", v.Name.Str, v.Type)
 }
 func (v *GlobalVar) Get() string {
-    return fmt.Sprintf("QWORD [%s]", v.Name.Str)
+    return fmt.Sprintf("%s [%s]", GetWord(v.Type.Size()), v.Name.Str)
 }
 func (v *GlobalVar) Gets() (string, string) {
-    return fmt.Sprintf("QWORD [%s]", v.Name.Str), fmt.Sprintf("QWORD [%s+8]", v.Name.Str)
+    return fmt.Sprintf("%s [%s]",    GetWord(types.Ptr_Size), v.Name.Str),
+           fmt.Sprintf("%s [%s+%d]", GetWord(types.I32_Size), v.Name.Str, types.Ptr_Size)
 }
 func (v *GlobalVar) GetType() types.Type {
     return v.Type
@@ -73,14 +74,15 @@ func defGlobalVal(asm *os.File, v *GlobalVar, val token.Token) {
     switch v.Type.GetKind() {
     case types.Str:
         strIdx := str.Add(val)
-        globalDefines = append(globalDefines, fmt.Sprintf("%s: dq _str%d, %d\n", v.Name.Str, strIdx, str.GetSize(strIdx)))
+        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s _str%d\n  %s %d\n",
+            v.Name.Str, GetDataSize(types.Ptr_Size), strIdx, GetDataSize(types.I32_Size), str.GetSize(strIdx)))
 
     case types.I32:
-        globalDefines = append(globalDefines, fmt.Sprintf("%s: dq %s\n", v.Name.Str, val.Str))
+        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s %s\n", v.Name.Str, GetDataSize(types.I32_Size), val.Str))
 
     case types.Bool:
         if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
-        globalDefines = append(globalDefines, fmt.Sprintf("%s: dq %s\n", v.Name.Str, val.Str))
+        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s %s\n", v.Name.Str, GetDataSize(types.I32_Size), val.Str))
 
     case types.Ptr:
         fmt.Fprintln(os.Stderr, "TODO defGlobalVal PtrType")
@@ -92,7 +94,8 @@ func defGlobalVal(asm *os.File, v *GlobalVar, val token.Token) {
     }
 }
 
-func defGlobalExpr(asm *os.File, v *GlobalVar, reg string) {
-    globalDefines = append(globalDefines, fmt.Sprintf("%s: dq 0\n", v.Name.Str))
-    preMain = append(preMain, fmt.Sprintf("mov QWORD [%s], %s\n", v.Name.Str, reg))
+func defGlobalExpr(asm *os.File, v *GlobalVar, reg RegGroup) {
+    size := v.Type.Size()
+    globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s 0\n", v.Name.Str, GetDataSize(size)))
+    preMain = append(preMain, fmt.Sprintf("mov %s [%s], %s\n", GetWord(size), v.Name.Str, GetReg(reg, size)))
 }

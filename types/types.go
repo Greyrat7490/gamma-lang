@@ -10,7 +10,12 @@ const (
     Str TypeKind = iota
 )
 
-// TODO: correct sizes for i32 and bool (not just 64bit)
+const (
+    I32_Size  int = 4
+    Bool_Size int = 1
+    Ptr_Size  int = 8
+    Str_Size  int = Ptr_Size + I32_Size
+)
 
 type Type interface {
     Size() int
@@ -34,9 +39,9 @@ func (t BoolType) GetKind() TypeKind { return Bool }
 func (t PtrType)  GetKind() TypeKind { return Ptr  }
 func (t StrType)  GetKind() TypeKind { return Str  }
 
-func (t I32Type)  Size() int { return 8 }
-func (t BoolType) Size() int { return 8 }
-func (t PtrType)  Size() int { return 8 }
+func (t I32Type)  Size() int { return I32_Size }
+func (t BoolType) Size() int { return Bool_Size }
+func (t PtrType)  Size() int { return Ptr_Size }
 func (t StrType)  Size() int { return t.ptr.Size() + t.size.Size() }
 
 func (t I32Type)  String() string { return "i32"  }

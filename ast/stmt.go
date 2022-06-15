@@ -98,29 +98,31 @@ func (o *OpAssignVar) Compile(asm *os.File) {
         os.Exit(1)
     }
 
+    size := t1.Size()
+
     switch dest := o.Dest.(type) {
     case *UnaryExpr:
         dest.Compile(asm)
 
         switch e := o.Value.(type) {
         case *LitExpr:
-            vars.DerefSetVal(asm, e.Val)
+            vars.DerefSetVal(asm, e.Val, size)
 
         case *IdentExpr:
             vars.DerefSetVar(asm, e.Ident)
 
         case *UnaryExpr:
-            asm.WriteString("mov rdx, rax\n")
+            asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(vars.RegD, size), vars.GetReg(vars.RegA, size)))
             o.Value.Compile(asm)
             if e.Operator.Type == token.Mul {
-                asm.WriteString("mov rax, QWORD [rax]\n")
+                asm.WriteString(fmt.Sprintf("mov %s, %s [rax]\n", vars.GetReg(vars.RegA, size), vars.GetWord(size)))
             }
-            asm.WriteString("mov QWORD [rdx], rax\n")
+            asm.WriteString(fmt.Sprintf("mov %s [rdx], %s\n", vars.GetWord(size), vars.GetReg(vars.RegA, size)))
 
         default:
-            asm.WriteString("mov rdx, rax\n")
+            asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(vars.RegD, size), vars.GetReg(vars.RegA, size)))
             o.Value.Compile(asm)
-            asm.WriteString("mov QWORD [rdx], rax\n")
+            asm.WriteString(fmt.Sprintf("mov %s [rdx], %s\n", vars.GetWord(size), vars.GetReg(vars.RegA, size)))
         }
 
     case *IdentExpr:
@@ -134,13 +136,13 @@ func (o *OpAssignVar) Compile(asm *os.File) {
         case *UnaryExpr:
             o.Value.Compile(asm)
             if e.Operator.Type == token.Mul {
-                asm.WriteString("mov rax, QWORD [rax]\n")
+                asm.WriteString(fmt.Sprintf("mov %s, %s [rax]\n", vars.GetReg(vars.RegA, size), vars.GetWord(size)))
             }
-            vars.VarSetExpr(asm, dest.Ident, "rax")
+            vars.VarSetExpr(asm, dest.Ident)
 
         default:
             o.Value.Compile(asm)
-            vars.VarSetExpr(asm, dest.Ident, "rax")
+            vars.VarSetExpr(asm, dest.Ident)
         }
 
     default:
@@ -172,7 +174,7 @@ func (o *IfStmt) Compile(asm *os.File) {
 
     default:
         o.Cond.Compile(asm)
-        count := cond.IfReg(asm, "rax")
+        count := cond.IfReg(asm, "al")
         o.Block.Compile(asm)
         cond.IfEnd(asm, count)
     }
@@ -210,7 +212,7 @@ func (o *IfElseStmt) Compile(asm *os.File) {
 
     default:
         o.If.Cond.Compile(asm)
-        count := cond.IfElseReg(asm, "rax")
+        count := cond.IfElseReg(asm, "al")
 
         vars.CreateScope()
         o.If.Block.Compile(asm)
@@ -252,7 +254,7 @@ func (o *WhileStmt) Compile(asm *os.File) {
     default:
         count := loops.WhileStart(asm)
         o.Cond.Compile(asm)
-        loops.WhileReg(asm, "rax")
+        loops.WhileReg(asm, "al")
         o.Block.Compile(asm)
         loops.WhileEnd(asm, count)
     }
@@ -271,7 +273,7 @@ func (o *ForStmt) Compile(asm *os.File) {
     if o.Limit != nil {
         cond := BinaryExpr{ Operator: token.Token{ Type: token.Lss }, OperandL: &IdentExpr{ Ident: o.Dec.Varname }, OperandR: o.Limit }
         cond.Compile(asm)
-        loops.ForReg(asm, "rax")
+        loops.ForReg(asm, "al")
     }
 
     o.Block.Compile(asm)

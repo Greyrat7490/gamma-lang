@@ -121,7 +121,7 @@ func (o *UnaryExpr) Compile(asm *os.File) {
     case token.Mul:
         switch e := o.Operand.(type) {
         case *IdentExpr:
-            vars.ValToRax(asm, e.Ident)
+            vars.ValToRegA(asm, e.Ident)
 
         case *ParenExpr:
             o.Operand.Compile(asm)
@@ -142,32 +142,39 @@ func (o *UnaryExpr) Compile(asm *os.File) {
         }
 
     default:
+        size := o.Operand.GetType().Size()
+
         switch e := o.Operand.(type) {
         case *IdentExpr:
-            vars.ValToRax(asm, e.Ident)
+            vars.ValToRegA(asm, e.Ident)
 
         case *LitExpr:
-            vars.Write(asm, fmt.Sprintf("mov rax, %s\n", e.Val.Str))
+            vars.Write(asm, fmt.Sprintf("mov %s, %s\n", vars.GetReg(vars.RegA, size), e.Val.Str))
 
         default:
             o.Operand.Compile(asm)
         }
 
         if o.Operator.Type == token.Minus {
-            vars.Write(asm, "neg rax\n")
+            vars.Write(asm, fmt.Sprintf("neg %s\n", vars.GetReg(vars.RegA, size)))
         }
     }
 }
 func (o *BinaryExpr) Compile(asm *os.File) {
+    size := o.OperandL.GetType().Size()
+    if sizeR := o.OperandR.GetType().Size(); sizeR > size {
+        size = sizeR
+    }
+
     switch e := o.OperandL.(type) {
     case *LitExpr:
-        vars.Write(asm, fmt.Sprintf("mov rax, %s\n", e.Val.Str))
+        vars.Write(asm, fmt.Sprintf("mov %s, %s\n", vars.GetReg(vars.RegA, size), e.Val.Str))
     case *IdentExpr:
-        vars.ValToRax(asm, e.Ident)
+        vars.ValToRegA(asm, e.Ident)
     case *UnaryExpr:
         o.OperandL.Compile(asm)
         if e.Operator.Type == token.Mul {
-            vars.Write(asm, "mov rax, QWORD [rax]\n")
+            vars.Write(asm, fmt.Sprintf("mov %s, %s [rax]\n", vars.GetReg(vars.RegA, size), vars.GetWord(size)))
         }
     default:
         o.OperandL.Compile(asm)
@@ -176,7 +183,7 @@ func (o *BinaryExpr) Compile(asm *os.File) {
 
     switch e := o.OperandR.(type) {
     case *LitExpr:
-        arith.BinaryOp(asm, o.Operator.Type, e.Val.Str)
+        arith.BinaryOp(asm, o.Operator.Type, e.Val.Str, size)
     case *IdentExpr:
         v := vars.GetVar(e.Ident.Str)
         if v == nil {
@@ -185,20 +192,20 @@ func (o *BinaryExpr) Compile(asm *os.File) {
             os.Exit(1)
         }
 
-        arith.BinaryOp(asm, o.Operator.Type, v.Get())
+        arith.BinaryOp(asm, o.Operator.Type, v.Get(), size)
 
     default:
-        vars.Write(asm, "push rax\n")
+        vars.Write(asm, fmt.Sprintf("push %s\n", vars.GetReg(vars.RegA, 8)))
 
         o.OperandR.Compile(asm)
         if u,ok := e.(*UnaryExpr); ok && u.Operator.Type == token.Mul {
-            vars.Write(asm, "mov rbx, QWORD [rax]\n")
+            vars.Write(asm, fmt.Sprintf("mov %s, %s [rax]\n", vars.GetReg(vars.RegB, size), vars.GetWord(size)))
         } else {
-            vars.Write(asm, "mov rbx, rax\n")
+            vars.Write(asm, fmt.Sprintf("mov %s, %s\n", vars.GetReg(vars.RegB, size), vars.GetReg(vars.RegA, size)))
         }
 
-        vars.Write(asm, "pop rax\n")
-        arith.BinaryOp(asm, o.Operator.Type, "rbx")
+        vars.Write(asm, fmt.Sprintf("pop %s\n", vars.GetReg(vars.RegA, 8)))
+        arith.BinaryOpReg(asm, o.Operator.Type, vars.RegB, size)
     }
 }
 
@@ -212,16 +219,17 @@ func (o *OpFnCall) Compile(asm *os.File) {
             fn.PassVar(asm, o.FnName, i, e.Ident)
 
         case *UnaryExpr:
+            size := val.GetType().Size()
+
             val.Compile(asm)
             if e.Operator.Type == token.Mul {
-                fn.PassReg(asm, o.FnName, i, "QWORD [rax]")
-            } else {
-                fn.PassReg(asm, o.FnName, i, "rax")
+                vars.Write(asm, fmt.Sprintf("mov %s, %s [rax]\n", vars.GetReg(vars.RegA, size), vars.GetWord(size)))
             }
+            fn.PassReg(asm, o.FnName, i, vars.RegA)
 
         default:
             val.Compile(asm)
-            fn.PassReg(asm, o.FnName, i, "rax")
+            fn.PassReg(asm, o.FnName, i, vars.RegA)
         }
     }
 

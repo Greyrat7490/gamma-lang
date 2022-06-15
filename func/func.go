@@ -23,7 +23,7 @@ System V AMD64 ABI calling convention
   * callee reserves space (multiple of 16)
 */
 
-var regs []string = []string{ "rdi", "rsi", "rdx", "rcx", "r8", "r9" }
+var regs []vars.RegGroup = []vars.RegGroup{ vars.RegDi, vars.RegSi, vars.RegD, vars.RegC, vars.RegR8, vars.RegR9 }
 
 var funcs []function
 var curFunc int = -1
@@ -102,10 +102,13 @@ func AddArg(argtype types.Type) {
 
 func DefArg(asm *os.File, argnum int, argname token.Token, argtype types.Type) {
     if argtype.GetKind() == types.Str {
-        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastOffset() + types.I32Type{}.Size(), regs[argnum]))
-        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastOffset(), regs[argnum+1]))
+        asm.WriteString(fmt.Sprintf("mov %s [rbp-%d], %s\n", vars.GetWord(types.Ptr_Size), vars.GetLastOffset() + types.Ptr_Size,
+            vars.GetReg(regs[argnum], types.Ptr_Size)))
+
+        asm.WriteString(fmt.Sprintf("mov %s [rbp-%d], %s\n", vars.GetWord(types.I32_Size), vars.GetLastOffset(),
+            vars.GetReg(regs[argnum+1], types.I32_Size)))
     } else {
-        asm.WriteString(fmt.Sprintf("mov QWORD [rbp-%d], %s\n", vars.GetLastOffset(), regs[argnum]))
+        asm.WriteString(fmt.Sprintf("mov %s [rbp-%d], %s\n", vars.GetWord(argtype.Size()), vars.GetLastOffset(), vars.GetReg(regs[argnum], argtype.Size())))
     }
 }
 
@@ -122,18 +125,18 @@ func PassVal(asm *os.File, fnName token.Token, argNum int, value token.Token) {
             switch t.GetKind() {
             case types.Str:
                 strIdx := str.Add(value)
-                asm.WriteString(fmt.Sprintf("mov %s, _str%d\n", regs[argNum], strIdx))
-                asm.WriteString(fmt.Sprintf("mov %s, %d\n", regs[argNum+1], str.GetSize(strIdx)))
+                asm.WriteString(fmt.Sprintf("mov %s, _str%d\n", vars.GetReg(regs[argNum],   types.Ptr_Size), strIdx))
+                asm.WriteString(fmt.Sprintf("mov %s, %d\n",     vars.GetReg(regs[argNum+1], types.I32_Size), str.GetSize(strIdx)))
 
             case types.I32:
                 i, _ := strconv.Atoi(value.Str)
-                asm.WriteString(fmt.Sprintf("mov %s, %d\n", regs[argNum], i))
+                asm.WriteString(fmt.Sprintf("mov %s, %d\n", vars.GetReg(regs[argNum], types.I32_Size), i))
 
             case types.Bool:
                 if value.Str == "true" {
-                    asm.WriteString(fmt.Sprintf("mov %s, %d\n", regs[argNum], 1))
+                    asm.WriteString(fmt.Sprintf("mov %s, %d\n", vars.GetReg(regs[argNum], types.Bool_Size), 1))
                 } else {
-                    asm.WriteString(fmt.Sprintf("mov %s, %d\n", regs[argNum], 0))
+                    asm.WriteString(fmt.Sprintf("mov %s, %d\n", vars.GetReg(regs[argNum], types.Bool_Size), 0))
                 }
 
             case types.Ptr:
@@ -168,14 +171,14 @@ func PassVar(asm *os.File, fnName token.Token, argNum int, varname token.Token) 
             switch otherVar.GetType().GetKind() {
             case types.Str:
                 s1, s2 := otherVar.Gets()
-                asm.WriteString(fmt.Sprintf("mov %s, %s\n", regs[argNum], s1))
-                asm.WriteString(fmt.Sprintf("mov %s, %s\n", regs[argNum+1], s2))
+                asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(regs[argNum], types.Ptr_Size), s1))
+                asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(regs[argNum+1],   types.I32_Size), s2))
 
-            case types.I32, types.Bool:
-                asm.WriteString(fmt.Sprintf("mov %s, %s\n", regs[argNum], otherVar.Get()))
+            case types.I32, types.Ptr:
+                asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(regs[argNum], otherVar.GetType().Size()), otherVar.Get()))
 
-            case types.Ptr:
-                asm.WriteString(fmt.Sprintf("mov %s, %s\n", regs[argNum], otherVar.Get()))
+            case types.Bool:
+                asm.WriteString(fmt.Sprintf("movzx %s, %s\n", vars.GetReg(regs[argNum], otherVar.GetType().Size()), otherVar.Get()))
 
             default:
                 fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", varname.Str)
@@ -188,7 +191,7 @@ func PassVar(asm *os.File, fnName token.Token, argNum int, varname token.Token) 
     }
 }
 
-func PassReg(asm *os.File, fnName token.Token, argNum int, reg string) {
+func PassReg(asm *os.File, fnName token.Token, argNum int, reg vars.RegGroup) {
     f := GetFn(fnName.Str)
 
     if f == nil {
@@ -197,11 +200,16 @@ func PassReg(asm *os.File, fnName token.Token, argNum int, reg string) {
     }
 
     if f.Args[argNum].GetKind() == types.Str {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected function \"%s\" arg%d to be an i32 or bool but got str\n", fnName.Str, argNum)
+        fmt.Fprintf(os.Stderr, "[ERROR] expected function \"%s\" arg%d to be an i32, bool or a pointer but got str\n", fnName.Str, argNum)
         os.Exit(1)
     }
 
-    asm.WriteString(fmt.Sprintf("mov %s, %s\n", regs[argNum], reg))
+    size := f.Args[argNum].Size()
+    if size < 2 {
+        asm.WriteString(fmt.Sprintf("movzx %s, %s\n", vars.GetReg(regs[argNum], size), vars.GetReg(reg, size)))
+    } else {
+        asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(regs[argNum], size), vars.GetReg(reg, size)))
+    }
 }
 
 

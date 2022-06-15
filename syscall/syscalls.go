@@ -42,7 +42,7 @@ func definePrintInt(asm *os.File) {
     fn.AddBuildIn("printInt", "i", types.I32Type{})
 
     asm.WriteString("printInt:\n")
-    asm.WriteString("mov rax, rdi\n")
+    asm.WriteString("movsxd rax, edi\n")   // mov edi into eax and sign extends upper half of rax
     asm.WriteString("call _int_to_str\n")
 
     asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
@@ -90,7 +90,7 @@ func definePrintStr(asm *os.File) {
     asm.WriteString("printStr:\n")
 
     asm.WriteString("mov rdx, rsi\n")
-    asm.WriteString("mov rsi, rdi\n")
+    asm.WriteString("mov esi, edi\n")
     asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
     syscall(asm, SYS_WRITE)
 
