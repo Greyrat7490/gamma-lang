@@ -43,8 +43,8 @@ func main() {
 
     token.Tokenize(src)
     prs.Parse()
-    // TODO: type checking step
     // TODO: optimization step
+    ast.TypeCheck()
     ast.ShowAst()
     compile()
     nasm.GenExe()

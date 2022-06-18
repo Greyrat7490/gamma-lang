@@ -1,8 +1,9 @@
 package ast
 
 import (
-    "fmt"
-    "os"
+	"os"
+	"fmt"
+	"gorec/vars"
 )
 
 var ast OpProgramm
@@ -17,6 +18,14 @@ func AddOp(opDecl OpDecl) {
 
 func Compile(asm *os.File) {
     ast.Compile(asm);
+}
+
+func TypeCheck() {
+    for _, op := range ast.Ops {
+        op.typeCheck()
+    }
+
+    vars.ClearGlobalVars()
 }
 
 

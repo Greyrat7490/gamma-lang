@@ -3,7 +3,6 @@ package ast
 import (
     "os"
     "fmt"
-    "strings"
     "gorec/vars"
     "gorec/func"
     "gorec/types"
@@ -14,6 +13,7 @@ import (
 type OpDecl interface {
     Op
     Compile(file *os.File)
+    typeCheck()
     decl()  // to differenciate OpDecl from OpStmt and OpExpr
 }
 
@@ -49,20 +49,10 @@ func (o *OpDecVar) Compile(file *os.File) {
 func (o *OpDefVar) Compile(file *os.File) {
     v := vars.GetVar(o.Varname.Str)
     if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared)\n", o.Varname.Str)
+        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", o.Varname.Str)
         fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
         os.Exit(1)
     }
-
-    t1 := v.GetType()
-    t2 := o.Value.GetType()
-
-    if t1 != t2 {
-        fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.Varname.Str, t1, t2)
-        fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
-        os.Exit(1)
-    }
-
 
     switch e := o.Value.(type) {
     case *LitExpr:
@@ -117,44 +107,6 @@ func (o *OpDefFn) Compile(file *os.File) {
 func (o *BadDecl) Compile(file *os.File) {
     fmt.Fprintln(os.Stderr, "[ERROR] bad declaration")
     os.Exit(1)
-}
-
-
-func (o *OpDecVar) Readable(indent int) string {
-    s := strings.Repeat("   ", indent)
-    s2 := s + "   "
-
-    return fmt.Sprintf("%sOP_DEC_VAR:\n%s%s(%s) %v(Typename)\n", s, s2,
-        o.Varname.Str, o.Varname.Type.Readable(),
-        o.Vartype)
-}
-
-func (o *OpDefVar) Readable(indent int) string {
-    s := strings.Repeat("   ", indent)
-    s2 := s + "   "
-
-    return fmt.Sprintf("%sOP_DEF_VAR:\n%s%s(%s)\n", s, s2,
-        o.Varname.Str, o.Varname.Type.Readable()) + o.Value.Readable(indent+1)
-}
-
-func (o *OpDefFn) Readable(indent int) string {
-    res := strings.Repeat("   ", indent) + "OP_DEF_FN:\n"
-
-    s := ""
-    for _,a := range o.Args {
-        s += fmt.Sprintf("%s(Name) %v(Typename), ", a.Varname.Str, a.Vartype)
-    }
-    if len(s) > 0 { s = s[:len(s)-2] }
-
-    res += fmt.Sprintf("%s%s(%s) [%s]\n", strings.Repeat("   ", indent+1), o.FnName.Str, o.FnName.Type.Readable(), s) +
-        o.Block.Readable(indent+2)
-
-    return res
-}
-func (o *BadDecl) Readable(indent int) string {
-    fmt.Fprintln(os.Stderr, "[ERROR] bad declaration")
-    os.Exit(1)
-    return ""
 }
 
 

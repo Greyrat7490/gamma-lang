@@ -3,7 +3,6 @@ package ast
 import (
     "os"
     "fmt"
-    "strings"
     "gorec/vars"
     "gorec/token"
     "gorec/loops"
@@ -14,6 +13,7 @@ import (
 type OpStmt interface {
     Op
     Compile(file *os.File)
+    typeCheck()
     stmt()  // to differenciate OpStmt from OpDecl and OpExpr
 }
 
@@ -91,15 +91,7 @@ func (o *OpAssignVar)  stmt() {}
 
 
 func (o *OpAssignVar) Compile(file *os.File) {
-    t1 := o.Dest.GetType()
-    t2 := o.Value.GetType()
-    if t1 != t2 {
-        fmt.Fprintf(os.Stderr, "[ERROR] cannot assign a type: %v with type: %v\n",  t1, t2)
-        fmt.Fprintln(os.Stderr, "\t" + o.Pos.At())
-        os.Exit(1)
-    }
-
-    size := t1.Size()
+    size := o.Dest.GetType().Size()
 
     switch dest := o.Dest.(type) {
     case *UnaryExpr:
@@ -313,81 +305,4 @@ func (o *OpDeclStmt) Compile(file *os.File) {
 func (o *BadStmt) Compile(file *os.File) {
     fmt.Fprintln(os.Stderr, "[ERROR] bad statement")
     os.Exit(1)
-}
-
-
-func (o *OpAssignVar) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + "OP_ASSIGN:\n" +
-        o.Dest.Readable(indent+1) +
-        o.Value.Readable(indent+1)
-}
-
-func (o *OpBlock) Readable(indent int) string {
-    res := strings.Repeat("   ", indent) + "OP_BLOCK:\n"
-    for _, op := range o.Stmts {
-        res += op.Readable(indent+1)
-    }
-
-    return res
-}
-
-func (o *IfStmt) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + "IF:\n" +
-        o.Cond.Readable(indent+1) +
-        o.Block.Readable(indent+1)
-}
-
-func (o *IfElseStmt) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + "IF_ELSE:\n" +
-        o.If.Readable(indent+1) +
-        strings.Repeat("   ", indent+1) + "ELSE:\n" +
-        o.Block.Readable(indent+2)
-}
-
-func (o *WhileStmt) Readable(indent int) string {
-    res := strings.Repeat("   ", indent) + "WHILE:\n" +
-        o.Cond.Readable(indent+1)
-    if o.InitVal != nil {
-        res += o.Dec.Readable(indent+1) +
-        o.InitVal.Readable(indent+1)
-    }
-    res += o.Block.Readable(indent+1)
-
-    return res
-}
-
-func (o *ForStmt) Readable(indent int) string {
-    res := strings.Repeat("   ", indent) + "FOR:\n" +
-        o.Dec.Readable(indent+1)
-    if o.Limit != nil {
-        res += o.Limit.Readable(indent+1)
-    }
-
-    res += o.Start.Readable(indent+1) +
-    o.Step.Readable(indent+1) +
-    o.Block.Readable(indent+1)
-
-    return res
-}
-
-func (o *BreakStmt) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + "BREAK\n"
-}
-
-func (o *ContinueStmt) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + "CONTINUE\n"
-}
-
-func (o *OpExprStmt) Readable(indent int) string {
-    return o.Expr.Readable(indent)
-}
-
-func (o *OpDeclStmt) Readable(indent int) string {
-    return o.Decl.Readable(indent)
-}
-
-func (o *BadStmt) Readable(indent int) string {
-    fmt.Fprintln(os.Stderr, "[ERROR] bad statement")
-    os.Exit(1)
-    return ""
 }
