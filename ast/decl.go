@@ -4,16 +4,16 @@ import (
     "os"
     "fmt"
     "strings"
-    "gorec/types"
-    "gorec/token"
     "gorec/vars"
     "gorec/func"
+    "gorec/types"
+    "gorec/token"
 )
 
 
 type OpDecl interface {
     Op
-    Compile(asm *os.File)
+    Compile(file *os.File)
     decl()  // to differenciate OpDecl from OpStmt and OpExpr
 }
 
@@ -42,11 +42,11 @@ func (o *OpDefFn)  decl() {}
 func (o *BadDecl)  decl() {}
 
 
-func (o *OpDecVar) Compile(asm *os.File) {
+func (o *OpDecVar) Compile(file *os.File) {
     vars.Declare(o.Varname, o.Vartype)
 }
 
-func (o *OpDefVar) Compile(asm *os.File) {
+func (o *OpDefVar) Compile(file *os.File) {
     v := vars.GetVar(o.Varname.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared)\n", o.Varname.Str)
@@ -66,7 +66,7 @@ func (o *OpDefVar) Compile(asm *os.File) {
 
     switch e := o.Value.(type) {
     case *LitExpr:
-        vars.DefWithVal(asm, o.Varname, e.Val)
+        v.DefVal(file, e.Val)
 
     case *IdentExpr:
         if ptr, ok := vars.GetVar(o.Varname.Str).GetType().(types.PtrType); ok {
@@ -77,7 +77,7 @@ func (o *OpDefVar) Compile(asm *os.File) {
                 os.Exit(1)
             }
 
-            vars.DefPtrWithVar(asm, o.Varname, e.Ident)
+            vars.DefPtrWithVar(file, o.Varname, e.Ident)
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] you can only define global pointer with another global var")
             fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
@@ -85,21 +85,21 @@ func (o *OpDefVar) Compile(asm *os.File) {
         }
 
     default:
-        o.Value.Compile(asm)
-        vars.DefWithExpr(asm, o.Varname, vars.RegA)
+        o.Value.Compile(file)
+        v.DefExpr(file)
     }
 }
 
-func (o *OpDefFn) Compile(asm *os.File) {
+func (o *OpDefFn) Compile(file *os.File) {
     vars.CreateScope()
 
-    fn.Define(asm, o.FnName)
-    fn.ReserveSpace(asm, argsSize(o.Args), o.Block.maxFrameSize())
+    fn.Define(file, o.FnName)
+    fn.ReserveSpace(file, argsSize(o.Args), o.Block.maxFrameSize())
     regIdx := 0
     for _, a := range o.Args {
         fn.AddArg(a.Vartype)
-        a.Compile(asm)
-        fn.DefArg(asm, regIdx, a.Vartype)
+        a.Compile(file)
+        fn.DefArg(file, regIdx, a.Vartype)
 
         if a.Vartype.GetKind() == types.Str {
             regIdx += 2
@@ -108,13 +108,13 @@ func (o *OpDefFn) Compile(asm *os.File) {
         }
     }
 
-    o.Block.Compile(asm)
+    o.Block.Compile(file)
 
     vars.RemoveScope()
-    fn.End(asm);
+    fn.End(file);
 }
 
-func (o *BadDecl) Compile(asm *os.File) {
+func (o *BadDecl) Compile(file *os.File) {
     fmt.Fprintln(os.Stderr, "[ERROR] bad declaration")
     os.Exit(1)
 }

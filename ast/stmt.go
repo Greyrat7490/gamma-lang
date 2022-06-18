@@ -8,11 +8,12 @@ import (
     "gorec/token"
     "gorec/loops"
     "gorec/conditions"
+    "gorec/asm/x86_64"
 )
 
 type OpStmt interface {
     Op
-    Compile(asm *os.File)
+    Compile(file *os.File)
     stmt()  // to differenciate OpStmt from OpDecl and OpExpr
 }
 
@@ -89,7 +90,7 @@ func (o *OpExprStmt)   stmt() {}
 func (o *OpAssignVar)  stmt() {}
 
 
-func (o *OpAssignVar) Compile(asm *os.File) {
+func (o *OpAssignVar) Compile(file *os.File) {
     t1 := o.Dest.GetType()
     t2 := o.Value.GetType()
     if t1 != t2 {
@@ -102,47 +103,54 @@ func (o *OpAssignVar) Compile(asm *os.File) {
 
     switch dest := o.Dest.(type) {
     case *UnaryExpr:
-        dest.Compile(asm)
+        dest.Compile(file)
 
         switch e := o.Value.(type) {
         case *LitExpr:
-            vars.DerefSetVal(asm, e.Val, size)
+            vars.DerefSetVal(file, e.Val, size)
 
         case *IdentExpr:
-            vars.DerefSetVar(asm, e.Ident)
+            vars.DerefSetVar(file, e.Ident)
 
         case *UnaryExpr:
-            asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(vars.RegD, size), vars.GetReg(vars.RegA, size)))
-            o.Value.Compile(asm)
+            file.WriteString(asm.MovRegReg(asm.RegD, asm.RegA, size))
+            o.Value.Compile(file)
             if e.Operator.Type == token.Mul {
-                asm.WriteString(fmt.Sprintf("mov %s, %s [rax]\n", vars.GetReg(vars.RegA, size), vars.GetWord(size)))
+                file.WriteString(asm.DerefRax(size))
             }
-            asm.WriteString(fmt.Sprintf("mov %s [rdx], %s\n", vars.GetWord(size), vars.GetReg(vars.RegA, size)))
+            file.WriteString(asm.MovDerefReg("rdx", size, asm.RegA))
 
         default:
-            asm.WriteString(fmt.Sprintf("mov %s, %s\n", vars.GetReg(vars.RegD, size), vars.GetReg(vars.RegA, size)))
-            o.Value.Compile(asm)
-            asm.WriteString(fmt.Sprintf("mov %s [rdx], %s\n", vars.GetWord(size), vars.GetReg(vars.RegA, size)))
+            file.WriteString(asm.MovRegReg(asm.RegD, asm.RegA, size))
+            o.Value.Compile(file)
+            file.WriteString(asm.MovDerefReg("rdx", size, asm.RegA))
         }
 
     case *IdentExpr:
+        v := vars.GetVar(dest.Ident.Str)
+        if v == nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", dest.Ident.Str)
+            fmt.Fprintln(os.Stderr, "\t" + dest.Ident.At())
+            os.Exit(1)
+        }
+
         switch e := o.Value.(type) {
         case *LitExpr:
-            vars.VarSetVal(asm, dest.Ident, e.Val)
+            v.SetVal(file, e.Val)
 
         case *IdentExpr:
-            vars.VarSetVar(asm, dest.Ident, e.Ident)
+            v.SetVar(file, e.Ident)
 
         case *UnaryExpr:
-            o.Value.Compile(asm)
+            o.Value.Compile(file)
             if e.Operator.Type == token.Mul {
-                asm.WriteString(fmt.Sprintf("mov %s, %s [rax]\n", vars.GetReg(vars.RegA, size), vars.GetWord(size)))
+                file.WriteString(asm.DerefRax(size))
             }
-            vars.VarSetExpr(asm, dest.Ident)
+            v.SetExpr(file)
 
         default:
-            o.Value.Compile(asm)
-            vars.VarSetExpr(asm, dest.Ident)
+            o.Value.Compile(file)
+            v.SetExpr(file)
         }
 
     default:
@@ -152,157 +160,157 @@ func (o *OpAssignVar) Compile(asm *os.File) {
     }
 }
 
-func (o *OpBlock) Compile(asm *os.File) {
+func (o *OpBlock) Compile(file *os.File) {
     for _, op := range o.Stmts {
-        op.Compile(asm)
+        op.Compile(file)
     }
 }
 
-func (o *IfStmt) Compile(asm *os.File) {
+func (o *IfStmt) Compile(file *os.File) {
     vars.CreateScope()
 
     switch e := o.Cond.(type) {
     case *LitExpr:
         if e.Val.Str == "true" {
-            o.Block.Compile(asm)
+            o.Block.Compile(file)
         }
 
     case *IdentExpr:
-        count := cond.IfIdent(asm, e.Ident)
-        o.Block.Compile(asm)
-        cond.IfEnd(asm, count)
+        count := cond.IfIdent(file, e.Ident)
+        o.Block.Compile(file)
+        cond.IfEnd(file, count)
 
     default:
-        o.Cond.Compile(asm)
-        count := cond.IfReg(asm, "al")
-        o.Block.Compile(asm)
-        cond.IfEnd(asm, count)
+        o.Cond.Compile(file)
+        count := cond.IfExpr(file)
+        o.Block.Compile(file)
+        cond.IfEnd(file, count)
     }
 
     vars.RemoveScope()
 }
 
-func (o *IfElseStmt) Compile(asm *os.File) {
+func (o *IfElseStmt) Compile(file *os.File) {
     switch e := o.If.Cond.(type) {
     case *LitExpr:
         vars.CreateScope()
 
         if e.Val.Str == "true" {
-            o.If.Block.Compile(asm)
+            o.If.Block.Compile(file)
         } else {
-            o.Block.Compile(asm)
+            o.Block.Compile(file)
         }
 
         vars.RemoveScope()
 
     case *IdentExpr:
-        count := cond.IfElseIdent(asm, e.Ident)
+        count := cond.IfElseIdent(file, e.Ident)
 
         vars.CreateScope()
-        o.If.Block.Compile(asm)
+        o.If.Block.Compile(file)
         vars.RemoveScope()
 
-        cond.ElseStart(asm, count)
+        cond.ElseStart(file, count)
 
         vars.CreateScope()
-        o.Block.Compile(asm)
+        o.Block.Compile(file)
         vars.RemoveScope()
 
-        cond.IfElseEnd(asm, count)
+        cond.IfElseEnd(file, count)
 
     default:
-        o.If.Cond.Compile(asm)
-        count := cond.IfElseReg(asm, "al")
+        o.If.Cond.Compile(file)
+        count := cond.IfElseExpr(file)
 
         vars.CreateScope()
-        o.If.Block.Compile(asm)
+        o.If.Block.Compile(file)
         vars.RemoveScope()
 
-        cond.ElseStart(asm, count)
+        cond.ElseStart(file, count)
 
         vars.CreateScope()
-        o.Block.Compile(asm)
+        o.Block.Compile(file)
         vars.RemoveScope()
 
-        cond.IfElseEnd(asm, count)
+        cond.IfElseEnd(file, count)
     }
 }
 
-func (o *WhileStmt) Compile(asm *os.File) {
+func (o *WhileStmt) Compile(file *os.File) {
     vars.CreateScope()
 
     if o.InitVal != nil {
-        o.Dec.Compile(asm)
+        o.Dec.Compile(file)
         def := OpDefVar{ Varname: o.Dec.Varname, Value: o.InitVal }
-        def.Compile(asm)
+        def.Compile(file)
     }
 
     switch e := o.Cond.(type) {
     case *LitExpr:
         if e.Val.Str == "true" {
-            count := loops.WhileStart(asm)
-            o.Block.Compile(asm)
-            loops.WhileEnd(asm, count)
+            count := loops.WhileStart(file)
+            o.Block.Compile(file)
+            loops.WhileEnd(file, count)
         }
 
     case *IdentExpr:
-        count := loops.WhileStart(asm)
-        loops.WhileIdent(asm, e.Ident)
-        o.Block.Compile(asm)
-        loops.WhileEnd(asm, count)
+        count := loops.WhileStart(file)
+        loops.WhileIdent(file, e.Ident)
+        o.Block.Compile(file)
+        loops.WhileEnd(file, count)
 
     default:
-        count := loops.WhileStart(asm)
-        o.Cond.Compile(asm)
-        loops.WhileReg(asm, "al")
-        o.Block.Compile(asm)
-        loops.WhileEnd(asm, count)
+        count := loops.WhileStart(file)
+        o.Cond.Compile(file)
+        loops.WhileExpr(file)
+        o.Block.Compile(file)
+        loops.WhileEnd(file, count)
     }
 
     vars.RemoveScope()
 }
 
-func (o *ForStmt) Compile(asm *os.File) {
+func (o *ForStmt) Compile(file *os.File) {
     vars.CreateScope()
 
-    o.Dec.Compile(asm)
+    o.Dec.Compile(file)
     def := OpDefVar{ Varname: o.Dec.Varname, Value: o.Start }
-    def.Compile(asm)
+    def.Compile(file)
 
-    count := loops.ForStart(asm)
+    count := loops.ForStart(file)
     if o.Limit != nil {
         cond := BinaryExpr{ Operator: token.Token{ Type: token.Lss }, OperandL: &IdentExpr{ Ident: o.Dec.Varname }, OperandR: o.Limit }
-        cond.Compile(asm)
-        loops.ForReg(asm, "al")
+        cond.Compile(file)
+        loops.ForExpr(file)
     }
 
-    o.Block.Compile(asm)
-    loops.ForBlockEnd(asm, count)
+    o.Block.Compile(file)
+    loops.ForBlockEnd(file, count)
 
     step := OpAssignVar{ Dest: &IdentExpr{ Ident: o.Dec.Varname }, Value: o.Step }
-    step.Compile(asm)
-    loops.ForEnd(asm, count)
+    step.Compile(file)
+    loops.ForEnd(file, count)
 
     vars.RemoveScope()
 }
 
-func (o *BreakStmt) Compile(asm *os.File) {
-    loops.Break(asm)
+func (o *BreakStmt) Compile(file *os.File) {
+    loops.Break(file)
 }
 
-func (o *ContinueStmt) Compile(asm *os.File) {
-    loops.Continue(asm)
+func (o *ContinueStmt) Compile(file *os.File) {
+    loops.Continue(file)
 }
 
-func (o *OpExprStmt) Compile(asm *os.File) {
-    o.Expr.Compile(asm)
+func (o *OpExprStmt) Compile(file *os.File) {
+    o.Expr.Compile(file)
 }
 
-func (o *OpDeclStmt) Compile(asm *os.File) {
-    o.Decl.Compile(asm)
+func (o *OpDeclStmt) Compile(file *os.File) {
+    o.Decl.Compile(file)
 }
 
-func (o *BadStmt) Compile(asm *os.File) {
+func (o *BadStmt) Compile(file *os.File) {
     fmt.Fprintln(os.Stderr, "[ERROR] bad statement")
     os.Exit(1)
 }

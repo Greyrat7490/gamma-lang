@@ -5,7 +5,8 @@ import (
     "fmt"
     "gorec/token"
     "gorec/types"
-    "gorec/str"
+    "gorec/types/str"
+    "gorec/asm/x86_64"
 )
 
 var globalVars []GlobalVar
@@ -21,26 +22,111 @@ type GlobalVar struct {
 func (v *GlobalVar) String() string {
     return fmt.Sprintf("{%s %s}", v.Name.Str, v.Type)
 }
-func (v *GlobalVar) Get() string {
-    return fmt.Sprintf("%s [%s]", GetWord(v.Type.Size()), v.Name.Str)
-}
-func (v *GlobalVar) Gets() (string, string) {
-    return fmt.Sprintf("%s [%s]",    GetWord(types.Ptr_Size), v.Name.Str),
-           fmt.Sprintf("%s [%s+%d]", GetWord(types.I32_Size), v.Name.Str, types.Ptr_Size)
-}
+
 func (v *GlobalVar) GetType() types.Type {
     return v.Type
 }
 
-func DefineGlobalVars(asm *os.File) {
-    for _, s := range globalDefines {
-        asm.WriteString(s)
+func (v *GlobalVar) Addr(fieldNum int) string {
+    if v.Type.GetKind() == types.Str {
+        if fieldNum == 1 {
+            return v.Name.Str + "+" + fmt.Sprint(types.Ptr_Size)
+        }
+    }
+
+    return v.Name.Str
+}
+
+
+func (v *GlobalVar) DefVal(file *os.File, val token.Token) {
+    if v.Name.Str == val.Str {
+        fmt.Fprintln(os.Stderr, "[ERROR] cannot define a variable with itself")
+        fmt.Fprintln(os.Stderr, "\t" + val.At())
+        os.Exit(1)
+    }
+
+    switch v.Type.GetKind() {
+    case types.Str:
+        strIdx := str.Add(val)
+        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s _str%d\n  %s %d\n",
+            v.Name.Str, asm.GetDataSize(types.Ptr_Size), strIdx, asm.GetDataSize(types.I32_Size), str.GetSize(strIdx)))
+
+    case types.I32:
+        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s %s\n", v.Name.Str, asm.GetDataSize(types.I32_Size), val.Str))
+
+    case types.Bool:
+        if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
+        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s %s\n", v.Name.Str, asm.GetDataSize(types.I32_Size), val.Str))
+
+    case types.Ptr:
+        fmt.Fprintln(os.Stderr, "TODO defGlobalVal PtrType")
+        os.Exit(1)
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name.Str)
+        os.Exit(1)
     }
 }
 
-func InitVarWithExpr(asm *os.File) {
+func (v *GlobalVar) DefVar(file *os.File, name token.Token) {
+    fmt.Fprintln(os.Stderr, "[ERROR] you cannot define global vars with another var")
+    fmt.Fprintln(os.Stderr, "\t" + v.Name.At())
+    os.Exit(1)
+}
+
+func (v *GlobalVar) DefExpr(file *os.File) {
+    size := v.Type.Size()
+    globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s 0\n", v.Name.Str, asm.GetDataSize(size)))
+    preMain = append(preMain, asm.MovDerefReg(v.Name.Str, size, asm.RegA))
+}
+
+func (v *GlobalVar) SetVal(file *os.File, val token.Token) {
+    if v.Type.GetKind() == types.Str {
+        strIdx := str.Add(val)
+
+        Write(file, asm.MovDerefVal(v.Addr(0), v.Type.Size(), fmt.Sprintf("_str%d", strIdx)))
+        Write(file, asm.MovDerefVal(v.Addr(1), v.Type.Size(), fmt.Sprint(str.GetSize(strIdx))))
+    } else {
+        Write(file, asm.MovDerefVal(v.Addr(0), v.Type.Size(), val.Str))
+    }
+}
+
+func (v *GlobalVar) SetVar(file *os.File, name token.Token) {
+    if v.Name.Str == name.Str { return } // redundant
+
+    if other := GetVar(name.Str); other != nil {
+        switch v.Type.GetKind() {
+        case types.Str:
+            file.WriteString(asm.MovDerefDeref(v.Addr(0), other.Addr(0), v.Type.Size(), asm.RegA))
+            file.WriteString(asm.MovDerefDeref(v.Addr(1), other.Addr(1), v.Type.Size(), asm.RegA))
+
+        case types.I32, types.Bool:
+            file.WriteString(asm.MovDerefDeref(v.Addr(0), other.Addr(0), v.Type.Size(), asm.RegA))
+
+        case types.Ptr:
+            file.WriteString(asm.MovDerefVal(v.Addr(0), v.Type.Size(), name.Str))
+
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", name.Str)
+            os.Exit(1)
+        }
+    }
+}
+
+func (v *GlobalVar) SetExpr(file *os.File) {
+    Write(file, asm.MovDerefReg(v.Name.Str, v.GetType().Size(), asm.RegA))
+}
+
+
+func DefineGlobalVars(file *os.File) {
+    for _, s := range globalDefines {
+        file.WriteString(s)
+    }
+}
+
+func InitVarWithExpr(file *os.File) {
     for _, s := range preMain {
-        asm.WriteString(s)
+        file.WriteString(s)
     }
 }
 
@@ -62,40 +148,4 @@ func declareGlobal(varname token.Token, vartype types.Type) {
     }
 
     globalVars = append(globalVars, GlobalVar{ Name: varname, Type: vartype })
-}
-
-func defGlobalVal(asm *os.File, v *GlobalVar, val token.Token) {
-    if v.Name.Str == val.Str {
-        fmt.Fprintln(os.Stderr, "[ERROR] cannot define a variable with itself")
-        fmt.Fprintln(os.Stderr, "\t" + val.At())
-        os.Exit(1)
-    }
-
-    switch v.Type.GetKind() {
-    case types.Str:
-        strIdx := str.Add(val)
-        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s _str%d\n  %s %d\n",
-            v.Name.Str, GetDataSize(types.Ptr_Size), strIdx, GetDataSize(types.I32_Size), str.GetSize(strIdx)))
-
-    case types.I32:
-        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s %s\n", v.Name.Str, GetDataSize(types.I32_Size), val.Str))
-
-    case types.Bool:
-        if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
-        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s %s\n", v.Name.Str, GetDataSize(types.I32_Size), val.Str))
-
-    case types.Ptr:
-        fmt.Fprintln(os.Stderr, "TODO defGlobalVal PtrType")
-        os.Exit(1)
-
-    default:
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name.Str)
-        os.Exit(1)
-    }
-}
-
-func defGlobalExpr(asm *os.File, v *GlobalVar, reg RegGroup) {
-    size := v.Type.Size()
-    globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s 0\n", v.Name.Str, GetDataSize(size)))
-    preMain = append(preMain, fmt.Sprintf("mov %s [%s], %s\n", GetWord(size), v.Name.Str, GetReg(reg, size)))
 }

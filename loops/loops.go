@@ -19,13 +19,13 @@ func ResetCount() {
     forCount   = 0
 }
 
-func WhileStart(asm *os.File) uint {
+func WhileStart(file *os.File) uint {
     whileCount++
-    asm.WriteString(fmt.Sprintf(".while%d:\n", whileCount))
+    file.WriteString(fmt.Sprintf(".while%d:\n", whileCount))
     return whileCount
 }
 
-func WhileIdent(asm *os.File, ident token.Token) {
+func WhileIdent(file *os.File, ident token.Token) {
     v := vars.GetVar(ident.Str)
 
     if v == nil {
@@ -40,30 +40,29 @@ func WhileIdent(asm *os.File, ident token.Token) {
         os.Exit(1)
     }
 
-    asm.WriteString(fmt.Sprintf("cmp QWORD [%s], 1\n", v.Get()))
-    asm.WriteString(fmt.Sprintf("jne .while%dEnd\n", whileCount))
+    file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", v.Addr(0)))
+    file.WriteString(fmt.Sprintf("jne .while%dEnd\n", whileCount))
 }
 
-func WhileReg(asm *os.File, reg string) {
-    asm.WriteString(fmt.Sprintf("cmp %s, 1\n", reg))
-    asm.WriteString(fmt.Sprintf("jne .while%dEnd\n", whileCount))
+func WhileExpr(file *os.File) {
+    file.WriteString(fmt.Sprintf("cmp al, 1\njne .while%dEnd\n", whileCount))
 }
 
-func WhileEnd(asm *os.File, count uint) {
-    asm.WriteString(fmt.Sprintf("jmp .while%d\n", count))
-    asm.WriteString(fmt.Sprintf(".while%dEnd:\n", count))
+func WhileEnd(file *os.File, count uint) {
+    file.WriteString(fmt.Sprintf("jmp .while%d\n", count))
+    file.WriteString(fmt.Sprintf(".while%dEnd:\n", count))
 }
 
 
-func ForStart(asm *os.File) uint {
+func ForStart(file *os.File) uint {
     inForLoop = true
 
     forCount++
-    asm.WriteString(fmt.Sprintf(".for%d:\n", forCount))
+    file.WriteString(fmt.Sprintf(".for%d:\n", forCount))
     return forCount
 }
 
-func ForIdent(asm *os.File, ident token.Token) {
+func ForIdent(file *os.File, ident token.Token) {
     v := vars.GetVar(ident.Str)
 
     if v == nil {
@@ -78,37 +77,36 @@ func ForIdent(asm *os.File, ident token.Token) {
         os.Exit(1)
     }
 
-    asm.WriteString(fmt.Sprintf("cmp QWORD [%s], 1\n", v.Get()))
-    asm.WriteString(fmt.Sprintf("jne .for%dEnd\n", forCount))
+    file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", v.Addr(0)))
+    file.WriteString(fmt.Sprintf("jne .for%dEnd\n", forCount))
 }
 
-func ForReg(asm *os.File, reg string) {
-    asm.WriteString(fmt.Sprintf("cmp %s, 1\n", reg))
-    asm.WriteString(fmt.Sprintf("jne .for%dEnd\n", forCount))
+func ForExpr(file *os.File) {
+    file.WriteString(fmt.Sprintf("cmp al, 1\njne .for%dEnd\n", forCount))
 }
 
-func ForBlockEnd(asm *os.File, count uint) {
-    asm.WriteString(fmt.Sprintf(".for%dBlockEnd:\n", count))
+func ForBlockEnd(file *os.File, count uint) {
+    file.WriteString(fmt.Sprintf(".for%dBlockEnd:\n", count))
 }
-func ForEnd(asm *os.File, count uint) {
-    asm.WriteString(fmt.Sprintf("jmp .for%d\n", count))
-    asm.WriteString(fmt.Sprintf(".for%dEnd:\n", count))
+func ForEnd(file *os.File, count uint) {
+    file.WriteString(fmt.Sprintf("jmp .for%d\n", count))
+    file.WriteString(fmt.Sprintf(".for%dEnd:\n", count))
 
     inForLoop = false
 }
 
-func Break(asm *os.File) {
+func Break(file *os.File) {
     if inForLoop {
-        asm.WriteString(fmt.Sprintf("jmp .for%dEnd\n", forCount))
+        file.WriteString(fmt.Sprintf("jmp .for%dEnd\n", forCount))
     } else {
-        asm.WriteString(fmt.Sprintf("jmp .while%dEnd\n", whileCount))
+        file.WriteString(fmt.Sprintf("jmp .while%dEnd\n", whileCount))
     }
 }
 
-func Continue(asm *os.File) {
+func Continue(file *os.File) {
     if inForLoop {
-        asm.WriteString(fmt.Sprintf("jmp .for%dBlockEnd\n", forCount))
+        file.WriteString(fmt.Sprintf("jmp .for%dBlockEnd\n", forCount))
     } else {
-        asm.WriteString(fmt.Sprintf("jmp .while%d\n", whileCount))
+        file.WriteString(fmt.Sprintf("jmp .while%d\n", whileCount))
     }
 }

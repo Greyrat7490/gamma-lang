@@ -1,4 +1,4 @@
-package vars
+package asm
 
 var regs [][]string = [][]string{
     { "al", "ax", "eax", "rax" },
@@ -70,9 +70,9 @@ func GetReg(g RegGroup, size int) string {
 
 func GetSize(g RegGroup, size int) int {
     switch {
-    case g >= RegR8: 
+    case g >= RegR8:
         return 8
-    case g >= RegDi && size < 2: 
+    case g >= RegDi && size < 2:
         return 2
     default:
         return size

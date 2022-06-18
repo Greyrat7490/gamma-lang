@@ -1,41 +1,25 @@
-package sys
+package std
 
 import (
-    "fmt"
     "os"
-    "gorec/types"
+    "fmt"
     "gorec/func"
+    "gorec/types"
 )
 
 const STDOUT = 1
 
-const SYS_WRITE = 1
-const SYS_EXIT = 60
+func definePrintStr(asm *os.File) {
+    fn.AddBuildIn("printStr", "s", types.StrType{})
 
-func DefineBuildIns(asm *os.File) {
-    defineItoS(asm)
-    defineBtoS(asm)
-    definePrintStr(asm)
-    definePrintInt(asm)
-    definePrintPtr(asm)
-    definePrintBool(asm)
-    defineExit(asm)
-}
+    asm.WriteString("printStr:\n")
 
-// linux syscall calling convention
-// arg: 0    1    2    3   4   5
-//     rdi, rsi, rdx, r10, r8, r9
-// return: rax
-func syscall(asm *os.File, syscallNum uint) {
-    asm.WriteString(fmt.Sprintf("mov rax, %d\n", syscallNum))
+    asm.WriteString("mov rdx, rsi\n")
+    asm.WriteString("mov esi, edi\n")
+    asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
+    syscall(asm, SYS_WRITE)
 
-    asm.WriteString("push rcx\n")
-    asm.WriteString("push r11\n")   // syscall can change r11 and rcx
-
-    asm.WriteString("syscall\n")
-
-    asm.WriteString("pop r11\n")
-    asm.WriteString("pop rcx\n")
+    asm.WriteString("ret\n\n")
 }
 
 func definePrintInt(asm *os.File) {
@@ -81,28 +65,6 @@ func definePrintBool(asm *os.File) {
     asm.WriteString("mov rsi, rbx\n")
     syscall(asm, SYS_WRITE)
 
-    asm.WriteString("ret\n\n")
-}
-
-func definePrintStr(asm *os.File) {
-    fn.AddBuildIn("printStr", "s", types.StrType{})
-
-    asm.WriteString("printStr:\n")
-
-    asm.WriteString("mov rdx, rsi\n")
-    asm.WriteString("mov esi, edi\n")
-    asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
-    syscall(asm, SYS_WRITE)
-
-    asm.WriteString("ret\n\n")
-}
-
-func defineExit(asm *os.File) {
-    fn.AddBuildIn("exit", "i", types.I32Type{})
-
-    asm.WriteString("exit:\n")
-    asm.WriteString(fmt.Sprintf("mov rax, %d\n", SYS_EXIT))
-    asm.WriteString("syscall\n")
     asm.WriteString("ret\n\n")
 }
 

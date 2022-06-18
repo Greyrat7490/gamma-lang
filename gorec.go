@@ -1,49 +1,15 @@
 package main
 
 import (
-    "fmt"
     "os"
-    "os/exec"
-    "strings"
+    "fmt"
     "io/ioutil"
-    "gorec/parser"
-    "gorec/str"
-    "gorec/syscall"
-    "gorec/vars"
+    "gorec/std"
     "gorec/ast"
     "gorec/token"
+    "gorec/parser"
+    "gorec/asm/x86_64/nasm"
 )
-
-
-func nasm_header(asm *os.File) {
-    asm.WriteString("[BITS 64]\n")
-    asm.WriteString("section .text\n")
-    asm.WriteString("global _start\n")
-}
-
-func nasm_footer(asm *os.File) {
-    asm.WriteString("\n_start:\n")
-    asm.WriteString("mov rsp, _stack_top\n")
-
-    vars.InitVarWithExpr(asm)
-    asm.WriteString("call main\n")
-
-    asm.WriteString("\nmov rdi, 0\n")
-    asm.WriteString(fmt.Sprintf("mov rax, %d\n", sys.SYS_EXIT))
-    asm.WriteString("syscall\n")
-
-    asm.WriteString("\nsection .rodata\n")
-    asm.WriteString("_true: db \"true\"\n")
-    asm.WriteString("_false: db \"false\"\n")
-    str.WriteStrLits(asm)
-
-    asm.WriteString("\nsection .data\n")
-    vars.DefineGlobalVars(asm)
-
-    asm.WriteString("\nsection .bss\n")
-    asm.WriteString("\tresb 1024 * 1024\n_stack_top:\n") // 1MiB
-    asm.WriteString("_intBuf:\n\tresb 21") // max 64bit -> 20 digits max + sign -> 21 char string max
-}
 
 func compile() {
     asm, err := os.Create("output.asm")
@@ -53,50 +19,15 @@ func compile() {
     }
     defer asm.Close()
 
-    nasm_header(asm)
+    nasm.Header(asm)
 
-    sys.DefineBuildIns(asm)
+    std.Define(asm)
 
     ast.Compile(asm)
 
-    nasm_footer(asm)
+    nasm.Footer(asm)
 }
 
-func genExe() {
-    var stderr strings.Builder
-
-    fmt.Println("[INFO] generating object files...")
-
-    cmd := exec.Command("nasm", "-f", "elf64", "-o", "output.o", "output.asm")
-    cmd.Stderr = &stderr
-    err := cmd.Run()
-    if err != nil {
-        s := stderr.String()
-        if s == "" {
-            fmt.Fprintf(os.Stderr, "[ERROR] %v\n", err)
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] %v\n", s)
-        }
-        os.Exit(1)
-    }
-
-    fmt.Println("[INFO] linking object files...")
-
-    cmd = exec.Command("ld", "-o", "output", "output.o")
-    cmd.Stderr = &stderr
-    err = cmd.Run()
-    if err != nil {
-        s := stderr.String()
-        if s == "" {
-            fmt.Fprintf(os.Stderr, "[ERROR] %v\n", err)
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] %v\n", s)
-        }
-        os.Exit(1)
-    }
-
-    fmt.Println("[INFO] generated executable")
-}
 
 func main() {
     if len(os.Args) < 2 {
@@ -116,5 +47,5 @@ func main() {
     // TODO: optimization step
     ast.ShowAst()
     compile()
-    genExe()
+    nasm.GenExe()
 }

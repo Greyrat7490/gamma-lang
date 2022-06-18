@@ -31,9 +31,9 @@ func Add(s token.Token) (idx int) {
     return idx
 }
 
-func WriteStrLits(asm *os.File) {
+func WriteStrLits(file *os.File) {
     for i, str := range strLits {
-        asm.WriteString(fmt.Sprintf("_str%d: db %s\n", i, str.value))
+        file.WriteString(fmt.Sprintf("_str%d: db %s\n", i, str.value))
     }
 }
 

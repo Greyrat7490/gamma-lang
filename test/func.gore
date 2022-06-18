@@ -66,17 +66,17 @@ fn test6(a1 str, a2 str, a3 str) {
 
 fn main() {
     test1(420)
-    
+
     printStr("------------\n")
-    
+
     test2("some arg\n")
-    
+
     printStr("------------\n")
-    
+
     test3()
-    
+
     printStr("------------\n")
-    
+
     test4(-69, 86)
     test5("test string arg1\n", 8)
     test6("test string arg1\n", "arg2\n", "string arg3\n")

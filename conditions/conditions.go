@@ -3,16 +3,16 @@ package cond
 import (
     "os"
     "fmt"
+    "gorec/vars"
     "gorec/token"
     "gorec/types"
-    "gorec/vars"
 )
 
 var count uint = 0
 
 func ResetCount() { count = 0 }
 
-func IfIdent(asm *os.File, ident token.Token) uint {
+func IfIdent(file *os.File, ident token.Token) uint {
     v := vars.GetVar(ident.Str)
 
     if v == nil {
@@ -29,43 +29,40 @@ func IfIdent(asm *os.File, ident token.Token) uint {
 
     count++
 
-    asm.WriteString(fmt.Sprintf("cmp %s, 1\n", v.Get()))
-    asm.WriteString(fmt.Sprintf("jne .if%dEnd\n", count)) // skip block if false
+    file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", v.Addr(0)))
+    file.WriteString(fmt.Sprintf("jne .if%dEnd\n", count)) // skip block if false
 
     return count
 }
 
-func IfReg(asm *os.File, reg string) uint {
+func IfExpr(file *os.File) uint {
     count++
-
-    asm.WriteString(fmt.Sprintf("cmp %s, 1\n", reg))
-    asm.WriteString(fmt.Sprintf("jne .if%dEnd\n", count))
-
+    file.WriteString(fmt.Sprintf("cmp al, 1\njne .if%dEnd\n", count))
     return count
 }
 
-func IfEnd(asm *os.File, count uint) {
-    asm.WriteString(fmt.Sprintf(".if%dEnd:\n", count))
+func IfEnd(file *os.File, count uint) {
+    file.WriteString(fmt.Sprintf(".if%dEnd:\n", count))
 }
 
-func IfElseIdent(asm *os.File, ident token.Token) uint {
-    count := IfIdent(asm, ident)
-    asm.WriteString("pushfq\n")
+func IfElseIdent(file *os.File, ident token.Token) uint {
+    count := IfIdent(file, ident)
+    file.WriteString("pushfq\n")
     return count
 }
 
-func IfElseReg(asm *os.File, reg string) uint {
-    count := IfReg(asm, reg)
-    asm.WriteString("pushfq\n")
+func IfElseExpr(file *os.File) uint {
+    count := IfExpr(file)
+    file.WriteString("pushfq\n")
     return count
 }
 
-func ElseStart(asm *os.File, count uint) {
-    asm.WriteString("popfq\n")
-    asm.WriteString(fmt.Sprintf("je .else%dEnd\n", count))
-    asm.WriteString(fmt.Sprintf(".if%dEnd:\n", count))
+func ElseStart(file *os.File, count uint) {
+    file.WriteString("popfq\n")
+    file.WriteString(fmt.Sprintf("je .else%dEnd\n", count))
+    file.WriteString(fmt.Sprintf(".if%dEnd:\n", count))
 }
 
-func IfElseEnd(asm *os.File, count uint) {
-    asm.WriteString(fmt.Sprintf(".else%dEnd:\n", count))
+func IfElseEnd(file *os.File, count uint) {
+    file.WriteString(fmt.Sprintf(".else%dEnd:\n", count))
 }
