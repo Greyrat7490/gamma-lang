@@ -48,7 +48,7 @@ And because it is written in Go...
   * [x] arithmetic
 * [x] turing complete -> actual programming language
   * [x] proof with Rule 110 programm
-* [ ] type checking
+* [x] type checking
 * [ ] examples
 * [ ] self-hosted
 * [ ] cross-platform
