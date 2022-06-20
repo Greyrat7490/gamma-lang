@@ -1,28 +1,13 @@
 package ast
 
 import (
-    "os"
-    "fmt"
-    "gorec/token"
-    "gorec/types"
-    "gorec/vars"
+	"os"
+	"fmt"
+	"gorec/vars"
+	"gorec/func"
+	"gorec/token"
+	"gorec/types"
 )
-
-func (o *BadDecl)  typeCheck() {}
-func (o *OpDecVar) typeCheck() {
-    vars.Declare(o.Varname, o.Vartype)
-}
-
-func (o *OpDefFn) typeCheck() {
-    vars.CreateScope()
-
-    for _,a := range o.Args {
-        a.typeCheck()
-    }
-
-    o.Block.typeCheck()
-    vars.RemoveScope()
-}
 
 func (o *OpDefVar) typeCheck() {
     v := vars.GetVar(o.Varname.Str)
@@ -43,10 +28,6 @@ func (o *OpDefVar) typeCheck() {
 }
 
 
-func (o *BadStmt)      typeCheck() {}
-func (o *BreakStmt)    typeCheck() {}
-func (o *ContinueStmt) typeCheck() {}
-func (o *OpDeclStmt)   typeCheck() { o.Decl.typeCheck() }
 func (o *OpExprStmt)   typeCheck() { o.Expr.typeCheck() }
 func (o *OpAssignVar)  typeCheck() {
     t1 := o.Dest.GetType()
@@ -58,41 +39,18 @@ func (o *OpAssignVar)  typeCheck() {
         os.Exit(1)
     }
 }
-func (o *OpBlock) typeCheck() {
-    for _,o := range o.Stmts {
-        o.typeCheck()
-    }
-}
 func (o *IfStmt) typeCheck() {
     if t := o.Cond.GetType(); t.GetKind() != types.Bool {
         fmt.Fprintf(os.Stderr, "[ERROR] expected an bool as if condition but got %v\n", t)
         fmt.Fprintln(os.Stderr, "\t" + o.IfPos.At())
         os.Exit(1)
     }
-
-    vars.CreateScope()
-    o.Block.typeCheck()
-    vars.RemoveScope()
 }
 func (o *IfElseStmt) typeCheck() {
-    if t := o.If.Cond.GetType(); t.GetKind() != types.Bool {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected an bool as if condition but got %v\n", t)
-        fmt.Fprintln(os.Stderr, "\t" + o.If.IfPos.At())
-        os.Exit(1)
-    }
-
-    vars.CreateScope()
-    o.If.Block.typeCheck()
-    vars.RemoveScope()
-
-    vars.CreateScope()
-    o.Block.typeCheck()
-    vars.RemoveScope()
+    o.If.typeCheck()
 }
-func (o *ForStmt) typeCheck() {
-    vars.CreateScope()
-    vars.Declare(o.Dec.Varname, o.Dec.Vartype)
 
+func (o *ForStmt) typeCheck() {
     t := o.Dec.Vartype
 
     if t2 := o.Start.GetType(); t != t2 {
@@ -114,13 +72,10 @@ func (o *ForStmt) typeCheck() {
         fmt.Fprintln(os.Stderr, "\t" + o.ForPos.At())
         os.Exit(1)
     }
-
-    vars.RemoveScope()
 }
+
 func (o *WhileStmt) typeCheck() {
     if o.InitVal != nil {
-        vars.CreateScope()
-        vars.Declare(o.Dec.Varname, o.Dec.Vartype)
         t1 := o.Dec.Vartype
         t2 := o.InitVal.GetType()
 
@@ -135,10 +90,6 @@ func (o *WhileStmt) typeCheck() {
         fmt.Fprintf(os.Stderr, "[ERROR] expected an bool as while condition but got %v\n", t)
         fmt.Fprintln(os.Stderr, "\t" + o.WhilePos.At())
         os.Exit(1)
-    }
-
-    if o.InitVal != nil {
-        vars.RemoveScope()
     }
 }
 
@@ -163,11 +114,13 @@ func (o *BinaryExpr) typeCheck() {
     if t1 != t2 {
         if (t1.GetKind() == types.Ptr && t2.GetKind() == types.I32) ||
            (t2.GetKind() == types.Ptr && t1.GetKind() == types.I32) {
-            if o.Operator.Type != token.Plus && o.Operator.Type != token.Minus {
-                fmt.Fprintf(os.Stderr, "[ERROR] only +/- operator are allowed for binary ops with %v and %v\n", t1, t2)
-                fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
-                os.Exit(1)
+            if o.Operator.Type == token.Plus || o.Operator.Type == token.Minus {
+                return
             }
+
+            fmt.Fprintf(os.Stderr, "[ERROR] only +/- operators are allowed for binary ops with %v and %v\n", t1, t2)
+            fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+            os.Exit(1)
         }
 
         fmt.Fprintf(os.Stderr, "[ERROR] binary operation has two diffrente types (left: %v right: %v)\n", t1, t2)
@@ -177,9 +130,41 @@ func (o *BinaryExpr) typeCheck() {
     }
 }
 func (o *OpFnCall) typeCheck() {
-    // TODO
+    f := fn.GetFn(o.FnName.Str)
+    if f == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not declared\n", o.FnName.Str)
+        fmt.Fprintln(os.Stderr, "\t" + o.FnName.At())
+        os.Exit(1)
+    }
+
+    if len(f.Args) != len(o.Values) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected %d args for function \"%s\" but got %d\n", len(f.Args), o.FnName.Str, len(o.Values))
+        fmt.Fprintf(os.Stderr, "\texpected: %v\n", f.Args)
+        fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))
+        fmt.Fprintln(os.Stderr, "\t" + o.FnName.At())
+        os.Exit(1)
+    }
+
+    for i, t1 := range f.Args {
+        t2 := o.Values[i].GetType()
+
+        if t1 != t2 {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected %v as arg %d but got %v for function \"%s\"\n", t1, i, t2, o.FnName.Str)
+            fmt.Fprintf(os.Stderr, "\texpected: %v\n", f.Args)
+            fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))
+            fmt.Fprintln(os.Stderr, "\t" + o.FnName.At())
+            os.Exit(1)
+        }
+    }
 }
 
+func valuesToTypes(values []OpExpr) (res []types.Type) {
+    for _, v := range values {
+        res = append(res, v.GetType())
+    }
+
+    return res
+}
 
 func (o *BadExpr)   GetType() types.Type { return nil }
 func (o *OpFnCall)  GetType() types.Type { return nil }
@@ -188,7 +173,7 @@ func (o *ParenExpr) GetType() types.Type { return o.Expr.GetType() }
 func (o *IdentExpr) GetType() types.Type {
     v := vars.GetVar(o.Ident.Str)
     if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared)\n", o.Ident.Str)
+        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", o.Ident.Str)
         fmt.Fprintln(os.Stderr, "\t" + o.Ident.At())
         os.Exit(1)
     }

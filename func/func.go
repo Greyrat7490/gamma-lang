@@ -1,15 +1,15 @@
 package fn
 
 import (
-    "os"
-    "fmt"
-    "gorec/vars"
-    "gorec/loops"
-    "gorec/token"
-    "gorec/types"
-    "gorec/types/str"
-    "gorec/conditions"
-    "gorec/asm/x86_64"
+	"os"
+	"fmt"
+	"gorec/asm/x86_64"
+	"gorec/conditions"
+	"gorec/loops"
+	"gorec/token"
+	"gorec/types"
+	"gorec/types/str"
+	"gorec/vars"
 )
 
 /*
@@ -47,26 +47,35 @@ func GetFn(name string) *function {
     return nil
 }
 
-func Define(file *os.File, name token.Token) {
+func Declare(name token.Token) {
     if name.Str[0] == '_' {
         fmt.Fprintln(os.Stderr, "[ERROR] function names starting with \"_\" are reserved for the compiler")
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
 
-    file.WriteString(name.Str + ":\n")
-    file.WriteString("push rbp\nmov rbp, rsp\n")
-
-    var f function = function{ Name: name }
     curFunc = len(funcs)
-    funcs = append(funcs, f)
+    funcs = append(funcs, function{ Name: name })
 }
 
-func ReserveSpace(file *os.File, argsSize int, blockSize int) {
+func Define(file *os.File, name token.Token, argsSize int, blockSize int) {
+    f := GetFn(name.Str)
+    if f == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not declared\n", name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+    }
+    
+    file.WriteString(name.Str + ":\n")
+    file.WriteString("push rbp\nmov rbp, rsp\n")
+    reserveSpace(file, argsSize, blockSize)
+}
+
+func reserveSpace(file *os.File, argsSize int, blockSize int) {
     size := argsSize + blockSize
     if size > 0 {
         // size has to be the multiple of 16byte
-        size += size % 16
+        size += 16 - size % 16
         file.WriteString(fmt.Sprintf("sub rsp, %d\n", size))
     }
 }

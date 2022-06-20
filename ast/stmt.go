@@ -13,7 +13,6 @@ import (
 type OpStmt interface {
     Op
     Compile(file *os.File)
-    typeCheck()
     stmt()  // to differenciate OpStmt from OpDecl and OpExpr
 }
 
@@ -91,6 +90,8 @@ func (o *OpAssignVar)  stmt() {}
 
 
 func (o *OpAssignVar) Compile(file *os.File) {
+    o.typeCheck()
+    
     size := o.Dest.GetType().Size()
 
     switch dest := o.Dest.(type) {
@@ -159,6 +160,8 @@ func (o *OpBlock) Compile(file *os.File) {
 }
 
 func (o *IfStmt) Compile(file *os.File) {
+    o.typeCheck()
+    
     vars.CreateScope()
 
     switch e := o.Cond.(type) {
@@ -183,6 +186,8 @@ func (o *IfStmt) Compile(file *os.File) {
 }
 
 func (o *IfElseStmt) Compile(file *os.File) {
+    o.typeCheck()
+    
     switch e := o.If.Cond.(type) {
     case *LitExpr:
         vars.CreateScope()
@@ -237,6 +242,8 @@ func (o *WhileStmt) Compile(file *os.File) {
         def.Compile(file)
     }
 
+    o.typeCheck()
+
     switch e := o.Cond.(type) {
     case *LitExpr:
         if e.Val.Str == "true" {
@@ -268,6 +275,8 @@ func (o *ForStmt) Compile(file *os.File) {
     o.Dec.Compile(file)
     def := OpDefVar{ Varname: o.Dec.Varname, Value: o.Start }
     def.Compile(file)
+
+    o.typeCheck()
 
     count := loops.ForStart(file)
     if o.Limit != nil {

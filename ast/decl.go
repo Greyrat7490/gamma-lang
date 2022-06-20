@@ -13,7 +13,6 @@ import (
 type OpDecl interface {
     Op
     Compile(file *os.File)
-    typeCheck()
     decl()  // to differenciate OpDecl from OpStmt and OpExpr
 }
 
@@ -47,6 +46,8 @@ func (o *OpDecVar) Compile(file *os.File) {
 }
 
 func (o *OpDefVar) Compile(file *os.File) {
+    o.typeCheck()
+    
     v := vars.GetVar(o.Varname.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", o.Varname.Str)
@@ -81,14 +82,17 @@ func (o *OpDefVar) Compile(file *os.File) {
 }
 
 func (o *OpDefFn) Compile(file *os.File) {
+    fn.Declare(o.FnName)
+
     vars.CreateScope()
 
-    fn.Define(file, o.FnName)
-    fn.ReserveSpace(file, argsSize(o.Args), o.Block.maxFrameSize())
     regIdx := 0
-    for _, a := range o.Args {
+    
+    fn.Define(file, o.FnName, argsSize(o.Args), o.Block.maxFrameSize())
+
+    for _,a := range o.Args {
         fn.AddArg(a.Vartype)
-        a.Compile(file)
+        vars.Declare(a.Varname, a.Vartype)
         fn.DefArg(file, regIdx, a.Vartype)
 
         if a.Vartype.GetKind() == types.Str {

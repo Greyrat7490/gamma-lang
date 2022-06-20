@@ -3,8 +3,6 @@ package std
 import (
     "os"
     "fmt"
-    "gorec/func"
-    "gorec/types"
 )
 
 const SYS_WRITE = 1
@@ -27,8 +25,6 @@ func syscall(file *os.File, syscallNum uint) {
 }
 
 func defineExit(file *os.File) {
-    fn.AddBuildIn("exit", "i", types.I32Type{})
-
     file.WriteString("exit:\n")
     file.WriteString(fmt.Sprintf("mov rax, %d\n", SYS_EXIT))
     file.WriteString("syscall\n\n")

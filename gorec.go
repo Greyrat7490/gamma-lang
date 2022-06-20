@@ -21,6 +21,7 @@ func compile() {
 
     nasm.Header(asm)
 
+    std.Declare()
     std.Define(asm)
 
     ast.Compile(asm)
@@ -44,7 +45,6 @@ func main() {
     token.Tokenize(src)
     prs.Parse()
     // TODO: optimization step
-    ast.TypeCheck()
     ast.ShowAst()
     compile()
     nasm.GenExe()

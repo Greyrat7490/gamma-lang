@@ -3,15 +3,11 @@ package std
 import (
     "os"
     "fmt"
-    "gorec/func"
-    "gorec/types"
 )
 
 const STDOUT = 1
 
 func definePrintStr(asm *os.File) {
-    fn.AddBuildIn("printStr", "s", types.StrType{})
-
     asm.WriteString("printStr:\n")
 
     asm.WriteString("mov rdx, rsi\n")
@@ -23,8 +19,6 @@ func definePrintStr(asm *os.File) {
 }
 
 func definePrintInt(asm *os.File) {
-    fn.AddBuildIn("printInt", "i", types.I32Type{})
-
     asm.WriteString("printInt:\n")
     asm.WriteString("movsxd rax, edi\n")   // mov edi into eax and sign extends upper half of rax
     asm.WriteString("call _int_to_str\n")
@@ -38,8 +32,6 @@ func definePrintInt(asm *os.File) {
 }
 
 func definePrintPtr(asm *os.File) {
-    fn.AddBuildIn("printPtr", "i", types.PtrType{})
-
     asm.WriteString("printPtr:\n")
     asm.WriteString("mov rax, rdi\n")
     asm.WriteString("call _int_to_str\n")
@@ -53,8 +45,6 @@ func definePrintPtr(asm *os.File) {
 }
 
 func definePrintBool(asm *os.File) {
-    fn.AddBuildIn("printBool", "b", types.BoolType{})
-
     asm.WriteString("printBool:\n")
 
     asm.WriteString("mov rax, rdi\n")

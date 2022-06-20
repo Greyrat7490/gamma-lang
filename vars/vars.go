@@ -48,10 +48,6 @@ func GetVar(name string) Var {
     return nil
 }
 
-func ClearGlobalVars() {
-    globalVars = nil
-}
-
 func Write(file *os.File, s string) {
     if InGlobalScope() {
         preMain = append(preMain, s)

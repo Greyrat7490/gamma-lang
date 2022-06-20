@@ -1,0 +1,13 @@
+fn test(a1 i32, a2 i32) {
+    printStr("arg1: ")
+    printInt(a1)
+    printStr("\n")
+
+    printStr("arg2: ")
+    printInt(a2)
+    printStr("\n")
+}
+
+fn main() {
+    test(69, "86")
+}

@@ -56,6 +56,8 @@ func (o *LitExpr)   Compile(file *os.File) {}
 func (o *IdentExpr) Compile(file *os.File) {}
 func (o *ParenExpr) Compile(file *os.File) { o.Expr.Compile(file) }
 func (o *UnaryExpr) Compile(file *os.File) {
+    o.typeCheck()
+    
     switch o.Operator.Type {
     case token.Mul:
         switch e := o.Operand.(type) {
@@ -114,6 +116,8 @@ func (o *UnaryExpr) Compile(file *os.File) {
     }
 }
 func (o *BinaryExpr) Compile(file *os.File) {
+    o.typeCheck()
+    
     size := o.OperandL.GetType().Size()
     if sizeR := o.OperandR.GetType().Size(); sizeR > size {
         size = sizeR
@@ -172,6 +176,8 @@ func (o *BinaryExpr) Compile(file *os.File) {
 }
 
 func (o *OpFnCall) Compile(file *os.File) {
+    o.typeCheck()
+    
     regIdx := 0
     for _, val := range o.Values {
         switch e := val.(type) {
