@@ -53,13 +53,50 @@ fn elifTest() {
     }
 }
 
+fn andTest() {
+    printStr("v1 = 69\n")
+
+    if v1 >= 69 && v1 < 86 {
+        printStr("v1 >= 69 && v1 < 86\n")
+    }
+
+    printStr("v1 = 86\n")
+    v1 = 86
+
+    if v1 >= 69 && v1 < 86 {
+        printStr("v1 >= 69 && v1 < 86\n")
+    } else {
+        printStr("v1 >= 69 && v1 < 86 is false\n")
+    }
+}
+
+fn orTest() {
+    printStr("v1 = 69\n")
+    v1 = 69
+
+    if v1 == 86 || v1 == 69 {
+        printStr("v1 == 86 || v1 == 69\n")
+    }
+
+    printStr("v1 = 86\n")
+    v1 = 86
+
+    if v1 == 86 || v1 == 69 {
+        printStr("v1 == 86 || v1 == 69\n")
+    }
+}
+
 fn main() {
-    printStr("------ test 1 ---------\n")
+    printStr("-------- test 1 -------\n")
     test1()
-    printStr("------ test 2 ---------\n")
+    printStr("-------- test 2 -------\n")
     test2()
-    printStr("------ test 3 ---------\n")
+    printStr("-------- test 3 -------\n")
     test3()
-    printStr("------ elif test ------\n")
+    printStr("-------- elif ---------\n")
     elifTest()
+    printStr("-------- && -----------\n")
+    andTest()
+    printStr("-------- || -----------\n")
+    orTest()
 }

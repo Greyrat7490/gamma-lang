@@ -108,22 +108,30 @@ func (o *BinaryExpr) typeCheck() {
     t1 := o.OperandL.GetType()
     t2 := o.OperandR.GetType()
 
-    if t1 != t2 {
-        if (t1.GetKind() == types.Ptr && t2.GetKind() == types.I32) ||
-           (t2.GetKind() == types.Ptr && t1.GetKind() == types.I32) {
-            if o.Operator.Type == token.Plus || o.Operator.Type == token.Minus {
-                return
-            }
-
-            fmt.Fprintf(os.Stderr, "[ERROR] only +/- operators are allowed for binary ops with %v and %v\n", t1, t2)
+    if o.Operator.Type == token.And || o.Operator.Type == token.Or {
+        if t1.GetKind() != types.Bool || t2.GetKind() != types.Bool {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected 2 bools for logic op \"%s\" but got %v and %v\n", o.Operator.Str, t1, t2)
             fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
             os.Exit(1)
         }
+    } else {
+        if t1 != t2 {
+            if (t1.GetKind() == types.Ptr && t2.GetKind() == types.I32) ||
+               (t2.GetKind() == types.Ptr && t1.GetKind() == types.I32) {
+                if o.Operator.Type == token.Plus || o.Operator.Type == token.Minus {
+                    return
+                }
 
-        fmt.Fprintf(os.Stderr, "[ERROR] binary operation has two diffrente types (left: %v right: %v)\n", t1, t2)
-        fmt.Fprintln(os.Stderr, "\t(ptr +/- i32 is allowed)")
-        fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
-        os.Exit(1)
+                fmt.Fprintf(os.Stderr, "[ERROR] only +/- operators are allowed for binary ops with %v and %v\n", t1, t2)
+                fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+                os.Exit(1)
+            }
+
+            fmt.Fprintf(os.Stderr, "[ERROR] binary operation has two diffrente types (left: %v right: %v)\n", t1, t2)
+            fmt.Fprintln(os.Stderr, "\t(ptr +/- i32 is allowed)")
+            fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+            os.Exit(1)
+        }
     }
 }
 func (o *OpFnCall) typeCheck() {

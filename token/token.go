@@ -29,6 +29,9 @@ const (
     Mul             // *
     Div             // /
 
+    And             // &&
+    Or              // ||
+
     Amp             // &
 
     Eql             // ==
@@ -78,6 +81,11 @@ func TokenTypeOfStr(s string) TokenType {
         return Mul
     case "/":
         return Div
+
+    case "&&":
+        return And
+    case "||":
+        return Or
 
     case "&":
         return Amp
@@ -165,6 +173,11 @@ func (t TokenType) Readable() string {
         return "Mul"
     case Div:
         return "Div"
+
+    case And:
+        return "And"
+    case Or:
+        return "Or"
 
     case Amp:
         return "Amp"
@@ -323,7 +336,7 @@ func Tokenize(file []byte) {
                     s := f[start:i]
 
                     t := TokenTypeOfStr(s)
-                    if t == Typename && tokens[len(tokens)-1].Type == Mul {
+                    if t == Typename && tokens[len(tokens)-1].Type == Mul {     // *typename
                         tokens[len(tokens)-1].Str += s
                         tokens[len(tokens)-1].Type = Typename
                     } else {
@@ -333,7 +346,13 @@ func Tokenize(file []byte) {
                 start = i + 1
 
                 if strings.Contains(keySigns, string(r)) {
-                    tokens = append(tokens, Token{TokenTypeOfStr(string(r)), string(r), Pos{line, col}})
+                    t := TokenTypeOfStr(string(r))
+                    if t == Amp && tokens[len(tokens)-1].Type == Amp {          // &&
+                        tokens[len(tokens)-1].Str  = "&&"
+                        tokens[len(tokens)-1].Type = And
+                    } else {
+                        tokens = append(tokens, Token{t, string(r), Pos{line, col}})
+                    }
                 }
             }
         }

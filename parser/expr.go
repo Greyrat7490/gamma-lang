@@ -10,11 +10,12 @@ import (
 
 type precedence int
 const (
-    COMPARE_PRECEDENCE  precedence = 0
-    ADD_SUB_PRECEDENCE  precedence = 1
-    MUL_DIV_PRECEDENCE  precedence = 2
-    EXP_ROOT_PRECEDENCE precedence = 3
-    PAREN_PRECEDENCE    precedence = 4
+    LOGICAL_PRECEDENCE precedence = 0 // &&, ||
+    COMPARE_PRECEDENCE precedence = 1 // ==, !=, <, <=, >, >=
+    ADD_SUB_PRECEDENCE precedence = 2 // +, -
+    MUL_DIV_PRECEDENCE precedence = 3 // *, /, %(TODO)
+    EXP_PRECEDENCE     precedence = 4 // **(TODO)
+    PAREN_PRECEDENCE   precedence = 5 // ()
 )
 
 func prsExpr() ast.OpExpr {
@@ -61,6 +62,7 @@ func isParenExpr() bool {
 func isBinaryExpr() bool {
     return  token.Peek().Type == token.Plus || token.Peek().Type == token.Minus ||
             token.Peek().Type == token.Mul  || token.Peek().Type == token.Div   ||
+            token.Peek().Type == token.And  || token.Peek().Type == token.Or   ||
             isComparison()
 }
 
@@ -72,6 +74,8 @@ func isComparison() bool {
 
 func getPrecedence() precedence {
     switch {
+    case token.Peek().Type == token.And || token.Peek().Type == token.Or:
+        return LOGICAL_PRECEDENCE
     case isComparison():
         return COMPARE_PRECEDENCE
     case token.Peek().Type == token.Plus || token.Peek().Type == token.Minus:

@@ -10,7 +10,10 @@ import (
 
 var count uint = 0
 
-func ResetCount() { count = 0 }
+func ResetCount() {
+    count = 0
+    logCount = 0
+}
 
 func IfIdent(file *os.File, ident token.Token, hasElse bool) uint {
     v := vars.GetVar(ident.Str)
