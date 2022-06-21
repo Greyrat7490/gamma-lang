@@ -109,16 +109,36 @@ func (o *OpBlock) Readable(indent int) string {
 }
 
 func (o *IfStmt) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + "IF:\n" +
+    s := strings.Repeat("   ", indent) + "IF:\n" +
         o.Cond.Readable(indent+1) +
         o.Block.Readable(indent+1)
+
+    if o.Elif != nil {
+        s += o.Elif.Readable(indent)
+    } else if o.Else != nil {
+        s += o.Else.Readable(indent)
+    }
+
+    return s
 }
 
-func (o *IfElseStmt) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + "IF_ELSE:\n" +
-        o.If.Readable(indent+1) +
-        strings.Repeat("   ", indent+1) + "ELSE:\n" +
-        o.Block.Readable(indent+2)
+func (o *ElifStmt) Readable(indent int) string {
+    s := strings.Repeat("   ", indent) + "ELIF:\n" +
+        o.Cond.Readable(indent+1) +
+        o.Block.Readable(indent+1)
+
+    if o.Elif != nil {
+        s += o.Elif.Readable(indent)
+    } else if o.Else != nil {
+        s += o.Else.Readable(indent)
+    }
+
+    return s
+}
+
+func (o *ElseStmt) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "ELSE:\n" +
+        o.Block.Readable(indent+1)
 }
 
 func (o *WhileStmt) Readable(indent int) string {

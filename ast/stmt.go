@@ -39,13 +39,16 @@ type OpBlock struct {
 }
 
 type IfStmt struct {
-    IfPos token.Pos
+    Pos token.Pos
     Cond OpExpr
     Block OpBlock
+    Else *ElseStmt // only one of these is set
+    Elif *ElifStmt
 }
 
-type IfElseStmt struct {
-    If IfStmt
+type ElifStmt IfStmt
+
+type ElseStmt struct {
     ElsePos token.Pos
     Block OpBlock
 }
@@ -78,7 +81,7 @@ type ContinueStmt struct {
 
 func (o *BadStmt)      stmt() {}
 func (o *IfStmt)       stmt() {}
-func (o *IfElseStmt)   stmt() {}
+func (o *ElseStmt)     stmt() {}
 func (o *ForStmt)      stmt() {}
 func (o *WhileStmt)    stmt() {}
 func (o *BreakStmt)    stmt() {}
@@ -91,7 +94,7 @@ func (o *OpAssignVar)  stmt() {}
 
 func (o *OpAssignVar) Compile(file *os.File) {
     o.typeCheck()
-    
+
     size := o.Dest.GetType().Size()
 
     switch dest := o.Dest.(type) {
@@ -161,76 +164,57 @@ func (o *OpBlock) Compile(file *os.File) {
 
 func (o *IfStmt) Compile(file *os.File) {
     o.typeCheck()
-    
+
     vars.CreateScope()
 
+    hasElse := o.Else != nil || o.Elif != nil
+
+    var count uint = 0
     switch e := o.Cond.(type) {
     case *LitExpr:
         if e.Val.Str == "true" {
             o.Block.Compile(file)
+            return
+        } else if o.Else != nil {
+            o.Else.Block.Compile(file)
+            return
         }
 
     case *IdentExpr:
-        count := cond.IfIdent(file, e.Ident)
+        count = cond.IfIdent(file, e.Ident, hasElse)
         o.Block.Compile(file)
-        cond.IfEnd(file, count)
 
     default:
         o.Cond.Compile(file)
-        count := cond.IfExpr(file)
+        count = cond.IfExpr(file, hasElse)
         o.Block.Compile(file)
-        cond.IfEnd(file, count)
     }
 
     vars.RemoveScope()
-}
 
-func (o *IfElseStmt) Compile(file *os.File) {
-    o.typeCheck()
-    
-    switch e := o.If.Cond.(type) {
-    case *LitExpr:
-        vars.CreateScope()
+    if hasElse {
+        cond.ElseStart(file, count)
 
-        if e.Val.Str == "true" {
-            o.If.Block.Compile(file)
+        if o.Else != nil {
+            o.Else.Compile(file)
         } else {
-            o.Block.Compile(file)
+            o.Elif.Compile(file)
         }
 
-        vars.RemoveScope()
-
-    case *IdentExpr:
-        count := cond.IfElseIdent(file, e.Ident)
-
-        vars.CreateScope()
-        o.If.Block.Compile(file)
-        vars.RemoveScope()
-
-        cond.ElseStart(file, count)
-
-        vars.CreateScope()
-        o.Block.Compile(file)
-        vars.RemoveScope()
-
-        cond.IfElseEnd(file, count)
-
-    default:
-        o.If.Cond.Compile(file)
-        count := cond.IfElseExpr(file)
-
-        vars.CreateScope()
-        o.If.Block.Compile(file)
-        vars.RemoveScope()
-
-        cond.ElseStart(file, count)
-
-        vars.CreateScope()
-        o.Block.Compile(file)
-        vars.RemoveScope()
-
-        cond.IfElseEnd(file, count)
+        cond.ElseEnd(file, count)
     }
+
+    cond.IfEnd(file, count)
+}
+
+func (o *ElifStmt) Compile(file *os.File) {
+    (*IfStmt)(o).Compile(file)
+}
+
+func (o *ElseStmt) Compile(file *os.File) {
+    vars.CreateScope()
+    o.Block.Compile(file)
+    vars.RemoveScope()
 }
 
 func (o *WhileStmt) Compile(file *os.File) {

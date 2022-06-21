@@ -41,11 +41,25 @@ fn test3() {
     t()
 }
 
+fn elifTest() {
+    if v1 == 86 {
+        printStr("v1 == 86\n")
+    } elif v1 == 420 {
+        printStr("v1 == 420\n")
+    } elif v1 == 69 {
+        printStr("v1 == 69\n")
+    } else {
+        printStr("v1 somthing else\n")
+    }
+}
+
 fn main() {
-    printStr("------ test 1 ------\n")
+    printStr("------ test 1 ---------\n")
     test1()
-    printStr("------ test 2 ------\n")
+    printStr("------ test 2 ---------\n")
     test2()
-    printStr("------ test 3 ------\n")
+    printStr("------ test 3 ---------\n")
     test3()
+    printStr("------ elif test ------\n")
+    elifTest()
 }

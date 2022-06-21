@@ -42,12 +42,9 @@ func (o *OpAssignVar)  typeCheck() {
 func (o *IfStmt) typeCheck() {
     if t := o.Cond.GetType(); t.GetKind() != types.Bool {
         fmt.Fprintf(os.Stderr, "[ERROR] expected an bool as if condition but got %v\n", t)
-        fmt.Fprintln(os.Stderr, "\t" + o.IfPos.At())
+        fmt.Fprintln(os.Stderr, "\t" + o.Pos.At())
         os.Exit(1)
     }
-}
-func (o *IfElseStmt) typeCheck() {
-    o.If.typeCheck()
 }
 
 func (o *ForStmt) typeCheck() {

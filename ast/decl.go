@@ -47,7 +47,7 @@ func (o *OpDecVar) Compile(file *os.File) {
 
 func (o *OpDefVar) Compile(file *os.File) {
     o.typeCheck()
-    
+
     v := vars.GetVar(o.Varname.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", o.Varname.Str)
@@ -87,7 +87,7 @@ func (o *OpDefFn) Compile(file *os.File) {
     vars.CreateScope()
 
     regIdx := 0
-    
+
     fn.Define(file, o.FnName, argsSize(o.Args), o.Block.maxFrameSize())
 
     for _,a := range o.Args {
@@ -153,14 +153,12 @@ func (o *OpBlock) maxFrameSize() int {
             }
         case *IfStmt:
             size := stmt.Block.maxFrameSize()
-            if size > maxInnerSize {
-                maxInnerSize = size
-            }
-        case *IfElseStmt:
-            size := stmt.Block.maxFrameSize()
-            size2 := stmt.If.Block.maxFrameSize()
-            if size < size2 {
-                size = size2
+
+            if stmt.Else != nil {
+                size2 := stmt.Else.Block.maxFrameSize()
+                if size < size2 {
+                    size = size2
+                }
             }
 
             if size > maxInnerSize {

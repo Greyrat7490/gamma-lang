@@ -19,15 +19,7 @@ func prsStmt() ast.OpStmt {
         return &ast.OpDeclStmt{ Decl: &d }
 
     case token.If:
-        var ifStmt ast.IfStmt
-        ifStmt = prsIfStmt()
-
-        if token.Peek().Type == token.Else {
-            token.Next()
-            e := prsIfElse(ifStmt)
-            return &e
-        }
-
+        ifStmt := prsIfStmt()
         return &ifStmt
 
     case token.While:
@@ -73,6 +65,13 @@ func prsStmt() ast.OpStmt {
             os.Exit(1)
             return &ast.BadStmt{}
         }
+
+
+    case token.Elif:
+        fmt.Fprintf(os.Stderr, "[ERROR] missing if (elif without an if before)\n")
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+        return &ast.BadStmt{}
 
     case token.Else:
         fmt.Fprintf(os.Stderr, "[ERROR] missing if (else without an if before)\n")
@@ -127,15 +126,31 @@ func prsIfStmt() ast.IfStmt {
     token.Next()
     block := prsBlock()
 
-    return ast.IfStmt{ IfPos: pos, Cond: cond, Block: block }
+    ifStmt := ast.IfStmt{ Pos: pos, Cond: cond, Block: block }
+
+    if token.Peek().Type == token.Else {
+        token.Next()
+        elseStmt := prsElse()
+        ifStmt.Else = &elseStmt
+    } else if token.Peek().Type == token.Elif {
+        token.Next()
+        elifStmt := prsElif()
+        ifStmt.Elif = &elifStmt
+    }
+
+    return ifStmt
 }
 
-func prsIfElse(If ast.IfStmt) ast.IfElseStmt {
+func prsElif() ast.ElifStmt {
+    return ast.ElifStmt(prsIfStmt())
+}
+
+func prsElse() ast.ElseStmt {
     pos := token.Cur().Pos
     token.Next()
     block := prsBlock()
 
-    return ast.IfElseStmt{ If: If, ElsePos: pos, Block: block }
+    return ast.ElseStmt{ ElsePos: pos, Block: block }
 }
 
 func prsWhileStmt() ast.WhileStmt {

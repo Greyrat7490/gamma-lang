@@ -55,6 +55,7 @@ const (
     Assign          // =
     Def_fn          // fn
     If              // if
+    Elif            // elif
     Else            // else
     While           // while
     For             // for
@@ -125,6 +126,8 @@ func TokenTypeOfStr(s string) TokenType {
         return Def_fn
     case "if":
         return If
+    case "elif":
+        return Elif
     case "else":
         return Else
     case "while":
@@ -210,6 +213,8 @@ func (t TokenType) Readable() string {
         return "Def_fn"
     case If:
         return "If"
+    case Elif:
+        return "Elif"
     case Else:
         return "Else"
     case While:

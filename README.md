@@ -38,9 +38,11 @@ And because it is written in Go...
 * [ ] controll structures
   * [x] if
   * [x] else
-  * [ ] elif
+  * [x] elif
   * [x] while
   * [x] for
+  * [ ] switch
+  * [ ] &&, ||
 * [x] pointer
   * [x] define/assign
   * [x] deref
