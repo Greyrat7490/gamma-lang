@@ -42,7 +42,7 @@ And because it is written in Go...
   * [x] while
   * [x] for
   * [ ] switch
-  * [ ] &&, ||
+  * [x] &&, ||
 * [x] pointer
   * [x] define/assign
   * [x] deref
