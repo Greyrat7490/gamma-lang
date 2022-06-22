@@ -46,6 +46,12 @@ func (o *IfStmt) typeCheck() {
         os.Exit(1)
     }
 }
+func (o *ElifStmt) typeCheck() {
+    (*IfStmt)(o).typeCheck()
+}
+func (o *SwitchStmt) typeCheck() {
+    (*IfStmt)(o).typeCheck()
+}
 
 func (o *ForStmt) typeCheck() {
     t := o.Dec.Vartype
@@ -127,7 +133,7 @@ func (o *BinaryExpr) typeCheck() {
                 os.Exit(1)
             }
 
-            fmt.Fprintf(os.Stderr, "[ERROR] binary operation has two diffrente types (left: %v right: %v)\n", t1, t2)
+            fmt.Fprintf(os.Stderr, "[ERROR] binary operation has two differente types (left: %v right: %v)\n", t1, t2)
             fmt.Fprintln(os.Stderr, "\t(ptr +/- i32 is allowed)")
             fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
             os.Exit(1)

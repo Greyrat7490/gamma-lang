@@ -1,0 +1,46 @@
+fn switchSimple(a1 i32) {
+    if a1 == {
+        420: printStr("a1 == 420\n")
+        86:  printStr("a1 == 86\n")
+        -86: printStr("a1 == -86\n")
+        _:   printStr("a1 something else\n")
+    }
+}
+
+fn switchArith(a1 i32) {
+    if a1 * 10 + 10 == {
+        420:  printStr("a1 == 420\n")
+        860:  printStr("a1 == 860\n")
+        -860: printStr("a1 == -860\n")
+        _:    printStr("a1 something else\n")
+    }
+}
+
+fn switchLss(a1 i32) {
+    if a1 < {
+        -86: printStr("a1 < -86\n")
+        420: printStr("a1 < 420\n")
+        86:  printStr("a1 < 86\n")          // gets never called because 420 > 86 and goes from top to bottom
+        _:   printStr("a1 something else\n")
+    }
+}
+
+fn main() {
+    printStr("---- simple ----\n")
+    switchSimple(86)
+    switchSimple(-86)
+    switchSimple(420)
+    switchSimple(69)
+
+    printStr("---- arith in base cond ----\n")
+    switchArith(85)
+    switchArith(-87)
+    switchArith(41)
+    switchArith(69)
+
+    printStr("---- lesser ----\n")
+    switchLss(86)
+    switchLss(-87)
+    switchLss(420)
+    switchLss(69)
+}

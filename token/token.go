@@ -40,6 +40,7 @@ const (
     Leq             // <=
     Lss             // <
     Grt             // >
+    Not             // !
 
     ParenL          // (
     ParenR          // )
@@ -47,8 +48,10 @@ const (
     BrackR          // ]
     BraceL          // {
     BraceR          // }
+    UndScr          // _
 
     Comma           // ,
+    Colon           // :
     SemiCol         // ;
 
     Comment         // // ..., /* ... */
@@ -102,6 +105,8 @@ func TokenTypeOfStr(s string) TokenType {
         return Grt
     case "<":
         return Lss
+    case "!":
+        return Not
 
     case "(":
         return ParenL
@@ -115,11 +120,15 @@ func TokenTypeOfStr(s string) TokenType {
         return BraceL
     case "}":
         return BraceR
+    case "_":
+        return UndScr
 
     case ",":
         return Comma
     case ";":
         return SemiCol
+    case ":":
+        return Colon
 
     case "//", "/*", "*/":
         return Comment
@@ -194,6 +203,8 @@ func (t TokenType) Readable() string {
         return "Grt"
     case Lss:
         return "Lss"
+    case Not:
+        return "Not"
 
     case ParenL:
         return "ParenL"
@@ -207,11 +218,15 @@ func (t TokenType) Readable() string {
         return "BraceL"
     case BraceR:
         return "BraceR"
+    case UndScr:
+        return "UnderS"
 
     case Comma:
         return "Comma"
     case SemiCol:
         return "SemiCol"
+    case Colon:
+        return "Colon"
 
     case Comment:
         return "Comment"
@@ -276,7 +291,7 @@ func (t Token) At() string {
 }
 
 func Tokenize(file []byte) {
-    keySigns := "(){}+-*/,;&"
+    keySigns := "(){}+-*/=,:;&"
     f := string(file)
 
     start := 0
@@ -347,9 +362,30 @@ func Tokenize(file []byte) {
 
                 if strings.Contains(keySigns, string(r)) {
                     t := TokenTypeOfStr(string(r))
-                    if t == Amp && tokens[len(tokens)-1].Type == Amp {          // &&
+
+                    if t == Amp && tokens[len(tokens)-1].Type == Amp {
                         tokens[len(tokens)-1].Str  = "&&"
                         tokens[len(tokens)-1].Type = And
+                    } else if t == Assign {
+                        switch tokens[len(tokens)-1].Type {
+                        case Colon:
+                            tokens[len(tokens)-1].Str  = ":="
+                            tokens[len(tokens)-1].Type = Def_var
+                        case Not:
+                            tokens[len(tokens)-1].Str  = "!="
+                            tokens[len(tokens)-1].Type = Neq
+                        case Assign:
+                            tokens[len(tokens)-1].Str  = "=="
+                            tokens[len(tokens)-1].Type = Eql
+                        case Lss:
+                            tokens[len(tokens)-1].Str  = "<="
+                            tokens[len(tokens)-1].Type = Leq
+                        case Grt:
+                            tokens[len(tokens)-1].Str  = ">="
+                            tokens[len(tokens)-1].Type = Geq
+                        default:
+                            tokens = append(tokens, Token{t, string(r), Pos{line, col}})
+                        }
                     } else {
                         tokens = append(tokens, Token{t, string(r), Pos{line, col}})
                     }

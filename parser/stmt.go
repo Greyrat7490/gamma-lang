@@ -19,7 +19,14 @@ func prsStmt() ast.OpStmt {
         return &ast.OpDeclStmt{ Decl: &d }
 
     case token.If:
+        fmt.Println("here")
         ifStmt := prsIfStmt()
+
+        if token.Cur().Str == "{" {
+            switchStmt := prsCondSwitch(ifStmt)
+            return &switchStmt
+        }
+
         return &ifStmt
 
     case token.While:
@@ -123,22 +130,30 @@ func prsIfStmt() ast.IfStmt {
     pos := token.Cur().Pos
     token.Next()
     cond := prsExpr()
-    token.Next()
-    block := prsBlock()
 
-    ifStmt := ast.IfStmt{ Pos: pos, Cond: cond, Block: block }
+    // cond-switch
+    if token.Cur().Str == "{" {
+        return ast.IfStmt{ Pos: pos, Cond: cond }
 
-    if token.Peek().Type == token.Else {
+    // normal if
+    } else {
         token.Next()
-        elseStmt := prsElse()
-        ifStmt.Else = &elseStmt
-    } else if token.Peek().Type == token.Elif {
-        token.Next()
-        elifStmt := prsElif()
-        ifStmt.Elif = &elifStmt
+        block := prsBlock()
+
+        ifStmt := ast.IfStmt{ Pos: pos, Cond: cond, Block: block }
+
+        if token.Peek().Type == token.Else {
+            token.Next()
+            elseStmt := prsElse()
+            ifStmt.Else = &elseStmt
+        } else if token.Peek().Type == token.Elif {
+            token.Next()
+            elifStmt := prsElif()
+            ifStmt.Elif = &elifStmt
+        }
+
+        return ifStmt
     }
-
-    return ifStmt
 }
 
 func prsElif() ast.ElifStmt {
@@ -238,4 +253,107 @@ func prsBreak() ast.BreakStmt {
 func prsContinue() ast.ContinueStmt {
     var op ast.ContinueStmt = ast.ContinueStmt{ Pos: token.Cur().Pos }
     return op
+}
+
+
+func prsCase(rhs *ast.OpExpr) (isAny bool) {
+    if token.Cur().Type == token.UndScr {
+        isAny = true
+    } else {
+        *rhs = prsExpr()
+    }
+
+    if token.Next().Type != token.Colon  {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \":\" after end of expr/case" +
+            " but got \"%s\"(%v)\n", token.Cur().Str, token.Cur().Type)
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+
+    return
+}
+
+func prsCaseBody() (stmts []ast.OpStmt) {
+    // TODO: parse sequence of stmts
+    stmts = append(stmts, prsStmt())
+    return stmts
+}
+
+func getPlaceholderExpr(cond ast.OpExpr) (expr *ast.OpExpr) {
+    for {
+        if b, ok := cond.(*ast.BinaryExpr); !ok {
+            fmt.Fprintln(os.Stderr, "[ERROR] expected condition to be a BinaryExpr")
+            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+            os.Exit(1)
+            return nil
+        } else {
+            if b.Operator.Type == token.Eql || b.Operator.Type == token.Neq ||
+               b.Operator.Type == token.Grt || b.Operator.Type == token.Lss ||
+               b.Operator.Type == token.Geq || b.Operator.Type == token.Leq {
+                return &b.OperandR
+            }
+
+            cond = b.OperandR
+        }
+    }
+}
+
+func copyCond(cond ast.OpExpr) ast.OpExpr {
+    if b, ok := cond.(*ast.BinaryExpr); ok {
+        newCond := *b
+        return &newCond
+    } else {
+        fmt.Fprintln(os.Stderr, "[ERROR] expected condition to be a BinaryExpr")
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+        return nil
+    }
+}
+
+func prsCondSwitch(ifStmt ast.IfStmt) (switchStmt ast.SwitchStmt) {
+    switchStmt.Pos = ifStmt.Pos
+
+    placeholder := getPlaceholderExpr(ifStmt.Cond)
+
+    if token.Next().Type != token.BraceR {
+        isAny := prsCase(placeholder)
+        stmts := prsCaseBody()
+
+        switchStmt.Block = ast.OpBlock{ Stmts: stmts }
+        switchStmt.Cond = copyCond(ifStmt.Cond)
+
+        if isAny {
+            switchStmt.Cond = &ast.LitExpr{
+                Val: token.Token{ Str: "true", Type: token.Boolean },
+                Type: types.BoolType{},
+            }
+        }
+    }
+
+    cur := &switchStmt
+    for token.Peek().Type != token.BraceR {
+        token.Next()
+
+        isAny := prsCase(placeholder)
+        stmts := prsCaseBody()
+
+        if isAny {
+            cur.Else = &ast.ElseStmt{ Block: ast.OpBlock{ Stmts: stmts } }
+            // TODO: instead of breaking print warnings for all cases after _:
+            break
+        }
+
+        cur.Elif = &ast.ElifStmt{ Cond: copyCond(ifStmt.Cond), Block: ast.OpBlock{ Stmts: stmts } }
+
+        cur = (*ast.SwitchStmt)(cur.Elif)
+    }
+
+    if token.Next().Type != token.BraceR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"}\" at the end of the cond-switch " +
+            "but got \"%s\"(%v)\n", token.Cur().Str, token.Cur().Type)
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+
+    return
 }

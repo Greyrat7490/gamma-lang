@@ -141,6 +141,21 @@ func (o *ElseStmt) Readable(indent int) string {
         o.Block.Readable(indent+1)
 }
 
+func (o *SwitchStmt) Readable(indent int) string {
+    s := strings.Repeat("   ", indent) + "COND-SWITCH:\n" +
+        strings.Repeat("   ", indent+1) + "IF:\n" +
+        o.Cond.Readable(indent+2) +
+        o.Block.Readable(indent+2)
+
+    if o.Elif != nil {
+        s += o.Elif.Readable(indent+1)
+    } else if o.Else != nil {
+        s += o.Else.Readable(indent+1)
+    }
+
+    return s
+}
+
 func (o *WhileStmt) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "WHILE:\n" +
         o.Cond.Readable(indent+1)

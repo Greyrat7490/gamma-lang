@@ -157,6 +157,11 @@ func prsBinary(expr ast.OpExpr, min_precedence precedence) ast.OpExpr {
         token.Next()
         precedenceR := getPrecedence()
 
+        // cond-switch
+        if token.Cur().Type == token.BraceL {
+            return &b
+        }
+
         switch {
         case isParenExpr():
             b.OperandR = prsParenExpr()

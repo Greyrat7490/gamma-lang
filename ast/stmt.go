@@ -53,6 +53,8 @@ type ElseStmt struct {
     Block OpBlock
 }
 
+type SwitchStmt IfStmt
+
 type WhileStmt struct {
     WhilePos token.Pos
     Cond OpExpr
@@ -82,6 +84,8 @@ type ContinueStmt struct {
 func (o *BadStmt)      stmt() {}
 func (o *IfStmt)       stmt() {}
 func (o *ElseStmt)     stmt() {}
+func (o *ElifStmt)     stmt() {}
+func (o *SwitchStmt)   stmt() {}
 func (o *ForStmt)      stmt() {}
 func (o *WhileStmt)    stmt() {}
 func (o *BreakStmt)    stmt() {}
@@ -208,6 +212,9 @@ func (o *IfStmt) Compile(file *os.File) {
 }
 
 func (o *ElifStmt) Compile(file *os.File) {
+    (*IfStmt)(o).Compile(file)
+}
+func (o *SwitchStmt) Compile(file *os.File) {
     (*IfStmt)(o).Compile(file)
 }
 
