@@ -1,0 +1,10 @@
+fn switch(a1 i32) {
+    if a1 == {
+        86: printStr("86\n")
+        _:
+    }
+}
+
+fn main() {
+    switch(69)
+}

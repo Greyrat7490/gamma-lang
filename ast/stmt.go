@@ -1,13 +1,13 @@
 package ast
 
 import (
-    "os"
-    "fmt"
-    "gorec/vars"
-    "gorec/token"
-    "gorec/loops"
-    "gorec/conditions"
-    "gorec/asm/x86_64"
+	"os"
+	"fmt"
+	"gorec/asm/x86_64"
+	"gorec/conditions"
+	"gorec/loops"
+	"gorec/token"
+	"gorec/vars"
 )
 
 type OpStmt interface {
@@ -53,7 +53,16 @@ type ElseStmt struct {
     Block OpBlock
 }
 
-type SwitchStmt IfStmt
+type SwitchStmt struct {
+    Pos token.Pos
+    Cases []CaseStmt
+}
+
+type CaseStmt struct {
+    Cond OpExpr         // nil -> default
+    ColonPos token.Pos
+    Stmts []OpStmt
+}
 
 type WhileStmt struct {
     WhilePos token.Pos
@@ -215,7 +224,30 @@ func (o *ElifStmt) Compile(file *os.File) {
     (*IfStmt)(o).Compile(file)
 }
 func (o *SwitchStmt) Compile(file *os.File) {
-    (*IfStmt)(o).Compile(file)
+    if o.Cases[0].Cond == nil {
+        block := OpBlock{ Stmts: o.Cases[0].Stmts }
+        block.Compile(file)
+        return
+    }
+
+    ifStmt := IfStmt{ Cond: o.Cases[0].Cond, Block: OpBlock{ Stmts: o.Cases[0].Stmts } }
+    cur := &ifStmt
+    for i := 1; i < len(o.Cases); i++ {
+        // else
+        if o.Cases[i].Cond == nil {
+            cur.Else = &ElseStmt{ Block: OpBlock{ Stmts: o.Cases[i].Stmts } }
+
+            // TODO: detect unreachable code and print warnings
+            break
+        }
+
+        // elif
+        cur.Elif = &ElifStmt{ Cond: o.Cases[i].Cond, Block: OpBlock{ Stmts: o.Cases[i].Stmts } }
+
+        cur = (*IfStmt)(cur.Elif)
+    }
+
+    ifStmt.Compile(file)
 }
 
 func (o *ElseStmt) Compile(file *os.File) {

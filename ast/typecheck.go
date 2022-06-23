@@ -49,9 +49,6 @@ func (o *IfStmt) typeCheck() {
 func (o *ElifStmt) typeCheck() {
     (*IfStmt)(o).typeCheck()
 }
-func (o *SwitchStmt) typeCheck() {
-    (*IfStmt)(o).typeCheck()
-}
 
 func (o *ForStmt) typeCheck() {
     t := o.Dec.Vartype

@@ -1,4 +1,4 @@
-fn switchSimple(a1 i32) {
+fn simple(a1 i32) {
     if a1 == {
         420: printStr("a1 == 420\n")
         86:  printStr("a1 == 86\n")
@@ -7,7 +7,13 @@ fn switchSimple(a1 i32) {
     }
 }
 
-fn switchArith(a1 i32) {
+fn onlyDefault(a1 i32) {
+    if a1 == {
+        _:   printStr("default\n")
+    }
+}
+
+fn arith(a1 i32) {
     if a1 * 10 + 10 == {
         420:  printStr("a1 == 420\n")
         860:  printStr("a1 == 860\n")
@@ -16,7 +22,7 @@ fn switchArith(a1 i32) {
     }
 }
 
-fn switchLss(a1 i32) {
+fn lss(a1 i32) {
     if a1 < {
         -86: printStr("a1 < -86\n")
         420: printStr("a1 < 420\n")
@@ -25,22 +31,51 @@ fn switchLss(a1 i32) {
     }
 }
 
+fn stmts(a1 i32) {
+    if a1 < {
+        -86:
+            printInt(a1)
+            printStr(" < -86\n")
+        420:
+            printInt(a1)
+            printStr(" < 420\n")
+        86:
+            printInt(a1)
+            printStr(" < 86\n")
+        _:
+            printInt(a1)
+            printStr(" >= 420\n")
+    }
+}
+
 fn main() {
     printStr("---- simple ----\n")
-    switchSimple(86)
-    switchSimple(-86)
-    switchSimple(420)
-    switchSimple(69)
+    simple(86)
+    simple(-86)
+    simple(420)
+    simple(69)
+
+    printStr("---- only default ----\n")
+    onlyDefault(86)
+    onlyDefault(-86)
+    onlyDefault(420)
+    onlyDefault(69)
 
     printStr("---- arith in base cond ----\n")
-    switchArith(85)
-    switchArith(-87)
-    switchArith(41)
-    switchArith(69)
+    arith(85)
+    arith(-87)
+    arith(41)
+    arith(69)
 
     printStr("---- lesser ----\n")
-    switchLss(86)
-    switchLss(-87)
-    switchLss(420)
-    switchLss(69)
+    lss(86)
+    lss(-87)
+    lss(420)
+    lss(69)
+
+    printStr("---- multiple stmts ----\n")
+    stmts(86)
+    stmts(-87)
+    stmts(420)
+    stmts(69)
 }

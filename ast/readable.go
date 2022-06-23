@@ -142,15 +142,19 @@ func (o *ElseStmt) Readable(indent int) string {
 }
 
 func (o *SwitchStmt) Readable(indent int) string {
-    s := strings.Repeat("   ", indent) + "COND-SWITCH:\n" +
-        strings.Repeat("   ", indent+1) + "IF:\n" +
-        o.Cond.Readable(indent+2) +
-        o.Block.Readable(indent+2)
+    s := strings.Repeat("   ", indent) + "COND-SWITCH:\n"
 
-    if o.Elif != nil {
-        s += o.Elif.Readable(indent+1)
-    } else if o.Else != nil {
-        s += o.Else.Readable(indent+1)
+    for _,c := range o.Cases {
+        if c.Cond == nil {
+            s += strings.Repeat("   ", indent+1) + "DEFAULT:\n"
+        } else {
+            s += strings.Repeat("   ", indent+1) + "CASE:\n" +
+                c.Cond.Readable(indent+2)
+        }
+
+        for _,stmt := range c.Stmts {
+            s += stmt.Readable(indent+2)
+        }
     }
 
     return s

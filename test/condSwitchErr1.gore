@@ -1,0 +1,8 @@
+fn switch(a1 i32) {
+    if a1 == {
+    }
+}
+
+fn main() {
+    switch(69)
+}
