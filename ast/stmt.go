@@ -95,6 +95,7 @@ func (o *IfStmt)       stmt() {}
 func (o *ElseStmt)     stmt() {}
 func (o *ElifStmt)     stmt() {}
 func (o *SwitchStmt)   stmt() {}
+func (o *CaseStmt)     stmt() {}
 func (o *ForStmt)      stmt() {}
 func (o *WhileStmt)    stmt() {}
 func (o *BreakStmt)    stmt() {}
@@ -223,6 +224,8 @@ func (o *IfStmt) Compile(file *os.File) {
 func (o *ElifStmt) Compile(file *os.File) {
     (*IfStmt)(o).Compile(file)
 }
+
+func (o *CaseStmt) Compile(file *os.File) {}
 func (o *SwitchStmt) Compile(file *os.File) {
     if o.Cases[0].Cond == nil {
         block := OpBlock{ Stmts: o.Cases[0].Stmts }

@@ -459,3 +459,14 @@ func Last2() Token {
 
     return tokens[idx-2]
 }
+
+// returns Pos{ -1, -1 } if not found
+func FindNext (t TokenType) Pos {
+    for i := idx+1; i < len(tokens); i++ {
+        if tokens[i].Type == t {
+            return tokens[i].Pos
+        }
+    }
+
+    return Pos{ -1, -1 }
+}

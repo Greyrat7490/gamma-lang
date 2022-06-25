@@ -1,7 +1,8 @@
 fn switch(a1 i32) {
     if a1 == {
         86: printStr("86\n")
-         _:
+        : printStr("-86\n")    // missing expr for this condition
+        _: printStr("default\n")
     }
 }
 

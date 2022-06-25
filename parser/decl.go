@@ -9,7 +9,6 @@ import (
 )
 
 func prsDecl() ast.OpDecl {
-
     switch t := token.Next(); t.Type {
     case token.Dec_var:
         d := prsDecVar()

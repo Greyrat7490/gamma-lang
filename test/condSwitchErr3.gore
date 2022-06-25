@@ -1,0 +1,23 @@
+/*
+multiple cases in one line should be separated with a ","
+* more readable
+* prevents:
+     if a1 == {
+         86: printStr("86\n"): printStr("-86\n")    // missing ","
+                             |
+                             +--- accidentally no expr before ":" / accidentally put ":" there
+                                    -> compiler thinks printStr is the cond
+         _: printStr("default\n")
+     }
+*/
+
+fn switch(a1 i32) {
+    if a1 == {
+        86: printStr("86\n") -86: printStr("-86\n")    // missing ","
+        _: printStr("default\n")
+    }
+}
+
+fn main() {
+    switch(69)
+}

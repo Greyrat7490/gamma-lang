@@ -25,6 +25,13 @@ func prsExpr() ast.OpExpr {
         expr = prsLitExpr()
 
     case token.Name:
+        if token.Peek().Type == token.ParenL {
+            expr = prsCallFn()
+        } else {
+            expr = prsIdentExpr()
+        }
+
+    case token.UndScr:
         expr = prsIdentExpr()
 
     case token.ParenL:
@@ -32,8 +39,6 @@ func prsExpr() ast.OpExpr {
 
     case token.Plus, token.Minus, token.Mul, token.Amp:
         expr = prsUnaryExpr()
-
-    // TODO: OpFnCall
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] no valid expression (got type %s)\n", token.Cur().Type.Readable())
@@ -201,12 +206,12 @@ func swap(expr *ast.BinaryExpr) {
 }
 
 
-func prsCallFn() ast.OpFnCall {
+func prsCallFn() *ast.OpFnCall {
     name := token.Cur()
     token.Next()
     vals := prsPassArgs()
 
-    return ast.OpFnCall{ FnName: name, Values: vals }
+    return &ast.OpFnCall{ FnName: name, Values: vals }
 }
 
 func prsPassArgs() []ast.OpExpr {

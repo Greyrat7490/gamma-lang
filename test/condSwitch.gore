@@ -31,20 +31,33 @@ fn lss(a1 i32) {
     }
 }
 
+var v1 i32 := 86
+var ptr *i32 := &v1
+
 fn stmts(a1 i32) {
     if a1 < {
         -86:
-            printInt(a1)
-            printStr(" < -86\n")
+             printInt(a1) printStr(" < -86\n")
         420:
-            printInt(a1)
-            printStr(" < 420\n")
+             printInt(a1) printStr(" < 420\n")
         86:
-            printInt(a1)
-            printStr(" < 86\n")
+             printInt(a1) printStr(" < 86\n")
         _:
-            printInt(a1)
-            printStr(" >= 420\n")
+             printStr("-----\n")
+             printInt(a1) printStr(" >= 420\n")
+             {
+                 printInt(v1) printStr("\n")
+                 *ptr = (87 - 1) * 10
+                 printInt(v1) printStr("\n")
+             }
+             printStr("-----\n")
+    }
+}
+
+fn commaTest(a1 i32) {
+    if a1 == {
+        -86: printStr("-86\n"), 86: printStr("86\n")
+        _: printStr("default\n")
     }
 }
 
@@ -78,4 +91,10 @@ fn main() {
     stmts(-87)
     stmts(420)
     stmts(69)
+
+    printStr("---- multiple cases per line ----\n")
+    commaTest(86)
+    commaTest(-86)
+    commaTest(420)
+    commaTest(69)
 }
