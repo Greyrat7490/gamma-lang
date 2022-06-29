@@ -54,10 +54,19 @@ fn stmts(a1 i32) {
     }
 }
 
+fn semiColTest(a1 i32) {
+    if a1 < {
+        86: printStr("< 86\n")
+        420: printStr("< 420\n")
+         _: printStr(">= 420\n")
+    }
+}
+
 fn commaTest(a1 i32) {
     if a1 == {
-        -86: printStr("-86\n"), 86: printStr("86\n")
-        _: printStr("default\n")
+        -86, 43 * 2, 69: printStr("-86, 43*2(86), 69\n") // a1 == -86 || a1 == 43*2 || a1 == 69
+        -420, 420: printStr("420, -420\n")
+                  _: printStr("default\n")
     }
 }
 
@@ -93,8 +102,15 @@ fn main() {
     stmts(69)
 
     printStr("---- multiple cases per line ----\n")
+    semiColTest(86)
+    semiColTest(-86)
+    semiColTest(420)
+    semiColTest(69)
+
+    printStr("---- multiple conditons ----\n")
     commaTest(86)
     commaTest(-86)
     commaTest(420)
+    commaTest(-420)
     commaTest(69)
 }

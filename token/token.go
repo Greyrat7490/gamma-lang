@@ -169,6 +169,7 @@ func TokenTypeOfStr(s string) TokenType {
     }
 }
 
+// TODO: to string()
 func (t TokenType) Readable() string {
     switch t {
     case EOF:
