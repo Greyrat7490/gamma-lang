@@ -26,7 +26,7 @@ func prsStmt() ast.OpStmt {
         ifStmt := prsIfStmt()
 
         if token.Cur().Str == "{" {
-            switchStmt := prsCondSwitch(ifStmt)
+            switchStmt := prsCondSwitch(ifStmt.Pos, ifStmt.Cond)
             return &switchStmt
         }
 
@@ -48,34 +48,17 @@ func prsStmt() ast.OpStmt {
         c := prsContinue()
         return &c
 
-    case token.Number, token.Str, token.Boolean:
-        return &ast.OpExprStmt{ Expr: prsLitExpr() }
+    case token.Number, token.Str, token.Boolean, token.UndScr, token.ParenL:
+        return &ast.OpExprStmt{ Expr: prsExpr() }
 
-    case token.UndScr:
-        return &ast.OpExprStmt{ Expr: prsIdentExpr() }
-
-    case token.ParenL:
-        return &ast.OpExprStmt{ Expr: prsParenExpr() }
-
-    case token.Plus, token.Minus, token.Mul, token.Amp:
-        expr := prsUnaryExpr()
+    case token.Name, token.Plus, token.Minus, token.Mul, token.Amp:
+        expr := prsExpr()
 
         if token.Peek().Type == token.Assign {
             a := prsAssignVar(expr)
             return &a
         } else {
             return &ast.OpExprStmt{ Expr: expr }
-        }
-
-    case token.Name:
-        if token.Peek().Type == token.Assign {
-            name := prsIdentExpr()
-            a := prsAssignVar(name)
-            return &a
-        } else if token.Peek().Type == token.ParenL {
-            return &ast.OpExprStmt{ Expr: prsCallFn() }
-        } else {
-            return &ast.OpExprStmt{ Expr: prsIdentExpr() }
         }
 
     case token.Elif:
@@ -132,32 +115,36 @@ func prsAssignVar(dest ast.OpExpr) ast.OpAssignVar {
 
 func prsIfStmt() ast.IfStmt {
     pos := token.Cur().Pos
-    token.Next()
+
+    // cond-switch without condBase
+    if token.Next().Str == "{" {
+        return ast.IfStmt{ Pos: pos }
+    }
+
     cond := prsExpr()
 
-    // cond-switch
+    // cond-switch with condBase
     if token.Cur().Str == "{" {
         return ast.IfStmt{ Pos: pos, Cond: cond }
+    }
 
     // normal if
-    } else {
+    token.Next()
+    block := prsBlock()
+
+    ifStmt := ast.IfStmt{ Pos: pos, Cond: cond, Block: block }
+
+    if token.Peek().Type == token.Else {
         token.Next()
-        block := prsBlock()
-
-        ifStmt := ast.IfStmt{ Pos: pos, Cond: cond, Block: block }
-
-        if token.Peek().Type == token.Else {
-            token.Next()
-            elseStmt := prsElse()
-            ifStmt.Else = &elseStmt
-        } else if token.Peek().Type == token.Elif {
-            token.Next()
-            elifStmt := prsElif()
-            ifStmt.Elif = &elifStmt
-        }
-
-        return ifStmt
+        elseStmt := prsElse()
+        ifStmt.Else = &elseStmt
+    } else if token.Peek().Type == token.Elif {
+        token.Next()
+        elifStmt := prsElif()
+        ifStmt.Elif = &elifStmt
     }
+
+    return ifStmt
 }
 
 func prsElif() ast.ElifStmt {
@@ -261,6 +248,10 @@ func prsContinue() ast.ContinueStmt {
 
 
 func getPlaceholder(cond ast.OpExpr) (expr *ast.OpExpr) {
+    if cond == nil {
+        return nil
+    }
+
     for {
         if b, ok := cond.(*ast.BinaryExpr); !ok {
             fmt.Fprintln(os.Stderr, "[ERROR] expected condition to be a BinaryExpr")
@@ -279,17 +270,25 @@ func getPlaceholder(cond ast.OpExpr) (expr *ast.OpExpr) {
     }
 }
 
-// replace placeholder in baseCond with expr1
+// replace placeholder in condBase with expr1
 // if expr2 is set they get combined with logical or
 // result in expr1
-func completeCond(placeholder *ast.OpExpr, baseCond ast.OpExpr, expr1 ast.OpExpr, expr2 ast.OpExpr) ast.OpExpr {
-    if b, ok := baseCond.(*ast.BinaryExpr); ok {
-        if ident, ok := (expr1).(*ast.IdentExpr); ok {
-            if ident.Ident.Type == token.UndScr {
-                return nil
-            }
+func completeCond(placeholder *ast.OpExpr, condBase ast.OpExpr, expr1 ast.OpExpr, expr2 ast.OpExpr) ast.OpExpr {
+    if ident, ok := expr1.(*ast.IdentExpr); ok {
+        if ident.Ident.Type == token.UndScr {
+            return nil
+        }
+    }
+
+    if condBase == nil {
+        if expr2 != nil {
+            return &ast.BinaryExpr{ OperandL: expr2, OperandR: expr1, Operator: token.Token{ Str: "||", Type: token.Or } }
         }
 
+        return expr1
+    }
+
+    if b, ok := condBase.(*ast.BinaryExpr); ok {
         if expr2 != nil {
             *placeholder = expr1
             condCopy := *b
@@ -307,8 +306,8 @@ func completeCond(placeholder *ast.OpExpr, baseCond ast.OpExpr, expr1 ast.OpExpr
     }
 }
 
-func prsCases(baseCond ast.OpExpr) (cases []ast.CaseStmt) {
-    placeholder := getPlaceholder(baseCond)
+func prsCases(condBase ast.OpExpr) (cases []ast.CaseStmt) {
+    placeholder := getPlaceholder(condBase)
     var conds ast.OpExpr = nil
     cur := -1
 
@@ -323,7 +322,7 @@ func prsCases(baseCond ast.OpExpr) (cases []ast.CaseStmt) {
             token.Next()
 
             if cond, ok := stmt.(*ast.OpExprStmt); ok {
-                conds = completeCond(placeholder, baseCond, cond.Expr, conds)
+                conds = completeCond(placeholder, condBase, cond.Expr, conds)
 
                 token.Next()
                 stmt = &ast.OpExprStmt{ Expr: prsExpr() }
@@ -367,7 +366,7 @@ func prsCases(baseCond ast.OpExpr) (cases []ast.CaseStmt) {
             }
 
             if cond, ok := stmt.(*ast.OpExprStmt); ok {
-                cond.Expr = completeCond(placeholder, baseCond, cond.Expr, conds)
+                cond.Expr = completeCond(placeholder, condBase, cond.Expr, conds)
                 cases = append(cases, ast.CaseStmt{ Cond: cond.Expr, ColonPos: token.Cur().Pos })
                 cur++
             } else {
@@ -408,7 +407,7 @@ func prsCases(baseCond ast.OpExpr) (cases []ast.CaseStmt) {
                 }
 
                 if cond, ok := stmt.(*ast.OpExprStmt); ok {
-                    cond.Expr = completeCond(placeholder, baseCond, cond.Expr, conds)
+                    cond.Expr = completeCond(placeholder, condBase, cond.Expr, conds)
                     cases = append(cases, ast.CaseStmt{ Cond: cond.Expr, ColonPos: token.Cur().Pos })
                     cur++
                 } else {
@@ -433,8 +432,8 @@ func prsCases(baseCond ast.OpExpr) (cases []ast.CaseStmt) {
     return
 }
 
-func prsCondSwitch(ifStmt ast.IfStmt) ast.SwitchStmt {
-    switchStmt := ast.SwitchStmt{ Pos: ifStmt.Pos }
+func prsCondSwitch(pos token.Pos, condBase ast.OpExpr) ast.SwitchStmt {
+    switchStmt := ast.SwitchStmt{ Pos: pos }
 
     if token.Peek().Type == token.BraceR {
         fmt.Fprintln(os.Stderr, "[ERROR] empty cond-switch")
@@ -442,7 +441,7 @@ func prsCondSwitch(ifStmt ast.IfStmt) ast.SwitchStmt {
         os.Exit(1)
     }
 
-    switchStmt.Cases = prsCases(ifStmt.Cond)
+    switchStmt.Cases = prsCases(condBase)
 
     for _,c := range switchStmt.Cases {
         if len(c.Stmts) == 0 {

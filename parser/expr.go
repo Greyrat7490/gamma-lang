@@ -26,7 +26,7 @@ func prsExpr() ast.OpExpr {
 
     case token.Name:
         if token.Peek().Type == token.ParenL {
-            expr = prsCallFn()
+            return prsCallFn()  // only tmp because binary ops are not supported with func calls yet
         } else {
             expr = prsIdentExpr()
         }

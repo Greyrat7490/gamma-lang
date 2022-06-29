@@ -65,8 +65,16 @@ fn semiColTest(a1 i32) {
 fn commaTest(a1 i32) {
     if a1 == {
         -86, 43 * 2, 69: printStr("-86, 43*2(86), 69\n") // a1 == -86 || a1 == 43*2 || a1 == 69
-        -420, 420: printStr("420, -420\n")
-                  _: printStr("default\n")
+              -420, 420: printStr("420, -420\n")
+                      _: printStr("default\n")
+    }
+}
+
+fn noCondBase(a1 i32) {
+    if {
+        a1 == 86, a1 == 69: printStr("86, 69\n")
+                  a1 < 420: printStr("a1 < 420\n")
+                         _: printStr("default\n")
     }
 }
 
@@ -113,4 +121,11 @@ fn main() {
     commaTest(420)
     commaTest(-420)
     commaTest(69)
+
+    printStr("---- no condition base ----\n")
+    noCondBase(86)
+    noCondBase(-86)
+    noCondBase(420)
+    noCondBase(-420)
+    noCondBase(69)
 }
