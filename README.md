@@ -41,7 +41,8 @@ And because it is written in Go...
   * [x] elif
   * [x] while
   * [x] for
-  * [ ] switch
+  * [x] switch
+  * [ ] xswitch (expr switch)
   * [x] &&, ||
 * [x] pointer
   * [x] define/assign
