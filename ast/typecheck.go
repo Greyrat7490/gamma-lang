@@ -20,7 +20,7 @@ func (o *OpDefVar) typeCheck() {
     t1 := v.GetType()
     t2 := o.Value.GetType()
 
-    if t1 != t2 {
+    if !types.AreCompatible(t1, t2) {
         fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.Varname.Str, t1, t2)
         fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
         os.Exit(1)
@@ -33,8 +33,8 @@ func (o *OpAssignVar)  typeCheck() {
     t1 := o.Dest.GetType()
     t2 := o.Value.GetType()
 
-    if t1 != t2 {
-        fmt.Fprintf(os.Stderr, "[ERROR] cannot assign a type: %v with type: %v\n",  t1, t2)
+    if !types.AreCompatible(t1, t2) {
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot assign a type: %v with type: %v\n", t1, t2)
         fmt.Fprintln(os.Stderr, "\t" + o.Pos.At())
         os.Exit(1)
     }
@@ -66,21 +66,21 @@ func (o *SwitchStmt) typeCheck() {
 func (o *ForStmt) typeCheck() {
     t := o.Dec.Vartype
 
-    if t2 := o.Start.GetType(); t != t2 {
+    if t2 := o.Start.GetType(); !types.AreCompatible(t, t2) {
         fmt.Fprintf(os.Stderr, "[ERROR] expected %v as for iterator start type but got %v\n", t, t2)
         fmt.Fprintln(os.Stderr, "\t" + o.ForPos.At())
         os.Exit(1)
     }
 
     if o.Limit != nil {
-        if t2 := o.Limit.GetType(); t != t2 {
+        if t2 := o.Limit.GetType(); !types.AreCompatible(t, t2) {
             fmt.Fprintf(os.Stderr, "[ERROR] expected %v as for iterator limit type but got %v\n", t, t2)
             fmt.Fprintln(os.Stderr, "\t" + o.ForPos.At())
             os.Exit(1)
         }
     }
 
-    if t2 := o.Step.GetType(); t != t2 {
+    if t2 := o.Step.GetType(); !types.AreCompatible(t, t2) {
         fmt.Fprintf(os.Stderr, "[ERROR] expected %v as for iterator step type but got %v\n", t, t2)
         fmt.Fprintln(os.Stderr, "\t" + o.ForPos.At())
         os.Exit(1)
@@ -92,7 +92,7 @@ func (o *WhileStmt) typeCheck() {
         t1 := o.Dec.Vartype
         t2 := o.InitVal.GetType()
 
-        if t1 != t2 {
+        if !types.AreCompatible(t1, t2) {
             fmt.Fprintf(os.Stderr, "[ERROR] expected %v as while iterator init type but got %v\n", t1, t2)
             fmt.Fprintln(os.Stderr, "\t" + o.WhilePos.At())
             os.Exit(1)
@@ -131,7 +131,7 @@ func (o *BinaryExpr) typeCheck() {
             os.Exit(1)
         }
     } else {
-        if t1 != t2 {
+        if !types.AreCompatible(t1, t2) {
             if (t1.GetKind() == types.Ptr && t2.GetKind() == types.I32) ||
                (t2.GetKind() == types.Ptr && t1.GetKind() == types.I32) {
                 if o.Operator.Type == token.Plus || o.Operator.Type == token.Minus {
@@ -169,7 +169,7 @@ func (o *OpFnCall) typeCheck() {
     for i, t1 := range f.Args {
         t2 := o.Values[i].GetType()
 
-        if t1 != t2 {
+        if !types.AreCompatible(t1, t2) {
             fmt.Fprintf(os.Stderr, "[ERROR] expected %v as arg %d but got %v for function \"%s\"\n", t1, i, t2, o.FnName.Str)
             fmt.Fprintf(os.Stderr, "\texpected: %v\n", f.Args)
             fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))

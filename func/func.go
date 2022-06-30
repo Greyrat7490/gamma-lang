@@ -65,7 +65,7 @@ func Define(file *os.File, name token.Token, argsSize int, blockSize int) {
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
-    
+
     file.WriteString(name.Str + ":\n")
     file.WriteString("push rbp\nmov rbp, rsp\n")
     reserveSpace(file, argsSize, blockSize)

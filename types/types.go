@@ -1,6 +1,8 @@
 package types
 
-import "strconv"
+import (
+	"strconv"
+)
 
 type TypeKind int
 const (
@@ -91,4 +93,19 @@ func TypeOfVal(val string) Type {
     } else {
         return nil
     }
+}
+
+func AreCompatible(destType Type, srcType Type) bool {
+    if destType == srcType {
+        return true
+    }
+
+    // allow generic ptr with any other pointer
+    if destType.GetKind() == Ptr && srcType.GetKind() == Ptr {
+        if p, ok := destType.(PtrType); ok {
+            if p.BaseType == nil { return true }
+        }
+    }
+
+    return false
 }
