@@ -231,6 +231,8 @@ func (o *ElifStmt) Compile(file *os.File) {
 }
 
 func (o *CaseStmt) Compile(file *os.File, switchCount uint) {
+    vars.CreateScope()
+
     block := OpBlock{ Stmts: o.Stmts }
 
     if o.Cond == nil {
@@ -258,27 +260,35 @@ func (o *CaseStmt) Compile(file *os.File, switchCount uint) {
         block.Compile(file)
         cond.CaseBodyEnd(file, switchCount)
     }
+
+    vars.RemoveScope()
 }
 
 func (o *SwitchStmt) Compile(file *os.File) {
     o.typeCheck()
     count := cond.StartSwitch()
-    vars.CreateScope()
 
-    for i := 0; i < len(o.Cases); i++ {
-        if o.Cases[i].Cond == nil || i == len(o.Cases)-1 {
-            cond.InLastCase()
-
-            o.Cases[i].Compile(file, count)
-
-            // TODO: detect unreachable code and print warnings
-            break
+    for i,c := range o.Cases {
+        // TODO: detect unreachable code and throw error
+        // a1 < but case 420 before 86
+        // cases with same cond
+        if c.Cond == nil && i != len(o.Cases)-1 {
+            i = len(o.Cases)-1 - i
+            if i == 1 {
+                fmt.Fprintln(os.Stderr, "[ERROR] one case after the default case (unreachable code)")
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] %d cases after the default case (unreachable code)\n", i)
+            }
+            fmt.Fprintln(os.Stderr, "\t" + c.ColonPos.At())
+            os.Exit(1)
         }
 
-        o.Cases[i].Compile(file, count)
+        if i == len(o.Cases)-1 {
+            cond.InLastCase()
+        }
+        c.Compile(file, count)
     }
 
-    vars.RemoveScope()
     cond.EndSwitch(file)
 }
 

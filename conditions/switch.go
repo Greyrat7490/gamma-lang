@@ -83,6 +83,6 @@ func Through(file *os.File, pos token.Pos) {
         fmt.Fprintln(os.Stderr, "\t" + pos.At())
         os.Exit(1)
     }
-    
+
     file.WriteString(fmt.Sprintf("jmp .case%dBody\n", caseCount+1))
 }

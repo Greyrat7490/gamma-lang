@@ -35,7 +35,7 @@ func prsStmt() ast.OpStmt {
     case token.Through:
         t := prsThrough()
         return &t
-        
+
     case token.While:
         w := prsWhileStmt()
         return &w
