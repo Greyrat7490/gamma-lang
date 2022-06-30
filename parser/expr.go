@@ -65,6 +65,10 @@ func isParenExpr() bool {
 }
 
 func isBinaryExpr() bool {
+    if token.Peek().Pos.Line > token.Cur().Pos.Line {
+        return false
+    }
+
     return  token.Peek().Type == token.Plus || token.Peek().Type == token.Minus ||
             token.Peek().Type == token.Mul  || token.Peek().Type == token.Div   ||
             token.Peek().Type == token.And  || token.Peek().Type == token.Or   ||

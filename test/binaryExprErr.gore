@@ -1,0 +1,24 @@
+// operator of a binary expr needs to be in the same line as the left operand
+// would otherwise cause unexpected behavior or an error
+
+var v1 i32 := 0
+var ptr *i32 := &v1
+
+fn main() {
+    printInt(v1) printStr("\n")
+
+    v1 = 86
+    *ptr = 420
+    // would be parsed like v1 = (86 * ptr) = 420
+    // -> [ERROR] no destination for assignment
+
+    printInt(v1) printStr("\n")
+
+    v1 = 8 * 10 +   // this is allowed (parsed as v1 = 8 * 10 + 6)
+        6
+    printInt(v1) printStr("\n")
+
+    v1 = 8 * 10     // parsed as v1 = 8 * 10
+        + 6         // -> "[ERROR] unused expr"
+    printInt(v1) printStr("\n")
+}

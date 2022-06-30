@@ -232,6 +232,7 @@ func (o *ElifStmt) Compile(file *os.File) {
 
 func (o *CaseStmt) Compile(file *os.File, switchCount uint) {
     vars.CreateScope()
+    defer vars.RemoveScope()
 
     block := OpBlock{ Stmts: o.Stmts }
 
@@ -260,8 +261,6 @@ func (o *CaseStmt) Compile(file *os.File, switchCount uint) {
         block.Compile(file)
         cond.CaseBodyEnd(file, switchCount)
     }
-
-    vars.RemoveScope()
 }
 
 func (o *SwitchStmt) Compile(file *os.File) {
@@ -304,6 +303,7 @@ func (o *ElseStmt) Compile(file *os.File) {
 
 func (o *WhileStmt) Compile(file *os.File) {
     vars.CreateScope()
+    defer vars.RemoveScope()
 
     if o.InitVal != nil {
         o.Dec.Compile(file)
@@ -334,13 +334,12 @@ func (o *WhileStmt) Compile(file *os.File) {
         o.Block.Compile(file)
         loops.WhileEnd(file, count)
     }
-
-    vars.RemoveScope()
 }
 
 func (o *ForStmt) Compile(file *os.File) {
     vars.CreateScope()
-
+    defer vars.RemoveScope()
+    
     o.Dec.Compile(file)
     def := OpDefVar{ Varname: o.Dec.Varname, Value: o.Start }
     def.Compile(file)
@@ -360,8 +359,6 @@ func (o *ForStmt) Compile(file *os.File) {
     step := OpAssignVar{ Dest: &IdentExpr{ Ident: o.Dec.Varname }, Value: o.Step }
     step.Compile(file)
     loops.ForEnd(file, count)
-
-    vars.RemoveScope()
 }
 
 func (o *BreakStmt) Compile(file *os.File) {

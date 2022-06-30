@@ -8,7 +8,7 @@ import (
     "gorec/types"
 )
 
-func prsStmt() ast.OpStmt {
+func prsStmt(ignoreUnusedExpr bool) ast.OpStmt {
     switch t := token.Next(); t.Type {
     case token.Dec_var:
         d := prsDecVar()
@@ -52,16 +52,27 @@ func prsStmt() ast.OpStmt {
         c := prsContinue()
         return &c
 
-    case token.Number, token.Str, token.Boolean, token.UndScr, token.ParenL:
-        return &ast.OpExprStmt{ Expr: prsExpr() }
+    case token.Number, token.Str, token.Boolean, token.ParenL:
+        expr := prsExpr()
+        if !ignoreUnusedExpr && expr.GetType() != nil{
+            fmt.Fprintln(os.Stderr, "[ERROR] unused expr")
+            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+            os.Exit(1)
+        }
+        return &ast.OpExprStmt{ Expr: expr }
 
-    case token.Name, token.Plus, token.Minus, token.Mul, token.Amp:
+    case token.Name, token.UndScr, token.Plus, token.Minus, token.Mul, token.Amp:
         expr := prsExpr()
 
         if token.Peek().Type == token.Assign {
             a := prsAssignVar(expr)
             return &a
         } else {
+            if !ignoreUnusedExpr && expr.GetType() != nil {
+                fmt.Fprintln(os.Stderr, "[ERROR] unused expr")
+                fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+                os.Exit(1)
+            }
             return &ast.OpExprStmt{ Expr: expr }
         }
 
@@ -101,7 +112,7 @@ func prsBlock() ast.OpBlock {
     block := ast.OpBlock{ BraceLPos: token.Cur().Pos }
 
     for token.Peek().Type != token.BraceR {
-        block.Stmts = append(block.Stmts, prsStmt())
+        block.Stmts = append(block.Stmts, prsStmt(false))
     }
 
     block.BraceRPos = token.Next().Pos
@@ -319,7 +330,7 @@ func prsCases(condBase ast.OpExpr) (cases []ast.CaseStmt) {
     lastStmtLine := 0
 
     for token.Peek().Type != token.BraceR {
-        stmt := prsStmt()
+        stmt := prsStmt(true)
 
         // comma-separated condition ----------
         for token.Peek().Type == token.Comma {
@@ -402,7 +413,7 @@ func prsCases(condBase ast.OpExpr) (cases []ast.CaseStmt) {
                     os.Exit(1)
                 }
 
-                stmt := prsStmt()
+                stmt := prsStmt(true)
 
                 if token.Next().Type != token.Colon {
                     fmt.Fprintln(os.Stderr, "[ERROR] \";\" should be at the end of the case")
