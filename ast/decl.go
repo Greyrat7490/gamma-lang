@@ -13,7 +13,7 @@ import (
 type OpDecl interface {
     Op
     Compile(file *os.File)
-    decl()  // to differenciate OpDecl from OpStmt and OpExpr
+    decl()  // to differenciate OpDecl from OpStmt
 }
 
 type BadDecl struct {}

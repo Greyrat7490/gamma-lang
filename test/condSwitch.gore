@@ -56,8 +56,7 @@ fn stmts(a1 i32) {
 
 fn semiColTest(a1 i32) {
     if a1 < {
-        86: printStr("< 86\n")
-        420: printStr("< 420\n")
+        86: printStr("< 86\n"); 420: printStr("< 420\n")
          _: printStr(">= 420\n")
     }
 }
@@ -75,6 +74,14 @@ fn noCondBase(a1 i32) {
         a1 == 86, a1 == 69: printStr("86, 69\n")
                   a1 < 420: printStr("a1 < 420\n")
                          _: printStr("default\n")
+    }
+}
+
+fn throughTest(a1 i32) {
+    if {
+        a1 == 86: printStr("through ") through                   // fall through to next case
+        a1 == 69: printStr("69\n")
+               _: printStr("default\n")
     }
 }
 
@@ -128,4 +135,9 @@ fn main() {
     noCondBase(420)
     noCondBase(-420)
     noCondBase(69)
+
+    printStr("---- through test ----\n")
+    throughTest(-86)
+    throughTest(86)
+    throughTest(69)
 }

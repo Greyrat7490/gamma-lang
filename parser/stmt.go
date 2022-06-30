@@ -32,6 +32,10 @@ func prsStmt() ast.OpStmt {
 
         return &ifStmt
 
+    case token.Through:
+        t := prsThrough()
+        return &t
+        
     case token.While:
         w := prsWhileStmt()
         return &w
@@ -452,4 +456,8 @@ func prsCondSwitch(pos token.Pos, condBase ast.OpExpr) ast.SwitchStmt {
     }
 
     return switchStmt
+}
+
+func prsThrough() ast.ThroughStmt {
+    return ast.ThroughStmt{ Pos: token.Cur().Pos }
 }

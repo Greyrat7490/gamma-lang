@@ -49,6 +49,19 @@ func (o *IfStmt) typeCheck() {
 func (o *ElifStmt) typeCheck() {
     (*IfStmt)(o).typeCheck()
 }
+func (o *SwitchStmt) typeCheck() {
+    for _,c := range o.Cases {
+        // skip default case
+        if c.Cond == nil { continue }
+
+        c.Cond.typeCheck()
+        if t := c.Cond.GetType(); t.GetKind() != types.Bool {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a condition of type bool but got \"%v\"\n", t)
+            fmt.Fprintln(os.Stderr, "\t" + c.ColonPos.At())
+            os.Exit(1)
+        }
+    }
+}
 
 func (o *ForStmt) typeCheck() {
     t := o.Dec.Vartype

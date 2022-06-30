@@ -1,19 +1,19 @@
 package ast
 
 import (
-	"os"
-	"fmt"
-	"gorec/asm/x86_64"
-	"gorec/conditions"
-	"gorec/loops"
-	"gorec/token"
-	"gorec/vars"
+    "os"
+    "fmt"
+    "gorec/vars"
+    "gorec/loops"
+    "gorec/token"
+    "gorec/conditions"
+    "gorec/asm/x86_64"
 )
 
 type OpStmt interface {
     Op
     Compile(file *os.File)
-    stmt()  // to differenciate OpStmt from OpDecl and OpExpr
+    stmt()  // to differenciate OpStmt from OpDecl
 }
 
 type BadStmt struct {}
@@ -64,6 +64,10 @@ type CaseStmt struct {
     Stmts []OpStmt
 }
 
+type ThroughStmt struct {
+    Pos token.Pos
+}
+
 type WhileStmt struct {
     WhilePos token.Pos
     Cond OpExpr
@@ -95,6 +99,7 @@ func (o *IfStmt)       stmt() {}
 func (o *ElseStmt)     stmt() {}
 func (o *ElifStmt)     stmt() {}
 func (o *SwitchStmt)   stmt() {}
+func (o *ThroughStmt)  stmt() {}
 func (o *CaseStmt)     stmt() {}
 func (o *ForStmt)      stmt() {}
 func (o *WhileStmt)    stmt() {}
@@ -225,32 +230,60 @@ func (o *ElifStmt) Compile(file *os.File) {
     (*IfStmt)(o).Compile(file)
 }
 
-func (o *CaseStmt) Compile(file *os.File) {}
-func (o *SwitchStmt) Compile(file *os.File) {
-    if o.Cases[0].Cond == nil {
-        block := OpBlock{ Stmts: o.Cases[0].Stmts }
+func (o *CaseStmt) Compile(file *os.File, switchCount uint) {
+    block := OpBlock{ Stmts: o.Stmts }
+
+    if o.Cond == nil {
+        cond.Default(file)
+        block := OpBlock{ Stmts: o.Stmts }
         block.Compile(file)
         return
     }
 
-    ifStmt := IfStmt{ Cond: o.Cases[0].Cond, Block: OpBlock{ Stmts: o.Cases[0].Stmts } }
-    cur := &ifStmt
-    for i := 1; i < len(o.Cases); i++ {
-        // else
-        if o.Cases[i].Cond == nil {
-            cur.Else = &ElseStmt{ Block: OpBlock{ Stmts: o.Cases[i].Stmts } }
+    switch e := o.Cond.(type) {
+    case *IdentExpr:
+        cond.CaseStart(file)
+        cond.CaseIdent(file, e.Ident)
+
+        cond.CaseBody(file)
+        block.Compile(file)
+        cond.CaseBodyEnd(file, switchCount)
+
+    default:
+        cond.CaseStart(file)
+        o.Cond.Compile(file)
+        cond.CaseExpr(file)
+
+        cond.CaseBody(file)
+        block.Compile(file)
+        cond.CaseBodyEnd(file, switchCount)
+    }
+}
+
+func (o *SwitchStmt) Compile(file *os.File) {
+    o.typeCheck()
+    count := cond.StartSwitch()
+    vars.CreateScope()
+
+    for i := 0; i < len(o.Cases); i++ {
+        if o.Cases[i].Cond == nil || i == len(o.Cases)-1 {
+            cond.InLastCase()
+
+            o.Cases[i].Compile(file, count)
 
             // TODO: detect unreachable code and print warnings
             break
         }
 
-        // elif
-        cur.Elif = &ElifStmt{ Cond: o.Cases[i].Cond, Block: OpBlock{ Stmts: o.Cases[i].Stmts } }
-
-        cur = (*IfStmt)(cur.Elif)
+        o.Cases[i].Compile(file, count)
     }
 
-    ifStmt.Compile(file)
+    vars.RemoveScope()
+    cond.EndSwitch(file)
+}
+
+func (o *ThroughStmt) Compile(file *os.File) {
+    cond.Through(file, o.Pos)
 }
 
 func (o *ElseStmt) Compile(file *os.File) {

@@ -167,6 +167,10 @@ func (o *SwitchStmt) Readable(indent int) string {
     return s
 }
 
+func (o *ThroughStmt) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "THROUGH\n"
+}
+
 func (o *WhileStmt) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "WHILE:\n" +
         o.Cond.Readable(indent+1)
