@@ -35,14 +35,14 @@ And because it is written in Go...
   * [x] binary ops
     * [x] parse by precedence
   * [x] parentheses
-* [ ] controll structures
+* [x] controll structures
   * [x] if
   * [x] else
   * [x] elif
   * [x] while
   * [x] for
   * [x] switch
-  * [ ] xswitch (expr switch)
+  * [x] xswitch (expr switch)
   * [x] &&, ||
 * [x] pointer
   * [x] define/assign
