@@ -62,6 +62,22 @@ func Div(src string, size int) string {
 
     return res
 }
+func Mod(src string, size int) string {
+    res := Push(RegB) + Push(RegD) +
+
+    fmt.Sprintf("mov %s, %s\n", GetReg(RegB, size), src)
+    if size == 8 {
+        res += "cqo\n"
+    } else if size == 4 {
+        res += "cdq\n"
+    }
+    res += fmt.Sprintf("idiv %s\n", GetReg(RegB, size)) +
+
+    fmt.Sprintf("mov %s, %s\n", GetReg(RegA, size), GetReg(RegD, size)) +
+    Pop(RegB) + Pop(RegD)
+
+    return res
+}
 func Push(reg RegGroup) string {
     return fmt.Sprintf("push %s\n", GetReg(reg, 8))
 }

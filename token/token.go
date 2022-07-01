@@ -28,6 +28,7 @@ const (
     Minus           // -
     Mul             // *
     Div             // /
+    Mod             // %
 
     And             // &&
     Or              // ||
@@ -86,6 +87,8 @@ func TokenTypeOfStr(s string) TokenType {
         return Mul
     case "/":
         return Div
+    case "%":
+        return Mod
 
     case "&&":
         return And
@@ -189,6 +192,8 @@ func (t TokenType) Readable() string {
         return "Mul"
     case Div:
         return "Div"
+    case Mod:
+        return "Mod"
 
     case And:
         return "And"
@@ -302,7 +307,7 @@ func (t Token) At() string {
 }
 
 func Tokenize(file []byte) {
-    keySigns := "(){}+-*/=,:;&$"
+    keySigns := "(){}+-*/%=,:;&$"
     f := string(file)
 
     start := 0

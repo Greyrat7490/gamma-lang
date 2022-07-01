@@ -14,7 +14,7 @@ const (
     COMPARE_PRECEDENCE            = iota // ==, !=, <, <=, >, >=
     XSWITCH_PRECEDENCE            = iota // $ ... { ... }
     ADD_SUB_PRECEDENCE            = iota // +, -
-    MUL_DIV_PRECEDENCE            = iota // *, /, %(TODO)
+    MUL_DIV_PRECEDENCE            = iota // *, /, %
     EXP_PRECEDENCE                = iota // **(TODO)
     PAREN_PRECEDENCE              = iota // ()
 )
@@ -75,7 +75,8 @@ func isBinaryExpr() bool {
 
     return  token.Peek().Type == token.Plus || token.Peek().Type == token.Minus ||
             token.Peek().Type == token.Mul  || token.Peek().Type == token.Div   ||
-            token.Peek().Type == token.And  || token.Peek().Type == token.Or   ||
+            token.Peek().Type == token.Mod  ||
+            token.Peek().Type == token.And  || token.Peek().Type == token.Or    ||
             isComparison()
 }
 
@@ -93,7 +94,7 @@ func getPrecedence() precedence {
         return COMPARE_PRECEDENCE
     case token.Peek().Type == token.Plus || token.Peek().Type == token.Minus:
         return ADD_SUB_PRECEDENCE
-    case token.Peek().Type == token.Mul || token.Peek().Type == token.Div:
+    case token.Peek().Type == token.Mul || token.Peek().Type == token.Div || token.Peek().Type == token.Mod:
         return MUL_DIV_PRECEDENCE
     case isParenExpr():
         return PAREN_PRECEDENCE

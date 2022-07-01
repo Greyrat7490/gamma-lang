@@ -79,6 +79,20 @@ fn test4() {
     printStr(" (expected 23)\n")
 }
 
+fn modTest() {
+    printStr("420 % 2 = ")
+    v1 =      420 % 2
+    printInt(v1) printStr("\n")
+
+    printStr("69 % 2 = ")
+    v1 =      69 % 2
+    printInt(v1) printStr("\n")
+
+    printStr("86 % 2 = ")
+    v1 =      86 % 2
+    printInt(v1) printStr("\n")
+}
+
 fn main() {
     test1()
     printStr("\n")
@@ -87,4 +101,6 @@ fn main() {
     test3()
     printStr("\n")
     test4()
+    printStr("\n")
+    modTest()
 }

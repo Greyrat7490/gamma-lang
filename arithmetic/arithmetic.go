@@ -34,6 +34,8 @@ func BinaryOp(file *os.File, opType token.TokenType, src string, size int) {
         s = asm.Mul(src, size)
     case token.Div:
         s = asm.Div(src, size)
+    case token.Mod:
+        s = asm.Mod(src, size)
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] unknown binary operator %s\n", opType.Readable())
         os.Exit(1)
