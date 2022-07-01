@@ -10,10 +10,6 @@ import (
 
 func prsDecl() ast.OpDecl {
     switch t := token.Next(); t.Type {
-    case token.Def_var:
-        d := prsDefVar()
-        return &d
-
     case token.Def_fn:
         d := prsDefFn()
         return &d
@@ -21,20 +17,33 @@ func prsDecl() ast.OpDecl {
     case token.Name:
         if token.Peek().Type == token.Typename {
             d := prsDecVar()
+
+            // define var type is given
+            if token.Peek().Type == token.Def_var {
+                d := prsDefVar(d)
+                return &d
+            }
+
+            return &d
+        }
+    
+        // define var infer the type with the value
+        if token.Peek().Type == token.Def_var {
+            d := prsDefVarInfer(token.Cur())
             return &d
         }
 
         if token.Peek().Type == token.ParenL {
             fmt.Fprintln(os.Stderr, "[ERROR] function calls are not allowed in global scope")
-            fmt.Fprintln(os.Stderr, "\t" + token.Peek().At())
+            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
             os.Exit(1)
         } else if token.Peek().Type == token.Assign {
             fmt.Fprintln(os.Stderr, "[ERROR] assigning variables is not allowed in global scope (but defining)")
             fmt.Fprintln(os.Stderr, "\t" + token.Peek().At())
             os.Exit(1)
         } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] variable \"%s\" is not used\n", token.Peek().Str)
-            fmt.Fprintln(os.Stderr, "\t" + token.Peek().At())
+            fmt.Fprintf(os.Stderr, "[ERROR] identifier \"%s\" is not used (maybe forgot to provide a type)\n", token.Cur().Str)
+            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
             os.Exit(1)
         }
         return &ast.BadDecl{}
@@ -92,20 +101,26 @@ func prsDecVar() ast.OpDecVar {
         os.Exit(1)
     }
 
-    return ast.OpDecVar{ Varname: name, Vartype: t }
+    return ast.OpDecVar{ Name: name, Type: t }
 }
 
-func prsDefVar() ast.OpDefVar {
-    name := token.Last2()
+func prsDefVar(dec ast.OpDecVar) ast.OpDefVar {
+    pos := token.Next().Pos
+    token.Next()
+    return ast.OpDefVar{ Name: dec.Name, Type: dec.Type, ColPos: pos, Value: prsExpr() }
+}
 
+func prsDefVarInfer(name token.Token) ast.OpDefVar {
     if name.Type != token.Name {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got \"%s\"(%s)\n", name.Type.Readable(), name.Str)
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
 
+    pos := token.Next().Pos
     token.Next()
-    return ast.OpDefVar{ Varname: name, Value: prsExpr() }
+    val := prsExpr()
+    return ast.OpDefVar{ Name: name, Type: val.GetType(), ColPos: pos, Value: val }
 }
 
 func prsDecArgs() []ast.OpDecVar {

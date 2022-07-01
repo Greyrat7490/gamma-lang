@@ -289,7 +289,7 @@ func (o *WhileStmt) Compile(file *os.File) {
 
     if o.InitVal != nil {
         o.Dec.Compile(file)
-        def := OpDefVar{ Varname: o.Dec.Varname, Value: o.InitVal }
+        def := OpDefVar{ Name: o.Dec.Name, Value: o.InitVal }
         def.Compile(file)
     }
 
@@ -323,14 +323,14 @@ func (o *ForStmt) Compile(file *os.File) {
     defer vars.RemoveScope()
 
     o.Dec.Compile(file)
-    def := OpDefVar{ Varname: o.Dec.Varname, Value: o.Start }
+    def := OpDefVar{ Name: o.Dec.Name, Value: o.Start }
     def.Compile(file)
 
     o.typeCheck()
 
     count := loops.ForStart(file)
     if o.Limit != nil {
-        cond := BinaryExpr{ Operator: token.Token{ Type: token.Lss }, OperandL: &IdentExpr{ Ident: o.Dec.Varname }, OperandR: o.Limit }
+        cond := BinaryExpr{ Operator: token.Token{ Type: token.Lss }, OperandL: &IdentExpr{ Ident: o.Dec.Name }, OperandR: o.Limit }
         cond.Compile(file)
         loops.ForExpr(file)
     }
@@ -338,7 +338,7 @@ func (o *ForStmt) Compile(file *os.File) {
     o.Block.Compile(file)
     loops.ForBlockEnd(file, count)
 
-    step := OpAssignVar{ Dest: &IdentExpr{ Ident: o.Dec.Varname }, Value: o.Step }
+    step := OpAssignVar{ Dest: &IdentExpr{ Ident: o.Dec.Name }, Value: o.Step }
     step.Compile(file)
     loops.ForEnd(file, count)
 }

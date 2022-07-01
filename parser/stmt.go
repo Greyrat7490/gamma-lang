@@ -10,10 +10,6 @@ import (
 
 func prsStmt(ignoreUnusedExpr bool) ast.OpStmt {
     switch t := token.Next(); t.Type {
-    case token.Def_var:
-        d := prsDefVar()
-        return &ast.OpDeclStmt{ Decl: &d }
-
     case token.BraceL:
         b := prsBlock()
         return &b
@@ -60,6 +56,19 @@ func prsStmt(ignoreUnusedExpr bool) ast.OpStmt {
     case token.Name, token.UndScr, token.Plus, token.Minus, token.Mul, token.Amp:
         if token.Peek().Type == token.Typename {
             d := prsDecVar()
+
+            // define var type is given
+            if token.Peek().Type == token.Def_var {
+                d := prsDefVar(d)
+                return &ast.OpDeclStmt{ Decl: &d }
+            }
+
+            return &ast.OpDeclStmt{ Decl: &d }
+        }
+    
+        // define var infer the type with the value
+        if token.Peek().Type == token.Def_var {
+            d := prsDefVarInfer(token.Cur())
             return &ast.OpDeclStmt{ Decl: &d }
         }
 
@@ -226,7 +235,7 @@ func prsForStmt() ast.ForStmt {
 
     op.Step = &ast.BinaryExpr{
         Operator: token.Token{ Type: token.Plus },
-        OperandL: &ast.IdentExpr{ Ident: op.Dec.Varname },
+        OperandL: &ast.IdentExpr{ Ident: op.Dec.Name },
         OperandR: &ast.LitExpr{
             Val: token.Token{ Str: "1", Type: token.Number },
             Type: types.I32Type{},

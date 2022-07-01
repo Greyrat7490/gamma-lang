@@ -19,12 +19,14 @@ type OpDecl interface {
 type BadDecl struct {}
 
 type OpDecVar struct {
-    Varname token.Token
-    Vartype types.Type
+    Name token.Token
+    Type types.Type
 }
 
 type OpDefVar struct {
-    Varname token.Token
+    Name token.Token
+    Type types.Type
+    ColPos token.Pos
     Value OpExpr
 }
 
@@ -42,16 +44,18 @@ func (o *BadDecl)  decl() {}
 
 
 func (o *OpDecVar) Compile(file *os.File) {
-    vars.Declare(o.Varname, o.Vartype)
+    vars.Declare(o.Name, o.Type)
 }
 
 func (o *OpDefVar) Compile(file *os.File) {
+    vars.Declare(o.Name, o.Type)
+
     o.typeCheck()
 
-    v := vars.GetVar(o.Varname.Str)
+    v := vars.GetVar(o.Name.Str)
     if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", o.Varname.Str)
-        fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
+        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", o.Name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + o.Name.At())
         os.Exit(1)
     }
 
@@ -60,18 +64,18 @@ func (o *OpDefVar) Compile(file *os.File) {
         v.DefVal(file, e.Val)
 
     case *IdentExpr:
-        if ptr, ok := vars.GetVar(o.Varname.Str).GetType().(types.PtrType); ok {
+        if ptr, ok := vars.GetVar(o.Name.Str).GetType().(types.PtrType); ok {
             otherType := vars.GetVar(e.Ident.Str).GetType()
             if ptr.BaseType != otherType {
-                fmt.Fprintf(os.Stderr, "[ERROR] %s points to %v not should be %v\n", o.Varname.Str, otherType, ptr.BaseType)
-                fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
+                fmt.Fprintf(os.Stderr, "[ERROR] %s points to %v not should be %v\n", o.Name.Str, otherType, ptr.BaseType)
+                fmt.Fprintln(os.Stderr, "\t" + o.Name.At())
                 os.Exit(1)
             }
 
-            vars.DefPtrWithVar(file, o.Varname, e.Ident)
+            vars.DefPtrWithVar(file, o.Name, e.Ident)
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] you can only define global pointer with another global var")
-            fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
+            fmt.Fprintln(os.Stderr, "\t" + o.Name.At())
             os.Exit(1)
         }
 
@@ -91,11 +95,11 @@ func (o *OpDefFn) Compile(file *os.File) {
     fn.Define(file, o.FnName, argsSize(o.Args), o.Block.maxFrameSize())
 
     for _,a := range o.Args {
-        fn.AddArg(a.Vartype)
-        vars.Declare(a.Varname, a.Vartype)
-        fn.DefArg(file, regIdx, a.Vartype)
+        fn.AddArg(a.Type)
+        vars.Declare(a.Name, a.Type)
+        fn.DefArg(file, regIdx, a.Type)
 
-        if a.Vartype.GetKind() == types.Str {
+        if a.Type.GetKind() == types.Str {
             regIdx += 2
         } else {
             regIdx++
@@ -116,7 +120,7 @@ func (o *BadDecl) Compile(file *os.File) {
 
 func argsSize(args []OpDecVar) (res int) {
     for _,a := range args {
-        res += a.Vartype.Size()
+        res += a.Type.Size()
     }
 
     return res
@@ -130,7 +134,7 @@ func (o *OpBlock) maxFrameSize() int {
         switch stmt := s.(type) {
         case *OpDeclStmt:
             if dec, ok := stmt.Decl.(*OpDecVar); ok {
-                res += dec.Vartype.Size()
+                res += dec.Type.Size()
             }
         case *OpBlock:
             size := stmt.maxFrameSize()
@@ -138,7 +142,7 @@ func (o *OpBlock) maxFrameSize() int {
                 maxInnerSize = size
             }
         case *ForStmt:
-            size := stmt.Dec.Vartype.Size()
+            size := stmt.Dec.Type.Size()
             size += stmt.Block.maxFrameSize()
             if size > maxInnerSize {
                 maxInnerSize = size
@@ -146,7 +150,7 @@ func (o *OpBlock) maxFrameSize() int {
         case *WhileStmt:
             size := stmt.Block.maxFrameSize()
             if stmt.InitVal != nil {
-                size += stmt.Dec.Vartype.Size()
+                size += stmt.Dec.Type.Size()
             }
             if size > maxInnerSize {
                 maxInnerSize = size

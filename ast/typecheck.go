@@ -10,10 +10,10 @@ import (
 )
 
 func (o *OpDefVar) typeCheck() {
-    v := vars.GetVar(o.Varname.Str)
+    v := vars.GetVar(o.Name.Str)
     if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", o.Varname.Str)
-        fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
+        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", o.Name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + o.Name.At())
         os.Exit(1)
     }
 
@@ -21,8 +21,8 @@ func (o *OpDefVar) typeCheck() {
     t2 := o.Value.GetType()
 
     if !types.AreCompatible(t1, t2) {
-        fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.Varname.Str, t1, t2)
-        fmt.Fprintln(os.Stderr, "\t" + o.Varname.At())
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.Name.Str, t1, t2)
+        fmt.Fprintln(os.Stderr, "\t" + o.Name.At())
         os.Exit(1)
     }
 }
@@ -64,7 +64,7 @@ func (o *SwitchStmt) typeCheck() {
 }
 
 func (o *ForStmt) typeCheck() {
-    t := o.Dec.Vartype
+    t := o.Dec.Type
 
     if t2 := o.Start.GetType(); !types.AreCompatible(t, t2) {
         fmt.Fprintf(os.Stderr, "[ERROR] expected %v as for iterator start type but got %v\n", t, t2)
@@ -89,7 +89,7 @@ func (o *ForStmt) typeCheck() {
 
 func (o *WhileStmt) typeCheck() {
     if o.InitVal != nil {
-        t1 := o.Dec.Vartype
+        t1 := o.Dec.Type
         t2 := o.InitVal.GetType()
 
         if !types.AreCompatible(t1, t2) {

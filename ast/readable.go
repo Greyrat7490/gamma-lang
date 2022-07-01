@@ -11,8 +11,8 @@ func (o *OpDecVar) Readable(indent int) string {
     s2 := s + "   "
 
     return fmt.Sprintf("%sOP_DEC_VAR:\n%s%s(%s) %v(Typename)\n", s, s2,
-        o.Varname.Str, o.Varname.Type.Readable(),
-        o.Vartype)
+        o.Name.Str, o.Name.Type.Readable(),
+        o.Type)
 }
 
 func (o *OpDefVar) Readable(indent int) string {
@@ -20,7 +20,7 @@ func (o *OpDefVar) Readable(indent int) string {
     s2 := s + "   "
 
     return fmt.Sprintf("%sOP_DEF_VAR:\n%s%s(%s)\n", s, s2,
-        o.Varname.Str, o.Varname.Type.Readable()) + o.Value.Readable(indent+1)
+        o.Name.Str, o.Name.Type.Readable()) + o.Value.Readable(indent+1)
 }
 
 func (o *OpDefFn) Readable(indent int) string {
@@ -28,7 +28,7 @@ func (o *OpDefFn) Readable(indent int) string {
 
     s := ""
     for _,a := range o.Args {
-        s += fmt.Sprintf("%s(Name) %v(Typename), ", a.Varname.Str, a.Vartype)
+        s += fmt.Sprintf("%s(Name) %v(Typename), ", a.Name.Str, a.Type)
     }
     if len(s) > 0 { s = s[:len(s)-2] }
 
