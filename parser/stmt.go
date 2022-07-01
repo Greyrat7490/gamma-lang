@@ -10,10 +10,6 @@ import (
 
 func prsStmt(ignoreUnusedExpr bool) ast.OpStmt {
     switch t := token.Next(); t.Type {
-    case token.Dec_var:
-        d := prsDecVar()
-        return &ast.OpDeclStmt{ Decl: &d }
-
     case token.Def_var:
         d := prsDefVar()
         return &ast.OpDeclStmt{ Decl: &d }
@@ -62,6 +58,11 @@ func prsStmt(ignoreUnusedExpr bool) ast.OpStmt {
         return &ast.OpExprStmt{ Expr: expr }
 
     case token.Name, token.UndScr, token.Plus, token.Minus, token.Mul, token.Amp:
+        if token.Peek().Type == token.Typename {
+            d := prsDecVar()
+            return &ast.OpDeclStmt{ Decl: &d }
+        }
+
         expr := prsExpr()
 
         if token.Peek().Type == token.Assign {
@@ -178,6 +179,7 @@ func prsWhileStmt() ast.WhileStmt {
     var op ast.WhileStmt = ast.WhileStmt{ WhilePos: token.Cur().Pos, InitVal: nil }
 
     if token.Peek().Type == token.Name && token.Peek2().Type == token.Typename {
+        token.Next()
         op.Dec = prsDecVar()
 
         if token.Next().Type != token.Comma {
@@ -219,6 +221,7 @@ func prsForStmt() ast.ForStmt {
         },
     }
 
+    token.Next()
     op.Dec = prsDecVar()
 
     op.Step = &ast.BinaryExpr{

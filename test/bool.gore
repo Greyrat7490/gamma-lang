@@ -1,7 +1,7 @@
-var v1 i32 := 420
+v1 i32 := 420
 
 fn simple() {
-    var l1 bool := v1 == 86
+    l1 bool := v1 == 86
     printStr("420 == 86: ")
     printBool(l1)
     printStr("\n")

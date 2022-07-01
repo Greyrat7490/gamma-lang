@@ -1,7 +1,7 @@
-var v1 i32 := 420
+v1 i32 := 420
 
 fn test1() {
-    var l1 bool := v1 == 86
+    l1 bool := v1 == 86
 
     printStr("before if\n")
     if l1 {

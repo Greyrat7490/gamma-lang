@@ -1,7 +1,7 @@
-var SIZE i32 := 150
+SIZE i32 := 150
 
-var prev *i32 := &SIZE + 3*8        // to skip the 3 global vars
-var cur  *i32 := prev + 8*150       // leave space(SIZE) for prev
+prev *i32 := &SIZE + 3*8        // to skip the 3 global vars
+cur  *i32 := prev + 8*150       // leave space(SIZE) for prev
 
 
 fn memcpy(dest *i32, src *i32, size i32) {

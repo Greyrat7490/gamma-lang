@@ -57,7 +57,6 @@ const (
 
     Comment         // // ..., /* ... */
 
-    Dec_var         // var
     Def_var         // :=
     Assign          // =
     Def_fn          // fn
@@ -138,8 +137,6 @@ func TokenTypeOfStr(s string) TokenType {
     case "//", "/*", "*/":
         return Comment
 
-    case "var":
-        return Dec_var
     case ":=":
         return Def_var
     case "=":
@@ -243,8 +240,6 @@ func (t TokenType) Readable() string {
     case Comment:
         return "Comment"
 
-    case Dec_var:
-        return "Dec_var"
     case Def_var:
         return "Def_var"
     case Assign:

@@ -10,10 +10,6 @@ import (
 
 func prsDecl() ast.OpDecl {
     switch t := token.Next(); t.Type {
-    case token.Dec_var:
-        d := prsDecVar()
-        return &d
-
     case token.Def_var:
         d := prsDefVar()
         return &d
@@ -23,6 +19,11 @@ func prsDecl() ast.OpDecl {
         return &d
 
     case token.Name:
+        if token.Peek().Type == token.Typename {
+            d := prsDecVar()
+            return &d
+        }
+
         if token.Peek().Type == token.ParenL {
             fmt.Fprintln(os.Stderr, "[ERROR] function calls are not allowed in global scope")
             fmt.Fprintln(os.Stderr, "\t" + token.Peek().At())
@@ -70,7 +71,7 @@ func prsDefFn() ast.OpDefFn {
 }
 
 func prsDecVar() ast.OpDecVar {
-    name := token.Next()
+    name := token.Cur()
     vartype := token.Next()
 
     if name.Type != token.Name {
@@ -116,16 +117,16 @@ func prsDecArgs() []ast.OpDecVar {
         os.Exit(1)
     }
 
-    if token.Peek().Type != token.ParenR {
+    if token.Next().Type != token.ParenR {
         decs = append(decs, prsDecVar())
 
-        for token.Peek().Type == token.Comma {
+        for token.Next().Type == token.Comma {
             token.Next()
             decs = append(decs, prsDecVar())
         }
     }
 
-    if token.Next().Type != token.ParenR {
+    if token.Cur().Type != token.ParenR {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got \"%s\"(%s)\n", token.Cur().Str, token.Cur().Type.Readable())
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)

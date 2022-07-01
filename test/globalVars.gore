@@ -1,7 +1,7 @@
-var v1 i32 := 86
-var v2 i32 := -69
-var v3 str := "some string\n"
-var v4 str := "some string 2\n"
+v1 i32 := 86
+v2 i32 := -69
+v3 str := "some string\n"
+v4 str := "some string 2\n"
 
 fn main() {
     printInt(v1)

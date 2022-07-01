@@ -1,8 +1,8 @@
 // operator of a binary expr needs to be in the same line as the left operand
 // would otherwise cause unexpected behavior or an error
 
-var v1 i32 := 0
-var ptr *i32 := &v1
+v1 i32 := 0
+ptr *i32 := &v1
 
 fn main() {
     printInt(v1) printStr("\n")

@@ -31,8 +31,8 @@ fn lss(a1 i32) {
     }
 }
 
-var v1 i32 := 86
-var ptr *i32 := &v1
+v1 i32 := 86
+ptr *i32 := &v1
 
 fn stmts(a1 i32) {
     if a1 < {

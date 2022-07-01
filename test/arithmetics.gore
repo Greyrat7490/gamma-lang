@@ -1,5 +1,5 @@
-var v1 i32 := 86
-var v2 i32 := 86
+v1 i32 := 86
+v2 i32 := 86
 
 fn test1() {
     printStr("v1 = -v1 * 2 + v1 = ")

@@ -1,14 +1,14 @@
-var g1 i32 := -86
+g1 i32 := -86
 
 // 0 args, 3 local vars
 // -> 3 * 8byte = 24byte
 // -> (multiple of 16) = 32byte frame
 fn test() {
-    var l1 bool := true
-    var l2 i32 := 420
+    l1 bool := true
+    l2 i32 := 420
 
     for i i32, 4 {
-        var i2 i32 := i * 2
+        i2 i32 := i * 2
         printInt(i2)
         printStr(" ")
     }
@@ -20,8 +20,8 @@ fn test() {
 // -> 3 * 8byte = 24byte
 // -> (multiple of 16) = 32byte frame
 fn test2(a1 i32) {
-    var l1 i32 := a1 - 2 * a1
-    var l2 i32 := l1 * -2
+    l1 i32 := a1 - 2 * a1
+    l2 i32 := l1 * -2
 
     printInt(l1)
     printStr("\n")
@@ -38,7 +38,7 @@ fn test3() {
 }
 
 fn test4() {
-    var s str := "test string\n"
+    s str := "test string\n"
     printStr(s)
 
     s = "new string\n"
@@ -48,19 +48,19 @@ fn test4() {
 fn test5() {
     printStr("g1 > 69 -> ")
     if g1 > 69 {
-        var l1 i32 := -69
+        l1 i32 := -69
         printInt(l1)
     } else {
-        var l1 i32 := 69
+        l1 i32 := 69
         printInt(l1)
     }
 
     printStr("\ng1 < 69 -> ")
     if g1 < 69 {
-        var l1 i32 := -69
+        l1 i32 := -69
         printInt(l1)
     } else {
-        var l1 i32 := 69
+        l1 i32 := 69
         printInt(l1)
     }
 

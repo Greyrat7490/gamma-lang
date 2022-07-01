@@ -1,6 +1,6 @@
-var v1 i32 := -86
-var v2 i32 := 420
-var p1 *i32 := &v1
+v1 i32 := -86
+v2 i32 := 420
+p1 *i32 := &v1
 
 fn global_test() {
     printStr("v1: ")
@@ -54,8 +54,8 @@ fn global_test() {
 }
 
 fn local_test() {
-    var i1 i32 := 86
-    var i2 i32 := -69
+    i1 i32 := 86
+    i2 i32 := -69
 
     printStr("i1: ")
     printInt(i1)
@@ -67,7 +67,7 @@ fn local_test() {
 
 
     printStr("lp1 = &i1\n")
-    var lp1 *i32 := &i1
+    lp1 *i32 := &i1
 
     printInt(i1)
     printStr("\n")

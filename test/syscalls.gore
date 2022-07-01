@@ -1,5 +1,5 @@
-var v1 i32 := 420
-var v2 str := "some string2"
+v1 i32 := 420
+v2 str := "some string2"
 
 fn main() {
     printInt(86)

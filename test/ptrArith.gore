@@ -1,11 +1,11 @@
-var v1 i32 := 0
-var pGlobal *i32 := &v1
+v1 i32 := 0
+pGlobal *i32 := &v1
 
 fn main() {
-    var local i32
-    var pLocal *i32 := &local
+    local i32
+    pLocal *i32 := &local
 
-    var diff i32 := pLocal - pGlobal
+    diff i32 := pLocal - pGlobal
 
     printPtr(pGlobal)
     printStr("\n")

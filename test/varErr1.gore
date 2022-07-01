@@ -1,6 +1,0 @@
-fn main() {
-    var
-
-    printStr(v1) // -> printStr as var name, "(" as type
-                // TODO: check if var name is a reserved keyword
-}

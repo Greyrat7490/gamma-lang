@@ -1,6 +1,6 @@
-var v1 str := "some\" string"
-var v2 str := "\tsome\\ string"
-var v3 str := "86"
+v1 str := "some\" string"
+v2 str := "\tsome\\ string"
+v3 str := "86"
 
 fn main() {
     printStr(v1)

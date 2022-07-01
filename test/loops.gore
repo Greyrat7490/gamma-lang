@@ -1,5 +1,5 @@
 fn testWhile() {
-    var idx i32 := 0
+    idx i32 := 0
 
     while idx < 10 {
         printInt(idx)
