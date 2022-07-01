@@ -68,6 +68,7 @@ const (
     Break           // break
     Continue        // continue
     Through         // through
+    XSwitch         // $
 
     TokenTypeCount uint = iota
 )
@@ -158,6 +159,8 @@ func TokenTypeOfStr(s string) TokenType {
         return Continue
     case "through":
         return Through
+    case "$":
+        return XSwitch
 
     default:
         if types.ToType(s) != nil {
@@ -259,6 +262,8 @@ func (t TokenType) Readable() string {
         return "Continue"
     case Through:
         return "Through"
+    case XSwitch:
+        return "XSwitch"
 
     case Typename:
         return "Typename"
@@ -297,7 +302,7 @@ func (t Token) At() string {
 }
 
 func Tokenize(file []byte) {
-    keySigns := "(){}+-*/=,:;&"
+    keySigns := "(){}+-*/=,:;&$"
     f := string(file)
 
     start := 0

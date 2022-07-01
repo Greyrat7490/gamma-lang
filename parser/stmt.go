@@ -26,7 +26,7 @@ func prsStmt(ignoreUnusedExpr bool) ast.OpStmt {
         ifStmt := prsIfStmt()
 
         if token.Cur().Str == "{" {
-            switchStmt := prsCondSwitch(ifStmt.Pos, ifStmt.Cond)
+            switchStmt := prsSwitch(ifStmt.Pos, ifStmt.Cond)
             return &switchStmt
         }
 
@@ -287,7 +287,6 @@ func getPlaceholder(cond ast.OpExpr) (expr *ast.OpExpr) {
 
 // replace placeholder in condBase with expr1
 // if expr2 is set they get combined with logical or
-// result in expr1
 func completeCond(placeholder *ast.OpExpr, condBase ast.OpExpr, expr1 ast.OpExpr, expr2 ast.OpExpr) ast.OpExpr {
     if ident, ok := expr1.(*ast.IdentExpr); ok {
         if ident.Ident.Type == token.UndScr {
@@ -447,7 +446,7 @@ func prsCases(condBase ast.OpExpr) (cases []ast.CaseStmt) {
     return
 }
 
-func prsCondSwitch(pos token.Pos, condBase ast.OpExpr) ast.SwitchStmt {
+func prsSwitch(pos token.Pos, condBase ast.OpExpr) ast.SwitchStmt {
     switchStmt := ast.SwitchStmt{ Pos: pos }
 
     if token.Peek().Type == token.BraceR {
@@ -458,9 +457,21 @@ func prsCondSwitch(pos token.Pos, condBase ast.OpExpr) ast.SwitchStmt {
 
     switchStmt.Cases = prsCases(condBase)
 
-    for _,c := range switchStmt.Cases {
+    for i,c := range switchStmt.Cases {
         if len(c.Stmts) == 0 {
             fmt.Fprintln(os.Stderr, "[ERROR] no stmts provided for this case")
+            fmt.Fprintln(os.Stderr, "\t" + c.ColonPos.At())
+            os.Exit(1)
+        }
+
+        // is default case last
+        if c.Cond == nil && i != len(switchStmt.Cases)-1 {
+            i = len(switchStmt.Cases)-1 - i
+            if i == 1 {
+                fmt.Fprintln(os.Stderr, "[ERROR] one case after the default case (unreachable code)")
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] %d cases after the default case (unreachable code)\n", i)
+            }
             fmt.Fprintln(os.Stderr, "\t" + c.ColonPos.At())
             os.Exit(1)
         }

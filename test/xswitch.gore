@@ -1,0 +1,63 @@
+// test ","
+fn simple(a1 i32) {
+    var l1 i32 := $ a1 == {
+        69, -69: 69
+        -86, 86: 86
+              _: 420
+    }
+
+    printInt(l1) printStr("\n")
+}
+
+// only default
+fn onlyDefault(a1 i32) {
+    printInt(${ _: a1 })
+    printStr("\n")
+}
+
+fn arith(a1 i32) {
+    var l1 i32 := $ (a1 - 1) / 10 == {
+        69, -69: 69
+        -86, 86: 86
+              _: (a1 - 1) / 10
+    }
+
+    printInt(l1) printStr("\n")
+}
+
+// test ";", no base cond, "<", inlining xswitch
+fn printAbs(a1 i32) {
+    printInt(${ a1 < 0: -a1;  _: a1 })
+    printStr("\n")
+}
+
+
+fn main() {
+    printStr("simple -----------\n")
+    simple(69)
+    simple(86)
+    simple(-69)
+    simple(-86)
+    simple(0)
+
+    printStr("only default -----\n")
+    onlyDefault(69)
+    onlyDefault(-69)
+    onlyDefault(86)
+    onlyDefault(-86)
+    onlyDefault(-420)
+
+    printStr("arith ------------\n")
+    arith(690)
+    arith(-689)
+    arith(861)
+    arith(-861)
+    arith(-420)
+
+    printStr("printAbs ---------\n")
+    printAbs(69)
+    printAbs(-69)
+    printAbs(86)
+    printAbs(-86)
+    printAbs(-420)
+}

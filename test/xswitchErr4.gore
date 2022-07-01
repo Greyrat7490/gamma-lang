@@ -1,0 +1,11 @@
+fn test(a1 i32) {
+    printInt(${
+        a1 < 0: -a1
+         : 0
+        _: a1
+    })
+}
+
+fn main() {
+    test(86)
+}

@@ -238,55 +238,37 @@ func (o *CaseStmt) Compile(file *os.File, switchCount uint) {
 
     if o.Cond == nil {
         cond.Default(file)
-        block := OpBlock{ Stmts: o.Stmts }
         block.Compile(file)
         return
     }
 
-    switch e := o.Cond.(type) {
-    case *IdentExpr:
-        cond.CaseStart(file)
-        cond.CaseIdent(file, e.Ident)
+    cond.CaseStart(file)
 
-        cond.CaseBody(file)
-        block.Compile(file)
-        cond.CaseBodyEnd(file, switchCount)
-
-    default:
-        cond.CaseStart(file)
+    if i,ok := o.Cond.(*IdentExpr); ok {
+        cond.CaseIdent(file, i.Ident)
+    } else {
         o.Cond.Compile(file)
         cond.CaseExpr(file)
-
-        cond.CaseBody(file)
-        block.Compile(file)
-        cond.CaseBodyEnd(file, switchCount)
     }
+
+    cond.CaseBody(file)
+    block.Compile(file)
+    cond.CaseBodyEnd(file, switchCount)
 }
 
 func (o *SwitchStmt) Compile(file *os.File) {
     o.typeCheck()
     count := cond.StartSwitch()
 
-    for i,c := range o.Cases {
-        // TODO: detect unreachable code and throw error
-        // a1 < but case 420 before 86
-        // cases with same cond
-        if c.Cond == nil && i != len(o.Cases)-1 {
-            i = len(o.Cases)-1 - i
-            if i == 1 {
-                fmt.Fprintln(os.Stderr, "[ERROR] one case after the default case (unreachable code)")
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] %d cases after the default case (unreachable code)\n", i)
-            }
-            fmt.Fprintln(os.Stderr, "\t" + c.ColonPos.At())
-            os.Exit(1)
-        }
+    // TODO: detect unreachable code and throw error
+    // * a1 < but case 420 before 86
+    // * cases with same cond
 
-        if i == len(o.Cases)-1 {
-            cond.InLastCase()
-        }
-        c.Compile(file, count)
+    for i := 0; i < len(o.Cases)-1; i++ {
+        o.Cases[i].Compile(file, count)
     }
+    cond.InLastCase()
+    o.Cases[len(o.Cases)-1].Compile(file, count)
 
     cond.EndSwitch(file)
 }
@@ -339,7 +321,7 @@ func (o *WhileStmt) Compile(file *os.File) {
 func (o *ForStmt) Compile(file *os.File) {
     vars.CreateScope()
     defer vars.RemoveScope()
-    
+
     o.Dec.Compile(file)
     def := OpDefVar{ Varname: o.Dec.Varname, Value: o.Start }
     def.Compile(file)

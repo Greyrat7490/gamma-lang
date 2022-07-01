@@ -1,0 +1,14 @@
+// every case has to return the same type
+// this would otherwise result in cases with incompatible types
+
+fn test(a1 i32) {
+    printInt(${
+        a1 < 0: 86
+        a1 == 0: true       // bool instead of i32 (if a1 == 0 -> i32 = bool)
+              _: -420
+    })
+}
+
+fn main() {
+    test(86)
+}

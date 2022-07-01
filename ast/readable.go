@@ -86,6 +86,27 @@ func (o *ParenExpr) Readable(indent int) string {
     return strings.Repeat("   ", indent) + "PAREN:\n" + o.Expr.Readable(indent+1)
 }
 
+func (o *CaseExpr) Readable(indent int) string {
+    s := strings.Repeat("   ", indent)
+    if o.Cond == nil {
+        s += "XDEFAULT:\n" + o.Expr.Readable(indent+1)
+    } else {
+        s += "XCASE:\n" + o.Cond.Readable(indent+1) + o.Expr.Readable(indent+1)
+    }
+
+    return s
+}
+
+func (o *SwitchExpr) Readable(indent int) string {
+    s := strings.Repeat("   ", indent) + "XSWITCH:\n"
+
+    for _, c := range o.Cases {
+        s += c.Readable(indent+1)
+    }
+
+    return s
+}
+
 func (o *BadExpr) Readable(indent int) string {
     fmt.Fprintln(os.Stderr, "[ERROR] bad expression")
     os.Exit(1)

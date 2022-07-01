@@ -1,12 +1,12 @@
 package ast
 
 import (
-	"os"
-	"fmt"
-	"gorec/vars"
-	"gorec/func"
-	"gorec/token"
-	"gorec/types"
+    "os"
+    "fmt"
+    "gorec/vars"
+    "gorec/func"
+    "gorec/token"
+    "gorec/types"
 )
 
 func (o *OpDefVar) typeCheck() {
@@ -150,6 +150,25 @@ func (o *BinaryExpr) typeCheck() {
         }
     }
 }
+
+func (o *SwitchExpr) typeCheck() {
+    ts := make(map[types.Type][]int)
+
+    for i,c := range o.Cases {
+        t2 := c.Expr.GetType()
+        ts[t2] = append(ts[t2], i)
+    }
+
+    if len(ts) > 1 {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected every case body to return the same type but got %d differente\n", len(ts))
+        for key,val := range ts {
+            fmt.Fprintf(os.Stderr, "cases %v\n   type: %v\n", val, key)
+        }
+
+        os.Exit(1)
+    }
+}
+
 func (o *OpFnCall) typeCheck() {
     f := fn.GetFn(o.FnName.Str)
     if f == nil {
@@ -247,3 +266,6 @@ func (o *BinaryExpr) GetType() types.Type {
     return t
 }
 
+func (o *SwitchExpr) GetType() types.Type {
+    return o.Cases[0].Expr.GetType()
+}

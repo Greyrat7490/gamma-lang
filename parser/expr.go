@@ -10,12 +10,13 @@ import (
 
 type precedence int
 const (
-    LOGICAL_PRECEDENCE precedence = 0 // &&, ||
-    COMPARE_PRECEDENCE precedence = 1 // ==, !=, <, <=, >, >=
-    ADD_SUB_PRECEDENCE precedence = 2 // +, -
-    MUL_DIV_PRECEDENCE precedence = 3 // *, /, %(TODO)
-    EXP_PRECEDENCE     precedence = 4 // **(TODO)
-    PAREN_PRECEDENCE   precedence = 5 // ()
+    LOGICAL_PRECEDENCE precedence = iota // &&, ||
+    COMPARE_PRECEDENCE            = iota // ==, !=, <, <=, >, >=
+    XSWITCH_PRECEDENCE            = iota // $ ... { ... }
+    ADD_SUB_PRECEDENCE            = iota // +, -
+    MUL_DIV_PRECEDENCE            = iota // *, /, %(TODO)
+    EXP_PRECEDENCE                = iota // **(TODO)
+    PAREN_PRECEDENCE              = iota // ()
 )
 
 func prsExpr() ast.OpExpr {
@@ -30,6 +31,9 @@ func prsExpr() ast.OpExpr {
         } else {
             expr = prsIdentExpr()
         }
+
+    case token.XSwitch:
+        expr = prsXSwitch()
 
     case token.UndScr:
         expr = prsIdentExpr()
@@ -155,6 +159,135 @@ func prsUnaryExpr() *ast.UnaryExpr {
     return &expr
 }
 
+func prsCaseExpr(condBase ast.OpExpr, placeholder *ast.OpExpr, lastCaseEnd token.Pos) (caseExpr ast.CaseExpr) {
+    if token.Cur().Type == token.Colon {
+        if token.Last().Pos.Line == token.Cur().Pos.Line {
+            fmt.Fprintln(os.Stderr, "[ERROR] missing case body(expr) for this case")
+            fmt.Fprintln(os.Stderr, "\t" + lastCaseEnd.At())
+        } else {
+            fmt.Fprintln(os.Stderr, "[ERROR] invalid case condition: nothing before \":\"")
+            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        }
+        os.Exit(1)
+    }
+    if token.Cur().Type == token.Comma {
+        fmt.Fprintln(os.Stderr, "[ERROR] invalid case condition: nothing before \",\"")
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+    if token.Last().Pos.Line == token.Cur().Pos.Line && token.Last().Type != token.SemiCol && token.Last().Type != token.BraceL {
+        fmt.Fprintln(os.Stderr, "[ERROR] cases should always start in a new line or after a \";\"")
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+
+    // parse case cond(s) ----------------
+    expr := prsExpr()
+    var conds ast.OpExpr = nil
+    for token.Next().Type == token.Comma {
+        conds = completeCond(placeholder, condBase, expr, conds)
+
+        if token.Peek().Type == token.Colon || token.Peek().Type == token.Comma {
+            fmt.Fprintln(os.Stderr, "[ERROR] invalid case condition: no expr after \",\"")
+            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+            os.Exit(1)
+        }
+
+        token.Next()
+        expr = prsExpr()
+    }
+
+    caseExpr.ColonPos = token.Cur().Pos
+    caseExpr.Cond = completeCond(placeholder, condBase, expr, conds)
+
+    if token.Cur().Type != token.Colon {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \":\" but got \"%s\"(%s)\n", token.Cur().Str, token.Cur().Type.Readable())
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+    if nextColon := token.FindNext(token.Colon); token.Cur().Pos.Line == nextColon.Line {
+        nextSemiCol := token.FindNext(token.SemiCol)
+
+        if nextSemiCol.Line == -1 || (nextSemiCol.Line == nextColon.Line && nextSemiCol.Col > nextColon.Col) {
+            fmt.Fprintln(os.Stderr, "[ERROR] multiple cases in a line should be separated with a \";\"")
+            fmt.Fprintln(os.Stderr, "\t" + nextColon.At())
+            os.Exit(1)
+        }
+    }
+
+
+    // parse case body -------------------
+    if token.Peek().Type == token.SemiCol {
+        fmt.Fprintln(os.Stderr, "[ERROR] missing case body(expr) for this case")
+        fmt.Fprintln(os.Stderr, "\t" + token.Last().At())
+        os.Exit(1)
+    }
+
+    token.Next()
+    caseExpr.Expr = prsExpr()
+
+    if token.Peek().Type == token.SemiCol { token.Next() }
+
+    return
+}
+
+func prsXSwitch() *ast.SwitchExpr {
+    switchExpr := ast.SwitchExpr{ Pos: token.Cur().Pos }
+    var condBase ast.OpExpr = nil
+    var placeholder *ast.OpExpr = nil
+
+    // set condBase -----------------------
+    if token.Next().Type != token.BraceL {
+        condBase = prsExpr()
+        placeholder = getPlaceholder(condBase)
+    }
+
+    // parse cases ------------------------
+    if token.Cur().Type != token.BraceL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" at the beginning of the xswitch " +
+            "but got \"%s\"(%v)\n", token.Cur().Str, token.Cur().Type)
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+    switchExpr.BraceLPos = token.Cur().Pos
+
+    lastCaseEnd := token.Pos{}
+    for token.Next().Type != token.BraceR {
+        expr := prsCaseExpr(condBase, placeholder, lastCaseEnd)
+        lastCaseEnd = expr.ColonPos
+        switchExpr.Cases = append(switchExpr.Cases, expr)
+    }
+
+    switchExpr.BraceRPos = token.Cur().Pos
+
+
+    // catch some syntax errors -----------
+    if len(switchExpr.Cases) == 0 {
+        fmt.Fprintln(os.Stderr, "[ERROR] empty xswitch")
+        fmt.Fprintln(os.Stderr, "\t" + switchExpr.BraceLPos.At())
+        os.Exit(1)
+    }
+    for i,c := range switchExpr.Cases {
+        if c.Cond == nil && i != len(switchExpr.Cases)-1 {
+            i = len(switchExpr.Cases)-1 - i
+            if i == 1 {
+                fmt.Fprintln(os.Stderr, "[ERROR] one case after the default case (unreachable code)")
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] %d cases after the default case (unreachable code)\n", i)
+            }
+            fmt.Fprintln(os.Stderr, "\t" + c.ColonPos.At())
+            os.Exit(1)
+        }
+    }
+    if switchExpr.Cases[len(switchExpr.Cases)-1].Cond != nil {
+        fmt.Fprintln(os.Stderr, "[ERROR] every xswitch requires a default case")
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+
+    return &switchExpr
+}
+
 func prsBinary(expr ast.OpExpr, min_precedence precedence) ast.OpExpr {
     for isBinaryExpr() && getPrecedence() >= min_precedence {
         var b ast.BinaryExpr
@@ -166,7 +299,7 @@ func prsBinary(expr ast.OpExpr, min_precedence precedence) ast.OpExpr {
         token.Next()
         precedenceR := getPrecedence()
 
-        // cond-switch
+        // switch/xswitch
         if token.Cur().Type == token.BraceL {
             return &b
         }

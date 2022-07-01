@@ -1,0 +1,15 @@
+// default case is always required otherwise cases could exist which would result in an invalid expr
+// "<" and ">=":
+// all cases are covered but this cannot be checked yet (TODO)
+
+fn test(a1 i32) {
+    printInt(${
+        a1 < 0: -a1
+        a1 >= 0: 0
+        // missing default case "_:"
+    })
+}
+
+fn main() {
+    test(86)
+}

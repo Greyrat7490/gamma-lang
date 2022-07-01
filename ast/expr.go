@@ -52,8 +52,22 @@ type ParenExpr struct {
     ParenRPos token.Pos
 }
 
+type SwitchExpr struct {
+    Pos token.Pos
+    BraceLPos token.Pos
+    Cases []CaseExpr
+    BraceRPos token.Pos
+}
+
+type CaseExpr struct {
+    Cond OpExpr
+    ColonPos token.Pos
+    Expr OpExpr
+}
 
 func (o *LitExpr) Compile(file *os.File) {
+    // TODO fix bool and str
+
     vars.Write(file, asm.MovRegVal(asm.RegA, o.Type.Size(), o.Val.Str))
 }
 func (o *IdentExpr) Compile(file *os.File) {
@@ -181,6 +195,43 @@ func (o *OpFnCall) Compile(file *os.File) {
     }
 
     fn.CallFunc(file, o.FnName)
+}
+
+func (o *CaseExpr) Compile(file *os.File, switchCount uint) {
+    vars.CreateScope()
+    defer vars.RemoveScope()
+
+    if o.Cond == nil {
+        cond.Default(file)
+        o.Expr.Compile(file)
+        return
+    }
+
+    cond.CaseStart(file)
+
+    if i,ok := o.Cond.(*IdentExpr); ok {
+        cond.CaseIdent(file, i.Ident)
+    } else {
+        o.Cond.Compile(file)
+        cond.CaseExpr(file)
+    }
+
+    cond.CaseBody(file)
+    o.Expr.Compile(file)
+    cond.CaseBodyEnd(file, switchCount)
+}
+
+func (o *SwitchExpr) Compile(file *os.File) {
+    o.typeCheck()
+    count := cond.StartSwitch()
+
+    for i := 0; i < len(o.Cases)-1; i++ {
+        o.Cases[i].Compile(file, count)
+    }
+    cond.InLastCase()
+    o.Cases[len(o.Cases)-1].Compile(file, count)
+
+    cond.EndSwitch(file)
 }
 
 func (o *BadExpr) Compile(file *os.File) {
