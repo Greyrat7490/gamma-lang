@@ -183,9 +183,8 @@ func prsWhileStmt() ast.WhileStmt {
     if token.Peek().Type == token.Name && token.Peek2().Type == token.Typename {
         token.Next()
         dec := prsDecVar()
-        op.Def.Name = dec.Name
-        op.Def.Type = dec.Type
-        
+        op.Def = &ast.OpDefVar{ Name: dec.Name, Type: dec.Type }
+
         if token.Next().Type != token.Comma {
             fmt.Fprintln(os.Stderr, "[ERROR] missing \",\"")
             fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
