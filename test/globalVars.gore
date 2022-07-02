@@ -3,8 +3,6 @@ v2 := -69                   // infer type from value
 v3 str := "some string\n"
 v4 := "some string 2\n"     // infer type from value
 
-v5 i32
-
 fn main() {
     printInt(v1)
     printStr("\n")
@@ -12,6 +10,4 @@ fn main() {
     printStr("\n")
     printStr(v3)
     printStr(v4)
-    printInt(v5)        // TODO: throw error
-    printStr("\n")
 }

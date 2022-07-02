@@ -71,16 +71,14 @@ type ThroughStmt struct {
 type WhileStmt struct {
     WhilePos token.Pos
     Cond OpExpr
-    Dec OpDecVar
-    InitVal OpExpr
+    Def *OpDefVar       // nil -> no iterator
     Block OpBlock
 }
 
 type ForStmt struct {
     ForPos token.Pos
-    Dec OpDecVar
+    Def OpDefVar
     Limit OpExpr
-    Start OpExpr
     Step OpExpr
     Block OpBlock
 }
@@ -287,10 +285,8 @@ func (o *WhileStmt) Compile(file *os.File) {
     vars.CreateScope()
     defer vars.RemoveScope()
 
-    if o.InitVal != nil {
-        o.Dec.Compile(file)
-        def := OpDefVar{ Name: o.Dec.Name, Value: o.InitVal }
-        def.Compile(file)
+    if o.Def != nil {
+        o.Def.Compile(file)
     }
 
     o.typeCheck()
@@ -322,15 +318,13 @@ func (o *ForStmt) Compile(file *os.File) {
     vars.CreateScope()
     defer vars.RemoveScope()
 
-    o.Dec.Compile(file)
-    def := OpDefVar{ Name: o.Dec.Name, Value: o.Start }
-    def.Compile(file)
+    o.Def.Compile(file)
 
     o.typeCheck()
 
     count := loops.ForStart(file)
     if o.Limit != nil {
-        cond := BinaryExpr{ Operator: token.Token{ Type: token.Lss }, OperandL: &IdentExpr{ Ident: o.Dec.Name }, OperandR: o.Limit }
+        cond := BinaryExpr{ Operator: token.Token{ Type: token.Lss }, OperandL: &IdentExpr{ Ident: o.Def.Name }, OperandR: o.Limit }
         cond.Compile(file)
         loops.ForExpr(file)
     }
@@ -338,7 +332,7 @@ func (o *ForStmt) Compile(file *os.File) {
     o.Block.Compile(file)
     loops.ForBlockEnd(file, count)
 
-    step := OpAssignVar{ Dest: &IdentExpr{ Ident: o.Dec.Name }, Value: o.Step }
+    step := OpAssignVar{ Dest: &IdentExpr{ Ident: o.Def.Name }, Value: o.Step }
     step.Compile(file)
     loops.ForEnd(file, count)
 }

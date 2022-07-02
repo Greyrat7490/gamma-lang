@@ -54,21 +54,14 @@ func prsStmt(ignoreUnusedExpr bool) ast.OpStmt {
         return &ast.OpExprStmt{ Expr: expr }
 
     case token.Name, token.UndScr, token.Plus, token.Minus, token.Mul, token.Amp:
+        // define var (type is given)
         if token.Peek().Type == token.Typename {
-            d := prsDecVar()
-
-            // define var type is given
-            if token.Peek().Type == token.Def_var {
-                d := prsDefVar(d)
-                return &ast.OpDeclStmt{ Decl: &d }
-            }
-
+            d := prsDefVar()
             return &ast.OpDeclStmt{ Decl: &d }
         }
-    
-        // define var infer the type with the value
+        // define var (infer the type with the value)
         if token.Peek().Type == token.Def_var {
-            d := prsDefVarInfer(token.Cur())
+            d := prsDefVarInfer()
             return &ast.OpDeclStmt{ Decl: &d }
         }
 
@@ -185,12 +178,14 @@ func prsElse() ast.ElseStmt {
 }
 
 func prsWhileStmt() ast.WhileStmt {
-    var op ast.WhileStmt = ast.WhileStmt{ WhilePos: token.Cur().Pos, InitVal: nil }
+    var op ast.WhileStmt = ast.WhileStmt{ WhilePos: token.Cur().Pos, Def: nil }
 
     if token.Peek().Type == token.Name && token.Peek2().Type == token.Typename {
         token.Next()
-        op.Dec = prsDecVar()
-
+        dec := prsDecVar()
+        op.Def.Name = dec.Name
+        op.Def.Type = dec.Type
+        
         if token.Next().Type != token.Comma {
             fmt.Fprintln(os.Stderr, "[ERROR] missing \",\"")
             fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
@@ -203,10 +198,10 @@ func prsWhileStmt() ast.WhileStmt {
         if token.Next().Type == token.Comma {
             token.Next()
             op.Cond = prsExpr()
-            op.InitVal = expr
+            op.Def.Value = expr
             token.Next()
         } else {
-            op.InitVal = &ast.LitExpr{ Val: token.Token{ Type: token.Number, Str: "0" }, Type: types.I32Type{} }
+            op.Def.Value = &ast.LitExpr{ Val: token.Token{ Type: token.Number, Str: "0" }, Type: types.I32Type{} }
             op.Cond = expr
         }
     } else {
@@ -224,18 +219,22 @@ func prsForStmt() ast.ForStmt {
     var op ast.ForStmt = ast.ForStmt{
         ForPos: token.Cur().Pos,
         Limit: nil,
-        Start: &ast.LitExpr{
-            Val: token.Token{ Str: "0", Type: token.Number },
-            Type: types.I32Type{},
+        Def: ast.OpDefVar{ 
+            Value: &ast.LitExpr{
+                Val: token.Token{ Str: "0", Type: token.Number },
+                Type: types.I32Type{},
+            },
         },
     }
 
     token.Next()
-    op.Dec = prsDecVar()
-
+    dec := prsDecVar()
+    op.Def.Name = dec.Name
+    op.Def.Type = dec.Type
+    
     op.Step = &ast.BinaryExpr{
         Operator: token.Token{ Type: token.Plus },
-        OperandL: &ast.IdentExpr{ Ident: op.Dec.Name },
+        OperandL: &ast.IdentExpr{ Ident: op.Def.Name },
         OperandR: &ast.LitExpr{
             Val: token.Token{ Str: "1", Type: token.Number },
             Type: types.I32Type{},
@@ -248,7 +247,7 @@ func prsForStmt() ast.ForStmt {
 
         if token.Next().Type == token.Comma {
             token.Next()
-            op.Start = prsExpr()
+            op.Def.Value = prsExpr()
 
             if token.Next().Type == token.Comma {
                 token.Next()

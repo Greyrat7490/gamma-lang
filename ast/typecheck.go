@@ -64,13 +64,7 @@ func (o *SwitchStmt) typeCheck() {
 }
 
 func (o *ForStmt) typeCheck() {
-    t := o.Dec.Type
-
-    if t2 := o.Start.GetType(); !types.AreCompatible(t, t2) {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected %v as for iterator start type but got %v\n", t, t2)
-        fmt.Fprintln(os.Stderr, "\t" + o.ForPos.At())
-        os.Exit(1)
-    }
+    t := o.Def.Type
 
     if o.Limit != nil {
         if t2 := o.Limit.GetType(); !types.AreCompatible(t, t2) {
@@ -88,17 +82,6 @@ func (o *ForStmt) typeCheck() {
 }
 
 func (o *WhileStmt) typeCheck() {
-    if o.InitVal != nil {
-        t1 := o.Dec.Type
-        t2 := o.InitVal.GetType()
-
-        if !types.AreCompatible(t1, t2) {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected %v as while iterator init type but got %v\n", t1, t2)
-            fmt.Fprintln(os.Stderr, "\t" + o.WhilePos.At())
-            os.Exit(1)
-        }
-    }
-
     if t := o.Cond.GetType(); t.GetKind() != types.Bool {
         fmt.Fprintf(os.Stderr, "[ERROR] expected an bool as while condition but got %v\n", t)
         fmt.Fprintln(os.Stderr, "\t" + o.WhilePos.At())

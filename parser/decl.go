@@ -15,21 +15,14 @@ func prsDecl() ast.OpDecl {
         return &d
 
     case token.Name:
+        // define var (type is given)
         if token.Peek().Type == token.Typename {
-            d := prsDecVar()
-
-            // define var type is given
-            if token.Peek().Type == token.Def_var {
-                d := prsDefVar(d)
-                return &d
-            }
-
+            d := prsDefVar()
             return &d
         }
-    
-        // define var infer the type with the value
+        // define var (infer the type with the value)
         if token.Peek().Type == token.Def_var {
-            d := prsDefVarInfer(token.Cur())
+            d := prsDefVarInfer()
             return &d
         }
 
@@ -37,15 +30,15 @@ func prsDecl() ast.OpDecl {
             fmt.Fprintln(os.Stderr, "[ERROR] function calls are not allowed in global scope")
             fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
             os.Exit(1)
-        } else if token.Peek().Type == token.Assign {
+        }
+        if token.Peek().Type == token.Assign {
             fmt.Fprintln(os.Stderr, "[ERROR] assigning variables is not allowed in global scope (but defining)")
             fmt.Fprintln(os.Stderr, "\t" + token.Peek().At())
             os.Exit(1)
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] identifier \"%s\" is not used (maybe forgot to provide a type)\n", token.Cur().Str)
-            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
-            os.Exit(1)
         }
+        fmt.Fprintf(os.Stderr, "[ERROR] identifier \"%s\" is not used (maybe forgot to previde a type)\n", token.Cur().Str)
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
         return &ast.BadDecl{}
 
     default:
@@ -104,23 +97,44 @@ func prsDecVar() ast.OpDecVar {
     return ast.OpDecVar{ Name: name, Type: t }
 }
 
-func prsDefVar(dec ast.OpDecVar) ast.OpDefVar {
-    pos := token.Next().Pos
-    token.Next()
-    return ast.OpDefVar{ Name: dec.Name, Type: dec.Type, ColPos: pos, Value: prsExpr() }
-}
+func prsDefVar() ast.OpDefVar {
+    dec := prsDecVar()
+    if token.Peek().Type == token.Def_var {
+        if token.Next().Type != token.Def_var {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a \":=\" but got \"%s\"(%s)\n", token.Cur().Type.Readable(), token.Cur().Str)
+            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+            os.Exit(1)
+        }
+        pos := token.Cur().Pos
 
-func prsDefVarInfer(name token.Token) ast.OpDefVar {
-    if name.Type != token.Name {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got \"%s\"(%s)\n", name.Type.Readable(), name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
+        token.Next()
+        return ast.OpDefVar{ Name: dec.Name, Type: dec.Type, ColPos: pos, Value: prsExpr() }
     }
 
-    pos := token.Next().Pos
+    fmt.Fprintln(os.Stderr, "[ERROR] declaring without initializing is not allowed")
+    fmt.Fprintln(os.Stderr, "\t" + dec.Name.At())
+    os.Exit(1)
+    return ast.OpDefVar{}
+}
+
+func prsDefVarInfer() ast.OpDefVar {
+    if token.Cur().Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got \"%s\"(%s)\n", token.Cur().Type.Readable(), token.Cur().Str)
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+    name := token.Cur()
+
+    if token.Next().Type != token.Def_var {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a \":=\" but got \"%s\"(%s)\n", token.Cur().Type.Readable(), token.Cur().Str)
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+    pos := token.Cur().Pos
+
     token.Next()
     val := prsExpr()
-    return ast.OpDefVar{ Name: name, Type: val.GetType(), ColPos: pos, Value: val }
+    return ast.OpDefVar{ Name: name, Type: nil, ColPos: pos, Value: val }
 }
 
 func prsDecArgs() []ast.OpDecVar {

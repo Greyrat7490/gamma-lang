@@ -48,6 +48,10 @@ func (o *OpDecVar) Compile(file *os.File) {
 }
 
 func (o *OpDefVar) Compile(file *os.File) {
+    if o.Type == nil {
+        o.Type = o.Value.GetType()
+    }
+    
     vars.Declare(o.Name, o.Type)
 
     o.typeCheck()
@@ -133,8 +137,8 @@ func (o *OpBlock) maxFrameSize() int {
     for _,s := range o.Stmts {
         switch stmt := s.(type) {
         case *OpDeclStmt:
-            if dec, ok := stmt.Decl.(*OpDecVar); ok {
-                res += dec.Type.Size()
+            if def, ok := stmt.Decl.(*OpDefVar); ok {
+                res += def.Type.Size()
             }
         case *OpBlock:
             size := stmt.maxFrameSize()
@@ -142,15 +146,15 @@ func (o *OpBlock) maxFrameSize() int {
                 maxInnerSize = size
             }
         case *ForStmt:
-            size := stmt.Dec.Type.Size()
+            size := stmt.Def.Type.Size()
             size += stmt.Block.maxFrameSize()
             if size > maxInnerSize {
                 maxInnerSize = size
             }
         case *WhileStmt:
             size := stmt.Block.maxFrameSize()
-            if stmt.InitVal != nil {
-                size += stmt.Dec.Type.Size()
+            if stmt.Def != nil {
+                size += stmt.Def.Type.Size()
             }
             if size > maxInnerSize {
                 maxInnerSize = size

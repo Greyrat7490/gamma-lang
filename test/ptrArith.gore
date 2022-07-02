@@ -2,7 +2,7 @@ v1 i32 := 0
 pGlobal *i32 := &v1
 
 fn main() {
-    local i32
+    local i32 := 0
     pLocal *i32 := &local
 
     diff i32 := pLocal - pGlobal

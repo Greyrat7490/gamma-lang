@@ -75,7 +75,7 @@ func reserveSpace(file *os.File, argsSize int, blockSize int) {
     size := argsSize + blockSize
     if size > 0 {
         // size has to be the multiple of 16byte
-        size += 16 - size % 16
+        size = (size + 15) & ^15
         file.WriteString(fmt.Sprintf("sub rsp, %d\n", size))
     }
 }

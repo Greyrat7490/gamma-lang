@@ -7,20 +7,28 @@ import (
 )
 
 func (o *OpDecVar) Readable(indent int) string {
-    s := strings.Repeat("   ", indent)
-    s2 := s + "   "
+    s  := strings.Repeat("   ", indent)
+    s2 := strings.Repeat("   ", indent+1)
 
-    return fmt.Sprintf("%sOP_DEC_VAR:\n%s%s(%s) %v(Typename)\n", s, s2,
-        o.Name.Str, o.Name.Type.Readable(),
-        o.Type)
+    return s + "OP_DEC_VAR:\n" +
+          s2 + fmt.Sprintf("%v(Name)\n", o.Name.Str) +
+          s2 + fmt.Sprintf("%v(Typename)\n", o.Type)
 }
 
 func (o *OpDefVar) Readable(indent int) string {
-    s := strings.Repeat("   ", indent)
-    s2 := s + "   "
+    s  := strings.Repeat("   ", indent)
+    s2 := strings.Repeat("   ", indent+1)
 
-    return fmt.Sprintf("%sOP_DEF_VAR:\n%s%s(%s)\n", s, s2,
-        o.Name.Str, o.Name.Type.Readable()) + o.Value.Readable(indent+1)
+    res := s + "OP_DEF_VAR:\n" +
+        s2 + fmt.Sprintf("%v(Name)\n", o.Name.Str)
+
+    if o.Type == nil {
+        res += s2 + "infer type\n"
+    } else {
+        res += s2 + fmt.Sprintf("%v(Typename)\n", o.Type)
+    }
+
+    return res + o.Value.Readable(indent+1)
 }
 
 func (o *OpDefFn) Readable(indent int) string {
@@ -53,11 +61,13 @@ func (o *IdentExpr) Readable(indent int) string {
 }
 
 func (o *OpFnCall) Readable(indent int) string {
-    s := strings.Repeat("   ", indent)
-    s2 := s + "   "
+    s  := strings.Repeat("   ", indent)
+    s2 := strings.Repeat("   ", indent+1)
 
-    res := fmt.Sprintf("%sOP_CALL_FN:\n%s%s\n", s, s2, o.FnName.Str)
-    for _, e := range o.Values {
+    res := s + "OP_CALL_FN:\n" +
+          s2 + o.FnName.Str + "(Name)\n"
+
+    for _,e := range o.Values {
         res += e.Readable(indent+1)
     }
 
@@ -195,9 +205,8 @@ func (o *ThroughStmt) Readable(indent int) string {
 func (o *WhileStmt) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "WHILE:\n" +
         o.Cond.Readable(indent+1)
-    if o.InitVal != nil {
-        res += o.Dec.Readable(indent+1) +
-        o.InitVal.Readable(indent+1)
+    if o.Def != nil {
+        res += o.Def.Readable(indent+1)
     }
     res += o.Block.Readable(indent+1)
 
@@ -206,13 +215,12 @@ func (o *WhileStmt) Readable(indent int) string {
 
 func (o *ForStmt) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "FOR:\n" +
-        o.Dec.Readable(indent+1)
+        o.Def.Readable(indent+1)
     if o.Limit != nil {
         res += o.Limit.Readable(indent+1)
     }
 
-    res += o.Start.Readable(indent+1) +
-    o.Step.Readable(indent+1) +
+    res += o.Step.Readable(indent+1) +
     o.Block.Readable(indent+1)
 
     return res
