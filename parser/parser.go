@@ -10,6 +10,7 @@ import (
 var isMainDefined bool = false
 
 func Parse() {
+    fmt.Println("[INFO] parsing...")
     for token.Peek().Type != token.EOF {
         ast.AddOp(prsDecl())
     }

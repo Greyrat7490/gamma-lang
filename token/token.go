@@ -302,6 +302,8 @@ func (t Token) At() string {
 }
 
 func Tokenize(file []byte) {
+    fmt.Println("[INFO] tokenizing...")
+
     keySigns := "(){}+-*/%=,:;&$"
     f := string(file)
 

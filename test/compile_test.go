@@ -1,14 +1,14 @@
 package test
 
 import (
-	"fmt"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
-	"testing"
+    "os"
+    "fmt"
     "flag"
+    "os/exec"
+    "strings"
+    "testing"
+    "io/ioutil"
+    "path/filepath"
 )
 
 var rec bool
