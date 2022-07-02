@@ -66,5 +66,13 @@ run tests
 ```console
 $ go test ./test -v
 ```
+gorec usage
+```console
+$ go run gorec --help
+gorec usage:
+  -ast
+    	show the AST
+  -r	run the compiled executable
+```
 
 later examples in examples folder...
