@@ -16,10 +16,13 @@ var keepAsm bool
 
 var failed bool = false
 
-func record(t *testing.T, name string, stdout string, stderr string) {
-    output := []byte(stdout + "\n" + stderr)
+func record(t *testing.T, path string, name string, stdout string, stderr string) {
+    os.MkdirAll(path, 0644)
 
-    err := ioutil.WriteFile(name, output, 0644)
+    output := []byte(stdout + "\n" + stderr)
+    file := path + "/" + name + ".rec"
+
+    err := ioutil.WriteFile(file, output, 0644)
     if err != nil {
         t.Fatalf("[ERROR] could not record results\n\t%v\n", err)
     }
@@ -27,12 +30,13 @@ func record(t *testing.T, name string, stdout string, stderr string) {
     fmt.Println("[RECORDED]")
 }
 
-func check(name string, stdout string, stderr string) {
+func check(path string, name string, stdout string, stderr string) {
     result := stdout + "\n" + stderr
+    file := path + "/" + name + ".rec"
 
-    expected, err := ioutil.ReadFile(name)
+    expected, err := ioutil.ReadFile(file)
     if err != nil {
-        fmt.Printf("[ERROR] could not compair with recorded results\n\t%v\n", err)
+        fmt.Printf("[ERROR] could not compare with recorded results\n\t%v\n", err)
         failed = true
         return
     }
@@ -58,24 +62,24 @@ func check(name string, stdout string, stderr string) {
 
 // removes executable, object and assembly files
 // if 'srcname' != "" -> the assembly file will be renamed instead
-func clearBuilds(t *testing.T, srcname string) {
-    err := os.Remove("output")
+func clearBuilds(t *testing.T, path string, srcname string) {
+    err := os.Remove(path + "output")
     if err != nil && !os.IsNotExist(err) {
         t.Fatalf("[ERROR] could not remove output\n%v", err)
     }
 
-    err = os.Remove("output.o")
+    err = os.Remove(path + "output.o")
     if err != nil && !os.IsNotExist(err) {
         t.Fatalf("[ERROR] could not remove output.o\n%v", err)
     }
 
     if len(srcname) == 0 {
-        err = os.Remove("output.asm")
+        err = os.Remove(path + "output.asm")
         if err != nil && !os.IsNotExist(err)  {
             t.Fatalf("[ERROR] could not remove output.asm\n%v", err)
         }
     } else {
-        err = os.Rename("output.asm", srcname + ".asm")
+        err = os.Rename(path + "output.asm", srcname + ".asm")
         if err != nil && !os.IsNotExist(err) {
             t.Fatalf("[ERROR] could not rename output.asm\n%v", err)
         }
@@ -87,13 +91,15 @@ func init() {
     flag.BoolVar(&keepAsm, "asm", false, "keep the assembly files generated")
 }
 
-func TestCompile(t *testing.T) {
+func test(t *testing.T, flagStr string, recDir string, fileDir string) {
     flag.Parse()
 
     path, err := os.Getwd()
     if err != nil {
         fmt.Fprintln(os.Stderr, err)
     }
+
+    path += "/" + fileDir + "/"
 
     files, err := ioutil.ReadDir(path)
     if err != nil {
@@ -103,7 +109,7 @@ func TestCompile(t *testing.T) {
     for _, f := range files {
         if filepath.Ext(f.Name()) == ".gore" {
             fmt.Print(f.Name())
-            cmd := exec.Command("go", "run", "gorec", f.Name())
+            cmd := exec.Command("go", "run", "gorec", flagStr, f.Name())
 
             var stdout, stderr strings.Builder
             cmd.Stdout = &stdout
@@ -115,20 +121,30 @@ func TestCompile(t *testing.T) {
             stderrStr := stderr.String()
 
             if rec {
-                record(t, f.Name() + ".rec", stdoutStr, stderrStr)
+                record(t, recDir, f.Name(), stdoutStr, stderrStr)
             } else {
-                check(f.Name() + ".rec", stdoutStr, stderrStr)
+                check(recDir, f.Name(), stdoutStr, stderrStr)
             }
 
             if keepAsm {
-                clearBuilds(t, f.Name())
+                clearBuilds(t, path, f.Name())
             } else {
-                clearBuilds(t, "")
+                clearBuilds(t, path, "")
             }
         }
     }
+}
 
-    if failed {
-        os.Exit(1)
-    }
+func TestError(t *testing.T) {
+    test(t, "", "recs/err", "errTests")
+
+    if failed { os.Exit(1) }
+}
+
+func TestAst(t *testing.T) {
+    test(t, "-ast", "recs/ast", "")
+}
+
+func TestRun(t *testing.T) {
+    test(t, "-r", "recs/run", "")
 }
