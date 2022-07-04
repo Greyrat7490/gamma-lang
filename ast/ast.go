@@ -8,7 +8,7 @@ import (
 var ast OpProgramm
 
 func ShowAst() {
-    fmt.Println(ast.Readable(0));
+    fmt.Print(ast.Readable(0));
 }
 
 func AddOp(opDecl OpDecl) {

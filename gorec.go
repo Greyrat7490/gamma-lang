@@ -40,12 +40,10 @@ func runExe() {
     fmt.Printf("[EXEC] ./output\n\n")
 
     out, err := exec.Command("./output").CombinedOutput()
+    fmt.Print(string(out))
     if err != nil {
         fmt.Fprintln(os.Stderr, "[ERROR]", err)
-        os.Exit(1)
     }
-
-    fmt.Println(string(out))
 }
 
 func init() {

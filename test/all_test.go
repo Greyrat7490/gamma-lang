@@ -37,27 +37,71 @@ func check(path string, name string, stdout string, stderr string) {
     expected, err := ioutil.ReadFile(file)
     if err != nil {
         fmt.Printf("[ERROR] could not compare with recorded results\n\t%v\n", err)
-        failed = true
         return
     }
 
-    if result != string(expected) {
-        fmt.Println("[FAILED]")
-        fmt.Println("--------------------")
-
-        fmt.Fprintln(os.Stderr, "result:")
-        fmt.Fprint(os.Stderr, result)
-
-        fmt.Println("-----")
-
-        fmt.Fprintln(os.Stderr, "expected:")
-        fmt.Fprint(os.Stderr, string(expected))
-        fmt.Println("--------------------")
-
-        failed = true
-    } else {
+    if string(expected) == result {
         fmt.Println("[PASSED]")
+    } else {
+        fmt.Println("[FAILED]")
+        fmt.Println(diff(string(expected), result))
+        failed = true
     }
+}
+
+func diff(expected string, res string) (diffStr string) {
+    expLines := strings.Split(expected, "\n")
+    resLines := strings.Split(res, "\n")
+
+    ir := 0
+    for ie := 0; ie < len(expLines); ie++ {
+        if expLines[ie] != resLines[ir] {
+            found := false
+            n := ir
+            for ; n < len(resLines); n++ {
+                if resLines[n] == expLines[ie] {
+                    found = true;
+                    break 
+                }
+            }
+
+            if found {
+                for i := ir; i < n; i++ {
+                    diffStr += fmt.Sprintf("@%d + %s\n", i, resLines[i])
+                }
+                ir = n
+            } else {
+                for i := n; i < len(resLines); i++ {
+                    if resLines[i] == expLines[ir] {
+                        found = true;
+                        break 
+                    }
+                }
+
+                diffStr += fmt.Sprintf("@%d - %s\n", ie, expLines[ie])
+                if !found {
+                    diffStr += fmt.Sprintf("@%d + %s\n", ir, resLines[ir])
+                }
+            }
+        }
+
+        ir++
+        if ir >= len(resLines) { 
+            break
+        }
+    } 
+
+    if len(resLines) < len(expLines) {
+        for ; ir < len(expLines); ir++ {
+            diffStr += fmt.Sprintf("@%d - %s\n", ir, expLines[ir])
+        }
+    } else if len(resLines) > len(expLines) {
+        for ; ir < len(resLines); ir++ {
+            diffStr += fmt.Sprintf("@%d + %s\n", ir, resLines[ir])
+        }
+    }
+
+    return
 }
 
 // removes executable, object and assembly files
