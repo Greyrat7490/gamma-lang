@@ -10,124 +10,124 @@ import (
     "gorec/asm/x86_64"
 )
 
-type OpStmt interface {
-    Op
+type Stmt interface {
+    Node
     Compile(file *os.File)
-    stmt()  // to differenciate OpStmt from OpDecl
+    stmt()  // to distinguish Stmt from Decl
 }
 
 type BadStmt struct {}
 
-type OpDeclStmt struct {
-    Decl OpDecl
+type DeclStmt struct {
+    Decl Decl
 }
 
-type OpExprStmt struct {
-    Expr OpExpr
+type ExprStmt struct {
+    Expr Expr
 }
 
-type OpAssignVar struct {
+type Assign struct {
     Pos token.Pos
-    Dest OpExpr
-    Value OpExpr
+    Dest Expr
+    Value Expr
 }
 
-type OpBlock struct {
+type Block struct {
     BraceLPos token.Pos
-    Stmts []OpStmt
+    Stmts []Stmt
     BraceRPos token.Pos
 }
 
-type IfStmt struct {
+type If struct {
     Pos token.Pos
-    Cond OpExpr
-    Block OpBlock
-    Else *ElseStmt // only one of these is set
-    Elif *ElifStmt
+    Cond Expr
+    Block Block
+    Else *Else // only one of these is set
+    Elif *Elif
 }
 
-type ElifStmt IfStmt
+type Elif If
 
-type ElseStmt struct {
+type Else struct {
     ElsePos token.Pos
-    Block OpBlock
+    Block Block
 }
 
-type SwitchStmt struct {
+type Switch struct {
     Pos token.Pos
-    Cases []CaseStmt
+    Cases []Case
 }
 
-type CaseStmt struct {
-    Cond OpExpr         // nil -> default
+type Case struct {
+    Cond Expr         // nil -> default
     ColonPos token.Pos
-    Stmts []OpStmt
+    Stmts []Stmt
 }
 
-type ThroughStmt struct {
+type Through struct {
     Pos token.Pos
 }
 
-type WhileStmt struct {
+type While struct {
     WhilePos token.Pos
-    Cond OpExpr
-    Def *OpDefVar       // nil -> no iterator
-    Block OpBlock
+    Cond Expr
+    Def *DefVar       // nil -> no iterator
+    Block Block
 }
 
-type ForStmt struct {
+type For struct {
     ForPos token.Pos
-    Def OpDefVar
-    Limit OpExpr
-    Step OpExpr
-    Block OpBlock
+    Def DefVar
+    Limit Expr
+    Step Expr
+    Block Block
 }
 
-type BreakStmt struct {
+type Break struct {
     Pos token.Pos
 }
 
-type ContinueStmt struct {
+type Continue struct {
     Pos token.Pos
 }
 
 
-func (o *BadStmt)      stmt() {}
-func (o *IfStmt)       stmt() {}
-func (o *ElseStmt)     stmt() {}
-func (o *ElifStmt)     stmt() {}
-func (o *SwitchStmt)   stmt() {}
-func (o *ThroughStmt)  stmt() {}
-func (o *CaseStmt)     stmt() {}
-func (o *ForStmt)      stmt() {}
-func (o *WhileStmt)    stmt() {}
-func (o *BreakStmt)    stmt() {}
-func (o *ContinueStmt) stmt() {}
-func (o *OpBlock)      stmt() {}
-func (o *OpDeclStmt)   stmt() {}
-func (o *OpExprStmt)   stmt() {}
-func (o *OpAssignVar)  stmt() {}
+func (s *BadStmt)  stmt() {}
+func (s *DeclStmt) stmt() {}
+func (s *ExprStmt) stmt() {}
+func (s *Block)    stmt() {}
+func (s *Assign)   stmt() {}
+func (s *If)       stmt() {}
+func (s *Else)     stmt() {}
+func (s *Elif)     stmt() {}
+func (s *Switch)   stmt() {}
+func (s *Through)  stmt() {}
+func (s *Case)     stmt() {}
+func (s *For)      stmt() {}
+func (s *While)    stmt() {}
+func (s *Break)    stmt() {}
+func (s *Continue) stmt() {}
 
 
-func (o *OpAssignVar) Compile(file *os.File) {
-    o.typeCheck()
+func (s *Assign) Compile(file *os.File) {
+    s.typeCheck()
 
-    size := o.Dest.GetType().Size()
+    size := s.Dest.GetType().Size()
 
-    switch dest := o.Dest.(type) {
-    case *UnaryExpr:
+    switch dest := s.Dest.(type) {
+    case *Unary:
         dest.Compile(file)
 
-        switch e := o.Value.(type) {
-        case *LitExpr:
+        switch e := s.Value.(type) {
+        case *Lit:
             vars.DerefSetVal(file, e.Val, size)
 
-        case *IdentExpr:
+        case *Ident:
             vars.DerefSetVar(file, e.Ident)
 
-        case *UnaryExpr:
+        case *Unary:
             file.WriteString(asm.MovRegReg(asm.RegD, asm.RegA, size))
-            o.Value.Compile(file)
+            s.Value.Compile(file)
             if e.Operator.Type == token.Mul {
                 file.WriteString(asm.DerefRax(size))
             }
@@ -135,11 +135,11 @@ func (o *OpAssignVar) Compile(file *os.File) {
 
         default:
             file.WriteString(asm.MovRegReg(asm.RegD, asm.RegA, size))
-            o.Value.Compile(file)
+            s.Value.Compile(file)
             file.WriteString(asm.MovDerefReg("rdx", size, asm.RegA))
         }
 
-    case *IdentExpr:
+    case *Ident:
         v := vars.GetVar(dest.Ident.Str)
         if v == nil {
             fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", dest.Ident.Str)
@@ -147,64 +147,64 @@ func (o *OpAssignVar) Compile(file *os.File) {
             os.Exit(1)
         }
 
-        switch e := o.Value.(type) {
-        case *LitExpr:
+        switch e := s.Value.(type) {
+        case *Lit:
             v.SetVal(file, e.Val)
 
-        case *IdentExpr:
+        case *Ident:
             v.SetVar(file, e.Ident)
 
-        case *UnaryExpr:
-            o.Value.Compile(file)
+        case *Unary:
+            s.Value.Compile(file)
             if e.Operator.Type == token.Mul {
                 file.WriteString(asm.DerefRax(size))
             }
             v.SetExpr(file)
 
         default:
-            o.Value.Compile(file)
+            s.Value.Compile(file)
             v.SetExpr(file)
         }
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] expected a variable or a derefenced pointer but got \"%t\"\n", dest)
-        fmt.Fprintln(os.Stderr, "\t" + o.Pos.At())
+        fmt.Fprintln(os.Stderr, "\t" + s.Pos.At())
         os.Exit(1)
     }
 }
 
-func (o *OpBlock) Compile(file *os.File) {
-    for _, op := range o.Stmts {
-        op.Compile(file)
+func (s *Block) Compile(file *os.File) {
+    for _, stmt := range s.Stmts {
+        stmt.Compile(file)
     }
 }
 
-func (o *IfStmt) Compile(file *os.File) {
-    o.typeCheck()
+func (s *If) Compile(file *os.File) {
+    s.typeCheck()
 
     vars.CreateScope()
 
-    hasElse := o.Else != nil || o.Elif != nil
+    hasElse := s.Else != nil || s.Elif != nil
 
     var count uint = 0
-    switch e := o.Cond.(type) {
-    case *LitExpr:
-        if e.Val.Str == "true" {
-            o.Block.Compile(file)
+    switch c := s.Cond.(type) {
+    case *Lit:
+        if c.Val.Str == "true" {
+            s.Block.Compile(file)
             return
-        } else if o.Else != nil {
-            o.Else.Block.Compile(file)
+        } else if s.Else != nil {
+            s.Else.Block.Compile(file)
             return
         }
 
-    case *IdentExpr:
-        count = cond.IfIdent(file, e.Ident, hasElse)
-        o.Block.Compile(file)
+    case *Ident:
+        count = cond.IfIdent(file, c.Ident, hasElse)
+        s.Block.Compile(file)
 
     default:
-        o.Cond.Compile(file)
+        s.Cond.Compile(file)
         count = cond.IfExpr(file, hasElse)
-        o.Block.Compile(file)
+        s.Block.Compile(file)
     }
 
     vars.RemoveScope()
@@ -212,10 +212,10 @@ func (o *IfStmt) Compile(file *os.File) {
     if hasElse {
         cond.ElseStart(file, count)
 
-        if o.Else != nil {
-            o.Else.Compile(file)
+        if s.Else != nil {
+            s.Else.Compile(file)
         } else {
-            o.Elif.Compile(file)
+            s.Elif.Compile(file)
         }
 
         cond.ElseEnd(file, count)
@@ -224,17 +224,17 @@ func (o *IfStmt) Compile(file *os.File) {
     cond.IfEnd(file, count)
 }
 
-func (o *ElifStmt) Compile(file *os.File) {
-    (*IfStmt)(o).Compile(file)
+func (s *Elif) Compile(file *os.File) {
+    (*If)(s).Compile(file)
 }
 
-func (o *CaseStmt) Compile(file *os.File, switchCount uint) {
+func (s *Case) Compile(file *os.File, switchCount uint) {
     vars.CreateScope()
     defer vars.RemoveScope()
 
-    block := OpBlock{ Stmts: o.Stmts }
+    block := Block{ Stmts: s.Stmts }
 
-    if o.Cond == nil {
+    if s.Cond == nil {
         cond.Default(file)
         block.Compile(file)
         return
@@ -242,10 +242,10 @@ func (o *CaseStmt) Compile(file *os.File, switchCount uint) {
 
     cond.CaseStart(file)
 
-    if i,ok := o.Cond.(*IdentExpr); ok {
+    if i,ok := s.Cond.(*Ident); ok {
         cond.CaseIdent(file, i.Ident)
     } else {
-        o.Cond.Compile(file)
+        s.Cond.Compile(file)
         cond.CaseExpr(file)
     }
 
@@ -254,106 +254,106 @@ func (o *CaseStmt) Compile(file *os.File, switchCount uint) {
     cond.CaseBodyEnd(file, switchCount)
 }
 
-func (o *SwitchStmt) Compile(file *os.File) {
-    o.typeCheck()
+func (s *Switch) Compile(file *os.File) {
+    s.typeCheck()
     count := cond.StartSwitch()
 
     // TODO: detect unreachable code and throw error
     // * a1 < but case 420 before 86
     // * cases with same cond
 
-    for i := 0; i < len(o.Cases)-1; i++ {
-        o.Cases[i].Compile(file, count)
+    for i := 0; i < len(s.Cases)-1; i++ {
+        s.Cases[i].Compile(file, count)
     }
     cond.InLastCase()
-    o.Cases[len(o.Cases)-1].Compile(file, count)
+    s.Cases[len(s.Cases)-1].Compile(file, count)
 
     cond.EndSwitch(file)
 }
 
-func (o *ThroughStmt) Compile(file *os.File) {
-    cond.Through(file, o.Pos)
+func (s *Through) Compile(file *os.File) {
+    cond.Through(file, s.Pos)
 }
 
-func (o *ElseStmt) Compile(file *os.File) {
+func (s *Else) Compile(file *os.File) {
     vars.CreateScope()
-    o.Block.Compile(file)
+    s.Block.Compile(file)
     vars.RemoveScope()
 }
 
-func (o *WhileStmt) Compile(file *os.File) {
+func (s *While) Compile(file *os.File) {
     vars.CreateScope()
     defer vars.RemoveScope()
 
-    if o.Def != nil {
-        o.Def.Compile(file)
+    if s.Def != nil {
+        s.Def.Compile(file)
     }
 
-    o.typeCheck()
+    s.typeCheck()
 
-    switch e := o.Cond.(type) {
-    case *LitExpr:
+    switch e := s.Cond.(type) {
+    case *Lit:
         if e.Val.Str == "true" {
             count := loops.WhileStart(file)
-            o.Block.Compile(file)
+            s.Block.Compile(file)
             loops.WhileEnd(file, count)
         }
 
-    case *IdentExpr:
+    case *Ident:
         count := loops.WhileStart(file)
         loops.WhileIdent(file, e.Ident)
-        o.Block.Compile(file)
+        s.Block.Compile(file)
         loops.WhileEnd(file, count)
 
     default:
         count := loops.WhileStart(file)
-        o.Cond.Compile(file)
+        s.Cond.Compile(file)
         loops.WhileExpr(file)
-        o.Block.Compile(file)
+        s.Block.Compile(file)
         loops.WhileEnd(file, count)
     }
 }
 
-func (o *ForStmt) Compile(file *os.File) {
+func (s *For) Compile(file *os.File) {
     vars.CreateScope()
     defer vars.RemoveScope()
 
-    o.Def.Compile(file)
+    s.Def.Compile(file)
 
-    o.typeCheck()
+    s.typeCheck()
 
     count := loops.ForStart(file)
-    if o.Limit != nil {
-        cond := BinaryExpr{ Operator: token.Token{ Type: token.Lss }, OperandL: &IdentExpr{ Ident: o.Def.Name }, OperandR: o.Limit }
+    if s.Limit != nil {
+        cond := Binary{ Operator: token.Token{ Type: token.Lss }, OperandL: &Ident{ Ident: s.Def.Name }, OperandR: s.Limit }
         cond.Compile(file)
         loops.ForExpr(file)
     }
 
-    o.Block.Compile(file)
+    s.Block.Compile(file)
     loops.ForBlockEnd(file, count)
 
-    step := OpAssignVar{ Dest: &IdentExpr{ Ident: o.Def.Name }, Value: o.Step }
+    step := Assign{ Dest: &Ident{ Ident: s.Def.Name }, Value: s.Step }
     step.Compile(file)
     loops.ForEnd(file, count)
 }
 
-func (o *BreakStmt) Compile(file *os.File) {
+func (s *Break) Compile(file *os.File) {
     loops.Break(file)
 }
 
-func (o *ContinueStmt) Compile(file *os.File) {
+func (s *Continue) Compile(file *os.File) {
     loops.Continue(file)
 }
 
-func (o *OpExprStmt) Compile(file *os.File) {
-    o.Expr.Compile(file)
+func (s *ExprStmt) Compile(file *os.File) {
+    s.Expr.Compile(file)
 }
 
-func (o *OpDeclStmt) Compile(file *os.File) {
-    o.Decl.Compile(file)
+func (s *DeclStmt) Compile(file *os.File) {
+    s.Decl.Compile(file)
 }
 
-func (o *BadStmt) Compile(file *os.File) {
+func (s *BadStmt) Compile(file *os.File) {
     fmt.Fprintln(os.Stderr, "[ERROR] bad statement")
     os.Exit(1)
 }

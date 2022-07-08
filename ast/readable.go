@@ -6,20 +6,20 @@ import (
     "strings"
 )
 
-func (o *OpDecVar) Readable(indent int) string {
+func (o *DecVar) Readable(indent int) string {
     s  := strings.Repeat("   ", indent)
     s2 := strings.Repeat("   ", indent+1)
 
-    return s + "OP_DEC_VAR:\n" +
+    return s + "DEC_VAR:\n" +
           s2 + fmt.Sprintf("%v(Name)\n", o.Name.Str) +
           s2 + fmt.Sprintf("%v(Typename)\n", o.Type)
 }
 
-func (o *OpDefVar) Readable(indent int) string {
+func (o *DefVar) Readable(indent int) string {
     s  := strings.Repeat("   ", indent)
     s2 := strings.Repeat("   ", indent+1)
 
-    res := s + "OP_DEF_VAR:\n" +
+    res := s + "DEF_VAR:\n" +
         s2 + fmt.Sprintf("%v(Name)\n", o.Name.Str)
 
     if o.Type == nil {
@@ -31,8 +31,8 @@ func (o *OpDefVar) Readable(indent int) string {
     return res + o.Value.Readable(indent+1)
 }
 
-func (o *OpDefFn) Readable(indent int) string {
-    res := strings.Repeat("   ", indent) + "OP_DEF_FN:\n"
+func (o *DefFn) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) + "DEF_FN:\n"
 
     s := ""
     for _,a := range o.Args {
@@ -52,20 +52,20 @@ func (o *BadDecl) Readable(indent int) string {
 }
 
 
-func (o *LitExpr) Readable(indent int) string {
+func (o *Lit) Readable(indent int) string {
     return strings.Repeat("   ", indent) + fmt.Sprintf("%s(%v)\n", o.Val.Str, o.Type)
 }
 
-func (o *IdentExpr) Readable(indent int) string {
+func (o *Ident) Readable(indent int) string {
     return strings.Repeat("   ", indent) + o.Ident.Str + "(Name)\n"
 }
 
-func (o *OpFnCall) Readable(indent int) string {
+func (o *FnCall) Readable(indent int) string {
     s  := strings.Repeat("   ", indent)
     s2 := strings.Repeat("   ", indent+1)
 
-    res := s + "OP_CALL_FN:\n" +
-          s2 + o.FnName.Str + "(Name)\n"
+    res := s + "CALL_FN:\n" +
+          s2 + o.Name.Str + "(Name)\n"
 
     for _,e := range o.Values {
         res += e.Readable(indent+1)
@@ -74,29 +74,29 @@ func (o *OpFnCall) Readable(indent int) string {
     return res
 }
 
-func (o *UnaryExpr) Readable(indent int) string {
+func (o *Unary) Readable(indent int) string {
     s := strings.Repeat("   ", indent)
     s2 := s + "   "
 
-    return fmt.Sprintf("%sOP_UNARY:\n%s%s(%s)\n", s, s2, o.Operator.Str, o.Operator.Type.Readable()) +
+    return fmt.Sprintf("%sUNARY:\n%s%s(%s)\n", s, s2, o.Operator.Str, o.Operator.Type.Readable()) +
         o.Operand.Readable(indent+1)
 }
 
-func (o *BinaryExpr) Readable(indent int) string {
+func (o *Binary) Readable(indent int) string {
     s := strings.Repeat("   ", indent)
     s2 := s + "   "
 
-    return s + "OP_BINARY:\n" +
+    return s + "BINARY:\n" +
         o.OperandL.Readable(indent+1) +
         s2 + fmt.Sprintf("%s(%s)\n", o.Operator.Str, o.Operator.Type.Readable()) +
         o.OperandR.Readable(indent+1)
 }
 
-func (o *ParenExpr) Readable(indent int) string {
+func (o *Paren) Readable(indent int) string {
     return strings.Repeat("   ", indent) + "PAREN:\n" + o.Expr.Readable(indent+1)
 }
 
-func (o *CaseExpr) Readable(indent int) string {
+func (o *XCase) Readable(indent int) string {
     s := strings.Repeat("   ", indent)
     if o.Cond == nil {
         s += "XDEFAULT:\n" + o.Expr.Readable(indent+1)
@@ -107,7 +107,7 @@ func (o *CaseExpr) Readable(indent int) string {
     return s
 }
 
-func (o *SwitchExpr) Readable(indent int) string {
+func (o *XSwitch) Readable(indent int) string {
     s := strings.Repeat("   ", indent) + "XSWITCH:\n"
 
     for _, c := range o.Cases {
@@ -124,14 +124,14 @@ func (o *BadExpr) Readable(indent int) string {
 }
 
 
-func (o *OpAssignVar) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + "OP_ASSIGN:\n" +
+func (o *Assign) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "ASSIGN:\n" +
         o.Dest.Readable(indent+1) +
         o.Value.Readable(indent+1)
 }
 
-func (o *OpBlock) Readable(indent int) string {
-    res := strings.Repeat("   ", indent) + "OP_BLOCK:\n"
+func (o *Block) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) + "BLOCK:\n"
     for _, op := range o.Stmts {
         res += op.Readable(indent+1)
     }
@@ -139,7 +139,7 @@ func (o *OpBlock) Readable(indent int) string {
     return res
 }
 
-func (o *IfStmt) Readable(indent int) string {
+func (o *If) Readable(indent int) string {
     s := strings.Repeat("   ", indent) + "IF:\n" +
         o.Cond.Readable(indent+1) +
         o.Block.Readable(indent+1)
@@ -153,7 +153,7 @@ func (o *IfStmt) Readable(indent int) string {
     return s
 }
 
-func (o *ElifStmt) Readable(indent int) string {
+func (o *Elif) Readable(indent int) string {
     s := strings.Repeat("   ", indent) + "ELIF:\n" +
         o.Cond.Readable(indent+1) +
         o.Block.Readable(indent+1)
@@ -167,12 +167,12 @@ func (o *ElifStmt) Readable(indent int) string {
     return s
 }
 
-func (o *ElseStmt) Readable(indent int) string {
+func (o *Else) Readable(indent int) string {
     return strings.Repeat("   ", indent) + "ELSE:\n" +
         o.Block.Readable(indent+1)
 }
 
-func (o *CaseStmt) Readable(indent int) string {
+func (o *Case) Readable(indent int) string {
     var s string
     if o.Cond == nil {
         s = strings.Repeat("   ", indent) + "DEFAULT:\n"
@@ -188,8 +188,8 @@ func (o *CaseStmt) Readable(indent int) string {
     return s
 }
 
-func (o *SwitchStmt) Readable(indent int) string {
-    s := strings.Repeat("   ", indent) + "COND-SWITCH:\n"
+func (o *Switch) Readable(indent int) string {
+    s := strings.Repeat("   ", indent) + "SWITCH:\n"
 
     for _, c := range o.Cases {
         s += c.Readable(indent+1)
@@ -198,11 +198,11 @@ func (o *SwitchStmt) Readable(indent int) string {
     return s
 }
 
-func (o *ThroughStmt) Readable(indent int) string {
+func (o *Through) Readable(indent int) string {
     return strings.Repeat("   ", indent) + "THROUGH\n"
 }
 
-func (o *WhileStmt) Readable(indent int) string {
+func (o *While) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "WHILE:\n" +
         o.Cond.Readable(indent+1)
     if o.Def != nil {
@@ -213,7 +213,7 @@ func (o *WhileStmt) Readable(indent int) string {
     return res
 }
 
-func (o *ForStmt) Readable(indent int) string {
+func (o *For) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "FOR:\n" +
         o.Def.Readable(indent+1)
     if o.Limit != nil {
@@ -226,19 +226,19 @@ func (o *ForStmt) Readable(indent int) string {
     return res
 }
 
-func (o *BreakStmt) Readable(indent int) string {
+func (o *Break) Readable(indent int) string {
     return strings.Repeat("   ", indent) + "BREAK\n"
 }
 
-func (o *ContinueStmt) Readable(indent int) string {
+func (o *Continue) Readable(indent int) string {
     return strings.Repeat("   ", indent) + "CONTINUE\n"
 }
 
-func (o *OpExprStmt) Readable(indent int) string {
+func (o *ExprStmt) Readable(indent int) string {
     return o.Expr.Readable(indent)
 }
 
-func (o *OpDeclStmt) Readable(indent int) string {
+func (o *DeclStmt) Readable(indent int) string {
     return o.Decl.Readable(indent)
 }
 

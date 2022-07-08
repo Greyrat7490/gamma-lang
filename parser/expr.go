@@ -19,8 +19,8 @@ const (
     PAREN_PRECEDENCE              = iota // ()
 )
 
-func prsExpr() ast.OpExpr {
-    var expr ast.OpExpr
+func prsExpr() ast.Expr {
+    var expr ast.Expr
     switch token.Cur().Type {
     case token.Number, token.Str, token.Boolean:
         expr = prsLitExpr()
@@ -103,18 +103,18 @@ func getPrecedence() precedence {
     }
 }
 
-func prsIdentExpr() *ast.IdentExpr {
-    return &ast.IdentExpr{ Ident: token.Cur() }
+func prsIdentExpr() *ast.Ident {
+    return &ast.Ident{ Ident: token.Cur() }
 }
 
-func prsLitExpr() *ast.LitExpr {
+func prsLitExpr() *ast.Lit {
     val := token.Cur()
     t := types.TypeOfVal(val.Str)
 
-    return &ast.LitExpr{ Val: val, Type: t }
+    return &ast.Lit{ Val: val, Type: t }
 }
 
-func prsValue() ast.OpExpr {
+func prsValue() ast.Expr {
     if token.Cur().Type == token.Name {
         return prsIdentExpr()
     } else {
@@ -122,8 +122,8 @@ func prsValue() ast.OpExpr {
     }
 }
 
-func prsParenExpr() *ast.ParenExpr {
-    expr := ast.ParenExpr{ ParenLPos: token.Cur().Pos }
+func prsParenExpr() *ast.Paren {
+    expr := ast.Paren{ ParenLPos: token.Cur().Pos }
 
     token.Next()
     expr.Expr = prsExpr()
@@ -139,8 +139,8 @@ func prsParenExpr() *ast.ParenExpr {
     return &expr
 }
 
-func prsUnaryExpr() *ast.UnaryExpr {
-    expr := ast.UnaryExpr{ Operator: token.Cur() }
+func prsUnaryExpr() *ast.Unary {
+    expr := ast.Unary{ Operator: token.Cur() }
 
     switch expr.Operator.Type {
     case token.Mul:
@@ -160,7 +160,7 @@ func prsUnaryExpr() *ast.UnaryExpr {
     return &expr
 }
 
-func prsCaseExpr(condBase ast.OpExpr, placeholder *ast.OpExpr, lastCaseEnd token.Pos) (caseExpr ast.CaseExpr) {
+func prsCaseExpr(condBase ast.Expr, placeholder *ast.Expr, lastCaseEnd token.Pos) (caseExpr ast.XCase) {
     if token.Cur().Type == token.Colon {
         if token.Last().Pos.Line == token.Cur().Pos.Line {
             fmt.Fprintln(os.Stderr, "[ERROR] missing case body(expr) for this case")
@@ -184,7 +184,7 @@ func prsCaseExpr(condBase ast.OpExpr, placeholder *ast.OpExpr, lastCaseEnd token
 
     // parse case cond(s) ----------------
     expr := prsExpr()
-    var conds ast.OpExpr = nil
+    var conds ast.Expr = nil
     for token.Next().Type == token.Comma {
         conds = completeCond(placeholder, condBase, expr, conds)
 
@@ -232,10 +232,10 @@ func prsCaseExpr(condBase ast.OpExpr, placeholder *ast.OpExpr, lastCaseEnd token
     return
 }
 
-func prsXSwitch() *ast.SwitchExpr {
-    switchExpr := ast.SwitchExpr{ Pos: token.Cur().Pos }
-    var condBase ast.OpExpr = nil
-    var placeholder *ast.OpExpr = nil
+func prsXSwitch() *ast.XSwitch {
+    switchExpr := ast.XSwitch{ Pos: token.Cur().Pos }
+    var condBase ast.Expr = nil
+    var placeholder *ast.Expr = nil
 
     // set condBase -----------------------
     if token.Next().Type != token.BraceL {
@@ -289,9 +289,9 @@ func prsXSwitch() *ast.SwitchExpr {
     return &switchExpr
 }
 
-func prsBinary(expr ast.OpExpr, min_precedence precedence) ast.OpExpr {
+func prsBinary(expr ast.Expr, min_precedence precedence) ast.Expr {
     for isBinaryExpr() && getPrecedence() >= min_precedence {
-        var b ast.BinaryExpr
+        var b ast.Binary
         b.OperandL = expr
 
         precedenceL := getPrecedence()
@@ -329,13 +329,13 @@ func prsBinary(expr ast.OpExpr, min_precedence precedence) ast.OpExpr {
     return expr
 }
 
-func swap(expr *ast.BinaryExpr) {
+func swap(expr *ast.Binary) {
     if expr.Operator.Type == token.Minus {
         expr.Operator.Type = token.Plus
         expr.Operator.Str = "+"
 
         t := token.Token{ Type: token.Minus, Str: "-" }
-        expr.OperandR = &ast.UnaryExpr{ Operator: t, Operand: expr.OperandR }
+        expr.OperandR = &ast.Unary{ Operator: t, Operand: expr.OperandR }
     }
 
     tmp := expr.OperandR
@@ -344,22 +344,22 @@ func swap(expr *ast.BinaryExpr) {
 }
 
 
-func prsCallFn() *ast.OpFnCall {
+func prsCallFn() *ast.FnCall {
     name := token.Cur()
     token.Next()
     vals := prsPassArgs()
 
-    return &ast.OpFnCall{ FnName: name, Values: vals }
+    return &ast.FnCall{ Name: name, Values: vals }
 }
 
-func prsPassArgs() []ast.OpExpr {
+func prsPassArgs() []ast.Expr {
     if token.Cur().Type != token.ParenL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got \"%s\"(%s)\n", token.Cur().Str, token.Cur().Type.Readable())
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)
     }
 
-    var values []ast.OpExpr
+    var values []ast.Expr
 
     if token.Next().Type == token.ParenR {
         return values

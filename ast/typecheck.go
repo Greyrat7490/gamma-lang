@@ -9,7 +9,7 @@ import (
     "gorec/types"
 )
 
-func (o *OpDefVar) typeCheck() {
+func (o *DefVar) typeCheck() {
     v := vars.GetVar(o.Name.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", o.Name.Str)
@@ -28,8 +28,8 @@ func (o *OpDefVar) typeCheck() {
 }
 
 
-func (o *OpExprStmt)   typeCheck() { o.Expr.typeCheck() }
-func (o *OpAssignVar)  typeCheck() {
+func (o *ExprStmt)   typeCheck() { o.Expr.typeCheck() }
+func (o *Assign)  typeCheck() {
     t1 := o.Dest.GetType()
     t2 := o.Value.GetType()
 
@@ -39,17 +39,17 @@ func (o *OpAssignVar)  typeCheck() {
         os.Exit(1)
     }
 }
-func (o *IfStmt) typeCheck() {
+func (o *If) typeCheck() {
     if t := o.Cond.GetType(); t.GetKind() != types.Bool {
         fmt.Fprintf(os.Stderr, "[ERROR] expected an bool as if condition but got %v\n", t)
         fmt.Fprintln(os.Stderr, "\t" + o.Pos.At())
         os.Exit(1)
     }
 }
-func (o *ElifStmt) typeCheck() {
-    (*IfStmt)(o).typeCheck()
+func (o *Elif) typeCheck() {
+    (*If)(o).typeCheck()
 }
-func (o *SwitchStmt) typeCheck() {
+func (o *Switch) typeCheck() {
     for _,c := range o.Cases {
         // skip default case
         if c.Cond == nil { continue }
@@ -63,7 +63,7 @@ func (o *SwitchStmt) typeCheck() {
     }
 }
 
-func (o *ForStmt) typeCheck() {
+func (o *For) typeCheck() {
     t := o.Def.Type
 
     if o.Limit != nil {
@@ -81,7 +81,7 @@ func (o *ForStmt) typeCheck() {
     }
 }
 
-func (o *WhileStmt) typeCheck() {
+func (o *While) typeCheck() {
     if t := o.Cond.GetType(); t.GetKind() != types.Bool {
         fmt.Fprintf(os.Stderr, "[ERROR] expected an bool as while condition but got %v\n", t)
         fmt.Fprintln(os.Stderr, "\t" + o.WhilePos.At())
@@ -91,10 +91,10 @@ func (o *WhileStmt) typeCheck() {
 
 
 func (o *BadExpr)    typeCheck() {}
-func (o *LitExpr)    typeCheck() {}
-func (o *ParenExpr)  typeCheck() {}
-func (o *IdentExpr)  typeCheck() {}
-func (o *UnaryExpr)  typeCheck() {
+func (o *Lit)    typeCheck() {}
+func (o *Paren)  typeCheck() {}
+func (o *Ident)  typeCheck() {}
+func (o *Unary)  typeCheck() {
     if o.Operator.Type == token.Plus || o.Operator.Type == token.Minus {
         if t := o.Operand.GetType(); t.GetKind() != types.I32 {
             fmt.Fprintf(os.Stderr, "[ERROR] expected i32 after +/- unary op but got %v\n", t)
@@ -103,7 +103,7 @@ func (o *UnaryExpr)  typeCheck() {
         }
     }
 }
-func (o *BinaryExpr) typeCheck() {
+func (o *Binary) typeCheck() {
     t1 := o.OperandL.GetType()
     t2 := o.OperandR.GetType()
 
@@ -134,7 +134,7 @@ func (o *BinaryExpr) typeCheck() {
     }
 }
 
-func (o *SwitchExpr) typeCheck() {
+func (o *XSwitch) typeCheck() {
     ts := make(map[types.Type][]int)
 
     for i,c := range o.Cases {
@@ -152,19 +152,19 @@ func (o *SwitchExpr) typeCheck() {
     }
 }
 
-func (o *OpFnCall) typeCheck() {
-    f := fn.GetFn(o.FnName.Str)
+func (o *FnCall) typeCheck() {
+    f := fn.GetFn(o.Name.Str)
     if f == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not declared\n", o.FnName.Str)
-        fmt.Fprintln(os.Stderr, "\t" + o.FnName.At())
+        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not declared\n", o.Name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + o.Name.At())
         os.Exit(1)
     }
 
     if len(f.Args) != len(o.Values) {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected %d args for function \"%s\" but got %d\n", len(f.Args), o.FnName.Str, len(o.Values))
+        fmt.Fprintf(os.Stderr, "[ERROR] expected %d args for function \"%s\" but got %d\n", len(f.Args), o.Name.Str, len(o.Values))
         fmt.Fprintf(os.Stderr, "\texpected: %v\n", f.Args)
         fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))
-        fmt.Fprintln(os.Stderr, "\t" + o.FnName.At())
+        fmt.Fprintln(os.Stderr, "\t" + o.Name.At())
         os.Exit(1)
     }
 
@@ -172,16 +172,16 @@ func (o *OpFnCall) typeCheck() {
         t2 := o.Values[i].GetType()
 
         if !types.AreCompatible(t1, t2) {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected %v as arg %d but got %v for function \"%s\"\n", t1, i, t2, o.FnName.Str)
+            fmt.Fprintf(os.Stderr, "[ERROR] expected %v as arg %d but got %v for function \"%s\"\n", t1, i, t2, o.Name.Str)
             fmt.Fprintf(os.Stderr, "\texpected: %v\n", f.Args)
             fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))
-            fmt.Fprintln(os.Stderr, "\t" + o.FnName.At())
+            fmt.Fprintln(os.Stderr, "\t" + o.Name.At())
             os.Exit(1)
         }
     }
 }
 
-func valuesToTypes(values []OpExpr) (res []types.Type) {
+func valuesToTypes(values []Expr) (res []types.Type) {
     for _, v := range values {
         res = append(res, v.GetType())
     }
@@ -190,10 +190,10 @@ func valuesToTypes(values []OpExpr) (res []types.Type) {
 }
 
 func (o *BadExpr)   GetType() types.Type { return nil }
-func (o *OpFnCall)  GetType() types.Type { return nil }
-func (o *LitExpr)   GetType() types.Type { return o.Type }
-func (o *ParenExpr) GetType() types.Type { return o.Expr.GetType() }
-func (o *IdentExpr) GetType() types.Type {
+func (o *FnCall)  GetType() types.Type { return nil }
+func (o *Lit)   GetType() types.Type { return o.Type }
+func (o *Paren) GetType() types.Type { return o.Expr.GetType() }
+func (o *Ident) GetType() types.Type {
     v := vars.GetVar(o.Ident.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", o.Ident.Str)
@@ -204,7 +204,7 @@ func (o *IdentExpr) GetType() types.Type {
     return v.GetType()
 }
 
-func (o *UnaryExpr) GetType() types.Type {
+func (o *Unary) GetType() types.Type {
     if o.Operator.Type == token.Amp {
         return types.PtrType{ BaseType: o.Operand.GetType() }
     }
@@ -222,7 +222,7 @@ func (o *UnaryExpr) GetType() types.Type {
     return o.Operand.GetType()
 }
 
-func (o *BinaryExpr) GetType() types.Type {
+func (o *Binary) GetType() types.Type {
     if  o.Operator.Type == token.Eql || o.Operator.Type == token.Neq ||
         o.Operator.Type == token.Grt || o.Operator.Type == token.Lss ||
         o.Operator.Type == token.Geq || o.Operator.Type == token.Leq {
@@ -249,6 +249,6 @@ func (o *BinaryExpr) GetType() types.Type {
     return t
 }
 
-func (o *SwitchExpr) GetType() types.Type {
+func (o *XSwitch) GetType() types.Type {
     return o.Cases[0].Expr.GetType()
 }

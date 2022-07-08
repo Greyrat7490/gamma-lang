@@ -8,7 +8,7 @@ import (
     "gorec/types"
 )
 
-func prsDecl() ast.OpDecl {
+func prsDecl() ast.Decl {
     switch t := token.Next(); t.Type {
     case token.Def_fn:
         d := prsDefFn()
@@ -50,7 +50,7 @@ func prsDecl() ast.OpDecl {
     }
 }
 
-func prsDefFn() ast.OpDefFn {
+func prsDefFn() ast.DefFn {
     name := token.Next()
 
     if name.Type != token.Name {
@@ -63,7 +63,7 @@ func prsDefFn() ast.OpDefFn {
         isMainDefined = true
     }
 
-    op := ast.OpDefFn{ FnName: name }
+    op := ast.DefFn{ FnName: name }
     token.Next()
     op.Args = prsDecArgs()
     token.Next()
@@ -72,7 +72,7 @@ func prsDefFn() ast.OpDefFn {
     return op
 }
 
-func prsDecVar() ast.OpDecVar {
+func prsDecVar() ast.DecVar {
     name := token.Cur()
     vartype := token.Next()
 
@@ -94,10 +94,10 @@ func prsDecVar() ast.OpDecVar {
         os.Exit(1)
     }
 
-    return ast.OpDecVar{ Name: name, Type: t }
+    return ast.DecVar{ Name: name, Type: t }
 }
 
-func prsDefVar() ast.OpDefVar {
+func prsDefVar() ast.DefVar {
     dec := prsDecVar()
     if token.Peek().Type == token.Def_var {
         if token.Next().Type != token.Def_var {
@@ -108,16 +108,16 @@ func prsDefVar() ast.OpDefVar {
         pos := token.Cur().Pos
 
         token.Next()
-        return ast.OpDefVar{ Name: dec.Name, Type: dec.Type, ColPos: pos, Value: prsExpr() }
+        return ast.DefVar{ Name: dec.Name, Type: dec.Type, ColPos: pos, Value: prsExpr() }
     }
 
     fmt.Fprintln(os.Stderr, "[ERROR] declaring without initializing is not allowed")
     fmt.Fprintln(os.Stderr, "\t" + dec.Name.At())
     os.Exit(1)
-    return ast.OpDefVar{}
+    return ast.DefVar{}
 }
 
-func prsDefVarInfer() ast.OpDefVar {
+func prsDefVarInfer() ast.DefVar {
     if token.Cur().Type != token.Name {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got \"%s\"(%s)\n", token.Cur().Type.Readable(), token.Cur().Str)
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
@@ -134,11 +134,11 @@ func prsDefVarInfer() ast.OpDefVar {
 
     token.Next()
     val := prsExpr()
-    return ast.OpDefVar{ Name: name, Type: nil, ColPos: pos, Value: val }
+    return ast.DefVar{ Name: name, Type: nil, ColPos: pos, Value: val }
 }
 
-func prsDecArgs() []ast.OpDecVar {
-    decs := []ast.OpDecVar{}
+func prsDecArgs() []ast.DecVar {
+    decs := []ast.DecVar{}
 
     if token.Cur().Type != token.ParenL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got \"%s\"(%s)\n", token.Cur().Str, token.Cur().Type.Readable())

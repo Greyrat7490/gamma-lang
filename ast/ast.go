@@ -5,41 +5,28 @@ import (
 	"fmt"
 )
 
-var ast OpProgramm
-
-func ShowAst() {
-    fmt.Print(ast.Readable(0));
-}
-
-func AddOp(opDecl OpDecl) {
-    ast.Ops = append(ast.Ops, opDecl)
-}
-
-func Compile(asm *os.File) {
-    ast.Compile(asm);
-}
-
-
-// TODO At() for Op
-type Op interface {
+// TODO At() for Node
+type Node interface {
     Readable(indent int) string
 }
 
-type OpProgramm struct {
-    Ops []OpDecl // only declaring/defining variables/functions allowed in global scope
-}
+var ast []Decl // only declaring/defining variables/functions allowed in global scope
 
-func (o *OpProgramm) Readable(indent int) string {
+func ShowAst() {
     res := ""
-    for _, op := range o.Ops {
-        res += op.Readable(indent)
+    for _, node := range ast {
+        res += node.Readable(0)
     }
 
-    return res
+    fmt.Print(res);
 }
 
-func (o *OpProgramm) Compile(asm *os.File) {
-    for _, op := range o.Ops {
-        op.Compile(asm)
+func AddNode(decl Decl) {
+    ast = append(ast, decl)
+}
+
+func Compile(asm *os.File) {
+    for _, node := range ast {
+        node.Compile(asm)
     }
 }

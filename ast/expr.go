@@ -12,172 +12,172 @@ import (
     "gorec/asm/x86_64"
 )
 
-type OpExpr interface {
-    Op
+type Expr interface {
+    Node
     Compile(file *os.File)
-    typeCheck()
     GetType() types.Type
+    typeCheck()
 }
 
 type BadExpr struct{}
 
-type OpFnCall struct {
-    FnName token.Token
-    Values []OpExpr
+type FnCall struct {
+    Name token.Token
+    Values []Expr
 }
 
-type LitExpr struct {
+type Lit struct {
     Val token.Token
     Type types.Type
 }
 
-type IdentExpr struct {
+type Ident struct {
     Ident token.Token
 }
 
-type UnaryExpr struct {
+type Unary struct {
     Operator token.Token
-    Operand OpExpr
+    Operand Expr
 }
 
-type BinaryExpr struct {
-    OperandL OpExpr
+type Binary struct {
+    OperandL Expr
     Operator token.Token
-    OperandR OpExpr
+    OperandR Expr
 }
 
-type ParenExpr struct {
+type Paren struct {
     ParenLPos token.Pos
-    Expr OpExpr
+    Expr Expr
     ParenRPos token.Pos
 }
 
-type SwitchExpr struct {
+type XSwitch struct {
     Pos token.Pos
     BraceLPos token.Pos
-    Cases []CaseExpr
+    Cases []XCase
     BraceRPos token.Pos
 }
 
-type CaseExpr struct {
-    Cond OpExpr
+type XCase struct {
+    Cond Expr
     ColonPos token.Pos
-    Expr OpExpr
+    Expr Expr
 }
 
-func (o *LitExpr) Compile(file *os.File) {
+func (e *Lit) Compile(file *os.File) {
     // TODO fix bool and str
 
-    vars.Write(file, asm.MovRegVal(asm.RegA, o.Type.Size(), o.Val.Str))
+    vars.Write(file, asm.MovRegVal(asm.RegA, e.Type.Size(), e.Val.Str))
 }
-func (o *IdentExpr) Compile(file *os.File) {
-    v := vars.GetVar(o.Ident.Str)
+func (e *Ident) Compile(file *os.File) {
+    v := vars.GetVar(e.Ident.Str)
     if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared)\n", o.Ident.Str)
-        fmt.Fprintln(os.Stderr, "\t" + o.Ident.At())
+        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared)\n", e.Ident.Str)
+        fmt.Fprintln(os.Stderr, "\t" + e.Ident.At())
         os.Exit(1)
     }
 
     vars.Write(file, asm.MovRegDeref(asm.RegA, v.Addr(0), v.GetType().Size()))
 }
-func (o *ParenExpr) Compile(file *os.File) { o.Expr.Compile(file) }
-func (o *UnaryExpr) Compile(file *os.File) {
-    o.typeCheck()
+func (e *Paren) Compile(file *os.File) { e.Expr.Compile(file) }
+func (e *Unary) Compile(file *os.File) {
+    e.typeCheck()
 
-    switch o.Operator.Type {
+    switch e.Operator.Type {
     case token.Mul:
-        if _,ok := o.Operand.(*IdentExpr); !ok {
-            if _,ok := o.Operand.(*ParenExpr); !ok {
+        if _,ok := e.Operand.(*Ident); !ok {
+            if _,ok := e.Operand.(*Paren); !ok {
                 fmt.Fprintln(os.Stderr, "[ERROR] expected a variable or parentheses after \"*\"")
-                fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+                fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
                 os.Exit(1)
             }
         }
-        o.Operand.Compile(file)
+        e.Operand.Compile(file)
 
     case token.Amp:
-        if e,ok := o.Operand.(*IdentExpr); ok {
-            vars.AddrToRax(file, e.Ident)
+        if i,ok := e.Operand.(*Ident); ok {
+            vars.AddrToRax(file, i.Ident)
         } else {
             fmt.Fprintln(os.Stderr, "[ERROR] expected a variable after \"&\"")
-            fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+            fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
             os.Exit(1)
         }
 
     default:
-        o.Operand.Compile(file)
-        if o.Operator.Type == token.Minus {
-            size := o.Operand.GetType().Size()
+        e.Operand.Compile(file)
+        if e.Operator.Type == token.Minus {
+            size := e.Operand.GetType().Size()
             vars.Write(file, asm.Neg(asm.GetReg(asm.RegA, size), size))
         }
     }
 }
-func (o *BinaryExpr) Compile(file *os.File) {
-    o.typeCheck()
+func (e *Binary) Compile(file *os.File) {
+    e.typeCheck()
 
-    o.OperandL.Compile(file)
-    if e,ok := o.OperandL.(*UnaryExpr); ok && e.Operator.Type == token.Mul {
-        vars.Write(file, asm.DerefRax(e.GetType().Size()))
+    e.OperandL.Compile(file)
+    if u,ok := e.OperandL.(*Unary); ok && u.Operator.Type == token.Mul {
+        vars.Write(file, asm.DerefRax(u.GetType().Size()))
     }
 
     // +,-,*,/, <,<=,>,>=,==,!=
-    if o.Operator.Type != token.And && o.Operator.Type != token.Or {
-        size := o.OperandL.GetType().Size()
-        if sizeR := o.OperandR.GetType().Size(); sizeR > size {
+    if e.Operator.Type != token.And && e.Operator.Type != token.Or {
+        size := e.OperandL.GetType().Size()
+        if sizeR := e.OperandR.GetType().Size(); sizeR > size {
             size = sizeR
         }
 
-        switch e := o.OperandR.(type) {
-        case *LitExpr:
-            arith.BinaryOp(file, o.Operator.Type, e.Val.Str, size)
-        case *IdentExpr:
-            v := vars.GetVar(e.Ident.Str)
+        switch opR := e.OperandR.(type) {
+        case *Lit:
+            arith.BinaryOp(file, e.Operator.Type, opR.Val.Str, size)
+        case *Ident:
+            v := vars.GetVar(opR.Ident.Str)
             if v == nil {
-                fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", e.Ident.Str)
-                fmt.Fprintln(os.Stderr, "\t" + e.Ident.At())
+                fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", opR.Ident.Str)
+                fmt.Fprintln(os.Stderr, "\t" + opR.Ident.At())
                 os.Exit(1)
             }
 
-            arith.BinaryOp(file, o.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(v.GetType().Size()), v.Addr(0)), size)
+            arith.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(v.GetType().Size()), v.Addr(0)), size)
 
         default:
             vars.Write(file, asm.Push(asm.RegA))
 
-            o.OperandR.Compile(file)
-            if u,ok := e.(*UnaryExpr); ok && u.Operator.Type == token.Mul {
+            e.OperandR.Compile(file)
+            if u,ok := opR.(*Unary); ok && u.Operator.Type == token.Mul {
                 vars.Write(file, asm.MovRegDeref(asm.RegB, "rax", size))
             } else {
                 vars.Write(file, asm.MovRegReg(asm.RegB, asm.RegA, size))
             }
 
             vars.Write(file, asm.Pop(asm.RegA))
-            arith.BinaryOpReg(file, o.Operator.Type, asm.RegB, size)
+            arith.BinaryOpReg(file, e.Operator.Type, asm.RegB, size)
         }
     // &&, ||
     } else {
-        count := cond.LogicalOp(file, o.Operator)
-        o.OperandR.Compile(file)
+        count := cond.LogicalOp(file, e.Operator)
+        e.OperandR.Compile(file)
         cond.LogicalOpEnd(file, count)
     }
 }
 
-func (o *OpFnCall) Compile(file *os.File) {
-    o.typeCheck()
+func (e *FnCall) Compile(file *os.File) {
+    e.typeCheck()
 
     regIdx := 0
-    for _, val := range o.Values {
-        switch e := val.(type) {
-        case *LitExpr:
-            fn.PassVal(file, o.FnName, regIdx, e.Val)
+    for _, val := range e.Values {
+        switch v := val.(type) {
+        case *Lit:
+            fn.PassVal(file, e.Name, regIdx, v.Val)
 
-        case *IdentExpr:
-            fn.PassVar(file, regIdx, e.Ident)
+        case *Ident:
+            fn.PassVar(file, regIdx, v.Ident)
 
-        case *UnaryExpr:
+        case *Unary:
             size := val.GetType().Size()
 
             val.Compile(file)
-            if e.Operator.Type == token.Mul {
+            if v.Operator.Type == token.Mul {
                 vars.Write(file, asm.DerefRax(size))
             }
             fn.PassReg(file, regIdx, size)
@@ -194,47 +194,47 @@ func (o *OpFnCall) Compile(file *os.File) {
         }
     }
 
-    fn.CallFunc(file, o.FnName)
+    fn.CallFunc(file, e.Name)
 }
 
-func (o *CaseExpr) Compile(file *os.File, switchCount uint) {
+func (e *XCase) Compile(file *os.File, switchCount uint) {
     vars.CreateScope()
     defer vars.RemoveScope()
 
-    if o.Cond == nil {
+    if e.Cond == nil {
         cond.Default(file)
-        o.Expr.Compile(file)
+        e.Expr.Compile(file)
         return
     }
 
     cond.CaseStart(file)
 
-    if i,ok := o.Cond.(*IdentExpr); ok {
+    if i,ok := e.Cond.(*Ident); ok {
         cond.CaseIdent(file, i.Ident)
     } else {
-        o.Cond.Compile(file)
+        e.Cond.Compile(file)
         cond.CaseExpr(file)
     }
 
     cond.CaseBody(file)
-    o.Expr.Compile(file)
+    e.Expr.Compile(file)
     cond.CaseBodyEnd(file, switchCount)
 }
 
-func (o *SwitchExpr) Compile(file *os.File) {
-    o.typeCheck()
+func (e *XSwitch) Compile(file *os.File) {
+    e.typeCheck()
     count := cond.StartSwitch()
 
-    for i := 0; i < len(o.Cases)-1; i++ {
-        o.Cases[i].Compile(file, count)
+    for i := 0; i < len(e.Cases)-1; i++ {
+        e.Cases[i].Compile(file, count)
     }
     cond.InLastCase()
-    o.Cases[len(o.Cases)-1].Compile(file, count)
+    e.Cases[len(e.Cases)-1].Compile(file, count)
 
     cond.EndSwitch(file)
 }
 
-func (o *BadExpr) Compile(file *os.File) {
+func (e *BadExpr) Compile(file *os.File) {
     fmt.Fprintln(os.Stderr, "[ERROR] bad expression")
     os.Exit(1)
 }
