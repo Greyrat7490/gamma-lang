@@ -49,59 +49,48 @@ func check(path string, name string, stdout string, stderr string) {
     }
 }
 
-func diff(expected string, res string) (diffStr string) {
+// https://en.wikipedia.org/wiki/Longest_common_subsequence_problem
+func diff(expected string, res string) string {
     expLines := strings.Split(expected, "\n")
     resLines := strings.Split(res, "\n")
 
-    ir := 0
-    for ie := 0; ie < len(expLines); ie++ {
-        if expLines[ie] != resLines[ir] {
-            found := false
-            n := ir
-            for ; n < len(resLines); n++ {
-                if resLines[n] == expLines[ie] {
-                    found = true;
-                    break 
-                }
-            }
+    LCS_Table := make([][]int, len(expLines)+1)
+    for i := range LCS_Table {
+        LCS_Table[i] = make([]int, len(resLines)+1)
+    }
 
-            if found {
-                for i := ir; i < n; i++ {
-                    diffStr += fmt.Sprintf("@%d + %s\n", i, resLines[i])
-                }
-                ir = n
+    // init LCS_table
+    for ie := 1; ie <= len(expLines); ie++ {
+        for ir := 1; ir <= len(resLines); ir++ {
+            if expLines[ie-1] == resLines[ir-1] {
+                LCS_Table[ie][ir] = LCS_Table[ie-1][ir-1] + 1
+
+            } else if LCS_Table[ie-1][ir] >= LCS_Table[ie][ir-1] {
+                LCS_Table[ie][ir] = LCS_Table[ie-1][ir]
+
             } else {
-                for i := n; i < len(resLines); i++ {
-                    if resLines[i] == expLines[ir] {
-                        found = true;
-                        break 
-                    }
-                }
-
-                diffStr += fmt.Sprintf("@%d - %s\n", ie, expLines[ie])
-                if !found {
-                    diffStr += fmt.Sprintf("@%d + %s\n", ir, resLines[ir])
-                }
+                LCS_Table[ie][ir] = LCS_Table[ie][ir-1]
             }
-        }
-
-        ir++
-        if ir >= len(resLines) { 
-            break
-        }
-    } 
-
-    if len(resLines) < len(expLines) {
-        for ; ir < len(expLines); ir++ {
-            diffStr += fmt.Sprintf("@%d - %s\n", ir, expLines[ir])
-        }
-    } else if len(resLines) > len(expLines) {
-        for ; ir < len(resLines); ir++ {
-            diffStr += fmt.Sprintf("@%d + %s\n", ir, resLines[ir])
         }
     }
 
-    return
+    return getDiff(LCS_Table, expLines, resLines, len(expLines), len(resLines))
+}
+
+func getDiff(LCS_Table [][]int, a []string, b []string, i int, j int) string {
+    if i == 0 || j == 0 {
+        return ""
+    }
+
+    if a[i-1] == b[j-1] {
+        return getDiff(LCS_Table, a, b, i-1, j-1)
+    }
+
+    if LCS_Table[i][j-1] >= LCS_Table[i-1][j] {
+        return getDiff(LCS_Table, a, b, i, j-1) + fmt.Sprintf("@%d + %s\n", j, b[j-1])
+    } else {
+        return getDiff(LCS_Table, a, b, i-1, j) + fmt.Sprintf("@%d - %s\n", i, a[i-1])
+    }
 }
 
 // removes executable, object and assembly files
@@ -191,4 +180,6 @@ func TestAst(t *testing.T) {
 
 func TestRun(t *testing.T) {
     test(t, "-r", "recs/run", "")
+
+    if failed { os.Exit(1) }
 }
