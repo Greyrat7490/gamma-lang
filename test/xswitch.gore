@@ -1,4 +1,4 @@
-// test ","
+// test ",", base cond
 fn simple(a1 i32) {
     l1 i32 := $ a1 == {
         69, -69: 69
@@ -31,6 +31,46 @@ fn printAbs(a1 i32) {
     printStr("\n")
 }
 
+// test inlined with string
+fn stringTest(a1 i32) {
+    printStr(${
+        a1 > 0: "positiv\n"
+        a1 < 0: "negativ\n"
+        _: "neutral\n"
+    })
+}
+
+// test define string
+fn stringTest2(a1 i32) {
+    s str := ${
+        a1 > 0: "positiv\n"
+        a1 < 0: "negativ\n"
+        _: "neutral\n"
+    }
+
+    printStr(s)
+}
+
+// test inlined with bool
+fn boolTest(a1 i32) {
+    printInt(a1) printStr(" > 0: ")
+    printBool(${
+        a1 > 0: true
+        _: false
+    })
+    printStr("\n")
+}
+
+// test define bool
+fn boolTest2(a1 i32) {
+    b bool := ${
+        a1 > 0: true
+        _: false
+    }
+
+    printInt(a1) printStr(" > 0: ")
+    printBool(b) printStr("\n")
+}
 
 fn main() {
     printStr("simple -----------\n")
@@ -60,4 +100,32 @@ fn main() {
     printAbs(86)
     printAbs(-86)
     printAbs(-420)
+
+    printStr("string test (inlined) ---------\n")
+    stringTest(69)
+    stringTest(-69)
+    stringTest(86)
+    stringTest(-86)
+    stringTest(-420)
+
+    printStr("string test (def var) ---------\n")
+    stringTest2(69)
+    stringTest2(-69)
+    stringTest2(86)
+    stringTest2(-86)
+    stringTest2(-420)
+
+    printStr("bool test (inlined) ---------\n")
+    boolTest(69)
+    boolTest(-69)
+    boolTest(86)
+    boolTest(-86)
+    boolTest(-420)
+
+    printStr("bool test (def var) ---------\n")
+    boolTest2(69)
+    boolTest2(-69)
+    boolTest2(86)
+    boolTest2(-86)
+    boolTest2(-420)
 }

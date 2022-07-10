@@ -64,7 +64,12 @@ func (v *LocalVar) DefVal(file *os.File, val token.Token) {
 }
 
 func (v *LocalVar) DefExpr(file *os.File) {
-    file.WriteString(asm.MovLocVarReg(v.offset, v.GetType().Size(), asm.RegA))
+    if v.Type.GetKind() == types.Str {
+        file.WriteString(asm.MovLocVarReg(v.offset+types.Ptr_Size, types.Ptr_Size, asm.RegA))
+        file.WriteString(asm.MovLocVarReg(v.offset, types.I32_Size, asm.RegB))
+    } else {
+        file.WriteString(asm.MovLocVarReg(v.offset, v.GetType().Size(), asm.RegA))
+    }
 }
 
 func (v *LocalVar) DefVar(file *os.File, name token.Token) {
@@ -75,10 +80,10 @@ func (v *LocalVar) SetVal(file *os.File, val token.Token) {
     if v.Type.GetKind() == types.Str {
         strIdx := str.Add(val)
 
-        Write(file, asm.MovDerefVal(v.Addr(0), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
-        Write(file, asm.MovDerefVal(v.Addr(1), types.I32_Size, fmt.Sprint(str.GetSize(strIdx))))
+        file.WriteString(asm.MovDerefVal(v.Addr(0), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
+        file.WriteString(asm.MovDerefVal(v.Addr(1), types.I32_Size, fmt.Sprint(str.GetSize(strIdx))))
     } else {
-        Write(file, asm.MovDerefVal(v.Addr(0), v.Type.Size(), val.Str))
+        file.WriteString(asm.MovDerefVal(v.Addr(0), v.Type.Size(), val.Str))
     }
 }
 
@@ -105,7 +110,12 @@ func (v *LocalVar) SetVar(file *os.File, name token.Token) {
 }
 
 func (v *LocalVar) SetExpr(file *os.File) {
-    Write(file, asm.MovDerefReg(v.Addr(0), v.GetType().Size(), asm.RegA))
+    if v.Type.GetKind() == types.Str {
+        Write(file, asm.MovDerefReg(v.Addr(0), types.Ptr_Size, asm.RegA))
+        Write(file, asm.MovDerefReg(v.Addr(1), types.I32_Size, asm.RegB))
+    } else {
+        Write(file, asm.MovDerefReg(v.Addr(0), v.GetType().Size(), asm.RegA))
+    }
 }
 
 

@@ -189,11 +189,17 @@ func PassVar(file *os.File, regIdx int, varname token.Token) {
     }
 }
 
-func PassReg(file *os.File, regIdx int, size int) {
-    if size < 2 {
-        file.WriteString(fmt.Sprintf("movzx %s, %s\n", asm.GetReg(regs[regIdx], size), asm.GetReg(asm.RegA, size)))
+func PassReg(file *os.File, regIdx int, argType types.Type) {
+    if argType.GetKind() == types.Str {
+        file.WriteString(fmt.Sprintf("mov %s, %s\n", asm.GetReg(regs[regIdx], types.Ptr_Size), asm.GetReg(asm.RegA, types.Ptr_Size)))
+        file.WriteString(fmt.Sprintf("mov %s, %s\n", asm.GetReg(regs[regIdx+1], types.I32_Size), asm.GetReg(asm.RegB, types.I32_Size)))
     } else {
-        file.WriteString(fmt.Sprintf("mov %s, %s\n", asm.GetReg(regs[regIdx], size), asm.GetReg(asm.RegA, size)))
+        size := argType.Size()
+        if size < 2 {
+            file.WriteString(fmt.Sprintf("movzx %s, %s\n", asm.GetReg(regs[regIdx], size), asm.GetReg(asm.RegA, size)))
+        } else {
+            file.WriteString(fmt.Sprintf("mov %s, %s\n", asm.GetReg(regs[regIdx], size), asm.GetReg(asm.RegA, size)))
+        }
     }
 }
 

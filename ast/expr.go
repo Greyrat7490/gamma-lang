@@ -7,6 +7,7 @@ import (
     "gorec/vars"
     "gorec/token"
     "gorec/types"
+    "gorec/types/str"
     "gorec/arithmetic"
     "gorec/conditions"
     "gorec/asm/x86_64"
@@ -66,9 +67,18 @@ type XCase struct {
 }
 
 func (e *Lit) Compile(file *os.File) {
-    // TODO fix bool and str
+    switch e.Val.Type {
+    case token.Str:
+        strIdx := str.Add(e.Val)
 
-    vars.Write(file, asm.MovRegVal(asm.RegA, e.Type.Size(), e.Val.Str))
+        vars.Write(file, asm.MovRegVal(asm.RegA, types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
+        vars.Write(file, asm.MovRegVal(asm.RegB, types.I32_Size, fmt.Sprintf("%d", str.GetSize(strIdx))))
+    case token.Boolean:
+        if e.Val.Str == "true" { e.Val.Str = "1" } else { e.Val.Str = "0" }
+        fallthrough
+    default:
+        vars.Write(file, asm.MovRegVal(asm.RegA, e.Type.Size(), e.Val.Str))
+    }
 }
 func (e *Ident) Compile(file *os.File) {
     v := vars.GetVar(e.Ident.Str)
@@ -174,17 +184,15 @@ func (e *FnCall) Compile(file *os.File) {
             fn.PassVar(file, regIdx, v.Ident)
 
         case *Unary:
-            size := val.GetType().Size()
-
             val.Compile(file)
             if v.Operator.Type == token.Mul {
-                vars.Write(file, asm.DerefRax(size))
+                vars.Write(file, asm.DerefRax(val.GetType().Size()))
             }
-            fn.PassReg(file, regIdx, size)
+            fn.PassReg(file, regIdx, val.GetType())
 
         default:
             val.Compile(file)
-            fn.PassReg(file, regIdx, val.GetType().Size())
+            fn.PassReg(file, regIdx, val.GetType())
         }
 
         if val.GetType().GetKind() == types.Str {
