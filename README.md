@@ -6,14 +6,14 @@ A statically and strongly typed programming language similar to Go, but with mor
 It is named Gore, because I took everything out of C, Go and Rust I like to write this bloody mess.
 And because it is written in Go...
 
+* fast
+* easy
 * compiled
 * statically and strongly typed
 * lightweigth
 * important build-in functions
 * designed around hardware-near programming
 * crossplatform
-* fast
-* easy and consistend syntax
 
 ## Supported:
 * [x] Linux
@@ -28,8 +28,8 @@ And because it is written in Go...
   * [ ] fasm (preferable!)
 * [x] generate executable
 * [x] variables
+* [x] functions
 * [x] syscalls
-* [x] tests
 * [x] arithmetics
   * [x] unary ops
   * [x] binary ops
@@ -49,9 +49,18 @@ And because it is written in Go...
   * [x] deref
   * [x] get addr (via "&")
   * [x] arithmetic
+* [ ] consts
+  * [ ] define
+  * [ ] compile time eval
+* [ ] arrays
+  * [ ] declare
+    * [ ] with literal
+    * [ ] with const
+* [ ] structs
 * [x] turing complete -> actual programming language
   * [x] proof with Rule 110 programm
 * [x] type checking
+* [x] tests
 * [ ] examples
 * [ ] self-hosted
 * [ ] cross-platform
@@ -74,5 +83,3 @@ gorec usage:
     	show the AST
   -r	run the compiled executable
 ```
-
-later examples in examples folder...
