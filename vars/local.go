@@ -1,12 +1,12 @@
 package vars
 
 import (
+    "os"
     "fmt"
-    "gorec/asm/x86_64"
     "gorec/token"
     "gorec/types"
     "gorec/types/str"
-    "os"
+    "gorec/asm/x86_64"
 )
 
 var localVarOffset int = 0
@@ -43,15 +43,15 @@ func (v *LocalVar) DefVal(file *os.File, val token.Token) {
     switch v.Type.GetKind() {
     case types.Str:
         strIdx := str.Add(val)
-        file.WriteString(asm.MovLocVarVal(v.offset+types.Ptr_Size, types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
-        file.WriteString(asm.MovLocVarVal(v.offset, types.I32_Size, fmt.Sprintf("%d", str.GetSize(strIdx))))
+        file.WriteString(asm.MovDerefVal(v.Addr(0), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
+        file.WriteString(asm.MovDerefVal(v.Addr(1), types.I32_Size, fmt.Sprintf("%d", str.GetSize(strIdx))))
 
     case types.Bool:
         if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
         fallthrough
 
     case types.I32:
-        file.WriteString(asm.MovLocVarVal(v.offset, v.GetType().Size(), val.Str))
+        file.WriteString(asm.MovDerefVal(v.Addr(0), v.GetType().Size(), val.Str))
 
     case types.Ptr:
         fmt.Fprintln(os.Stderr, "TODO defLocalVal PtrType")
@@ -65,10 +65,10 @@ func (v *LocalVar) DefVal(file *os.File, val token.Token) {
 
 func (v *LocalVar) DefExpr(file *os.File) {
     if v.Type.GetKind() == types.Str {
-        file.WriteString(asm.MovLocVarReg(v.offset+types.Ptr_Size, types.Ptr_Size, asm.RegA))
-        file.WriteString(asm.MovLocVarReg(v.offset, types.I32_Size, asm.RegB))
+        file.WriteString(asm.MovDerefReg(v.Addr(0), types.Ptr_Size, asm.RegA))
+        file.WriteString(asm.MovDerefReg(v.Addr(1), types.I32_Size, asm.RegB))
     } else {
-        file.WriteString(asm.MovLocVarReg(v.offset, v.GetType().Size(), asm.RegA))
+        file.WriteString(asm.MovDerefReg(v.Addr(0), v.GetType().Size(), asm.RegA))
     }
 }
 
