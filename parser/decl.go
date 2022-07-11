@@ -51,10 +51,11 @@ func prsDecl() ast.Decl {
 }
 
 func prsDefFn() ast.DefFn {
+    pos := token.Cur().Pos
     name := token.Next()
 
     if name.Type != token.Name {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got \"%s\"(%s)\n", name.Str, name.Type.Readable())
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
@@ -63,7 +64,7 @@ func prsDefFn() ast.DefFn {
         isMainDefined = true
     }
 
-    op := ast.DefFn{ FnName: name }
+    op := ast.DefFn{ Pos: pos, FnName: name }
     token.Next()
     op.Args = prsDecArgs()
     token.Next()
@@ -75,14 +76,15 @@ func prsDefFn() ast.DefFn {
 func prsDecVar() ast.DecVar {
     name := token.Cur()
     vartype := token.Next()
+    end := token.Cur().Pos
 
     if name.Type != token.Name {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got \"%s\"(%s)\n", name.Str, name.Type.Readable())
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
     if vartype.Type != token.Typename {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Typename but got \"%s\"(%s)\n", vartype.Str, vartype.Type.Readable())
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Typename but got %v\n", vartype)
         fmt.Fprintln(os.Stderr, "\t" + vartype.At())
         os.Exit(1)
     }
@@ -94,14 +96,14 @@ func prsDecVar() ast.DecVar {
         os.Exit(1)
     }
 
-    return ast.DecVar{ Name: name, Type: t }
+    return ast.DecVar{ Name: name, Type: t, TypePos: end }
 }
 
 func prsDefVar() ast.DefVar {
     dec := prsDecVar()
     if token.Peek().Type == token.Def_var {
         if token.Next().Type != token.Def_var {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected a \":=\" but got \"%s\"(%s)\n", token.Cur().Type.Readable(), token.Cur().Str)
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a \":=\" but got %v\n", token.Cur())
             fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
             os.Exit(1)
         }
@@ -119,14 +121,14 @@ func prsDefVar() ast.DefVar {
 
 func prsDefVarInfer() ast.DefVar {
     if token.Cur().Type != token.Name {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got \"%s\"(%s)\n", token.Cur().Type.Readable(), token.Cur().Str)
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got \"%s\"(%v)\n", token.Cur().Type, token.Cur().Str)
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)
     }
     name := token.Cur()
 
     if token.Next().Type != token.Def_var {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a \":=\" but got \"%s\"(%s)\n", token.Cur().Type.Readable(), token.Cur().Str)
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a \":=\" but got %v\n", token.Cur())
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)
     }
@@ -141,7 +143,7 @@ func prsDecArgs() []ast.DecVar {
     decs := []ast.DecVar{}
 
     if token.Cur().Type != token.ParenL {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got \"%s\"(%s)\n", token.Cur().Str, token.Cur().Type.Readable())
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got %v\n", token.Cur())
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)
     }
@@ -156,7 +158,7 @@ func prsDecArgs() []ast.DecVar {
     }
 
     if token.Cur().Type != token.ParenR {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got \"%s\"(%s)\n", token.Cur().Str, token.Cur().Type.Readable())
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got %v\n", token.Cur())
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)
     }

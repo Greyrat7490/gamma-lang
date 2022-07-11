@@ -104,7 +104,7 @@ func prsStmt(ignoreUnusedExpr bool) ast.Stmt {
         return &ast.BadStmt{}
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] unexpected token \"%s\" (of type %s)\n", token.Cur().Str, token.Cur().Type.Readable())
+        fmt.Fprintf(os.Stderr, "[ERROR] unexpected token %v\n", token.Cur())
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)
         return &ast.BadStmt{}
@@ -359,7 +359,7 @@ func prsCases(condBase ast.Expr) (cases []ast.Case) {
         }
 
         if expectColon && token.Peek().Type != token.Colon {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected end of case condition(\":\") but got \"%s\"(%s)\n", token.Peek().Str, token.Peek().Type.Readable())
+            fmt.Fprintf(os.Stderr, "[ERROR] expected end of case condition(\":\") but got %v\n", token.Peek())
             fmt.Fprintln(os.Stderr, "\t" + token.Peek().At())
             os.Exit(1)
         }
@@ -457,7 +457,7 @@ func prsCases(condBase ast.Expr) (cases []ast.Case) {
 }
 
 func prsSwitch(pos token.Pos, condBase ast.Expr) ast.Switch {
-    switchStmt := ast.Switch{ Pos: pos }
+    switchStmt := ast.Switch{ BraceLPos: pos }
 
     if token.Peek().Type == token.BraceR {
         fmt.Fprintln(os.Stderr, "[ERROR] empty cond-switch")
@@ -467,6 +467,8 @@ func prsSwitch(pos token.Pos, condBase ast.Expr) ast.Switch {
 
     switchStmt.Cases = prsCases(condBase)
 
+    switchStmt.BraceRPos = token.Cur().Pos
+    
     for i,c := range switchStmt.Cases {
         if len(c.Stmts) == 0 {
             fmt.Fprintln(os.Stderr, "[ERROR] no stmts provided for this case")

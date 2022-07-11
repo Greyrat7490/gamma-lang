@@ -1,15 +1,15 @@
 package types
 
 import (
-	"strconv"
+    "strconv"
 )
 
 type TypeKind int
 const (
-    I32 TypeKind = iota
+    I32  TypeKind = iota
     Bool TypeKind = iota
-    Ptr TypeKind = iota
-    Str TypeKind = iota
+    Ptr  TypeKind = iota
+    Str  TypeKind = iota
 )
 
 const (
@@ -20,19 +20,18 @@ const (
 )
 
 type Type interface {
-    Size() int
-    String() string
+    Size()    int
+    String()  string
     GetKind() TypeKind
 }
 
-type I32Type struct {}
+type I32Type  struct {}
 type BoolType struct {}
-
-type PtrType struct {
+type PtrType  struct {
     BaseType Type
 }
-type StrType struct {
-    ptr PtrType
+type StrType  struct {
+    ptr  PtrType
     size I32Type
 }
 

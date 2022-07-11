@@ -5,9 +5,10 @@ import (
 	"fmt"
 )
 
-// TODO At() for Node
 type Node interface {
     Readable(indent int) string
+    At() string
+    End() string
 }
 
 var ast []Decl // only declaring/defining variables/functions allowed in global scope

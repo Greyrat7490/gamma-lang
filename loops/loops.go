@@ -5,7 +5,6 @@ import (
     "fmt"
     "gorec/vars"
     "gorec/token"
-    "gorec/types"
 )
 
 
@@ -27,15 +26,8 @@ func WhileStart(file *os.File) uint {
 
 func WhileIdent(file *os.File, ident token.Token) {
     v := vars.GetVar(ident.Str)
-
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", ident.Str)
-        fmt.Fprintln(os.Stderr, "\t" + ident.At())
-        os.Exit(1)
-    }
-
-    if v.GetType().GetKind() != types.Bool {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"%s\" to be of type bool but got \"%v\"\n", ident.Str, v.GetType())
         fmt.Fprintln(os.Stderr, "\t" + ident.At())
         os.Exit(1)
     }
@@ -64,15 +56,8 @@ func ForStart(file *os.File) uint {
 
 func ForIdent(file *os.File, ident token.Token) {
     v := vars.GetVar(ident.Str)
-
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", ident.Str)
-        fmt.Fprintln(os.Stderr, "\t" + ident.At())
-        os.Exit(1)
-    }
-
-    if v.GetType().GetKind() != types.Bool {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"%s\" to be of type bool but got \"%v\"\n", ident.Str, v.GetType())
         fmt.Fprintln(os.Stderr, "\t" + ident.At())
         os.Exit(1)
     }

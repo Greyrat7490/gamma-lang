@@ -40,7 +40,7 @@ func (o *DefFn) Readable(indent int) string {
     }
     if len(s) > 0 { s = s[:len(s)-2] }
 
-    res += fmt.Sprintf("%s%s(%s) [%s]\n", strings.Repeat("   ", indent+1), o.FnName.Str, o.FnName.Type.Readable(), s) +
+    res += fmt.Sprintf("%s%s(%v) [%s]\n", strings.Repeat("   ", indent+1), o.FnName.Str, o.FnName.Type, s) +
         o.Block.Readable(indent+2)
 
     return res
@@ -78,7 +78,7 @@ func (o *Unary) Readable(indent int) string {
     s := strings.Repeat("   ", indent)
     s2 := s + "   "
 
-    return fmt.Sprintf("%sUNARY:\n%s%s(%s)\n", s, s2, o.Operator.Str, o.Operator.Type.Readable()) +
+    return fmt.Sprintf("%sUNARY:\n%s%s(%v)\n", s, s2, o.Operator.Str, o.Operator.Type) +
         o.Operand.Readable(indent+1)
 }
 
@@ -88,7 +88,7 @@ func (o *Binary) Readable(indent int) string {
 
     return s + "BINARY:\n" +
         o.OperandL.Readable(indent+1) +
-        s2 + fmt.Sprintf("%s(%s)\n", o.Operator.Str, o.Operator.Type.Readable()) +
+        s2 + fmt.Sprintf("%s(%v)\n", o.Operator.Str, o.Operator.Type) +
         o.OperandR.Readable(indent+1)
 }
 

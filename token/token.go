@@ -175,8 +175,7 @@ func TokenTypeOfStr(s string) TokenType {
     }
 }
 
-// TODO: to string()
-func (t TokenType) Readable() string {
+func (t TokenType) String() string {
     switch t {
     case EOF:
         return "EOF"
@@ -295,6 +294,10 @@ type Token struct {
     Type TokenType
     Str string
     Pos Pos
+}
+
+func (t Token) String() string {
+    return fmt.Sprintf("\"%s\"(%v)", t.Str, t.Type)
 }
 
 func (t Token) At() string {

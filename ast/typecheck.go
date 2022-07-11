@@ -90,11 +90,11 @@ func (o *While) typeCheck() {
 }
 
 
-func (o *BadExpr)    typeCheck() {}
-func (o *Lit)    typeCheck() {}
-func (o *Paren)  typeCheck() {}
-func (o *Ident)  typeCheck() {}
-func (o *Unary)  typeCheck() {
+func (o *BadExpr) typeCheck() {}
+func (o *Lit)     typeCheck() {}
+func (o *Paren)   typeCheck() {}
+func (o *Ident)   typeCheck() {}
+func (o *Unary)   typeCheck() {
     if o.Operator.Type == token.Plus || o.Operator.Type == token.Minus {
         if t := o.Operand.GetType(); t.GetKind() != types.I32 {
             fmt.Fprintf(os.Stderr, "[ERROR] expected i32 after +/- unary op but got %v\n", t)
@@ -189,11 +189,11 @@ func valuesToTypes(values []Expr) (res []types.Type) {
     return res
 }
 
-func (o *BadExpr)   GetType() types.Type { return nil }
+func (o *BadExpr) GetType() types.Type { return nil }
 func (o *FnCall)  GetType() types.Type { return nil }
-func (o *Lit)   GetType() types.Type { return o.Type }
-func (o *Paren) GetType() types.Type { return o.Expr.GetType() }
-func (o *Ident) GetType() types.Type {
+func (o *Lit)     GetType() types.Type { return o.Type }
+func (o *Paren)   GetType() types.Type { return o.Expr.GetType() }
+func (o *Ident)   GetType() types.Type {
     v := vars.GetVar(o.Ident.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", o.Ident.Str)

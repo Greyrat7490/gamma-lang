@@ -24,7 +24,9 @@ type BadExpr struct{}
 
 type FnCall struct {
     Name token.Token
+    ParenLPos token.Pos
     Values []Expr
+    ParenRPos token.Pos
 }
 
 type Lit struct {
@@ -65,6 +67,7 @@ type XCase struct {
     ColonPos token.Pos
     Expr Expr
 }
+
 
 func (e *Lit) Compile(file *os.File) {
     switch e.Val.Type {
@@ -246,3 +249,24 @@ func (e *BadExpr) Compile(file *os.File) {
     fmt.Fprintln(os.Stderr, "[ERROR] bad expression")
     os.Exit(1)
 }
+
+
+func (e *BadExpr) At() string { return "" }
+func (e *FnCall)  At() string { return e.Name.At() }
+func (e *Lit)     At() string { return e.Val.At() }
+func (e *Ident)   At() string { return e.Ident.At() }
+func (e *Unary)   At() string { return e.Operator.At() }
+func (e *Binary)  At() string { return e.OperandL.At() }
+func (e *Paren)   At() string { return e.ParenLPos.At() }
+func (e *XSwitch) At() string { return e.Pos.At() }
+func (e *XCase)   At() string { return e.ColonPos.At() }
+
+func (e *BadExpr) End() string { return "" }
+func (e *FnCall)  End() string { return e.ParenRPos.At() }
+func (e *Lit)     End() string { return e.Val.At() }
+func (e *Ident)   End() string { return e.Ident.At() }
+func (e *Unary)   End() string { return e.Operand.At() }
+func (e *Binary)  End() string { return e.OperandR.At() }
+func (e *Paren)   End() string { return e.ParenRPos.At() }
+func (e *XSwitch) End() string { return e.BraceRPos.At() }
+func (e *XCase)   End() string { return e.Expr.At() }

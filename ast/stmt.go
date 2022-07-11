@@ -54,8 +54,9 @@ type Else struct {
 }
 
 type Switch struct {
-    Pos token.Pos
+    BraceLPos token.Pos
     Cases []Case
+    BraceRPos token.Pos
 }
 
 type Case struct {
@@ -90,23 +91,6 @@ type Break struct {
 type Continue struct {
     Pos token.Pos
 }
-
-
-func (s *BadStmt)  stmt() {}
-func (s *DeclStmt) stmt() {}
-func (s *ExprStmt) stmt() {}
-func (s *Block)    stmt() {}
-func (s *Assign)   stmt() {}
-func (s *If)       stmt() {}
-func (s *Else)     stmt() {}
-func (s *Elif)     stmt() {}
-func (s *Switch)   stmt() {}
-func (s *Through)  stmt() {}
-func (s *Case)     stmt() {}
-func (s *For)      stmt() {}
-func (s *While)    stmt() {}
-func (s *Break)    stmt() {}
-func (s *Continue) stmt() {}
 
 
 func (s *Assign) Compile(file *os.File) {
@@ -357,3 +341,52 @@ func (s *BadStmt) Compile(file *os.File) {
     fmt.Fprintln(os.Stderr, "[ERROR] bad statement")
     os.Exit(1)
 }
+
+
+func (s *BadStmt)  stmt() {}
+func (s *DeclStmt) stmt() {}
+func (s *ExprStmt) stmt() {}
+func (s *Block)    stmt() {}
+func (s *Assign)   stmt() {}
+func (s *If)       stmt() {}
+func (s *Else)     stmt() {}
+func (s *Elif)     stmt() {}
+func (s *Switch)   stmt() {}
+func (s *Through)  stmt() {}
+func (s *Case)     stmt() {}
+func (s *For)      stmt() {}
+func (s *While)    stmt() {}
+func (s *Break)    stmt() {}
+func (s *Continue) stmt() {}
+
+func (s *BadStmt)  At() string { return "" }
+func (s *DeclStmt) At() string { return s.Decl.At() }
+func (s *ExprStmt) At() string { return s.Expr.At() }
+func (s *Block)    At() string { return s.BraceLPos.At() }
+func (s *Assign)   At() string { return s.Pos.At() }
+func (s *If)       At() string { return s.Pos.At() }
+func (s *Else)     At() string { return s.ElsePos.At() }
+func (s *Elif)     At() string { return s.Pos.At() }
+func (s *Switch)   At() string { return s.BraceLPos.At() }
+func (s *Through)  At() string { return s.Pos.At() }
+func (s *Case)     At() string { return s.ColonPos.At() }
+func (s *For)      At() string { return s.ForPos.At() }
+func (s *While)    At() string { return s.WhilePos.At() }
+func (s *Break)    At() string { return s.Pos.At() }
+func (s *Continue) At() string { return s.Pos.At() }
+
+func (s *BadStmt)  End() string { return "" }
+func (s *DeclStmt) End() string { return s.Decl.End() }
+func (s *ExprStmt) End() string { return s.Expr.End() }
+func (s *Block)    End() string { return s.BraceRPos.At() }
+func (s *Assign)   End() string { return s.Value.End() }
+func (s *If)       End() string { return s.Block.End() }
+func (s *Else)     End() string { return s.Block.End() }
+func (s *Elif)     End() string { return s.Block.End() }
+func (s *Switch)   End() string { return s.BraceRPos.At() }
+func (s *Through)  End() string { return s.Pos.At() }
+func (s *Case)     End() string { return s.Stmts[len(s.Stmts)-1].End() }
+func (s *For)      End() string { return s.Block.End() }
+func (s *While)    End() string { return s.Block.End() }
+func (s *Break)    End() string { return s.Pos.At() }
+func (s *Continue) End() string { return s.Pos.At() }

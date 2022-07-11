@@ -45,7 +45,7 @@ func prsExpr() ast.Expr {
         expr = prsUnaryExpr()
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] no valid expression (got type %s)\n", token.Cur().Type.Readable())
+        fmt.Fprintf(os.Stderr, "[ERROR] no valid expression (got type %v)\n", token.Cur().Type)
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)
 
@@ -131,7 +131,7 @@ func prsParenExpr() *ast.Paren {
     expr.ParenRPos = token.Next().Pos
 
     if token.Cur().Type != token.ParenR {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got \"%s\"(%s)\n", token.Cur().Str, token.Cur().Type.Readable())
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got %v\n", token.Cur())
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)
     }
@@ -202,7 +202,7 @@ func prsCaseExpr(condBase ast.Expr, placeholder *ast.Expr, lastCaseEnd token.Pos
     caseExpr.Cond = completeCond(placeholder, condBase, expr, conds)
 
     if token.Cur().Type != token.Colon {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \":\" but got \"%s\"(%s)\n", token.Cur().Str, token.Cur().Type.Readable())
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \":\" but got %v\n", token.Cur())
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)
     }
@@ -346,15 +346,16 @@ func swap(expr *ast.Binary) {
 
 func prsCallFn() *ast.FnCall {
     name := token.Cur()
-    token.Next()
+    posL := token.Next().Pos
     vals := prsPassArgs()
+    posR := token.Cur().Pos
 
-    return &ast.FnCall{ Name: name, Values: vals }
+    return &ast.FnCall{ Name: name, Values: vals, ParenLPos: posL, ParenRPos: posR }
 }
 
 func prsPassArgs() []ast.Expr {
     if token.Cur().Type != token.ParenL {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got \"%s\"(%s)\n", token.Cur().Str, token.Cur().Type.Readable())
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got %v\n", token.Cur())
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)
     }
@@ -372,7 +373,7 @@ func prsPassArgs() []ast.Expr {
     }
 
     if token.Cur().Type != token.ParenR {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got \"%s\"(%s)\n", token.Cur().Str, token.Cur().Type.Readable())
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got %v\n", token.Cur())
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)
     }

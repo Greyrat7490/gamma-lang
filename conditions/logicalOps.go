@@ -17,7 +17,7 @@ func LogicalOp(file *os.File, t token.Token) int {
     } else if t.Type == token.Or {
         vars.Write(file, "cmp al, 1\n")
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\"(%s) is not a valid logical op (expected && or ||)\n", t.Str, t.Type.Readable())
+        fmt.Fprintf(os.Stderr, "[ERROR] %v is not a valid logical op (expected && or ||)\n", t)
         fmt.Fprintln(os.Stderr, "\t" + t.At())
         os.Exit(1)
     }

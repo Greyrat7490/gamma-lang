@@ -1,11 +1,11 @@
 package arith
 
 import (
-	"os"
-	"fmt"
-	"gorec/token"
-	"gorec/vars"
-	"gorec/asm/x86_64"
+    "os"
+    "fmt"
+    "gorec/vars"
+    "gorec/token"
+    "gorec/asm/x86_64"
 )
 
 // results in A-register
@@ -37,7 +37,7 @@ func BinaryOp(file *os.File, opType token.TokenType, src string, size int) {
     case token.Mod:
         s = asm.Mod(src, size)
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] unknown binary operator %s\n", opType.Readable())
+        fmt.Fprintf(os.Stderr, "[ERROR] unknown binary operator %v\n", opType)
         os.Exit(1)
     }
 

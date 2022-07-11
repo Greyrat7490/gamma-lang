@@ -21,6 +21,7 @@ type BadDecl struct {}
 type DecVar struct {
     Name token.Token
     Type types.Type
+    TypePos token.Pos
 }
 
 type DefVar struct {
@@ -31,16 +32,11 @@ type DefVar struct {
 }
 
 type DefFn struct {
+    Pos token.Pos
     FnName token.Token
     Args []DecVar
     Block Block
 }
-
-
-func (d *BadDecl) decl() {}
-func (d *DecVar)  decl() {}
-func (d *DefVar)  decl() {}
-func (d *DefFn)   decl() {}
 
 
 func (d *DecVar) Compile(file *os.File) {
@@ -71,7 +67,7 @@ func (d *DefVar) Compile(file *os.File) {
         if ptr, ok := vars.GetVar(d.Name.Str).GetType().(types.PtrType); ok {
             otherType := vars.GetVar(e.Ident.Str).GetType()
             if ptr.BaseType != otherType {
-                fmt.Fprintf(os.Stderr, "[ERROR] %s points to %v not should be %v\n", d.Name.Str, otherType, ptr.BaseType)
+                fmt.Fprintf(os.Stderr, "[ERROR] %s points to %v but %s is of type %v\n", d.Name.Str, ptr.BaseType, e.Ident.Str, otherType)
                 fmt.Fprintln(os.Stderr, "\t" + d.Name.At())
                 os.Exit(1)
             }
@@ -179,3 +175,19 @@ func (d *Block) maxFrameSize() int {
 
     return res
 }
+
+
+func (d *BadDecl) decl() {}
+func (d *DecVar)  decl() {}
+func (d *DefVar)  decl() {}
+func (d *DefFn)   decl() {}
+
+func (d *BadDecl) At() string { return "" }
+func (d *DecVar)  At() string { return d.Name.At() }
+func (d *DefVar)  At() string { return d.ColPos.At() }
+func (d *DefFn)   At() string { return d.Pos.At() }
+
+func (d *BadDecl) End() string { return "" }
+func (d *DecVar)  End() string { return d.TypePos.At() }
+func (d *DefVar)  End() string { return d.Value.End() }
+func (d *DefFn)   End() string { return d.Block.End() }

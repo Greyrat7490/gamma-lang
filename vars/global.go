@@ -56,7 +56,7 @@ func (v *GlobalVar) DefVal(file *os.File, val token.Token) {
 
     case types.Bool:
         if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
-        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s %s\n", v.Name.Str, asm.GetDataSize(types.I32_Size), val.Str))
+        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s %s\n", v.Name.Str, asm.GetDataSize(types.Bool_Size), val.Str))
 
     case types.Ptr:
         fmt.Fprintln(os.Stderr, "TODO defGlobalVal PtrType")
@@ -74,14 +74,10 @@ func (v *GlobalVar) DefVar(file *os.File, name token.Token) {
     os.Exit(1)
 }
 
+// TODO: remove if const evaluation is implemented
 func (v *GlobalVar) DefExpr(file *os.File) {
     if v.GetType().GetKind() == types.Str {
-        // not needed yet (later for string concatination)
-        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s 0\n  %s 0\n",
-            v.Name.Str, asm.GetDataSize(types.Ptr_Size), asm.GetDataSize(types.I32_Size)))
-
-        preMain = append(preMain, asm.MovDerefReg(v.Addr(0), types.Ptr_Size, asm.RegA))
-        preMain = append(preMain, asm.MovDerefReg(v.Addr(1), types.I32_Size, asm.RegB))
+        // should never get reached
     } else {
         size := v.Type.Size()
         globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s 0\n", v.Name.Str, asm.GetDataSize(size)))
@@ -101,7 +97,11 @@ func (v *GlobalVar) SetVal(file *os.File, val token.Token) {
 }
 
 func (v *GlobalVar) SetVar(file *os.File, name token.Token) {
-    if v.Name.Str == name.Str { return } // redundant
+    if v.Name.Str == name.Str { 
+        fmt.Fprintln(os.Stderr, "[WARNING] assigning a variable to itself is redundant")
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        return
+    }
 
     if other := GetVar(name.Str); other != nil {
         switch v.Type.GetKind() {
