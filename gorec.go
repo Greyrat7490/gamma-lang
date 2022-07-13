@@ -5,7 +5,6 @@ import (
     "fmt"
     "flag"
     "os/exec"
-    "io/ioutil"
     "gorec/std"
     "gorec/ast"
     "gorec/token"
@@ -65,13 +64,7 @@ func main() {
         os.Exit(1)
     }
 
-    src, err := ioutil.ReadFile(path)
-    if err != nil {
-        fmt.Fprintln(os.Stderr, "[ERROR]", err)
-        os.Exit(1)
-    }
-
-    token.Tokenize(src)
+    token.Tokenize(path)
     prs.Parse()
     // TODO: optimization step
     compile()

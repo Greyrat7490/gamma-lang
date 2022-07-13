@@ -10,7 +10,7 @@ import (
 
 func prsDecl() ast.Decl {
     switch t := token.Next(); t.Type {
-    case token.Def_fn:
+    case token.Fn:
         d := prsDefFn()
         return &d
 
@@ -21,7 +21,7 @@ func prsDecl() ast.Decl {
             return &d
         }
         // define var (infer the type with the value)
-        if token.Peek().Type == token.Def_var {
+        if token.Peek().Type == token.DefVar {
             d := prsDefVarInfer()
             return &d
         }
@@ -101,8 +101,8 @@ func prsDecVar() ast.DecVar {
 
 func prsDefVar() ast.DefVar {
     dec := prsDecVar()
-    if token.Peek().Type == token.Def_var {
-        if token.Next().Type != token.Def_var {
+    if token.Peek().Type == token.DefVar {
+        if token.Next().Type != token.DefVar {
             fmt.Fprintf(os.Stderr, "[ERROR] expected a \":=\" but got %v\n", token.Cur())
             fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
             os.Exit(1)
@@ -127,7 +127,7 @@ func prsDefVarInfer() ast.DefVar {
     }
     name := token.Cur()
 
-    if token.Next().Type != token.Def_var {
+    if token.Next().Type != token.DefVar {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a \":=\" but got %v\n", token.Cur())
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)

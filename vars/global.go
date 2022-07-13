@@ -97,7 +97,7 @@ func (v *GlobalVar) SetVal(file *os.File, val token.Token) {
 }
 
 func (v *GlobalVar) SetVar(file *os.File, name token.Token) {
-    if v.Name.Str == name.Str { 
+    if v.Name.Str == name.Str {
         fmt.Fprintln(os.Stderr, "[WARNING] assigning a variable to itself is redundant")
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         return

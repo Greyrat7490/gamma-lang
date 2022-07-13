@@ -3,8 +3,8 @@ package token
 import (
     "os"
     "fmt"
+    "bufio"
     "strconv"
-    "unicode"
     "strings"
     "gorec/types"
 )
@@ -57,9 +57,9 @@ const (
 
     Comment         // // ..., /* ... */
 
-    Def_var         // :=
+    DefVar          // :=
     Assign          // =
-    Def_fn          // fn
+    Fn              // fn
     If              // if
     Elif            // elif
     Else            // else
@@ -73,7 +73,7 @@ const (
     TokenTypeCount uint = iota
 )
 
-func TokenTypeOfStr(s string) TokenType {
+func toTokenType(s string) TokenType {
     switch s {
     case "true", "false":
         return Boolean
@@ -138,11 +138,11 @@ func TokenTypeOfStr(s string) TokenType {
         return Comment
 
     case ":=":
-        return Def_var
+        return DefVar
     case "=":
         return Assign
     case "fn":
-        return Def_fn
+        return Fn
     case "if":
         return If
     case "elif":
@@ -239,12 +239,12 @@ func (t TokenType) String() string {
     case Comment:
         return "Comment"
 
-    case Def_var:
-        return "Def_var"
+    case DefVar:
+        return "DefVar"
     case Assign:
         return "Assign"
-    case Def_fn:
-        return "Def_fn"
+    case Fn:
+        return "Fn"
     case If:
         return "If"
     case Elif:
@@ -304,123 +304,162 @@ func (t Token) At() string {
     return t.Pos.At()
 }
 
-func Tokenize(file []byte) {
+func split(s string, start int, end int, line int) {
+    if start != end {
+        s := s[start:end]
+        t := toTokenType(s)
+
+        tokens = append(tokens, Token{t, s, Pos{line, start+1} })
+    }
+}
+
+// only tmp will be removed later
+func getTypename(line string) string {
+    if line[0] == '*' {
+        i := strings.IndexAny(line[1:], " \t,")
+
+        if i < 2 {
+            if types.ToType(line[1:]) != nil {
+                return line
+            }
+
+            return ""
+        }
+
+        if types.ToType(line[1:i+1]) != nil {
+            return line[:i+1]
+        }
+    }
+
+    return ""
+}
+
+func Tokenize(path string) {
     fmt.Println("[INFO] tokenizing...")
 
-    keySigns := "(){}+-*/%=,:;&$"
-    f := string(file)
+    src, err := os.Open(path)
+    if err != nil {
+        fmt.Fprintln(os.Stderr, "[ERROR]", err)
+        os.Exit(1)
+    }
+    scanner := bufio.NewScanner(src)
 
-    start := 0
-
-    line := 1
-    col := 1
-
-    skip := false
-    mlSkip := false
+    comment := false
+    mlComment := false
     strLit := false
     escape := false
 
-    for i, r := range(f) {
-        // comments
-        if skip {
-            if mlSkip {
-                if r == '*' && file[i+1] == '/' {
-                    skip = false
-                    mlSkip = false
-                    start = i + 2
-                }
-            } else {
-                if r == '\n' {
-                    skip = false
-                    start = i + 1
-                }
+    for lineNum := 1; scanner.Scan(); lineNum++ {
+        line := scanner.Text()
+
+        start := 0
+        comment = false
+        for i := 0; i < len(line); i++ {
+            // in single line comment
+            if comment {
+                break
             }
 
-        // string literales
-        } else if strLit {
-            if !escape {
-                if r == '"' {
-                    strLit = false
-                } else if r == '\\' {
-                    escape = true
+            // in multiline comment
+            if mlComment {
+                if i+2 < len(line) && line[i:i+2] == "*/" {
+                    mlComment = false
+                    start = i+2
+                    i++
                 }
-            } else {
-                escape = false
+
+                continue
             }
 
-        } else {
-            if r == '"' {       // start string literal
+            // in string literal
+            if strLit {
+                if escape {
+                    escape = false
+                } else {
+                    if line[i] == '"' {
+                        strLit = false
+                    } else if line[i] == '\\' {
+                        escape = true
+                    }
+                }
+
+                continue
+            }
+
+            switch line[i] {
+            // start string literal
+            case '"':
                 strLit = true
-            }
 
-            if r == '/' {       // start comment
-                if file[i+1] == '/' {
-                    skip = true
-                } else if file[i+1] == '*' {
-                    skip = true
-                    mlSkip = true
-                }
+            // split at space
+            case ' ', '\t':
+                split(line, start, i, lineNum)
+                start = i+1
 
-            // split
-            } else if unicode.IsSpace(r) || strings.Contains(keySigns, string(r)) {
-                if start != i {
-                    s := f[start:i]
+            // split at //, /*, :=, <=, >=, ==, !=, &&, *typename
+            case '/', ':', '<', '>', '=', '!', '&', '*':
+                if i+2 <= len(line) {
+                    s := line[i:i+2]
+                    switch s {
+                    // start single line comment
+                    case "//":
+                        split(line, start, i, lineNum)
+                        comment = true
+                        i++
+                        continue
+                    // start multiline comment
+                    case "/*":
+                        split(line, start, i, lineNum)
+                        mlComment = true
+                        start = i+1
+                        i++
+                        continue
 
-                    t := TokenTypeOfStr(s)
-                    if t == Typename && tokens[len(tokens)-1].Type == Mul {     // *typename
-                        tokens[len(tokens)-1].Str += s
-                        tokens[len(tokens)-1].Type = Typename
-                    } else {
-                        tokens = append(tokens, Token{t, s, Pos{line, col + start - i} })
-                    }
-                }
-                start = i + 1
-
-                if strings.Contains(keySigns, string(r)) {
-                    t := TokenTypeOfStr(string(r))
-
-                    if t == Amp && tokens[len(tokens)-1].Type == Amp {
-                        tokens[len(tokens)-1].Str  = "&&"
-                        tokens[len(tokens)-1].Type = And
-                    } else if t == Assign {
-                        switch tokens[len(tokens)-1].Type {
-                        case Colon:
-                            tokens[len(tokens)-1].Str  = ":="
-                            tokens[len(tokens)-1].Type = Def_var
-                        case Not:
-                            tokens[len(tokens)-1].Str  = "!="
-                            tokens[len(tokens)-1].Type = Neq
-                        case Assign:
-                            tokens[len(tokens)-1].Str  = "=="
-                            tokens[len(tokens)-1].Type = Eql
-                        case Lss:
-                            tokens[len(tokens)-1].Str  = "<="
-                            tokens[len(tokens)-1].Type = Leq
-                        case Grt:
-                            tokens[len(tokens)-1].Str  = ">="
-                            tokens[len(tokens)-1].Type = Geq
-                        default:
-                            tokens = append(tokens, Token{t, string(r), Pos{line, col}})
+                    case "&&", ":=", "!=", "==", "<=", ">=":
+                        split(line, start, i, lineNum)
+                        tokens = append(tokens, Token{ toTokenType(s), s, Pos{lineNum, i+1} })
+                        start = i+3
+                        i += 2
+                        continue
+                    // *typename (only tmp will be removed later)
+                    default:
+                        s := getTypename(line[i:])
+                        if s != "" {
+                            split(line, start, i, lineNum)
+                            tokens = append(tokens, Token{ toTokenType(s), s, Pos{lineNum, i+1} })
+                            start = i+len(s)
+                            i = start-1
+                            continue
                         }
-                    } else {
-                        tokens = append(tokens, Token{t, string(r), Pos{line, col}})
                     }
                 }
+
+                fallthrough
+
+            // split at non space char (and keep char)
+            case '(', ')', '{', '}', '+', '-', '%', ',', ';', '$':
+                split(line, start, i, lineNum)
+
+                tokens = append(tokens, Token{ toTokenType(string(line[i])), string(line[i]), Pos{lineNum, i+1} })
+                start = i+1
             }
         }
 
-        // set word position
-        if r == '\n' {
-            line++
-            col = 0
+        if !comment && !mlComment && len(line) > start {
+            split(line, start, len(line), lineNum)
         }
-        col++
     }
 
-    tokens = append(tokens, Token{EOF, "EOF", Pos{line, col}})
+    pos := tokens[len(tokens)-1].Pos
+    pos.Col += len(tokens[len(tokens)-1].Str)
+    tokens = append(tokens, Token{EOF, "EOF", pos})
 
-    if mlSkip {
-        fmt.Fprintln(os.Stderr, "you have not terminated your comment (missing \"*/\")")
+    if strLit {
+        fmt.Fprintln(os.Stderr, "string literal not terminated (missing '\"')")
+        os.Exit(1)
+    }
+    if mlComment {
+        fmt.Fprintln(os.Stderr, "comment not terminated (missing \"*/\")")
         os.Exit(1)
     }
 }

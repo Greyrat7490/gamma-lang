@@ -72,7 +72,7 @@ func ToType(s string) Type {
     case "bool":
         base = BoolType{}
     default:
-        base = nil
+        return nil
     }
 
     if isPtr {

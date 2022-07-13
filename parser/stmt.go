@@ -60,7 +60,7 @@ func prsStmt(ignoreUnusedExpr bool) ast.Stmt {
             return &ast.DeclStmt{ Decl: &d }
         }
         // define var (infer the type with the value)
-        if token.Peek().Type == token.Def_var {
+        if token.Peek().Type == token.DefVar {
             d := prsDefVarInfer()
             return &ast.DeclStmt{ Decl: &d }
         }
@@ -97,7 +97,7 @@ func prsStmt(ignoreUnusedExpr bool) ast.Stmt {
         os.Exit(1)
         return &ast.BadStmt{}
 
-    case token.Def_fn:
+    case token.Fn:
         fmt.Fprintln(os.Stderr, "[ERROR] you are not allowed to define functions inside a function")
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)
@@ -468,7 +468,7 @@ func prsSwitch(pos token.Pos, condBase ast.Expr) ast.Switch {
     switchStmt.Cases = prsCases(condBase)
 
     switchStmt.BraceRPos = token.Cur().Pos
-    
+
     for i,c := range switchStmt.Cases {
         if len(c.Stmts) == 0 {
             fmt.Fprintln(os.Stderr, "[ERROR] no stmts provided for this case")
