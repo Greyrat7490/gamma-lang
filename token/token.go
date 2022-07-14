@@ -5,7 +5,6 @@ import (
     "fmt"
     "bufio"
     "strconv"
-    "strings"
     "gorec/types"
 )
 
@@ -163,7 +162,7 @@ func toTokenType(s string) TokenType {
         return XSwitch
 
     default:
-        if types.ToType(s) != nil {
+        if types.ToType(s, false) != nil {
             return Typename
         } else if s[0] == '"' && s[len(s) - 1] == '"' {
             return Str
@@ -313,27 +312,6 @@ func split(s string, start int, end int, line int) {
     }
 }
 
-// only tmp will be removed later
-func getTypename(line string) string {
-    if line[0] == '*' {
-        i := strings.IndexAny(line[1:], " \t,")
-
-        if i < 2 {
-            if types.ToType(line[1:]) != nil {
-                return line
-            }
-
-            return ""
-        }
-
-        if types.ToType(line[1:i+1]) != nil {
-            return line[:i+1]
-        }
-    }
-
-    return ""
-}
-
 func Tokenize(path string) {
     fmt.Println("[INFO] tokenizing...")
 
@@ -396,8 +374,8 @@ func Tokenize(path string) {
                 split(line, start, i, lineNum)
                 start = i+1
 
-            // split at //, /*, :=, <=, >=, ==, !=, &&, *typename
-            case '/', ':', '<', '>', '=', '!', '&', '*':
+            // split at //, /*, :=, <=, >=, ==, !=, &&
+            case '/', ':', '<', '>', '=', '!', '&':
                 if i+2 <= len(line) {
                     s := line[i:i+2]
                     switch s {
@@ -421,23 +399,13 @@ func Tokenize(path string) {
                         start = i+3
                         i += 2
                         continue
-                    // *typename (only tmp will be removed later)
-                    default:
-                        s := getTypename(line[i:])
-                        if s != "" {
-                            split(line, start, i, lineNum)
-                            tokens = append(tokens, Token{ toTokenType(s), s, Pos{lineNum, i+1} })
-                            start = i+len(s)
-                            i = start-1
-                            continue
-                        }
                     }
                 }
 
                 fallthrough
 
             // split at non space char (and keep char)
-            case '(', ')', '{', '}', '+', '-', '%', ',', ';', '$':
+            case '(', ')', '{', '}', '+', '-', '*', '%', ',', ';', '$':
                 split(line, start, i, lineNum)
 
                 tokens = append(tokens, Token{ toTokenType(string(line[i])), string(line[i]), Pos{lineNum, i+1} })

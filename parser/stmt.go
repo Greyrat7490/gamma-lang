@@ -55,7 +55,7 @@ func prsStmt(ignoreUnusedExpr bool) ast.Stmt {
 
     case token.Name, token.UndScr, token.Plus, token.Minus, token.Mul, token.Amp:
         // define var (type is given)
-        if token.Peek().Type == token.Typename {
+        if isVarDec() {
             d := prsDefVar()
             return &ast.DeclStmt{ Decl: &d }
         }
@@ -180,8 +180,8 @@ func prsElse() ast.Else {
 func prsWhileStmt() ast.While {
     var op ast.While = ast.While{ WhilePos: token.Cur().Pos, Def: nil }
 
-    if token.Peek().Type == token.Name && token.Peek2().Type == token.Typename {
-        token.Next()
+    token.Next()
+    if isVarDec() {
         dec := prsDecVar()
         op.Def = &ast.DefVar{ Name: dec.Name, Type: dec.Type }
 
@@ -204,7 +204,6 @@ func prsWhileStmt() ast.While {
             op.Cond = expr
         }
     } else {
-        token.Next()
         op.Cond = prsExpr()
         token.Next()
     }

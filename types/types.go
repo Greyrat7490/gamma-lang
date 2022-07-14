@@ -56,13 +56,7 @@ func (t PtrType)  String() string {
 }
 
 
-func ToType(s string) Type {
-    isPtr := false
-    if s[0] == '*' {
-        s = s[1:]
-        isPtr = true
-    }
-
+func ToType(s string, isPtr bool) Type {
     var base Type
     switch s {
     case "str":

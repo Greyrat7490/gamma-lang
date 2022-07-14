@@ -16,7 +16,7 @@ func prsDecl() ast.Decl {
 
     case token.Name:
         // define var (type is given)
-        if token.Peek().Type == token.Typename {
+        if isVarDec() {
             d := prsDefVar()
             return &d
         }
@@ -74,8 +74,15 @@ func prsDefFn() ast.DefFn {
 }
 
 func prsDecVar() ast.DecVar {
+    isPtr := false
+
     name := token.Cur()
-    vartype := token.Next()
+    t := token.Next()
+    if t.Type == token.Mul {
+        t = token.Next()
+        isPtr = true
+    }
+
     end := token.Cur().Pos
 
     if name.Type != token.Name {
@@ -83,20 +90,13 @@ func prsDecVar() ast.DecVar {
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
-    if vartype.Type != token.Typename {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Typename but got %v\n", vartype)
-        fmt.Fprintln(os.Stderr, "\t" + vartype.At())
+    if t.Type != token.Typename {
+        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", t.Str)
+        fmt.Fprintln(os.Stderr, "\t" + t.At())
         os.Exit(1)
     }
 
-    t := types.ToType(vartype.Str)
-    if t == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", vartype.Str)
-        fmt.Fprintln(os.Stderr, "\t" + vartype.At())
-        os.Exit(1)
-    }
-
-    return ast.DecVar{ Name: name, Type: t, TypePos: end }
+    return ast.DecVar{ Name: name, Type: types.ToType(t.Str, isPtr), TypePos: end }
 }
 
 func prsDefVar() ast.DefVar {
@@ -164,4 +164,9 @@ func prsDecArgs() []ast.DecVar {
     }
 
     return decs
+}
+
+func isVarDec() bool {
+    return token.Cur().Type == token.Name && 
+        (token.Peek().Type == token.Typename || (token.Peek().Type == token.Mul && token.Peek2().Type == token.Typename))
 }
