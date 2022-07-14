@@ -1,0 +1,13 @@
+c1 i32 :: 420
+c2 :: 69
+
+fn main() {
+    printInt(c1) printStr("\n")
+    printInt(c2) printStr("\n")
+
+    c3 i32 :: 86
+    c4 :: -69
+
+    printInt(c3) printStr("\n")
+    printInt(c4) printStr("\n")
+}

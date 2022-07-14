@@ -27,9 +27,18 @@ func (o *DefVar) typeCheck() {
     }
 }
 
+func (o *DefConst) typeCheck() {
+    t2 := o.Value.GetType()
+    if !types.AreCompatible(o.Type, t2) {
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.Name.Str, o.Type, t2)
+        fmt.Fprintln(os.Stderr, "\t" + o.Name.At())
+        os.Exit(1)
+    }
+}
 
-func (o *ExprStmt)   typeCheck() { o.Expr.typeCheck() }
-func (o *Assign)  typeCheck() {
+
+func (o *ExprStmt) typeCheck() { o.Expr.typeCheck() }
+func (o *Assign)   typeCheck() {
     t1 := o.Dest.GetType()
     t2 := o.Value.GetType()
 
@@ -194,6 +203,11 @@ func (o *FnCall)  GetType() types.Type { return nil }
 func (o *Lit)     GetType() types.Type { return o.Type }
 func (o *Paren)   GetType() types.Type { return o.Expr.GetType() }
 func (o *Ident)   GetType() types.Type {
+    c := vars.GetConst(o.Ident.Str)
+    if c != nil {
+        return c.Type
+    }
+    
     v := vars.GetVar(o.Ident.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", o.Ident.Str)

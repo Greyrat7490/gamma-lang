@@ -144,7 +144,7 @@ func InitVarWithExpr(file *os.File) {
     }
 }
 
-func isGlobalDec(varname string) bool {
+func isGlobalVarDec(varname string) bool {
     for _, v := range globalVars {
         if v.Name.Str == varname {
             return true
@@ -155,8 +155,13 @@ func isGlobalDec(varname string) bool {
 }
 
 func declareGlobal(varname token.Token, vartype types.Type) {
-    if isGlobalDec(varname.Str) {
+    if isGlobalVarDec(varname.Str) {
         fmt.Fprintf(os.Stderr, "[ERROR] a variable with the name \"%s\" is already declared\n", varname.Str)
+        fmt.Fprintln(os.Stderr, "\t" + varname.At())
+        os.Exit(1)
+    }
+    if isGlobalConstDec(varname.Str) {
+        fmt.Fprintf(os.Stderr, "[ERROR] a const with the name \"%s\" is already declared\n", varname.Str)
         fmt.Fprintln(os.Stderr, "\t" + varname.At())
         os.Exit(1)
     }

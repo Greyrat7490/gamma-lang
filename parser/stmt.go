@@ -54,14 +54,32 @@ func prsStmt(ignoreUnusedExpr bool) ast.Stmt {
         return &ast.ExprStmt{ Expr: expr }
 
     case token.Name, token.UndScr, token.Plus, token.Minus, token.Mul, token.Amp:
-        // define var (type is given)
+        // define var/const (type is given)
         if isVarDec() {
-            d := prsDefVar()
-            return &ast.DeclStmt{ Decl: &d }
+            dec := prsDecVar()
+
+            token.Next()
+            if token.Cur().Type == token.DefVar {
+                d := prsDefVar(dec)
+                return &ast.DeclStmt{ Decl: &d }
+            }
+            if token.Cur().Type == token.DefConst {
+                d := prsDefConst(dec)
+                return &ast.DeclStmt{ Decl: &d }
+            }
+
+            fmt.Fprintln(os.Stderr, "[ERROR] declaring without initializing is not allowed")
+            fmt.Fprintln(os.Stderr, "\t" + dec.Name.At())
+            os.Exit(1)
         }
         // define var (infer the type with the value)
         if token.Peek().Type == token.DefVar {
             d := prsDefVarInfer()
+            return &ast.DeclStmt{ Decl: &d }
+        }
+        // define const (infer the type with the value)
+        if token.Peek().Type == token.DefConst {
+            d := prsDefConstInfer()
             return &ast.DeclStmt{ Decl: &d }
         }
 

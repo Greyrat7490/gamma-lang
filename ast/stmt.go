@@ -107,7 +107,11 @@ func (s *Assign) Compile(file *os.File) {
             vars.DerefSetVal(file, e.Val, size)
 
         case *Ident:
-            vars.DerefSetVar(file, e.Ident)
+            if c := vars.GetConst(e.Ident.Str); c != nil {
+                vars.DerefSetVal(file, c.Val, size)
+            } else {
+                vars.DerefSetVar(file, e.Ident)
+            }
 
         case *Unary:
             file.WriteString(asm.MovRegReg(asm.RegD, asm.RegA, size))
@@ -124,6 +128,12 @@ func (s *Assign) Compile(file *os.File) {
         }
 
     case *Ident:
+        if c := vars.GetConst(dest.Ident.Str); c != nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] you cannot change a const(%s)\n", dest.Ident.Str)
+            fmt.Fprintln(os.Stderr, "\t" + s.At())
+            os.Exit(1)
+        }
+
         v := vars.GetVar(dest.Ident.Str)
         if v == nil {
             fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", dest.Ident.Str)
@@ -182,8 +192,18 @@ func (s *If) Compile(file *os.File) {
         }
 
     case *Ident:
-        count = cond.IfIdent(file, c.Ident, hasElse)
-        s.Block.Compile(file)
+        if con := vars.GetConst(c.Ident.Str); con != nil {
+            if con.Val.Str == "true" {
+                s.Block.Compile(file)
+                return
+            } else if s.Else != nil {
+                s.Else.Block.Compile(file)
+                return
+            }
+        } else {
+            count = cond.IfIdent(file, c.Ident, hasElse)
+            s.Block.Compile(file)
+        }
 
     default:
         s.Cond.Compile(file)
@@ -227,6 +247,10 @@ func (s *Case) Compile(file *os.File, switchCount uint) {
     cond.CaseStart(file)
 
     if i,ok := s.Cond.(*Ident); ok {
+        if c := vars.GetConst(i.Ident.Str); c != nil {
+            // TODO
+            os.Exit(1)
+        }
         cond.CaseIdent(file, i.Ident)
     } else {
         s.Cond.Compile(file)
@@ -284,10 +308,19 @@ func (s *While) Compile(file *os.File) {
         }
 
     case *Ident:
-        count := loops.WhileStart(file)
-        loops.WhileIdent(file, e.Ident)
-        s.Block.Compile(file)
-        loops.WhileEnd(file, count)
+        if c := vars.GetConst(e.Ident.Str); c != nil {
+            if c.Val.Str == "true" {
+                count := loops.WhileStart(file)
+                s.Block.Compile(file)
+                loops.WhileEnd(file, count)
+            }
+        } else {
+            count := loops.WhileStart(file)
+            loops.WhileIdent(file, e.Ident)
+            s.Block.Compile(file)
+            loops.WhileEnd(file, count)
+        }
+
 
     default:
         count := loops.WhileStart(file)

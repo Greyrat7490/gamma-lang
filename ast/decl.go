@@ -31,6 +31,13 @@ type DefVar struct {
     Value Expr
 }
 
+type DefConst struct {
+    Name token.Token
+    Type types.Type
+    ColPos token.Pos
+    Value Expr
+}
+
 type DefFn struct {
     Pos token.Pos
     FnName token.Token
@@ -40,7 +47,29 @@ type DefFn struct {
 
 
 func (d *DecVar) Compile(file *os.File) {
-    vars.Declare(d.Name, d.Type)
+    vars.DecVar(d.Name, d.Type)
+}
+
+func (d *DefConst) Compile(file *os.File) {
+    if d.Type == nil {
+        d.Type = d.Value.GetType()
+    }
+
+    d.typeCheck()
+
+    val := d.Value.constEval()
+    // TODO to constEval
+    var t token.TokenType
+    switch d.Type.GetKind() {
+    case types.Bool:
+        t = token.Boolean
+    case types.I32, types.Ptr:
+        t = token.Number
+    case types.Str:
+        t = token.Str
+    }
+
+    vars.DefConst(d.Name, d.Type, token.Token{ Str: val, Type: t, Pos: d.Name.Pos })
 }
 
 func (d *DefVar) Compile(file *os.File) {
@@ -48,7 +77,7 @@ func (d *DefVar) Compile(file *os.File) {
         d.Type = d.Value.GetType()
     }
 
-    vars.Declare(d.Name, d.Type)
+    vars.DecVar(d.Name, d.Type)
 
     d.typeCheck()
 
@@ -96,7 +125,7 @@ func (d *DefFn) Compile(file *os.File) {
 
     for _,a := range d.Args {
         fn.AddArg(a.Type)
-        vars.Declare(a.Name, a.Type)
+        vars.DecVar(a.Name, a.Type)
         fn.DefArg(file, regIdx, a.Type)
 
         if a.Type.GetKind() == types.Str {
@@ -134,6 +163,15 @@ func (d *Block) maxFrameSize() int {
         switch stmt := s.(type) {
         case *DeclStmt:
             if def, ok := stmt.Decl.(*DefVar); ok {
+                if def.Type == nil {
+                    def.Type = def.Value.GetType()
+                }
+                res += def.Type.Size()
+            }
+            if def, ok := stmt.Decl.(*DefConst); ok {
+                if def.Type == nil {
+                    def.Type = def.Value.GetType()
+                }
                 res += def.Type.Size()
             }
         case *Block:
@@ -177,17 +215,20 @@ func (d *Block) maxFrameSize() int {
 }
 
 
-func (d *BadDecl) decl() {}
-func (d *DecVar)  decl() {}
-func (d *DefVar)  decl() {}
-func (d *DefFn)   decl() {}
+func (d *BadDecl)  decl() {}
+func (d *DecVar)   decl() {}
+func (d *DefVar)   decl() {}
+func (d *DefConst) decl() {}
+func (d *DefFn)    decl() {}
 
-func (d *BadDecl) At() string { return "" }
-func (d *DecVar)  At() string { return d.Name.At() }
-func (d *DefVar)  At() string { return d.ColPos.At() }
-func (d *DefFn)   At() string { return d.Pos.At() }
+func (d *BadDecl)  At() string { return "" }
+func (d *DecVar)   At() string { return d.Name.At() }
+func (d *DefVar)   At() string { return d.ColPos.At() }
+func (d *DefConst) At() string { return d.ColPos.At() }
+func (d *DefFn)    At() string { return d.Pos.At() }
 
-func (d *BadDecl) End() string { return "" }
-func (d *DecVar)  End() string { return d.TypePos.At() }
-func (d *DefVar)  End() string { return d.Value.End() }
-func (d *DefFn)   End() string { return d.Block.End() }
+func (d *BadDecl)  End() string { return "" }
+func (d *DecVar)   End() string { return d.TypePos.At() }
+func (d *DefVar)   End() string { return d.Value.End() }
+func (d *DefConst) End() string { return d.Value.End() }
+func (d *DefFn)    End() string { return d.Block.End() }

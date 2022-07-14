@@ -4,6 +4,7 @@ var scopes []Scope
 
 type Scope struct {
     vars []LocalVar
+    consts []Const
     maxSize int
 }
 

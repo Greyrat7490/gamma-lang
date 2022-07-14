@@ -24,12 +24,6 @@ type Var interface {
 }
 
 
-func ShowVars() {
-    for _, v := range globalVars {
-        fmt.Printf("%v\n", v)
-    }
-}
-
 func GetVar(name string) Var {
     for i := len(scopes)-1; i >= 0; i-- {
         for _, v := range scopes[i].vars {
@@ -71,7 +65,7 @@ func AddrToRax(file *os.File, name token.Token) {
     }
 }
 
-func Declare(varname token.Token, vartype types.Type) {
+func DecVar(varname token.Token, vartype types.Type) {
     if varname.Str[0] == '_' {
         fmt.Fprintln(os.Stderr, "[ERROR] variable names starting with \"_\" are reserved for the compiler")
         fmt.Fprintln(os.Stderr, "\t" + varname.At())

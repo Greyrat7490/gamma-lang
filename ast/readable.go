@@ -31,6 +31,22 @@ func (o *DefVar) Readable(indent int) string {
     return res + o.Value.Readable(indent+1)
 }
 
+func (o *DefConst) Readable(indent int) string {
+    s  := strings.Repeat("   ", indent)
+    s2 := strings.Repeat("   ", indent+1)
+
+    res := s + "DEF_CONST:\n" +
+        s2 + fmt.Sprintf("%v(Name)\n", o.Name.Str)
+
+    if o.Type == nil {
+        res += s2 + "infer type\n"
+    } else {
+        res += s2 + fmt.Sprintf("%v(Typename)\n", o.Type)
+    }
+
+    return res + o.Value.Readable(indent+1)
+}
+
 func (o *DefFn) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "DEF_FN:\n"
 

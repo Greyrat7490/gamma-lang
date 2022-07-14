@@ -57,6 +57,7 @@ const (
     Comment         // // ..., /* ... */
 
     DefVar          // :=
+    DefConst        // ::
     Assign          // =
     Fn              // fn
     If              // if
@@ -72,7 +73,7 @@ const (
     TokenTypeCount uint = iota
 )
 
-func toTokenType(s string) TokenType {
+func ToTokenType(s string) TokenType {
     switch s {
     case "true", "false":
         return Boolean
@@ -138,6 +139,8 @@ func toTokenType(s string) TokenType {
 
     case ":=":
         return DefVar
+    case "::":
+        return DefConst
     case "=":
         return Assign
     case "fn":
@@ -240,6 +243,8 @@ func (t TokenType) String() string {
 
     case DefVar:
         return "DefVar"
+    case DefConst:
+        return "DefConst"
     case Assign:
         return "Assign"
     case Fn:
@@ -306,7 +311,7 @@ func (t Token) At() string {
 func split(s string, start int, end int, line int) {
     if start != end {
         s := s[start:end]
-        t := toTokenType(s)
+        t := ToTokenType(s)
 
         tokens = append(tokens, Token{t, s, Pos{line, start+1} })
     }
@@ -374,7 +379,7 @@ func Tokenize(path string) {
                 split(line, start, i, lineNum)
                 start = i+1
 
-            // split at //, /*, :=, <=, >=, ==, !=, &&
+            // split at //, /*, :=, ::, <=, >=, ==, !=, &&
             case '/', ':', '<', '>', '=', '!', '&':
                 if i+2 <= len(line) {
                     s := line[i:i+2]
@@ -393,9 +398,9 @@ func Tokenize(path string) {
                         i++
                         continue
 
-                    case "&&", ":=", "!=", "==", "<=", ">=":
+                    case "&&", ":=", "::", "!=", "==", "<=", ">=":
                         split(line, start, i, lineNum)
-                        tokens = append(tokens, Token{ toTokenType(s), s, Pos{lineNum, i+1} })
+                        tokens = append(tokens, Token{ ToTokenType(s), s, Pos{lineNum, i+1} })
                         start = i+3
                         i += 2
                         continue
@@ -408,7 +413,7 @@ func Tokenize(path string) {
             case '(', ')', '{', '}', '+', '-', '*', '%', ',', ';', '$':
                 split(line, start, i, lineNum)
 
-                tokens = append(tokens, Token{ toTokenType(string(line[i])), string(line[i]), Pos{lineNum, i+1} })
+                tokens = append(tokens, Token{ ToTokenType(string(line[i])), string(line[i]), Pos{lineNum, i+1} })
                 start = i+1
             }
         }

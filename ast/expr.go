@@ -18,6 +18,7 @@ type Expr interface {
     Compile(file *os.File)
     GetType() types.Type
     typeCheck()
+    constEval() string
 }
 
 type BadExpr struct{}
@@ -84,6 +85,10 @@ func (e *Lit) Compile(file *os.File) {
     }
 }
 func (e *Ident) Compile(file *os.File) {
+    if c := vars.GetConst(e.Ident.Str); c != nil {
+        return
+    }
+    
     v := vars.GetVar(e.Ident.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared)\n", e.Ident.Str)
@@ -144,14 +149,18 @@ func (e *Binary) Compile(file *os.File) {
         case *Lit:
             arith.BinaryOp(file, e.Operator.Type, opR.Val.Str, size)
         case *Ident:
-            v := vars.GetVar(opR.Ident.Str)
-            if v == nil {
-                fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", opR.Ident.Str)
-                fmt.Fprintln(os.Stderr, "\t" + opR.Ident.At())
-                os.Exit(1)
-            }
+            if c := vars.GetConst(opR.Ident.Str); c != nil {
+                arith.BinaryOp(file, e.Operator.Type, c.Val.Str, size)
+            } else {
+                v := vars.GetVar(opR.Ident.Str)
+                if v == nil {
+                    fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", opR.Ident.Str)
+                    fmt.Fprintln(os.Stderr, "\t" + opR.Ident.At())
+                    os.Exit(1)
+                }
 
-            arith.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(v.GetType().Size()), v.Addr(0)), size)
+                arith.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(v.GetType().Size()), v.Addr(0)), size)
+            }
 
         default:
             vars.Write(file, asm.Push(asm.RegA))
@@ -184,7 +193,11 @@ func (e *FnCall) Compile(file *os.File) {
             fn.PassVal(file, e.Name, regIdx, v.Val)
 
         case *Ident:
-            fn.PassVar(file, regIdx, v.Ident)
+            if c := vars.GetConst(v.Ident.Str); c != nil {
+                fn.PassVal(file, e.Name, regIdx, c.Val)
+            } else {
+                fn.PassVar(file, regIdx, v.Ident)
+            }
 
         case *Unary:
             val.Compile(file)
@@ -221,6 +234,10 @@ func (e *XCase) Compile(file *os.File, switchCount uint) {
     cond.CaseStart(file)
 
     if i,ok := e.Cond.(*Ident); ok {
+        if c := vars.GetConst(i.Ident.Str); c != nil {
+            // TODO
+            os.Exit(1)
+        }
         cond.CaseIdent(file, i.Ident)
     } else {
         e.Cond.Compile(file)

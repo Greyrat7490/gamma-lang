@@ -15,14 +15,33 @@ func prsDecl() ast.Decl {
         return &d
 
     case token.Name:
-        // define var (type is given)
+        // define var/const (type is given)
         if isVarDec() {
-            d := prsDefVar()
-            return &d
+            dec := prsDecVar()
+
+            token.Next()
+            if token.Cur().Type == token.DefVar {
+                d := prsDefVar(dec)
+                return &d
+            }
+            if token.Cur().Type == token.DefConst {
+                d := prsDefConst(dec)
+                return &d
+            }
+
+            fmt.Fprintln(os.Stderr, "[ERROR] declaring without initializing is not allowed")
+            fmt.Fprintln(os.Stderr, "\t" + dec.At())
+            os.Exit(1)
         }
+
         // define var (infer the type with the value)
         if token.Peek().Type == token.DefVar {
             d := prsDefVarInfer()
+            return &d
+        }
+        // define const (infer the type with the value)
+        if token.Peek().Type == token.DefConst {
+            d := prsDefConstInfer()
             return &d
         }
 
@@ -99,24 +118,14 @@ func prsDecVar() ast.DecVar {
     return ast.DecVar{ Name: name, Type: types.ToType(t.Str, isPtr), TypePos: end }
 }
 
-func prsDefVar() ast.DefVar {
-    dec := prsDecVar()
-    if token.Peek().Type == token.DefVar {
-        if token.Next().Type != token.DefVar {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected a \":=\" but got %v\n", token.Cur())
-            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
-            os.Exit(1)
-        }
-        pos := token.Cur().Pos
+func prsDefVar(dec ast.DecVar) ast.DefVar {
+    pos := token.Cur().Pos
+    token.Next()
+    return ast.DefVar{ Name: dec.Name, Type: dec.Type, ColPos: pos, Value: prsExpr() }
+}
 
-        token.Next()
-        return ast.DefVar{ Name: dec.Name, Type: dec.Type, ColPos: pos, Value: prsExpr() }
-    }
-
-    fmt.Fprintln(os.Stderr, "[ERROR] declaring without initializing is not allowed")
-    fmt.Fprintln(os.Stderr, "\t" + dec.Name.At())
-    os.Exit(1)
-    return ast.DefVar{}
+func prsDefConst(dec ast.DecVar) ast.DefConst {
+    return ast.DefConst(prsDefVar(dec))
 }
 
 func prsDefVarInfer() ast.DefVar {
@@ -126,17 +135,15 @@ func prsDefVarInfer() ast.DefVar {
         os.Exit(1)
     }
     name := token.Cur()
-
-    if token.Next().Type != token.DefVar {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a \":=\" but got %v\n", token.Cur())
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
-        os.Exit(1)
-    }
-    pos := token.Cur().Pos
+    pos := token.Next().Pos
 
     token.Next()
     val := prsExpr()
     return ast.DefVar{ Name: name, Type: nil, ColPos: pos, Value: val }
+}
+
+func prsDefConstInfer() ast.DefConst {
+    return ast.DefConst(prsDefVarInfer())
 }
 
 func prsDecArgs() []ast.DecVar {
