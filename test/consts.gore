@@ -1,13 +1,92 @@
 c1 i32 :: 420
 c2 :: 69
 
-fn main() {
+fn globalConst() {
     printInt(c1) printStr("\n")
     printInt(c2) printStr("\n")
+}
 
-    c3 i32 :: 86
-    c4 :: -69
+fn local() {
+    c1 i32 :: 86
+    c2 :: -69
 
+    printInt(c1) printStr("\n")
+    printInt(c2) printStr("\n")
+}
+
+fn binaryOp() {
+    c1 :: 11 + 8 * -10
+    c2 :: (2 + 4) * 10 + 13 * 2
+    c3 :: 11 + 8 * -10 == -69
+    c4 :: 11 + 8 * -10 >= (2 + 4) * 10 + 13 * 2
+
+    printInt(c1)  printStr("\n")
+    printInt(c2)  printStr("\n")
+    printBool(c3) printStr("\n")
+    printBool(c4) printStr("\n")
+}
+
+fn mix() {
+    c1 :: -69
+    c2 :: 86
+
+    v1 := 2
+    v1 = c1 * v1
+
+    v2 := c2
+    v2 = v1 + c2
+
+    printStr("c1 * v1 = ")
+    printInt(v1)
+    printStr(" (expected: -69 * 2 = -138)\n")
+
+    printStr("v1 + c2 = ")
+    printInt(v2)
+    printStr(" (expected: -138 + 86 = -52)\n")
+}
+
+fn xswitch() {
+    c :: 86
+    c1 :: $ c == {
+        420: (5 + 15) * 2 * 10 - 900 + 80
+         86: -40 * 2 - 6
+         69: (20 + 3) * -3
+          _: 0
+    }
+    c2 :: $ 420 == {
+        420: (5 + 15) * 2 * 10 - 900 + 80
+         86: -40 * 2 - 6
+         69: (20 + 3) * -3
+          _: 0
+    }
+
+    v1 := 420
+    cb :: false
+    c3 := $ {
+               cb: 1
+        v1 == 420: 2
+      cb == false: 3
+                _: 4
+    }
+
+    printInt(c1) printStr("\n")
+    printInt(c2) printStr("\n")
     printInt(c3) printStr("\n")
-    printInt(c4) printStr("\n")
+}
+
+fn main() {
+    printStr("global ------\n")
+    globalConst()
+
+    printStr("local ------\n")
+    local()
+
+    printStr("binaryOp ------\n")
+    binaryOp()
+
+    printStr("var const mix ------\n")
+    mix()
+
+    printStr("xswitch ------\n")
+    xswitch()
 }

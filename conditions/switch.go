@@ -29,10 +29,9 @@ func InLastCase() {
     inLastCase = true
 }
 
-func CaseStart(file *os.File) uint {
+func CaseStart(file *os.File) {
     caseCount++
     file.WriteString(fmt.Sprintf(".case%d:\n", caseCount))
-    return caseCount
 }
 
 func CaseIdent(file *os.File, ident token.Token) {
@@ -55,12 +54,6 @@ func CaseExpr(file *os.File) {
     if !inLastCase {
         file.WriteString(fmt.Sprintf("jne .case%d\n", caseCount+1))
     }
-}
-
-func Default(file *os.File) {
-    caseCount++
-
-    file.WriteString(fmt.Sprintf(".case%d:\n", caseCount))
 }
 
 func CaseBody(file *os.File) {

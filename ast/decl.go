@@ -58,18 +58,14 @@ func (d *DefConst) Compile(file *os.File) {
     d.typeCheck()
 
     val := d.Value.constEval()
-    // TODO to constEval
-    var t token.TokenType
-    switch d.Type.GetKind() {
-    case types.Bool:
-        t = token.Boolean
-    case types.I32, types.Ptr:
-        t = token.Number
-    case types.Str:
-        t = token.Str
+
+    if val.Type == token.Unknown {
+        fmt.Fprintln(os.Stderr, "[ERROR] cannot evaluate expr at compile time (not const)")
+        fmt.Fprintln(os.Stderr, "\t" + d.Value.At())
+        os.Exit(1)
     }
 
-    vars.DefConst(d.Name, d.Type, token.Token{ Str: val, Type: t, Pos: d.Name.Pos })
+    vars.DefConst(d.Name, d.Type, val)
 }
 
 func (d *DefVar) Compile(file *os.File) {
@@ -93,6 +89,11 @@ func (d *DefVar) Compile(file *os.File) {
         v.DefVal(file, e.Val)
 
     case *Ident:
+        if c := vars.GetConst(e.Ident.Str); c != nil {
+            v.DefVal(file, c.Val)
+            return
+        }
+
         if ptr, ok := vars.GetVar(d.Name.Str).GetType().(types.PtrType); ok {
             otherType := vars.GetVar(e.Ident.Str).GetType()
             if ptr.BaseType != otherType {
@@ -102,11 +103,12 @@ func (d *DefVar) Compile(file *os.File) {
             }
 
             vars.DefPtrWithVar(file, d.Name, e.Ident)
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] you can only define global pointer with another global var")
-            fmt.Fprintln(os.Stderr, "\t" + d.Name.At())
-            os.Exit(1)
+            return
         }
+
+        fmt.Fprintln(os.Stderr, "[ERROR] you can only define global pointer with another global var")
+        fmt.Fprintln(os.Stderr, "\t" + d.Name.At())
+        os.Exit(1)
 
     default:
         d.Value.Compile(file)

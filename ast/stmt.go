@@ -238,19 +238,24 @@ func (s *Case) Compile(file *os.File, switchCount uint) {
 
     block := Block{ Stmts: s.Stmts }
 
+    cond.CaseStart(file)
+
     if s.Cond == nil {
-        cond.Default(file)
+        cond.CaseBody(file)
         block.Compile(file)
         return
     }
 
-    cond.CaseStart(file)
-
     if i,ok := s.Cond.(*Ident); ok {
         if c := vars.GetConst(i.Ident.Str); c != nil {
-            // TODO
-            os.Exit(1)
+            if c.Val.Str == "true" {
+                cond.CaseBody(file)
+                block.Compile(file)
+                cond.CaseBodyEnd(file, switchCount)
+            }
+            return
         }
+
         cond.CaseIdent(file, i.Ident)
     } else {
         s.Cond.Compile(file)

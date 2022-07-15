@@ -18,7 +18,7 @@ type Expr interface {
     Compile(file *os.File)
     GetType() types.Type
     typeCheck()
-    constEval() string
+    constEval() token.Token
 }
 
 type BadExpr struct{}
@@ -86,9 +86,11 @@ func (e *Lit) Compile(file *os.File) {
 }
 func (e *Ident) Compile(file *os.File) {
     if c := vars.GetConst(e.Ident.Str); c != nil {
+        l := Lit{ Val: c.Val, Type: c.Type }
+        l.Compile(file)
         return
     }
-    
+
     v := vars.GetVar(e.Ident.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared)\n", e.Ident.Str)
@@ -147,7 +149,18 @@ func (e *Binary) Compile(file *os.File) {
 
         switch opR := e.OperandR.(type) {
         case *Lit:
-            arith.BinaryOp(file, e.Operator.Type, opR.Val.Str, size)
+            switch opR.Val.Type {
+            case token.Str:
+                // TODO
+                fmt.Fprintln(os.Stderr, "[ERROR] TODO: expr.go compile Binary with Str")
+                os.Exit(1)
+            case token.Boolean:
+                if opR.Val.Str == "true" { opR.Val.Str = "1" } else { opR.Val.Str = "0" }
+                fallthrough
+            default:
+                arith.BinaryOp(file, e.Operator.Type, opR.Val.Str, size)
+            }
+
         case *Ident:
             if c := vars.GetConst(opR.Ident.Str); c != nil {
                 arith.BinaryOp(file, e.Operator.Type, c.Val.Str, size)
@@ -222,22 +235,24 @@ func (e *FnCall) Compile(file *os.File) {
 }
 
 func (e *XCase) Compile(file *os.File, switchCount uint) {
-    vars.CreateScope()
-    defer vars.RemoveScope()
+    cond.CaseStart(file)
 
     if e.Cond == nil {
-        cond.Default(file)
+        cond.CaseBody(file)
         e.Expr.Compile(file)
         return
     }
 
-    cond.CaseStart(file)
-
     if i,ok := e.Cond.(*Ident); ok {
         if c := vars.GetConst(i.Ident.Str); c != nil {
-            // TODO
-            os.Exit(1)
+            if c.Val.Str == "true" {
+                cond.CaseBody(file)
+                e.Expr.Compile(file)
+                cond.CaseBodyEnd(file, switchCount)
+            }
+            return
         }
+
         cond.CaseIdent(file, i.Ident)
     } else {
         e.Cond.Compile(file)
@@ -251,6 +266,7 @@ func (e *XCase) Compile(file *os.File, switchCount uint) {
 
 func (e *XSwitch) Compile(file *os.File) {
     e.typeCheck()
+
     count := cond.StartSwitch()
 
     for i := 0; i < len(e.Cases)-1; i++ {

@@ -207,7 +207,7 @@ func (o *Ident)   GetType() types.Type {
     if c != nil {
         return c.Type
     }
-    
+
     v := vars.GetVar(o.Ident.Str)
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", o.Ident.Str)
