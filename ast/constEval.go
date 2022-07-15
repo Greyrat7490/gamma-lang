@@ -17,9 +17,13 @@ func (e *Unary) constEval() token.Token {
     case token.Plus:
         return v
 
-    default:
-        return token.Token{ Type: token.Unknown }
+    case token.Amp:
+        if i,ok := e.Operand.(*Ident); ok {
+            return i.Ident
+        }
     }
+
+    return token.Token{ Type: token.Unknown }
 }
 
 func (e *BadExpr) constEval() token.Token { return token.Token{ Type: token.Unknown } }
@@ -67,6 +71,15 @@ func (e *Binary) constEval() token.Token {
     r := e.OperandR.constEval()
 
     if l.Type != token.Unknown && r.Type != token.Unknown {
+        if l.Type == token.Name {
+            l.Str += e.Operator.Str + r.Str
+            return l
+        }
+        if r.Type == token.Name {
+            r.Str += e.Operator.Str + l.Str
+            return r
+        }
+        
         return arith.BinaryOpVals(e.Operator, l, r)
     }
 

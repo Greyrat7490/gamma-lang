@@ -101,12 +101,16 @@ func DefPtrWithVar(file *os.File, name token.Token, otherName token.Token) {
 }
 
 func DerefSetVal(file *os.File, val token.Token, size int) {
-    if val.Type == token.Str {
+    switch val.Type {
+    case token.Str:
         strIdx := str.Add(val)
 
         file.WriteString(asm.MovDerefVal("rax", types.Ptr_Size, fmt.Sprintf("_str%d\n", strIdx)))
         file.WriteString(asm.MovDerefVal(fmt.Sprintf("rax+%d", types.Ptr_Size), types.I32_Size, fmt.Sprintf("%d\n", str.GetSize(strIdx))))
-    } else {
+    case token.Boolean:
+        if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
+        fallthrough
+    default:
         file.WriteString(asm.MovDerefVal("rax", size, val.Str))
     }
 }

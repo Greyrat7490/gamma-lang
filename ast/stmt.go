@@ -6,6 +6,7 @@ import (
     "gorec/vars"
     "gorec/loops"
     "gorec/token"
+    "gorec/types"
     "gorec/conditions"
     "gorec/asm/x86_64"
 )
@@ -114,7 +115,9 @@ func (s *Assign) Compile(file *os.File) {
             }
 
         case *Unary:
-            file.WriteString(asm.MovRegReg(asm.RegD, asm.RegA, size))
+            // TODO: not proper derefenced sometimes
+            //       see rule110v2.gore
+            file.WriteString(asm.MovRegReg(asm.RegD, asm.RegA, types.Ptr_Size))
             s.Value.Compile(file)
             if e.Operator.Type == token.Mul {
                 file.WriteString(asm.DerefRax(size))

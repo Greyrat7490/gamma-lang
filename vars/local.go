@@ -77,12 +77,16 @@ func (v *LocalVar) DefVar(file *os.File, name token.Token) {
 }
 
 func (v *LocalVar) SetVal(file *os.File, val token.Token) {
-    if v.Type.GetKind() == types.Str {
+    switch v.Type.GetKind() {
+    case types.Str:
         strIdx := str.Add(val)
 
         file.WriteString(asm.MovDerefVal(v.Addr(0), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
         file.WriteString(asm.MovDerefVal(v.Addr(1), types.I32_Size, fmt.Sprint(str.GetSize(strIdx))))
-    } else {
+    case types.Bool:
+        if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
+        fallthrough
+    default:
         file.WriteString(asm.MovDerefVal(v.Addr(0), v.Type.Size(), val.Str))
     }
 }

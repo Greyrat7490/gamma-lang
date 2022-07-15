@@ -172,7 +172,12 @@ func (e *Binary) Compile(file *os.File) {
                     os.Exit(1)
                 }
 
-                arith.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(v.GetType().Size()), v.Addr(0)), size)
+                if t := v.GetType(); t.Size() < size {
+                    vars.Write(file, asm.MovRegDeref(asm.RegC, v.Addr(0), t.Size()))
+                    arith.BinaryOpReg(file, e.Operator.Type, asm.RegC, size)
+                } else {
+                    arith.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), v.Addr(0)), size)
+                }
             }
 
         default:
@@ -203,11 +208,17 @@ func (e *FnCall) Compile(file *os.File) {
     for _, val := range e.Values {
         switch v := val.(type) {
         case *Lit:
-            fn.PassVal(file, e.Name, regIdx, v.Val)
+            if t := types.TypeOfVal(v.Val.Str); t.GetKind() == types.Ptr {
+                fmt.Fprintf(os.Stderr, "[ERROR] passing a literal(%s) as pointer is not allowed (use a const instead)\n", v.Val.Str)
+                fmt.Fprintln(os.Stderr, "\t" + val.At())
+                os.Exit(1)
+            } else {
+                fn.PassVal(file, e.Name, regIdx, v.Val, t)
+            }
 
         case *Ident:
             if c := vars.GetConst(v.Ident.Str); c != nil {
-                fn.PassVal(file, e.Name, regIdx, c.Val)
+                fn.PassVal(file, e.Name, regIdx, c.Val, c.Type)
             } else {
                 fn.PassVar(file, regIdx, v.Ident)
             }

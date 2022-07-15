@@ -133,36 +133,27 @@ func setArg(file *os.File, offset int, regIdx int, size int) {
     }
 }
 
-func PassVal(file *os.File, fnName token.Token, regIdx int, value token.Token) {
+func PassVal(file *os.File, fnName token.Token, regIdx int, value token.Token, valtype types.Type) {
     if f := GetFn(fnName.Str); f == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", fnName.Str)
         os.Exit(1)
     }
 
-    if t := types.TypeOfVal(value.Str); t != nil {
-        switch t.GetKind() {
-        case types.Str:
-            strIdx := str.Add(value)
-            file.WriteString(asm.MovRegVal(regs[regIdx], types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
-            file.WriteString(asm.MovRegVal(regs[regIdx+1], types.I32_Size, fmt.Sprint(str.GetSize(strIdx))))
+    switch valtype.GetKind() {
+    case types.Str:
+        strIdx := str.Add(value)
+        file.WriteString(asm.MovRegVal(regs[regIdx], types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
+        file.WriteString(asm.MovRegVal(regs[regIdx+1], types.I32_Size, fmt.Sprint(str.GetSize(strIdx))))
 
-        case types.Bool:
-            if value.Str == "true" { value.Str = "1" } else { value.Str = "0" }
-            fallthrough
-        case types.I32:
-            file.WriteString(asm.MovRegVal(regs[regIdx], t.Size(), value.Str))
+    case types.Bool:
+        if value.Str == "true" { value.Str = "1" } else { value.Str = "0" }
+        fallthrough
 
-        case types.Ptr:
-            fmt.Fprintln(os.Stderr, "TODO PtrType in PassVal")
-            os.Exit(1)
+    case types.I32, types.Ptr:
+        file.WriteString(asm.MovRegVal(regs[regIdx], valtype.Size(), value.Str))
 
-        default:
-            fmt.Fprintf(os.Stderr, "[ERROR] could not get type of value \"%s\"\n", value.Str)
-            os.Exit(1)
-        }
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", value.Str)
-        fmt.Fprintln(os.Stderr, "\t" + fnName.At())
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] could not get type of value \"%s\"\n", value.Str)
         os.Exit(1)
     }
 }
