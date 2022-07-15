@@ -50,7 +50,7 @@ And because it is written in Go...
   * [x] get addr (via "&")
   * [x] arithmetic
 * [ ] consts
-  * [ ] define
+  * [x] define
   * [ ] compile time eval
 * [ ] arrays
   * [ ] declare
