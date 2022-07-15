@@ -330,12 +330,29 @@ func prsBinary(expr ast.Expr, min_precedence precedence) ast.Expr {
 }
 
 func swap(expr *ast.Binary) {
-    if expr.Operator.Type == token.Minus {
+    switch expr.Operator.Type {
+    case token.Minus:
         expr.Operator.Type = token.Plus
         expr.Operator.Str = "+"
 
         t := token.Token{ Type: token.Minus, Str: "-" }
         expr.OperandR = &ast.Unary{ Operator: t, Operand: expr.OperandR }
+
+    case token.Geq:
+        expr.Operator.Type = token.Leq
+        expr.Operator.Str = "<="
+
+    case token.Leq:
+        expr.Operator.Type = token.Geq
+        expr.Operator.Str = ">="
+
+    case token.Grt:
+        expr.Operator.Type = token.Lss
+        expr.Operator.Str = "<"
+
+    case token.Lss:
+        expr.Operator.Type = token.Grt
+        expr.Operator.Str = ">"
     }
 
     tmp := expr.OperandR

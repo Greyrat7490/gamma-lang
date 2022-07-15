@@ -174,6 +174,6 @@ func prsDecArgs() []ast.DecVar {
 }
 
 func isVarDec() bool {
-    return token.Cur().Type == token.Name && 
+    return token.Cur().Type == token.Name &&
         (token.Peek().Type == token.Typename || (token.Peek().Type == token.Mul && token.Peek2().Type == token.Typename))
 }
