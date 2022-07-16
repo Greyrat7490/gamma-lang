@@ -14,8 +14,7 @@ fn memcpy(dest *bool, src *bool, size i32) {
 
 fn printRow() {
     for i i32, LEN {
-        // TODO: won't work without "== true" (not dereferenced?)
-        if *(cur+i) == true {
+        if *(cur+i) {
             printStr("o")
         } else {
             printStr(" ")

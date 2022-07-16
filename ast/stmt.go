@@ -115,8 +115,6 @@ func (s *Assign) Compile(file *os.File) {
             }
 
         case *Unary:
-            // TODO: not proper derefenced sometimes
-            //       see rule110v2.gore
             file.WriteString(asm.MovRegReg(asm.RegD, asm.RegA, types.Ptr_Size))
             s.Value.Compile(file)
             if e.Operator.Type == token.Mul {
@@ -207,6 +205,22 @@ func (s *If) Compile(file *os.File) {
             count = cond.IfIdent(file, c.Ident, hasElse)
             s.Block.Compile(file)
         }
+    
+    case *Unary:
+        c.Compile(file)
+        if c.Operator.Type == token.Mul {
+            if _,ok := c.Operand.(*Ident); !ok {
+                if _,ok := c.Operand.(*Paren); !ok {
+                    fmt.Fprintln(os.Stderr, "[ERROR] expected a variable or parentheses after \"*\"")
+                    fmt.Fprintln(os.Stderr, "\t" + c.Operator.At())
+                    os.Exit(1)
+                }
+            }
+
+            file.WriteString(asm.DerefRax(c.GetType().Size()))
+        }
+        count = cond.IfExpr(file, hasElse)
+        s.Block.Compile(file)
 
     default:
         s.Cond.Compile(file)
