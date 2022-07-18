@@ -103,16 +103,15 @@ func (s *Assign) Compile(file *os.File) {
     case *Unary:
         dest.Compile(file)
 
-        switch e := s.Value.(type) {
-        case *Lit:
-            vars.DerefSetVal(file, e.Val, size)
+        // compile time evaluation
+        if val := s.Value.constEval(); val.Type != token.Unknown {
+            vars.DerefSetVal(file, val, size)
+            return
+        }
 
+        switch e := s.Value.(type) {
         case *Ident:
-            if c := vars.GetConst(e.Ident.Str); c != nil {
-                vars.DerefSetVal(file, c.Val, size)
-            } else {
-                vars.DerefSetVar(file, e.Ident)
-            }
+            vars.DerefSetVar(file, e.Ident)
 
         case *Unary:
             file.WriteString(asm.MovRegReg(asm.RegD, asm.RegA, types.Ptr_Size))
@@ -142,10 +141,13 @@ func (s *Assign) Compile(file *os.File) {
             os.Exit(1)
         }
 
-        switch e := s.Value.(type) {
-        case *Lit:
-            v.SetVal(file, e.Val)
+        // compile time evaluation
+        if val := s.Value.constEval(); val.Type != token.Unknown {
+            v.SetVal(file, val)
+            return
+        }
 
+        switch e := s.Value.(type) {
         case *Ident:
             v.SetVar(file, e.Ident)
 
@@ -179,33 +181,26 @@ func (s *If) Compile(file *os.File) {
 
     vars.CreateScope()
 
+    // compile time evaluation
+    if val := s.Cond.constEval(); val.Type != token.Unknown {
+        if val.Str == "true" {
+            s.Block.Compile(file)
+        } else if s.Else != nil {
+            s.Else.Block.Compile(file)
+        }
+
+        vars.RemoveScope()
+        return
+    }
+
     hasElse := s.Else != nil || s.Elif != nil
 
     var count uint = 0
     switch c := s.Cond.(type) {
-    case *Lit:
-        if c.Val.Str == "true" {
-            s.Block.Compile(file)
-            return
-        } else if s.Else != nil {
-            s.Else.Block.Compile(file)
-            return
-        }
-
     case *Ident:
-        if con := vars.GetConst(c.Ident.Str); con != nil {
-            if con.Val.Str == "true" {
-                s.Block.Compile(file)
-                return
-            } else if s.Else != nil {
-                s.Else.Block.Compile(file)
-                return
-            }
-        } else {
-            count = cond.IfIdent(file, c.Ident, hasElse)
-            s.Block.Compile(file)
-        }
-    
+        count = cond.IfIdent(file, c.Ident, hasElse)
+        s.Block.Compile(file)
+
     case *Unary:
         c.Compile(file)
         if c.Operator.Type == token.Mul {
@@ -263,16 +258,18 @@ func (s *Case) Compile(file *os.File, switchCount uint) {
         return
     }
 
-    if i,ok := s.Cond.(*Ident); ok {
-        if c := vars.GetConst(i.Ident.Str); c != nil {
-            if c.Val.Str == "true" {
-                cond.CaseBody(file)
-                block.Compile(file)
-                cond.CaseBodyEnd(file, switchCount)
-            }
-            return
+    // compile time evaluation
+    if val := s.Cond.constEval(); val.Type != token.Unknown {
+        if val.Str == "true" {
+            cond.CaseBody(file)
+            block.Compile(file)
+            cond.CaseBodyEnd(file, switchCount)
         }
 
+        return
+    }
+
+    if i,ok := s.Cond.(*Ident); ok {
         cond.CaseIdent(file, i.Ident)
     } else {
         s.Cond.Compile(file)
@@ -286,11 +283,35 @@ func (s *Case) Compile(file *os.File, switchCount uint) {
 
 func (s *Switch) Compile(file *os.File) {
     s.typeCheck()
-    count := cond.StartSwitch()
+
+    // compile time evaluation
+    for _,c := range s.Cases {
+        if c.Cond == nil {
+            for _,s := range c.Stmts {
+                s.Compile(file)
+            }
+
+            return
+        }
+
+        cond := c.Cond.constEval()
+
+        if cond.Type == token.Boolean && cond.Str == "true" {
+            for _,s := range c.Stmts {
+                s.Compile(file)
+            }
+
+            return
+        } else if cond.Type == token.Unknown {
+            break
+        }
+    }
+
 
     // TODO: detect unreachable code and throw error
     // * a1 < but case 420 before 86
     // * cases with same cond
+    count := cond.StartSwitch()
 
     for i := 0; i < len(s.Cases)-1; i++ {
         s.Cases[i].Compile(file, count)
@@ -321,28 +342,23 @@ func (s *While) Compile(file *os.File) {
 
     s.typeCheck()
 
+    // compile time evaluation
+    if c := s.Cond.constEval(); c.Type != token.Unknown {
+        if c.Str == "true" {
+            count := loops.WhileStart(file)
+            s.Block.Compile(file)
+            loops.WhileEnd(file, count)
+        }
+
+        return
+    }
+
     switch e := s.Cond.(type) {
-    case *Lit:
-        if e.Val.Str == "true" {
-            count := loops.WhileStart(file)
-            s.Block.Compile(file)
-            loops.WhileEnd(file, count)
-        }
-
     case *Ident:
-        if c := vars.GetConst(e.Ident.Str); c != nil {
-            if c.Val.Str == "true" {
-                count := loops.WhileStart(file)
-                s.Block.Compile(file)
-                loops.WhileEnd(file, count)
-            }
-        } else {
-            count := loops.WhileStart(file)
-            loops.WhileIdent(file, e.Ident)
-            s.Block.Compile(file)
-            loops.WhileEnd(file, count)
-        }
-
+        count := loops.WhileStart(file)
+        loops.WhileIdent(file, e.Ident)
+        s.Block.Compile(file)
+        loops.WhileEnd(file, count)
 
     default:
         count := loops.WhileStart(file)

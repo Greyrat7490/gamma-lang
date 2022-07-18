@@ -1,6 +1,8 @@
 package ast
 
 import (
+    "os"
+    "fmt"
     "gorec/vars"
     "gorec/token"
     "gorec/arithmetic"
@@ -19,7 +21,14 @@ func (e *Unary) constEval() token.Token {
 
     case token.Amp:
         if i,ok := e.Operand.(*Ident); ok {
-            return i.Ident
+            v := vars.GetVar(i.Ident.Str)
+            if v == nil {
+                fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", i.Ident.Str)
+                fmt.Fprintln(os.Stderr, "\t" + i.Ident.At())
+                os.Exit(1)
+            }
+
+            return token.Token{ Str: v.Addr(0), Type: token.Name, Pos: e.Operator.Pos }
         }
     }
 
@@ -79,7 +88,7 @@ func (e *Binary) constEval() token.Token {
             r.Str += e.Operator.Str + l.Str
             return r
         }
-        
+
         return arith.BinaryOpVals(e.Operator, l, r)
     }
 

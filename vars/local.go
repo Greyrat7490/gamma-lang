@@ -40,36 +40,11 @@ func (v *LocalVar) Addr(fieldNum int) string {
 
 
 func (v *LocalVar) DefVal(file *os.File, val token.Token) {
-    switch v.Type.GetKind() {
-    case types.Str:
-        strIdx := str.Add(val)
-        file.WriteString(asm.MovDerefVal(v.Addr(0), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
-        file.WriteString(asm.MovDerefVal(v.Addr(1), types.I32_Size, fmt.Sprintf("%d", str.GetSize(strIdx))))
-
-    case types.Bool:
-        if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
-        fallthrough
-
-    case types.I32:
-        file.WriteString(asm.MovDerefVal(v.Addr(0), v.GetType().Size(), val.Str))
-
-    case types.Ptr:
-        fmt.Fprintln(os.Stderr, "TODO defLocalVal PtrType")
-        os.Exit(1)
-
-    default:
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name.Str)
-        os.Exit(1)
-    }
+    v.SetVal(file, val)
 }
 
 func (v *LocalVar) DefExpr(file *os.File) {
-    if v.Type.GetKind() == types.Str {
-        file.WriteString(asm.MovDerefReg(v.Addr(0), types.Ptr_Size, asm.RegA))
-        file.WriteString(asm.MovDerefReg(v.Addr(1), types.I32_Size, asm.RegB))
-    } else {
-        file.WriteString(asm.MovDerefReg(v.Addr(0), v.GetType().Size(), asm.RegA))
-    }
+    v.SetExpr(file)
 }
 
 func (v *LocalVar) DefVar(file *os.File, name token.Token) {
@@ -83,33 +58,58 @@ func (v *LocalVar) SetVal(file *os.File, val token.Token) {
 
         file.WriteString(asm.MovDerefVal(v.Addr(0), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
         file.WriteString(asm.MovDerefVal(v.Addr(1), types.I32_Size, fmt.Sprint(str.GetSize(strIdx))))
+
+    case types.Ptr:
+        if val.Type == token.Name {
+            Write(file, fmt.Sprintf("lea rax, [%s]\n", val.Str))
+            Write(file, asm.MovDerefReg(v.Addr(0), v.GetType().Size(), asm.RegA))
+        } else {
+            file.WriteString(asm.MovDerefVal(v.Addr(0), v.Type.Size(), val.Str))
+        }
+
     case types.Bool:
         if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
         fallthrough
-    default:
+
+    case types.I32:
         file.WriteString(asm.MovDerefVal(v.Addr(0), v.Type.Size(), val.Str))
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + v.Name.At())
+        os.Exit(1)
     }
 }
 
 func (v *LocalVar) SetVar(file *os.File, name token.Token) {
-    if v.Name.Str == name.Str { return } // redundant
+    if v.Name.Str == name.Str {
+        fmt.Fprintln(os.Stderr, "[WARNING] assigning a variable to itself is redundant")
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        return
+    }
 
-    if other := GetVar(name.Str); other != nil {
-        switch v.Type.GetKind() {
-        case types.Str:
-            file.WriteString(asm.MovDerefDeref(v.Addr(0), other.Addr(0), types.Ptr_Size, asm.RegA))
-            file.WriteString(asm.MovDerefDeref(v.Addr(1), other.Addr(1), types.I32_Size, asm.RegA))
+    other := GetVar(name.Str)
+    if other == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+    }
 
-        case types.I32, types.Bool:
-            file.WriteString(asm.MovDerefDeref(v.Addr(0), other.Addr(0), v.Type.Size(), asm.RegA))
+    switch v.Type.GetKind() {
+    case types.Str:
+        file.WriteString(asm.MovDerefDeref(v.Addr(0), other.Addr(0), types.Ptr_Size, asm.RegA))
+        file.WriteString(asm.MovDerefDeref(v.Addr(1), other.Addr(1), types.I32_Size, asm.RegA))
 
-        case types.Ptr:
-            file.WriteString(asm.MovDerefVal(v.Addr(0), v.Type.Size(), other.Addr(0)))
+    case types.I32, types.Bool:
+        file.WriteString(asm.MovDerefDeref(v.Addr(0), other.Addr(0), v.Type.Size(), asm.RegA))
 
-        default:
-            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", name.Str)
-            os.Exit(1)
-        }
+    case types.Ptr:
+        file.WriteString(asm.MovDerefVal(v.Addr(0), v.Type.Size(), other.Addr(0)))
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + v.Name.At())
+        os.Exit(1)
     }
 }
 

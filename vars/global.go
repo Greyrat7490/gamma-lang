@@ -39,31 +39,22 @@ func (v *GlobalVar) Addr(fieldNum int) string {
 
 
 func (v *GlobalVar) DefVal(file *os.File, val token.Token) {
-    if v.Name.Str == val.Str {
-        fmt.Fprintln(os.Stderr, "[ERROR] cannot define a variable with itself")
-        fmt.Fprintln(os.Stderr, "\t" + val.At())
-        os.Exit(1)
-    }
-
     switch v.Type.GetKind() {
     case types.Str:
         strIdx := str.Add(val)
         globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s _str%d\n  %s %d\n",
             v.Name.Str, asm.GetDataSize(types.Ptr_Size), strIdx, asm.GetDataSize(types.I32_Size), str.GetSize(strIdx)))
 
-    case types.I32:
-        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s %s\n", v.Name.Str, asm.GetDataSize(types.I32_Size), val.Str))
-
     case types.Bool:
         if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
-        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s %s\n", v.Name.Str, asm.GetDataSize(types.Bool_Size), val.Str))
+        fallthrough
 
-    case types.Ptr:
-        fmt.Fprintln(os.Stderr, "TODO defGlobalVal PtrType")
-        os.Exit(1)
+    case types.I32, types.Ptr:
+        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s %s\n", v.Name.Str, asm.GetDataSize(v.Type.Size()), val.Str))
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + v.Name.At())
         os.Exit(1)
     }
 }
@@ -92,11 +83,18 @@ func (v *GlobalVar) SetVal(file *os.File, val token.Token) {
 
         Write(file, asm.MovDerefVal(v.Addr(0), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
         Write(file, asm.MovDerefVal(v.Addr(1), types.I32_Size, fmt.Sprint(str.GetSize(strIdx))))
+
     case types.Bool:
         if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
         fallthrough
-    default:
+
+    case types.I32, types.Ptr:
         Write(file, asm.MovDerefVal(v.Addr(0), v.Type.Size(), val.Str))
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + v.Name.At())
+        os.Exit(1)
     }
 }
 
@@ -107,22 +105,27 @@ func (v *GlobalVar) SetVar(file *os.File, name token.Token) {
         return
     }
 
-    if other := GetVar(name.Str); other != nil {
-        switch v.Type.GetKind() {
-        case types.Str:
-            file.WriteString(asm.MovDerefDeref(v.Addr(0), other.Addr(0), types.Ptr_Size, asm.RegA))
-            file.WriteString(asm.MovDerefDeref(v.Addr(1), other.Addr(1), types.I32_Size, asm.RegA))
+    other := GetVar(name.Str)
+    if other == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+    }
 
-        case types.I32, types.Bool:
-            file.WriteString(asm.MovDerefDeref(v.Addr(0), other.Addr(0), v.Type.Size(), asm.RegA))
+    switch v.Type.GetKind() {
+    case types.Str:
+        file.WriteString(asm.MovDerefDeref(v.Addr(0), other.Addr(0), types.Ptr_Size, asm.RegA))
+        file.WriteString(asm.MovDerefDeref(v.Addr(1), other.Addr(1), types.I32_Size, asm.RegA))
 
-        case types.Ptr:
-            file.WriteString(asm.MovDerefVal(v.Addr(0), v.Type.Size(), name.Str))
+    case types.I32, types.Bool:
+        file.WriteString(asm.MovDerefDeref(v.Addr(0), other.Addr(0), v.Type.Size(), asm.RegA))
 
-        default:
-            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", name.Str)
-            os.Exit(1)
-        }
+    case types.Ptr:
+        file.WriteString(asm.MovDerefVal(v.Addr(0), v.Type.Size(), name.Str))
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", name.Str)
+        os.Exit(1)
     }
 }
 

@@ -84,36 +84,20 @@ func (d *DefVar) Compile(file *os.File) {
         os.Exit(1)
     }
 
-    switch e := d.Value.(type) {
-    case *Lit:
-        v.DefVal(file, e.Val)
+    // compile time evaluation
+    if val := d.Value.constEval(); val.Type != token.Unknown {
+        v.DefVal(file, val)
+        return
+    }
 
-    case *Ident:
-        if c := vars.GetConst(e.Ident.Str); c != nil {
-            v.DefVal(file, c.Val)
-            return
-        }
-
-        if ptr, ok := vars.GetVar(d.Name.Str).GetType().(types.PtrType); ok {
-            otherType := vars.GetVar(e.Ident.Str).GetType()
-            if ptr.BaseType != otherType {
-                fmt.Fprintf(os.Stderr, "[ERROR] %s points to %v but %s is of type %v\n", d.Name.Str, ptr.BaseType, e.Ident.Str, otherType)
-                fmt.Fprintln(os.Stderr, "\t" + d.Name.At())
-                os.Exit(1)
-            }
-
-            vars.DefPtrWithVar(file, d.Name, e.Ident)
-            return
-        }
-
-        fmt.Fprintln(os.Stderr, "[ERROR] you can only define global pointer with another global var")
+    if _,ok := d.Value.(*Ident); ok {
+        fmt.Fprintln(os.Stderr, "[ERROR] defining a variable with another variable is not supported yet")
         fmt.Fprintln(os.Stderr, "\t" + d.Name.At())
         os.Exit(1)
-
-    default:
-        d.Value.Compile(file)
-        v.DefExpr(file)
     }
+
+    d.Value.Compile(file)
+    v.DefExpr(file)
 }
 
 func (d *DefFn) Compile(file *os.File) {

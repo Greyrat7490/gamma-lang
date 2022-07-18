@@ -135,18 +135,21 @@ func (e *Unary) Compile(file *os.File) {
 func (e *Binary) Compile(file *os.File) {
     e.typeCheck()
 
+    // TODO: compile time evaluation:
+    //  constEval whole expr or only left or right operand
+
+    size := e.OperandL.GetType().Size()
+    if sizeR := e.OperandR.GetType().Size(); sizeR > size {
+        size = sizeR
+    }
+
     e.OperandL.Compile(file)
     if u,ok := e.OperandL.(*Unary); ok && u.Operator.Type == token.Mul {
-        vars.Write(file, asm.DerefRax(u.GetType().Size()))
+        vars.Write(file, asm.DerefRax(size))
     }
 
     // +,-,*,/, <,<=,>,>=,==,!=
     if e.Operator.Type != token.And && e.Operator.Type != token.Or {
-        size := e.OperandL.GetType().Size()
-        if sizeR := e.OperandR.GetType().Size(); sizeR > size {
-            size = sizeR
-        }
-
         switch opR := e.OperandR.(type) {
         case *Lit:
             switch opR.Val.Type {
@@ -207,6 +210,9 @@ func (e *FnCall) Compile(file *os.File) {
     regIdx := 0
     for _, val := range e.Values {
         switch v := val.(type) {
+
+        // TODO: compile time evaluation:
+        //  constEval value
         case *Lit:
             if t := types.TypeOfVal(v.Val.Str); t.GetKind() == types.Ptr {
                 fmt.Fprintf(os.Stderr, "[ERROR] passing a literal(%s) as pointer is not allowed (use a const instead)\n", v.Val.Str)
@@ -254,6 +260,8 @@ func (e *XCase) Compile(file *os.File, switchCount uint) {
         return
     }
 
+    // TODO: compile time evaluation:
+    //  constEval conditions and compile body if true
     if i,ok := e.Cond.(*Ident); ok {
         if c := vars.GetConst(i.Ident.Str); c != nil {
             if c.Val.Str == "true" {
@@ -278,6 +286,8 @@ func (e *XCase) Compile(file *os.File, switchCount uint) {
 func (e *XSwitch) Compile(file *os.File) {
     e.typeCheck()
 
+    // TODO: compile time evaluation:
+    //  constEval case conditions and compile first case body with true as result
     count := cond.StartSwitch()
 
     for i := 0; i < len(e.Cases)-1; i++ {

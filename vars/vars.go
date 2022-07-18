@@ -80,26 +80,6 @@ func DecVar(varname token.Token, vartype types.Type) {
 }
 
 
-func DefPtrWithVar(file *os.File, name token.Token, otherName token.Token) {
-    v := GetVar(name.Str)
-    if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] cannot define var \"%s\" (is not declared)\n", name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
-    }
-
-    if _, ok := v.(*GlobalVar); ok {
-        globalDefines = append(globalDefines, fmt.Sprintf("%s: dq %s\n", name.Str, otherName.Str))
-        return
-    }
-
-    if v, ok := v.(*LocalVar); ok {
-        AddrToRax(file, otherName)
-        v.DefExpr(file)
-        return
-    }
-}
-
 func DerefSetVal(file *os.File, val token.Token, size int) {
     switch val.Type {
     case token.Str:
