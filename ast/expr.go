@@ -104,83 +104,78 @@ func (e *Paren) Compile(file *os.File) { e.Expr.Compile(file) }
 func (e *Unary) Compile(file *os.File) {
     e.typeCheck()
 
-    switch e.Operator.Type {
-    case token.Mul:
-        if _,ok := e.Operand.(*Ident); !ok {
-            if _,ok := e.Operand.(*Paren); !ok {
-                fmt.Fprintln(os.Stderr, "[ERROR] expected a variable or parentheses after \"*\"")
-                fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
-                os.Exit(1)
-            }
-        }
-        e.Operand.Compile(file)
+    // compile time evaluation
+    if c := e.constEval(); c.Type != token.Unknown {
+        asm.MovRegVal(asm.RegA, types.TypeOfVal(c.Str).Size(), c.Str)
+        return
+    }
 
-    case token.Amp:
-        if i,ok := e.Operand.(*Ident); ok {
-            vars.AddrToRax(file, i.Ident)
-        } else {
-            fmt.Fprintln(os.Stderr, "[ERROR] expected a variable after \"&\"")
-            fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
-            os.Exit(1)
-        }
+    e.Operand.Compile(file)
 
-    default:
-        e.Operand.Compile(file)
-        if e.Operator.Type == token.Minus {
-            size := e.Operand.GetType().Size()
-            vars.Write(file, asm.Neg(asm.GetReg(asm.RegA, size), size))
-        }
+    if e.Operator.Type == token.Minus {
+        size := e.Operand.GetType().Size()
+        vars.Write(file, asm.Neg(asm.GetReg(asm.RegA, size), size))
     }
 }
 func (e *Binary) Compile(file *os.File) {
     e.typeCheck()
-
-    // TODO: compile time evaluation:
-    //  constEval whole expr or only left or right operand
 
     size := e.OperandL.GetType().Size()
     if sizeR := e.OperandR.GetType().Size(); sizeR > size {
         size = sizeR
     }
 
-    e.OperandL.Compile(file)
-    if u,ok := e.OperandL.(*Unary); ok && u.Operator.Type == token.Mul {
-        vars.Write(file, asm.DerefRax(size))
+    // compile time evaluation (constEval whole expr)
+    if c := e.constEval(); c.Type != token.Unknown {
+        if c.Type == token.Boolean {
+            if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
+        }
+
+        vars.Write(file, asm.MovRegVal(asm.RegA, size, c.Str))
+        return
     }
+
 
     // +,-,*,/, <,<=,>,>=,==,!=
     if e.Operator.Type != token.And && e.Operator.Type != token.Or {
-        switch opR := e.OperandR.(type) {
-        case *Lit:
-            switch opR.Val.Type {
-            case token.Str:
-                // TODO
-                fmt.Fprintln(os.Stderr, "[ERROR] TODO: expr.go compile Binary with Str")
-                os.Exit(1)
-            case token.Boolean:
-                if opR.Val.Str == "true" { opR.Val.Str = "1" } else { opR.Val.Str = "0" }
-                fallthrough
-            default:
-                arith.BinaryOp(file, e.Operator.Type, opR.Val.Str, size)
+        // compile time evaluation (constEval only left expr)
+        if c := e.OperandL.constEval(); c.Type != token.Unknown {
+            if c.Type == token.Boolean {
+                if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
             }
 
-        case *Ident:
-            if c := vars.GetConst(opR.Ident.Str); c != nil {
-                arith.BinaryOp(file, e.Operator.Type, c.Val.Str, size)
-            } else {
-                v := vars.GetVar(opR.Ident.Str)
-                if v == nil {
-                    fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", opR.Ident.Str)
-                    fmt.Fprintln(os.Stderr, "\t" + opR.Ident.At())
-                    os.Exit(1)
+            vars.Write(file, asm.MovRegVal(asm.RegA, size, c.Str))
+        } else {
+            e.OperandL.Compile(file)
+            if u,ok := e.OperandL.(*Unary); ok && u.Operator.Type == token.Mul {
+                vars.Write(file, asm.DerefRax(size))
+            }
+
+            // compile time evaluation (constEval only right expr)
+            if c := e.OperandR.constEval(); c.Type != token.Unknown {
+                if c.Type == token.Boolean {
+                    if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
                 }
 
-                if t := v.GetType(); t.Size() < size {
-                    vars.Write(file, asm.MovRegDeref(asm.RegC, v.Addr(0), t.Size()))
-                    arith.BinaryOpReg(file, e.Operator.Type, asm.RegC, size)
-                } else {
-                    arith.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), v.Addr(0)), size)
-                }
+                arith.BinaryOp(file, e.Operator.Type, c.Str, size)
+                return
+            }
+        }
+
+        switch opR := e.OperandR.(type) {
+        case *Ident:
+            v := vars.GetVar(opR.Ident.Str)
+            if v == nil {
+                fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", opR.Ident.Str)
+                fmt.Fprintln(os.Stderr, "\t" + opR.Ident.At())
+                os.Exit(1)
+            }
+
+            if t := v.GetType(); t.Size() < size {
+                vars.Write(file, asm.MovRegDeref(asm.RegC, v.Addr(0), t.Size()))
+                arith.BinaryOpReg(file, e.Operator.Type, asm.RegC, size)
+            } else {
+                arith.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), v.Addr(0)), size)
             }
 
         default:
@@ -196,11 +191,32 @@ func (e *Binary) Compile(file *os.File) {
             vars.Write(file, asm.Pop(asm.RegA))
             arith.BinaryOpReg(file, e.Operator.Type, asm.RegB, size)
         }
+
     // &&, ||
     } else {
-        count := cond.LogicalOp(file, e.Operator)
-        e.OperandR.Compile(file)
-        cond.LogicalOpEnd(file, count)
+        // compile time evaluation
+        if c := e.OperandL.constEval(); c.Type != token.Unknown {
+            if e.Operator.Type == token.And && c.Str == "false" {
+                vars.Write(file, asm.MovRegVal(asm.RegA, size, "0"))
+                return
+            }
+            if e.Operator.Type == token.Or && c.Str == "true" {
+                vars.Write(file, asm.MovRegVal(asm.RegA, size, "1"))
+                return
+            }
+
+            e.OperandR.Compile(file)
+        } else {
+            e.OperandL.Compile(file)
+            if u,ok := e.OperandL.(*Unary); ok && u.Operator.Type == token.Mul {
+                vars.Write(file, asm.DerefRax(size))
+            }
+
+            // TODO move to arithmetic and move to asm and rename
+            count := cond.LogicalOp(file, e.Operator)
+            e.OperandR.Compile(file)
+            cond.LogicalOpEnd(file, count)
+        }
     }
 }
 
@@ -209,36 +225,25 @@ func (e *FnCall) Compile(file *os.File) {
 
     regIdx := 0
     for _, val := range e.Values {
-        switch v := val.(type) {
-
-        // TODO: compile time evaluation:
-        //  constEval value
-        case *Lit:
-            if t := types.TypeOfVal(v.Val.Str); t.GetKind() == types.Ptr {
-                fmt.Fprintf(os.Stderr, "[ERROR] passing a literal(%s) as pointer is not allowed (use a const instead)\n", v.Val.Str)
-                fmt.Fprintln(os.Stderr, "\t" + val.At())
-                os.Exit(1)
-            } else {
-                fn.PassVal(file, e.Name, regIdx, v.Val, t)
-            }
-
-        case *Ident:
-            if c := vars.GetConst(v.Ident.Str); c != nil {
-                fn.PassVal(file, e.Name, regIdx, c.Val, c.Type)
-            } else {
+        // compile time evaluation:
+        if v := val.constEval(); v.Type != token.Unknown {
+            fn.PassVal(file, e.Name, regIdx, v, val.GetType())
+        } else {
+            switch v := val.(type) {
+            case *Ident:
                 fn.PassVar(file, regIdx, v.Ident)
-            }
 
-        case *Unary:
-            val.Compile(file)
-            if v.Operator.Type == token.Mul {
-                vars.Write(file, asm.DerefRax(val.GetType().Size()))
-            }
-            fn.PassReg(file, regIdx, val.GetType())
+            case *Unary:
+                val.Compile(file)
+                if v.Operator.Type == token.Mul {
+                    vars.Write(file, asm.DerefRax(val.GetType().Size()))
+                }
+                fn.PassReg(file, regIdx, val.GetType())
 
-        default:
-            val.Compile(file)
-            fn.PassReg(file, regIdx, val.GetType())
+            default:
+                val.Compile(file)
+                fn.PassReg(file, regIdx, val.GetType())
+            }
         }
 
         if val.GetType().GetKind() == types.Str {
@@ -260,18 +265,18 @@ func (e *XCase) Compile(file *os.File, switchCount uint) {
         return
     }
 
-    // TODO: compile time evaluation:
-    //  constEval conditions and compile body if true
-    if i,ok := e.Cond.(*Ident); ok {
-        if c := vars.GetConst(i.Ident.Str); c != nil {
-            if c.Val.Str == "true" {
-                cond.CaseBody(file)
-                e.Expr.Compile(file)
-                cond.CaseBodyEnd(file, switchCount)
-            }
-            return
+    // compile time evaluation
+    if val := e.Cond.constEval(); val.Type != token.Unknown {
+        if val.Str == "true" {
+            cond.CaseBody(file)
+            e.Expr.Compile(file)
+            cond.CaseBodyEnd(file, switchCount)
         }
 
+        return
+    }
+
+    if i,ok := e.Cond.(*Ident); ok {
         cond.CaseIdent(file, i.Ident)
     } else {
         e.Cond.Compile(file)
@@ -286,8 +291,12 @@ func (e *XCase) Compile(file *os.File, switchCount uint) {
 func (e *XSwitch) Compile(file *os.File) {
     e.typeCheck()
 
-    // TODO: compile time evaluation:
-    //  constEval case conditions and compile first case body with true as result
+    // compile time evaluation
+    if c := e.constEval(); c.Type != token.Unknown {
+        asm.MovRegVal(asm.RegA, types.TypeOfVal(c.Str).Size(), c.Str)
+        return
+    }
+
     count := cond.StartSwitch()
 
     for i := 0; i < len(e.Cases)-1; i++ {

@@ -104,12 +104,34 @@ func (o *Lit)     typeCheck() {}
 func (o *Paren)   typeCheck() {}
 func (o *Ident)   typeCheck() {}
 func (o *Unary)   typeCheck() {
-    if o.Operator.Type == token.Plus || o.Operator.Type == token.Minus {
+    switch o.Operator.Type {
+    case token.Mul:
+        if _,ok := o.Operand.(*Ident); !ok {
+            if _,ok := o.Operand.(*Paren); !ok {
+                fmt.Fprintln(os.Stderr, "[ERROR] expected a variable or parentheses after \"*\"")
+                fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+                os.Exit(1)
+            }
+        }
+
+    case token.Amp:
+        if _,ok := o.Operand.(*Ident); !ok {
+            fmt.Fprintln(os.Stderr, "[ERROR] expected a variable after \"&\"")
+            fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+            os.Exit(1)
+        }
+
+    case token.Plus, token.Minus:
         if t := o.Operand.GetType(); t.GetKind() != types.I32 {
             fmt.Fprintf(os.Stderr, "[ERROR] expected i32 after +/- unary op but got %v\n", t)
             fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
             os.Exit(1)
         }
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] unexpected unary op %v\n", o.Operator)
+        fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+        os.Exit(1)
     }
 }
 func (o *Binary) typeCheck() {

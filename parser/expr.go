@@ -338,6 +338,11 @@ func swap(expr *ast.Binary) {
         t := token.Token{ Type: token.Minus, Str: "-" }
         expr.OperandR = &ast.Unary{ Operator: t, Operand: expr.OperandR }
 
+    // TODO: proper fix
+    // only tmp
+    case token.Div:
+        return
+        
     case token.Geq:
         expr.Operator.Type = token.Leq
         expr.Operator.Str = "<="
