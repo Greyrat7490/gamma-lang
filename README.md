@@ -49,9 +49,9 @@ And because it is written in Go...
   * [x] deref
   * [x] get addr (via "&")
   * [x] arithmetic
-* [ ] consts
+* [x] consts
   * [x] define
-  * [ ] compile time eval
+  * [x] compile time eval
 * [ ] arrays
   * [ ] declare
     * [ ] with literal
