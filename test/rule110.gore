@@ -1,21 +1,23 @@
-SIZE := 150
+dummy bool := false
 
-prev := &SIZE + 3*8        // to skip the 3 global vars
-cur  := prev + 8*150       // leave space(SIZE) for prev
+LEN :: 150                  // amount of lines printed
+
+prev :: &dummy
+cur  :: prev + LEN          // size of prev is LEN*BOOL_SIZE
 
 
-fn memcpy(dest *i32, src *i32, size i32) {
+fn memcpy(dest *bool, src *bool, size i32) {
     for i i32, size {
-        *(dest+i*8) = *(src+i*8)
+        *(dest+i) = *(src+i)
     }
 }
 
 fn printRow() {
-    for i i32, SIZE {
-        if *(cur+i*8) == 0 {
-            printStr(" ")
-        } else {
+    for i i32, LEN {
+        if *(cur+i) {
             printStr("o")
+        } else {
+            printStr(" ")
         }
     }
 
@@ -23,45 +25,41 @@ fn printRow() {
 }
 
 fn setNextRow(round i32) {
-    *(cur+(SIZE-round-1)*8) = 1
+    *(cur+LEN-round-1) = true
 
-    for i i32, SIZE-1, 1 {
-        if *(prev+(i-1)*8) == 0 {
-            if *(prev+i*8) == 0 {
-                if *(prev+(i+1)*8) == 0 {   // 000 -> 0
-                    *(cur+i*8) = 0
-                } else {                    // 001 -> 1
-                    *(cur+i*8) = 1
+    for i i32, LEN-1, 1 {
+        if *(prev+i-1) == false {
+            if *(prev+i) == false {
+                if *(prev+i+1) == false {       // 000 -> 0
+                    *(cur+i) = false
+                } else {                        // 001 -> 1
+                    *(cur+i) = true
                 }
             } else {
-                if *(prev+(i+1)*8) == 0 {   // 010 -> 1
-                    *(cur+i*8) = 1
-                } else {                    // 011 -> 1
-                    *(cur+i*8) = 1
-                }
+                *(cur+i) = true                 // 010 -> 1 / 011 -> 1
             }
         } else {
-            if *(prev+i*8) == 0 {
-                if *(prev+(i+1)*8) == 0 {   // 100 -> 0
-                    *(cur+i*8) = 0
-                } else {                    // 101 -> 1
-                    *(cur+i*8) = 1
+            if *(prev+i) == false {
+                if *(prev+i+1) == false {       // 100 -> 0
+                    *(cur+i) = false
+                } else {                        // 101 -> 1
+                    *(cur+i) = true
                 }
             } else {
-                if *(prev+(i+1)*8) == 0 {   // 110 -> 1
-                    *(cur+i*8) = 1
-                } else {                    // 111 -> 0
-                    *(cur+i*8) = 0
+                if *(prev+i+1) == false {       // 110 -> 1
+                    *(cur+i) = true
+                } else {                        // 111 -> 0
+                    *(cur+i) = false
                 }
             }
         }
     }
 
-    memcpy(prev, cur, SIZE)
+    memcpy(prev, cur, LEN)
 }
 
 fn main() {
-    for i i32, SIZE {
+    for i i32, LEN {
         setNextRow(i)
         printRow()
     }

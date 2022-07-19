@@ -5,7 +5,7 @@ import (
     "fmt"
     "gorec/vars"
     "gorec/token"
-    "gorec/arithmetic"
+    "gorec/asm/x86_64"
 )
 
 func (e *Lit) constEval() token.Token { return e.Val }
@@ -89,7 +89,7 @@ func (e *Binary) constEval() token.Token {
             return r
         }
 
-        return arith.BinaryOpVals(e.Operator, l, r)
+        return asm.BinaryOpVals(e.Operator, l, r)
     }
 
     return token.Token{ Type: token.Unknown }

@@ -18,7 +18,6 @@ func ResetCount() {
 
 func IfIdent(file *os.File, ident token.Token, hasElse bool) uint {
     v := vars.GetVar(ident.Str)
-
     if v == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", ident.Str)
         fmt.Fprintln(os.Stderr, "\t" + ident.At())

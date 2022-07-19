@@ -1,0 +1,14 @@
+// defining a global variable with another variable is not allowed
+// -> so non const expr too
+
+// maybe support later again
+
+SIZE := 150
+
+prev := &SIZE + 3*8
+cur  := prev + 8*150        // prev is a variable(not const) 
+                            // so the expr is not a const expr
+
+fn main() {
+
+}

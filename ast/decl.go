@@ -90,9 +90,9 @@ func (d *DefVar) Compile(file *os.File) {
         return
     }
 
-    if _,ok := d.Value.(*Ident); ok {
-        fmt.Fprintln(os.Stderr, "[ERROR] defining a variable with another variable is not supported yet")
-        fmt.Fprintln(os.Stderr, "\t" + d.Name.At())
+    if vars.InGlobalScope() {
+        fmt.Fprintln(os.Stderr, "[ERROR] defining a global variable with a non const expr is not allowed")
+        fmt.Fprintln(os.Stderr, "\t" + d.Value.At())
         os.Exit(1)
     }
 

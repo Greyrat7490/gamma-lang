@@ -42,14 +42,6 @@ func GetVar(name string) Var {
     return nil
 }
 
-func Write(file *os.File, s string) {
-    if InGlobalScope() {
-        preMain = append(preMain, s)
-    } else {
-        file.WriteString(s)
-    }
-}
-
 func AddrToRax(file *os.File, name token.Token) {
     v := GetVar(name.Str)
     if v == nil {
@@ -59,9 +51,9 @@ func AddrToRax(file *os.File, name token.Token) {
     }
 
     if _,ok := v.(*GlobalVar); ok {
-        Write(file, fmt.Sprintf("mov rax, %s\n", v.Addr(0)))
+        file.WriteString(fmt.Sprintf("mov rax, %s\n", v.Addr(0)))
     } else {
-        Write(file, fmt.Sprintf("lea rax, [%s]\n", v.Addr(0)))
+        file.WriteString(fmt.Sprintf("lea rax, [%s]\n", v.Addr(0)))
     }
 }
 

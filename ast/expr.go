@@ -8,7 +8,6 @@ import (
     "gorec/token"
     "gorec/types"
     "gorec/types/str"
-    "gorec/arithmetic"
     "gorec/conditions"
     "gorec/asm/x86_64"
 )
@@ -75,13 +74,13 @@ func (e *Lit) Compile(file *os.File) {
     case token.Str:
         strIdx := str.Add(e.Val)
 
-        vars.Write(file, asm.MovRegVal(asm.RegA, types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
-        vars.Write(file, asm.MovRegVal(asm.RegB, types.I32_Size, fmt.Sprintf("%d", str.GetSize(strIdx))))
+        file.WriteString(asm.MovRegVal(asm.RegA, types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
+        file.WriteString(asm.MovRegVal(asm.RegB, types.I32_Size, fmt.Sprintf("%d", str.GetSize(strIdx))))
     case token.Boolean:
         if e.Val.Str == "true" { e.Val.Str = "1" } else { e.Val.Str = "0" }
         fallthrough
     default:
-        vars.Write(file, asm.MovRegVal(asm.RegA, e.Type.Size(), e.Val.Str))
+        file.WriteString(asm.MovRegVal(asm.RegA, e.Type.Size(), e.Val.Str))
     }
 }
 func (e *Ident) Compile(file *os.File) {
@@ -98,7 +97,7 @@ func (e *Ident) Compile(file *os.File) {
         os.Exit(1)
     }
 
-    vars.Write(file, asm.MovRegDeref(asm.RegA, v.Addr(0), v.GetType().Size()))
+    file.WriteString(asm.MovRegDeref(asm.RegA, v.Addr(0), v.GetType().Size()))
 }
 func (e *Paren) Compile(file *os.File) { e.Expr.Compile(file) }
 func (e *Unary) Compile(file *os.File) {
@@ -114,7 +113,7 @@ func (e *Unary) Compile(file *os.File) {
 
     if e.Operator.Type == token.Minus {
         size := e.Operand.GetType().Size()
-        vars.Write(file, asm.Neg(asm.GetReg(asm.RegA, size), size))
+        file.WriteString(asm.Neg(asm.GetReg(asm.RegA, size), size))
     }
 }
 func (e *Binary) Compile(file *os.File) {
@@ -131,7 +130,7 @@ func (e *Binary) Compile(file *os.File) {
             if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
         }
 
-        vars.Write(file, asm.MovRegVal(asm.RegA, size, c.Str))
+        file.WriteString(asm.MovRegVal(asm.RegA, size, c.Str))
         return
     }
 
@@ -144,11 +143,11 @@ func (e *Binary) Compile(file *os.File) {
                 if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
             }
 
-            vars.Write(file, asm.MovRegVal(asm.RegA, size, c.Str))
+            file.WriteString(asm.MovRegVal(asm.RegA, size, c.Str))
         } else {
             e.OperandL.Compile(file)
             if u,ok := e.OperandL.(*Unary); ok && u.Operator.Type == token.Mul {
-                vars.Write(file, asm.DerefRax(size))
+                file.WriteString(asm.DerefRax(size))
             }
 
             // compile time evaluation (constEval only right expr)
@@ -157,7 +156,7 @@ func (e *Binary) Compile(file *os.File) {
                     if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
                 }
 
-                arith.BinaryOp(file, e.Operator.Type, c.Str, size)
+                asm.BinaryOp(file, e.Operator.Type, c.Str, size)
                 return
             }
         }
@@ -172,24 +171,24 @@ func (e *Binary) Compile(file *os.File) {
             }
 
             if t := v.GetType(); t.Size() < size {
-                vars.Write(file, asm.MovRegDeref(asm.RegC, v.Addr(0), t.Size()))
-                arith.BinaryOpReg(file, e.Operator.Type, asm.RegC, size)
+                file.WriteString(asm.MovRegDeref(asm.RegC, v.Addr(0), t.Size()))
+                asm.BinaryOpReg(file, e.Operator.Type, asm.RegC, size)
             } else {
-                arith.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), v.Addr(0)), size)
+                asm.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), v.Addr(0)), size)
             }
 
         default:
-            vars.Write(file, asm.Push(asm.RegA))
+            file.WriteString(asm.Push(asm.RegA))
 
             e.OperandR.Compile(file)
             if u,ok := opR.(*Unary); ok && u.Operator.Type == token.Mul {
-                vars.Write(file, asm.MovRegDeref(asm.RegB, "rax", size))
+                file.WriteString(asm.MovRegDeref(asm.RegB, "rax", size))
             } else {
-                vars.Write(file, asm.MovRegReg(asm.RegB, asm.RegA, size))
+                file.WriteString(asm.MovRegReg(asm.RegB, asm.RegA, size))
             }
 
-            vars.Write(file, asm.Pop(asm.RegA))
-            arith.BinaryOpReg(file, e.Operator.Type, asm.RegB, size)
+            file.WriteString(asm.Pop(asm.RegA))
+            asm.BinaryOpReg(file, e.Operator.Type, asm.RegB, size)
         }
 
     // &&, ||
@@ -197,11 +196,11 @@ func (e *Binary) Compile(file *os.File) {
         // compile time evaluation
         if c := e.OperandL.constEval(); c.Type != token.Unknown {
             if e.Operator.Type == token.And && c.Str == "false" {
-                vars.Write(file, asm.MovRegVal(asm.RegA, size, "0"))
+                file.WriteString(asm.MovRegVal(asm.RegA, size, "0"))
                 return
             }
             if e.Operator.Type == token.Or && c.Str == "true" {
-                vars.Write(file, asm.MovRegVal(asm.RegA, size, "1"))
+                file.WriteString(asm.MovRegVal(asm.RegA, size, "1"))
                 return
             }
 
@@ -209,10 +208,9 @@ func (e *Binary) Compile(file *os.File) {
         } else {
             e.OperandL.Compile(file)
             if u,ok := e.OperandL.(*Unary); ok && u.Operator.Type == token.Mul {
-                vars.Write(file, asm.DerefRax(size))
+                file.WriteString(asm.DerefRax(size))
             }
 
-            // TODO move to arithmetic and move to asm and rename
             count := cond.LogicalOp(file, e.Operator)
             e.OperandR.Compile(file)
             cond.LogicalOpEnd(file, count)
@@ -236,7 +234,7 @@ func (e *FnCall) Compile(file *os.File) {
             case *Unary:
                 val.Compile(file)
                 if v.Operator.Type == token.Mul {
-                    vars.Write(file, asm.DerefRax(val.GetType().Size()))
+                    file.WriteString(asm.DerefRax(val.GetType().Size()))
                 }
                 fn.PassReg(file, regIdx, val.GetType())
 
@@ -319,7 +317,7 @@ func (e *FnCall)  At() string { return e.Name.At() }
 func (e *Lit)     At() string { return e.Val.At() }
 func (e *Ident)   At() string { return e.Ident.At() }
 func (e *Unary)   At() string { return e.Operator.At() }
-func (e *Binary)  At() string { return e.OperandL.At() }
+func (e *Binary)  At() string { return e.OperandL.At() }    // TODO: At() of Operand with higher precedence
 func (e *Paren)   At() string { return e.ParenLPos.At() }
 func (e *XSwitch) At() string { return e.Pos.At() }
 func (e *XCase)   At() string { return e.ColonPos.At() }

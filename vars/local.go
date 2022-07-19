@@ -61,8 +61,8 @@ func (v *LocalVar) SetVal(file *os.File, val token.Token) {
 
     case types.Ptr:
         if val.Type == token.Name {
-            Write(file, fmt.Sprintf("lea rax, [%s]\n", val.Str))
-            Write(file, asm.MovDerefReg(v.Addr(0), v.GetType().Size(), asm.RegA))
+            file.WriteString(fmt.Sprintf("lea rax, [%s]\n", val.Str))
+            file.WriteString(asm.MovDerefReg(v.Addr(0), v.GetType().Size(), asm.RegA))
         } else {
             file.WriteString(asm.MovDerefVal(v.Addr(0), v.Type.Size(), val.Str))
         }
@@ -115,10 +115,10 @@ func (v *LocalVar) SetVar(file *os.File, name token.Token) {
 
 func (v *LocalVar) SetExpr(file *os.File) {
     if v.Type.GetKind() == types.Str {
-        Write(file, asm.MovDerefReg(v.Addr(0), types.Ptr_Size, asm.RegA))
-        Write(file, asm.MovDerefReg(v.Addr(1), types.I32_Size, asm.RegB))
+        file.WriteString(asm.MovDerefReg(v.Addr(0), types.Ptr_Size, asm.RegA))
+        file.WriteString(asm.MovDerefReg(v.Addr(1), types.I32_Size, asm.RegB))
     } else {
-        Write(file, asm.MovDerefReg(v.Addr(0), v.GetType().Size(), asm.RegA))
+        file.WriteString(asm.MovDerefReg(v.Addr(0), v.GetType().Size(), asm.RegA))
     }
 }
 

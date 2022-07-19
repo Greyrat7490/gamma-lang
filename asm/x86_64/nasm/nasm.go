@@ -19,7 +19,6 @@ func Footer(file *os.File) {
     file.WriteString("\n_start:\n")
     file.WriteString("mov rsp, _stack_top\n\n")
 
-    vars.InitVarWithExpr(file)
     file.WriteString("call main\n")
 
     file.WriteString("\nmov rdi, 0\n")

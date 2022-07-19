@@ -12,7 +12,6 @@ import (
 var globalVars []GlobalVar
 
 var globalDefines []string
-var preMain []string
 
 type GlobalVar struct {
     Name token.Token
@@ -65,15 +64,10 @@ func (v *GlobalVar) DefVar(file *os.File, name token.Token) {
     os.Exit(1)
 }
 
-// TODO: remove if const evaluation is implemented
 func (v *GlobalVar) DefExpr(file *os.File) {
-    if v.GetType().GetKind() == types.Str {
-        // should never get reached
-    } else {
-        size := v.Type.Size()
-        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s 0\n", v.Name.Str, asm.GetDataSize(size)))
-        preMain = append(preMain, asm.MovDerefReg(v.Addr(0), size, asm.RegA))
-    }
+    fmt.Fprintln(os.Stderr, "[ERROR] defining a global variable with a non const expr is not allowed")
+    fmt.Fprintln(os.Stderr, "\t" + v.Name.At())
+    os.Exit(1)
 }
 
 func (v *GlobalVar) SetVal(file *os.File, val token.Token) {
@@ -81,15 +75,15 @@ func (v *GlobalVar) SetVal(file *os.File, val token.Token) {
     case types.Str:
         strIdx := str.Add(val)
 
-        Write(file, asm.MovDerefVal(v.Addr(0), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
-        Write(file, asm.MovDerefVal(v.Addr(1), types.I32_Size, fmt.Sprint(str.GetSize(strIdx))))
+        file.WriteString(asm.MovDerefVal(v.Addr(0), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
+        file.WriteString(asm.MovDerefVal(v.Addr(1), types.I32_Size, fmt.Sprint(str.GetSize(strIdx))))
 
     case types.Bool:
         if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
         fallthrough
 
     case types.I32, types.Ptr:
-        Write(file, asm.MovDerefVal(v.Addr(0), v.Type.Size(), val.Str))
+        file.WriteString(asm.MovDerefVal(v.Addr(0), v.Type.Size(), val.Str))
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.Name.Str)
@@ -131,22 +125,16 @@ func (v *GlobalVar) SetVar(file *os.File, name token.Token) {
 
 func (v *GlobalVar) SetExpr(file *os.File) {
     if v.Type.GetKind() == types.Str {
-        Write(file, asm.MovDerefReg(v.Addr(0), types.Ptr_Size, asm.RegA))
-        Write(file, asm.MovDerefReg(v.Addr(1), types.I32_Size, asm.RegB))
+        file.WriteString(asm.MovDerefReg(v.Addr(0), types.Ptr_Size, asm.RegA))
+        file.WriteString(asm.MovDerefReg(v.Addr(1), types.I32_Size, asm.RegB))
     } else {
-        Write(file, asm.MovDerefReg(v.Addr(0), v.GetType().Size(), asm.RegA))
+        file.WriteString(asm.MovDerefReg(v.Addr(0), v.GetType().Size(), asm.RegA))
     }
 }
 
 
 func DefineGlobalVars(file *os.File) {
     for _, s := range globalDefines {
-        file.WriteString(s)
-    }
-}
-
-func InitVarWithExpr(file *os.File) {
-    for _, s := range preMain {
         file.WriteString(s)
     }
 }
