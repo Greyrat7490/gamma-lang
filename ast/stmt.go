@@ -101,7 +101,7 @@ func (s *Assign) Compile(file *os.File) {
 
     switch dest := s.Dest.(type) {
     case *Unary:
-        dest.Compile(file)
+        dest.Operand.Compile(file)
 
         // compile time evaluation
         if val := s.Value.constEval(); val.Type != token.Unknown {
@@ -109,33 +109,24 @@ func (s *Assign) Compile(file *os.File) {
             return
         }
 
-        switch e := s.Value.(type) {
-        case *Ident:
+        if e,ok := s.Value.(*Ident); ok {
             vars.DerefSetVar(file, e.Ident)
-
-        case *Unary:
-            file.WriteString(asm.MovRegReg(asm.RegD, asm.RegA, types.Ptr_Size))
-            s.Value.Compile(file)
-            if e.Operator.Type == token.Mul {
-                file.WriteString(asm.DerefRax(size))
-            }
-            file.WriteString(asm.MovDerefReg("rdx", size, asm.RegA))
-
-        default:
-            file.WriteString(asm.MovRegReg(asm.RegD, asm.RegA, size))
-            s.Value.Compile(file)
-            file.WriteString(asm.MovDerefReg("rdx", size, asm.RegA))
+            return
         }
+
+        file.WriteString(asm.MovRegReg(asm.RegD, asm.RegA, types.Ptr_Size))
+        s.Value.Compile(file)
+        file.WriteString(asm.MovDerefReg("rdx", size, asm.RegA))
 
     case *Ident:
-        if c := vars.GetConst(dest.Ident.Str); c != nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] you cannot change a const(%s)\n", dest.Ident.Str)
-            fmt.Fprintln(os.Stderr, "\t" + s.At())
-            os.Exit(1)
-        }
-
         v := vars.GetVar(dest.Ident.Str)
         if v == nil {
+            if c := vars.GetConst(dest.Ident.Str); c != nil {
+                fmt.Fprintf(os.Stderr, "[ERROR] you cannot change a const(%s)\n", dest.Ident.Str)
+                fmt.Fprintln(os.Stderr, "\t" + s.At())
+                os.Exit(1)
+            }
+
             fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", dest.Ident.Str)
             fmt.Fprintln(os.Stderr, "\t" + dest.Ident.At())
             os.Exit(1)
@@ -147,24 +138,16 @@ func (s *Assign) Compile(file *os.File) {
             return
         }
 
-        switch e := s.Value.(type) {
-        case *Ident:
+        if e,ok := s.Value.(*Ident); ok {
             v.SetVar(file, e.Ident)
-
-        case *Unary:
-            s.Value.Compile(file)
-            if e.Operator.Type == token.Mul {
-                file.WriteString(asm.DerefRax(size))
-            }
-            v.SetExpr(file)
-
-        default:
-            s.Value.Compile(file)
-            v.SetExpr(file)
+            return
         }
 
+        s.Value.Compile(file)
+        v.SetExpr(file)
+
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a variable or a derefenced pointer but got \"%t\"\n", dest)
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a variable or a dereferenced pointer but got \"%t\"\n", dest)
         fmt.Fprintln(os.Stderr, "\t" + s.Pos.At())
         os.Exit(1)
     }
@@ -196,32 +179,14 @@ func (s *If) Compile(file *os.File) {
     hasElse := s.Else != nil || s.Elif != nil
 
     var count uint = 0
-    switch c := s.Cond.(type) {
-    case *Ident:
+    if c,ok := s.Cond.(*Ident); ok {
         count = cond.IfIdent(file, c.Ident, hasElse)
-        s.Block.Compile(file)
-
-    case *Unary:
-        c.Compile(file)
-        if c.Operator.Type == token.Mul {
-            if _,ok := c.Operand.(*Ident); !ok {
-                if _,ok := c.Operand.(*Paren); !ok {
-                    fmt.Fprintln(os.Stderr, "[ERROR] expected a variable or parentheses after \"*\"")
-                    fmt.Fprintln(os.Stderr, "\t" + c.Operator.At())
-                    os.Exit(1)
-                }
-            }
-
-            file.WriteString(asm.DerefRax(c.GetType().Size()))
-        }
-        count = cond.IfExpr(file, hasElse)
-        s.Block.Compile(file)
-
-    default:
+    } else {
         s.Cond.Compile(file)
         count = cond.IfExpr(file, hasElse)
-        s.Block.Compile(file)
     }
+
+    s.Block.Compile(file)
 
     vars.RemoveScope()
 
@@ -353,20 +318,16 @@ func (s *While) Compile(file *os.File) {
         return
     }
 
-    switch e := s.Cond.(type) {
-    case *Ident:
-        count := loops.WhileStart(file)
+    count := loops.WhileStart(file)
+    if e,ok := s.Cond.(*Ident); ok {
         loops.WhileIdent(file, e.Ident)
-        s.Block.Compile(file)
-        loops.WhileEnd(file, count)
-
-    default:
-        count := loops.WhileStart(file)
+    } else {
         s.Cond.Compile(file)
         loops.WhileExpr(file)
-        s.Block.Compile(file)
-        loops.WhileEnd(file, count)
     }
+
+    s.Block.Compile(file)
+    loops.WhileEnd(file, count)
 }
 
 func (s *For) Compile(file *os.File) {

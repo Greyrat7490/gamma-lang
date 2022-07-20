@@ -105,15 +105,27 @@ func (e *Unary) Compile(file *os.File) {
 
     // compile time evaluation
     if c := e.constEval(); c.Type != token.Unknown {
-        asm.MovRegVal(asm.RegA, types.TypeOfVal(c.Str).Size(), c.Str)
+        file.WriteString(asm.MovRegVal(asm.RegA, e.Operand.GetType().Size(), c.Str))
         return
     }
 
     e.Operand.Compile(file)
 
-    if e.Operator.Type == token.Minus {
+    switch e.Operator.Type {
+    case token.Minus:
         size := e.Operand.GetType().Size()
         file.WriteString(asm.Neg(asm.GetReg(asm.RegA, size), size))
+
+    case token.Mul:
+        if _,ok := e.Operand.(*Ident); !ok {
+            if _,ok := e.Operand.(*Paren); !ok {
+                fmt.Fprintln(os.Stderr, "[ERROR] expected a variable or parentheses after \"*\"")
+                fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
+                os.Exit(1)
+            }
+        }
+
+        file.WriteString(asm.DerefRax(e.GetType().Size()))
     }
 }
 func (e *Binary) Compile(file *os.File) {
@@ -146,9 +158,6 @@ func (e *Binary) Compile(file *os.File) {
             file.WriteString(asm.MovRegVal(asm.RegA, size, c.Str))
         } else {
             e.OperandL.Compile(file)
-            if u,ok := e.OperandL.(*Unary); ok && u.Operator.Type == token.Mul {
-                file.WriteString(asm.DerefRax(size))
-            }
 
             // compile time evaluation (constEval only right expr)
             if c := e.OperandR.constEval(); c.Type != token.Unknown {
@@ -181,11 +190,7 @@ func (e *Binary) Compile(file *os.File) {
             file.WriteString(asm.Push(asm.RegA))
 
             e.OperandR.Compile(file)
-            if u,ok := opR.(*Unary); ok && u.Operator.Type == token.Mul {
-                file.WriteString(asm.MovRegDeref(asm.RegB, "rax", size))
-            } else {
-                file.WriteString(asm.MovRegReg(asm.RegB, asm.RegA, size))
-            }
+            file.WriteString(asm.MovRegReg(asm.RegB, asm.RegA, size))
 
             file.WriteString(asm.Pop(asm.RegA))
             asm.BinaryOpReg(file, e.Operator.Type, asm.RegB, size)
@@ -207,9 +212,6 @@ func (e *Binary) Compile(file *os.File) {
             e.OperandR.Compile(file)
         } else {
             e.OperandL.Compile(file)
-            if u,ok := e.OperandL.(*Unary); ok && u.Operator.Type == token.Mul {
-                file.WriteString(asm.DerefRax(size))
-            }
 
             count := cond.LogicalOp(file, e.Operator)
             e.OperandR.Compile(file)
@@ -226,22 +228,13 @@ func (e *FnCall) Compile(file *os.File) {
         // compile time evaluation:
         if v := val.constEval(); v.Type != token.Unknown {
             fn.PassVal(file, e.Name, regIdx, v, val.GetType())
+
+        } else if v,ok := val.(*Ident); ok {
+            fn.PassVar(file, regIdx, v.Ident)
+
         } else {
-            switch v := val.(type) {
-            case *Ident:
-                fn.PassVar(file, regIdx, v.Ident)
-
-            case *Unary:
-                val.Compile(file)
-                if v.Operator.Type == token.Mul {
-                    file.WriteString(asm.DerefRax(val.GetType().Size()))
-                }
-                fn.PassReg(file, regIdx, val.GetType())
-
-            default:
-                val.Compile(file)
-                fn.PassReg(file, regIdx, val.GetType())
-            }
+            val.Compile(file)
+            fn.PassReg(file, regIdx, val.GetType())
         }
 
         if val.GetType().GetKind() == types.Str {
