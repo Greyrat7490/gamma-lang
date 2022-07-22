@@ -9,7 +9,6 @@ import (
     "gorec/asm/x86_64"
 )
 
-var globalVars []GlobalVar
 var globalDefines []string
 
 type GlobalVar struct {
@@ -134,31 +133,4 @@ func DefineGlobalVars(file *os.File) {
     for _, s := range globalDefines {
         file.WriteString(s)
     }
-}
-
-func isGlobalVarDec(varname string) bool {
-    for _, v := range globalVars {
-        if v.Name.Str == varname {
-            return true
-        }
-    }
-
-    return false
-}
-
-func declareGlobal(varname token.Token, vartype types.Type) Var {
-    if isGlobalVarDec(varname.Str) {
-        fmt.Fprintf(os.Stderr, "[ERROR] a variable with the name \"%s\" is already declared\n", varname.Str)
-        fmt.Fprintln(os.Stderr, "\t" + varname.At())
-        os.Exit(1)
-    }
-    if isGlobalConstDec(varname.Str) {
-        fmt.Fprintf(os.Stderr, "[ERROR] a const with the name \"%s\" is already declared\n", varname.Str)
-        fmt.Fprintln(os.Stderr, "\t" + varname.At())
-        os.Exit(1)
-    }
-
-    v := GlobalVar{ Name: varname, Type: vartype }
-    globalVars = append(globalVars, v)
-    return &v
 }

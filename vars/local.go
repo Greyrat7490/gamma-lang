@@ -133,31 +133,3 @@ func calcOffset(vartype types.Type) (offset int) {
 
     return offset
 }
-
-func varInCurScope(name string) bool {
-    for _,v := range curScope.vars {
-        if v.Name.Str == name {
-            return true
-        }
-    }
-
-    return false
-}
-
-func declareLocal(varname token.Token, vartype types.Type) Var {
-    if varInCurScope(varname.Str) {
-        fmt.Fprintf(os.Stderr, "[ERROR] local var \"%s\" is already declared in this scope\n", varname.Str)
-        fmt.Fprintln(os.Stderr, "\t" + varname.At())
-        os.Exit(1)
-    }
-
-    if constInCurScope(varname.Str) {
-        fmt.Fprintf(os.Stderr, "[ERROR] local const \"%s\" is already declared in this scope\n", varname.Str)
-        fmt.Fprintln(os.Stderr, "\t" + varname.At())
-        os.Exit(1)
-    }
-
-    v := LocalVar{ Name: varname, Type: vartype, offset: calcOffset(vartype) }
-    curScope.vars = append(curScope.vars, v)
-    return &v
-}

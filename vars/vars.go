@@ -30,36 +30,57 @@ func GetVar(name string) Var {
 
     for scope != nil {
         for i := len(scope.children)-1; i >= 0; i-- {
-            for _, v := range scope.children[i].vars {
-                if v.Name.Str == name {
-                    return &v
-                }
+            if v,ok := scope.children[i].vars[name]; ok {
+                return v
             }
         }
-        scope = scope.parent
-    }
 
-    for _, v := range globalVars {
-        if v.Name.Str == name {
-            return &v
+        if v,ok := scope.vars[name]; ok {
+            return v
         }
+
+        scope = scope.parent
     }
 
     return nil
 }
 
+func varInCurScope(name string) bool {
+    if _,ok := curScope.vars[name]; ok {
+        return ok
+    }
+
+    return false
+}
+
 func DecVar(varname token.Token, vartype types.Type) Var {
     if varname.Str[0] == '_' {
-        fmt.Fprintln(os.Stderr, "[ERROR] variable names starting with \"_\" are reserved for the compiler")
+        fmt.Fprintln(os.Stderr, "[ERROR] names starting with \"_\" are reserved for the compiler")
         fmt.Fprintln(os.Stderr, "\t" + varname.At())
         os.Exit(1)
     }
 
-    if InGlobalScope() {
-        return declareGlobal(varname, vartype)
-    } else {
-        return declareLocal(varname, vartype)
+    if varInCurScope(varname.Str) {
+        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is already declared in this scope\n", varname.Str)
+        fmt.Fprintln(os.Stderr, "\t" + varname.At())
+        os.Exit(1)
     }
+
+    if constInCurScope(varname.Str) {
+        fmt.Fprintf(os.Stderr, "[ERROR] const \"%s\" is already declared in this scope\n", varname.Str)
+        fmt.Fprintln(os.Stderr, "\t" + varname.At())
+        os.Exit(1)
+    }
+
+    var v Var
+    if InGlobalScope() {
+        v = &GlobalVar{ Name: varname, Type: vartype }
+    } else {
+        v = &LocalVar{ Name: varname, Type: vartype, offset: calcOffset(vartype) }
+    }
+
+    curScope.vars[varname.Str] = v
+    return v
 }
 
 
