@@ -79,6 +79,7 @@ func DecVar(varname token.Token, vartype types.Type) Var {
         v = &LocalVar{ Name: varname, Type: vartype, offset: calcOffset(vartype) }
     }
 
+    curScope.minFrameSize += vartype.Size()
     curScope.vars[varname.Str] = v
     return v
 }

@@ -98,7 +98,7 @@ func (d *DefVar) Compile(file *os.File) {
 }
 
 func (d *DefFn) Compile(file *os.File) {
-    fn.Define(file, d.FnName, argsSize(d.Args), d.Block.maxFrameSize())
+    fn.Define(file, d.FnName)
 
     regIdx := 0
     for _,a := range d.Args {
@@ -124,74 +124,6 @@ func (d *DefFn) Compile(file *os.File) {
 func (d *BadDecl) Compile(file *os.File) {
     fmt.Fprintln(os.Stderr, "[ERROR] bad declaration")
     os.Exit(1)
-}
-
-
-func argsSize(args []DecVar) (res int) {
-    for _,a := range args {
-        res += a.Type.Size()
-    }
-
-    return res
-}
-
-func (d *Block) maxFrameSize() int {
-    res := 0
-    maxInnerSize := 0
-
-    for _,s := range d.Stmts {
-        switch stmt := s.(type) {
-        case *DeclStmt:
-            if def, ok := stmt.Decl.(*DefVar); ok {
-                if def.Type == nil {
-                    def.Type = def.Value.GetType()
-                }
-                res += def.Type.Size()
-            }
-            if def, ok := stmt.Decl.(*DefConst); ok {
-                if def.Type == nil {
-                    def.Type = def.Value.GetType()
-                }
-                res += def.Type.Size()
-            }
-        case *Block:
-            size := stmt.maxFrameSize()
-            if size > maxInnerSize {
-                maxInnerSize = size
-            }
-        case *For:
-            size := stmt.Def.Type.Size()
-            size += stmt.Block.maxFrameSize()
-            if size > maxInnerSize {
-                maxInnerSize = size
-            }
-        case *While:
-            size := stmt.Block.maxFrameSize()
-            if stmt.Def != nil {
-                size += stmt.Def.Type.Size()
-            }
-            if size > maxInnerSize {
-                maxInnerSize = size
-            }
-        case *If:
-            size := stmt.Block.maxFrameSize()
-
-            if stmt.Else != nil {
-                size2 := stmt.Else.Block.maxFrameSize()
-                if size < size2 {
-                    size = size2
-                }
-            }
-
-            if size > maxInnerSize {
-                maxInnerSize = size
-            }
-        }
-    }
-
-    res += maxInnerSize
-
-    return res
 }
 
 

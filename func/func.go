@@ -30,6 +30,7 @@ var funcs []function
 type function struct {
     Name token.Token
     Args []types.Type
+    Scope *vars.Scope
 }
 
 func (f *function) At() string {
@@ -53,10 +54,10 @@ func Declare(name token.Token, args []types.Type) {
         os.Exit(1)
     }
 
-    funcs = append(funcs, function{ Name: name, Args: args })
+    funcs = append(funcs, function{ Name: name, Args: args, Scope: vars.GetCurScope() })
 }
 
-func Define(file *os.File, name token.Token, argsSize int, blockSize int) {
+func Define(file *os.File, name token.Token) {
     f := GetFn(name.Str)
     if f == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not declared\n", name.Str)
@@ -66,11 +67,10 @@ func Define(file *os.File, name token.Token, argsSize int, blockSize int) {
 
     file.WriteString(name.Str + ":\n")
     file.WriteString("push rbp\nmov rbp, rsp\n")
-    reserveSpace(file, argsSize, blockSize)
+    reserveSpace(file, f.Scope.GetMaxFrameSize())
 }
 
-func reserveSpace(file *os.File, argsSize int, blockSize int) {
-    size := argsSize + blockSize
+func reserveSpace(file *os.File, size int) {
     if size > 0 {
         // size has to be the multiple of 16byte
         size = (size + 15) & ^15

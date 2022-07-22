@@ -1,14 +1,32 @@
 package vars
 
-var scope Scope = Scope{ vars: make(map[string]Var), consts: map[string]*Const{} }
-var curScope *Scope = &scope
+var curScope *Scope = &Scope{
+    vars: map[string]Var{},
+    consts: map[string]*Const{},
+}
 
 type Scope struct {
     vars map[string]Var
     consts map[string]*Const
     parent *Scope
     children []Scope
-    maxSize int
+    minFrameSize int
+}
+
+func GetCurScope() *Scope {
+    return curScope
+}
+
+func (s *Scope) GetMaxFrameSize() int {
+    maxInner := 0
+    for _,c := range s.children {
+        size := c.GetMaxFrameSize()
+        if size > maxInner {
+            maxInner = size
+        }
+    }
+
+    return s.minFrameSize + maxInner
 }
 
 func InGlobalScope() bool {
@@ -17,7 +35,7 @@ func InGlobalScope() bool {
 
 func CreateScope() {
     curScope.children = append(curScope.children, Scope{
-        vars: make(map[string]Var),
+        vars: map[string]Var{},
         consts: map[string]*Const{},
         parent: curScope,
     })
