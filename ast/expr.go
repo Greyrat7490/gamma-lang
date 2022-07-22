@@ -36,6 +36,9 @@ type Lit struct {
 
 type Ident struct {
     Ident token.Token
+    // TODO: IdentObj
+    V vars.Var
+    C *vars.Const
 }
 
 type Unary struct {
@@ -84,20 +87,19 @@ func (e *Lit) Compile(file *os.File) {
     }
 }
 func (e *Ident) Compile(file *os.File) {
-    if c := vars.GetConst(e.Ident.Str); c != nil {
-        l := Lit{ Val: c.Val, Type: c.Type }
+    if e.C != nil {
+        l := Lit{ Val: e.C.Val, Type: e.C.Type }
         l.Compile(file)
         return
     }
 
-    v := vars.GetVar(e.Ident.Str)
-    if v == nil {
+    if e.V == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared)\n", e.Ident.Str)
         fmt.Fprintln(os.Stderr, "\t" + e.Ident.At())
         os.Exit(1)
     }
 
-    file.WriteString(asm.MovRegDeref(asm.RegA, v.Addr(0), v.GetType().Size()))
+    file.WriteString(asm.MovRegDeref(asm.RegA, e.V.Addr(0), e.V.GetType().Size()))
 }
 func (e *Paren) Compile(file *os.File) { e.Expr.Compile(file) }
 func (e *Unary) Compile(file *os.File) {
@@ -170,23 +172,14 @@ func (e *Binary) Compile(file *os.File) {
             }
         }
 
-        switch opR := e.OperandR.(type) {
-        case *Ident:
-            v := vars.GetVar(opR.Ident.Str)
-            if v == nil {
-                fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", opR.Ident.Str)
-                fmt.Fprintln(os.Stderr, "\t" + opR.Ident.At())
-                os.Exit(1)
-            }
-
-            if t := v.GetType(); t.Size() < size {
-                file.WriteString(asm.MovRegDeref(asm.RegC, v.Addr(0), t.Size()))
+        if ident,ok := e.OperandR.(*Ident); ok {
+            if t := ident.V.GetType(); t.Size() < size {
+                file.WriteString(asm.MovRegDeref(asm.RegC, ident.V.Addr(0), t.Size()))
                 asm.BinaryOpReg(file, e.Operator.Type, asm.RegC, size)
             } else {
-                asm.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), v.Addr(0)), size)
+                asm.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), ident.V.Addr(0)), size)
             }
-
-        default:
+        } else {
             file.WriteString(asm.Push(asm.RegA))
 
             e.OperandR.Compile(file)
@@ -230,7 +223,7 @@ func (e *FnCall) Compile(file *os.File) {
             fn.PassVal(file, e.Name, regIdx, v, val.GetType())
 
         } else if v,ok := val.(*Ident); ok {
-            fn.PassVar(file, regIdx, v.Ident)
+            fn.PassVar(file, regIdx, v.V)
 
         } else {
             val.Compile(file)
@@ -268,7 +261,7 @@ func (e *XCase) Compile(file *os.File, switchCount uint) {
     }
 
     if i,ok := e.Cond.(*Ident); ok {
-        cond.CaseIdent(file, i.Ident)
+        cond.CaseVar(file, i.V)
     } else {
         e.Cond.Compile(file)
         cond.CaseExpr(file)

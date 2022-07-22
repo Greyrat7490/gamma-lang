@@ -11,26 +11,32 @@ import (
 
 type Var interface {
     DefVal(file *os.File, val token.Token)
-    DefVar(file *os.File, name token.Token)
+    DefVar(file *os.File, other Var)
     DefExpr(file *os.File)
 
     SetVal(file *os.File, val token.Token)
-    SetVar(file *os.File, name token.Token)
+    SetVar(file *os.File, other Var)
     SetExpr(file *os.File)
 
     Addr(fieldNum int) string
-    String()  string
+    String() string
+    GetName() token.Token
     GetType() types.Type
 }
 
 
 func GetVar(name string) Var {
-    for i := len(scopes)-1; i >= 0; i-- {
-        for _, v := range scopes[i].vars {
-            if v.Name.Str == name {
-                return &v
+    scope := curScope
+
+    for scope != nil {
+        for i := len(scope.children)-1; i >= 0; i-- {
+            for _, v := range scope.children[i].vars {
+                if v.Name.Str == name {
+                    return &v
+                }
             }
         }
+        scope = scope.parent
     }
 
     for _, v := range globalVars {
@@ -42,22 +48,7 @@ func GetVar(name string) Var {
     return nil
 }
 
-func AddrToRax(file *os.File, name token.Token) {
-    v := GetVar(name.Str)
-    if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] variable \"%s\" is not declared\n", name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
-    }
-
-    if _,ok := v.(*GlobalVar); ok {
-        file.WriteString(fmt.Sprintf("mov rax, %s\n", v.Addr(0)))
-    } else {
-        file.WriteString(fmt.Sprintf("lea rax, [%s]\n", v.Addr(0)))
-    }
-}
-
-func DecVar(varname token.Token, vartype types.Type) {
+func DecVar(varname token.Token, vartype types.Type) Var {
     if varname.Str[0] == '_' {
         fmt.Fprintln(os.Stderr, "[ERROR] variable names starting with \"_\" are reserved for the compiler")
         fmt.Fprintln(os.Stderr, "\t" + varname.At())
@@ -65,9 +56,9 @@ func DecVar(varname token.Token, vartype types.Type) {
     }
 
     if InGlobalScope() {
-        declareGlobal(varname, vartype)
+        return declareGlobal(varname, vartype)
     } else {
-        declareLocal(varname, vartype)
+        return declareLocal(varname, vartype)
     }
 }
 
@@ -87,15 +78,7 @@ func DerefSetVal(file *os.File, val token.Token, size int) {
     }
 }
 
-func DerefSetVar(file *os.File, name token.Token) {
-    other := GetVar(name.Str)
-
-    if other == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] variable \"%s\" is not declared\n", name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
-    }
-
+func DerefSetVar(file *os.File, other Var) {
     if other.GetType().GetKind() == types.Str {
         file.WriteString(asm.MovDerefDeref("rax", other.Addr(0), types.Ptr_Size, asm.RegB))
         file.WriteString(asm.MovDerefDeref(fmt.Sprintf("rax+%d", types.Ptr_Size), other.Addr(types.Ptr_Size), types.I32_Size, asm.RegB))

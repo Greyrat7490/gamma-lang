@@ -4,6 +4,7 @@ import (
     "os"
     "fmt"
     "gorec/ast"
+    "gorec/vars"
     "gorec/token"
     "gorec/types"
 )
@@ -55,23 +56,25 @@ func prsStmt(ignoreUnusedExpr bool) ast.Stmt {
 
     case token.Name, token.UndScr, token.Plus, token.Minus, token.Mul, token.Amp:
         // define var/const (type is given)
-        if isVarDec() {
-            dec := prsDecVar()
+        if isDec() {
+            name := token.Cur()
+            t := prsType()
 
             token.Next()
             if token.Cur().Type == token.DefVar {
-                d := prsDefVar(dec)
+                d := prsDefVar(name, t)
                 return &ast.DeclStmt{ Decl: &d }
             }
             if token.Cur().Type == token.DefConst {
-                d := prsDefConst(dec)
+                d := prsDefConst(name, t)
                 return &ast.DeclStmt{ Decl: &d }
             }
 
             fmt.Fprintln(os.Stderr, "[ERROR] declaring without initializing is not allowed")
-            fmt.Fprintln(os.Stderr, "\t" + dec.Name.At())
+            fmt.Fprintln(os.Stderr, "\t" + name.At())
             os.Exit(1)
         }
+
         // define var (infer the type with the value)
         if token.Peek().Type == token.DefVar {
             d := prsDefVarInfer()
@@ -150,6 +153,9 @@ func prsAssignVar(dest ast.Expr) ast.Assign {
 }
 
 func prsIfStmt() ast.If {
+    vars.CreateScope()
+    defer vars.EndScope()
+
     pos := token.Cur().Pos
 
     // cond-switch without condBase
@@ -188,6 +194,9 @@ func prsElif() ast.Elif {
 }
 
 func prsElse() ast.Else {
+    vars.CreateScope()
+    defer vars.EndScope()
+
     pos := token.Cur().Pos
     token.Next()
     block := prsBlock()
@@ -196,12 +205,15 @@ func prsElse() ast.Else {
 }
 
 func prsWhileStmt() ast.While {
+    vars.CreateScope()
+    defer vars.EndScope()
+
     var op ast.While = ast.While{ WhilePos: token.Cur().Pos, Def: nil }
 
     token.Next()
-    if isVarDec() {
+    if isDec() {
         dec := prsDecVar()
-        op.Def = &ast.DefVar{ Name: dec.Name, Type: dec.Type }
+        op.Def = &ast.DefVar{ Ident: dec.Ident, Type: dec.Type }
 
         if token.Next().Type != token.Comma {
             fmt.Fprintln(os.Stderr, "[ERROR] missing \",\"")
@@ -232,6 +244,9 @@ func prsWhileStmt() ast.While {
 }
 
 func prsForStmt() ast.For {
+    vars.CreateScope()
+    defer vars.EndScope()
+
     var op ast.For = ast.For{
         ForPos: token.Cur().Pos,
         Limit: nil,
@@ -245,12 +260,12 @@ func prsForStmt() ast.For {
 
     token.Next()
     dec := prsDecVar()
-    op.Def.Name = dec.Name
+    op.Def.Ident = dec.Ident
     op.Def.Type = dec.Type
 
     op.Step = &ast.Binary{
         Operator: token.Token{ Type: token.Plus },
-        OperandL: &ast.Ident{ Ident: op.Def.Name },
+        OperandL: &op.Def.Ident,
         OperandR: &ast.Lit{
             Val: token.Token{ Str: "1", Type: token.Number },
             Type: types.I32Type{},
@@ -482,7 +497,9 @@ func prsSwitch(pos token.Pos, condBase ast.Expr) ast.Switch {
         os.Exit(1)
     }
 
+    vars.CreateScope()
     switchStmt.Cases = prsCases(condBase)
+    vars.EndScope()
 
     switchStmt.BraceRPos = token.Cur().Pos
 

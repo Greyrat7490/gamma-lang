@@ -21,6 +21,10 @@ func (v *LocalVar) String() string {
     return fmt.Sprintf("{%s %v}", v.Name.Str, v.Type)
 }
 
+func (v *LocalVar) GetName() token.Token {
+    return v.Name
+}
+
 func (v *LocalVar) GetType() types.Type {
     return v.Type
 }
@@ -47,8 +51,8 @@ func (v *LocalVar) DefExpr(file *os.File) {
     v.SetExpr(file)
 }
 
-func (v *LocalVar) DefVar(file *os.File, name token.Token) {
-    v.SetVar(file, name)
+func (v *LocalVar) DefVar(file *os.File, other Var) {
+    v.SetVar(file, other)
 }
 
 func (v *LocalVar) SetVal(file *os.File, val token.Token) {
@@ -81,18 +85,11 @@ func (v *LocalVar) SetVal(file *os.File, val token.Token) {
     }
 }
 
-func (v *LocalVar) SetVar(file *os.File, name token.Token) {
-    if v.Name.Str == name.Str {
+func (v *LocalVar) SetVar(file *os.File, other Var) {
+    if v.Name.Str == other.GetName().Str {
         fmt.Fprintln(os.Stderr, "[WARNING] assigning a variable to itself is redundant")
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        fmt.Fprintln(os.Stderr, "\t" + other.GetName().At()) // TODO correct position
         return
-    }
-
-    other := GetVar(name.Str)
-    if other == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
     }
 
     switch v.Type.GetKind() {
@@ -123,11 +120,6 @@ func (v *LocalVar) SetExpr(file *os.File) {
 }
 
 
-func GetLastOffset() int {
-    vars := scopes[len(scopes)-1].vars
-    return vars[len(vars)-1].offset
-}
-
 func calcOffset(vartype types.Type) (offset int) {
     if !InGlobalScope() {
         if vartype.GetKind() == types.Str {
@@ -143,7 +135,7 @@ func calcOffset(vartype types.Type) (offset int) {
 }
 
 func varInCurScope(name string) bool {
-    for _,v := range scopes[len(scopes)-1].vars {
+    for _,v := range curScope.vars {
         if v.Name.Str == name {
             return true
         }
@@ -152,7 +144,7 @@ func varInCurScope(name string) bool {
     return false
 }
 
-func declareLocal(varname token.Token, vartype types.Type) {
+func declareLocal(varname token.Token, vartype types.Type) Var {
     if varInCurScope(varname.Str) {
         fmt.Fprintf(os.Stderr, "[ERROR] local var \"%s\" is already declared in this scope\n", varname.Str)
         fmt.Fprintln(os.Stderr, "\t" + varname.At())
@@ -165,9 +157,7 @@ func declareLocal(varname token.Token, vartype types.Type) {
         os.Exit(1)
     }
 
-    scopes[len(scopes)-1].vars = append(scopes[len(scopes)-1].vars, LocalVar{
-        Name: varname,
-        Type: vartype,
-        offset: calcOffset(vartype),
-    })
+    v := LocalVar{ Name: varname, Type: vartype, offset: calcOffset(vartype) }
+    curScope.vars = append(curScope.vars, v)
+    return &v
 }

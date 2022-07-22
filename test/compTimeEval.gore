@@ -1,7 +1,7 @@
 fn main() {
     v1 := 1000
 
-    res i32 := 32 * 10 + v1 / (3 * 3 + 1)
+    res := 32 * 10 + v1 / (3 * 3 + 1)
     // evaluated to: 320 + v1 / 10
 
     printInt(res) printStr("\n")

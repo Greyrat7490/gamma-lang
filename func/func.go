@@ -1,15 +1,15 @@
 package fn
 
 import (
-	"os"
-	"fmt"
-	"gorec/asm/x86_64"
-	"gorec/conditions"
-	"gorec/loops"
-	"gorec/token"
-	"gorec/types"
-	"gorec/types/str"
-	"gorec/vars"
+    "os"
+    "fmt"
+    "gorec/vars"
+    "gorec/loops"
+    "gorec/token"
+    "gorec/types"
+    "gorec/types/str"
+    "gorec/conditions"
+    "gorec/asm/x86_64"
 )
 
 /*
@@ -26,7 +26,6 @@ System V AMD64 ABI calling convention
 var regs []asm.RegGroup = []asm.RegGroup{ asm.RegDi, asm.RegSi, asm.RegD, asm.RegC, asm.RegR8, asm.RegR9 }
 
 var funcs []function
-var curFunc int = -1
 
 type function struct {
     Name token.Token
@@ -47,15 +46,14 @@ func GetFn(name string) *function {
     return nil
 }
 
-func Declare(name token.Token) {
+func Declare(name token.Token, args []types.Type) {
     if name.Str[0] == '_' {
         fmt.Fprintln(os.Stderr, "[ERROR] function names starting with \"_\" are reserved for the compiler")
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
 
-    curFunc = len(funcs)
-    funcs = append(funcs, function{ Name: name })
+    funcs = append(funcs, function{ Name: name, Args: args })
 }
 
 func Define(file *os.File, name token.Token, argsSize int, blockSize int) {
@@ -81,8 +79,6 @@ func reserveSpace(file *os.File, argsSize int, blockSize int) {
 }
 
 func End(file *os.File) {
-    curFunc = -1
-
     cond.ResetCount()
     loops.ResetCount()
 
@@ -100,25 +96,16 @@ func CallFunc(file *os.File, fnName token.Token) {
     file.WriteString("call " + fnName.Str + "\n")
 }
 
-func AddArg(argtype types.Type) {
-    if curFunc == -1 {
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) curFunc should be set")
-        os.Exit(1)
-    }
-
-    funcs[curFunc].Args = append(funcs[curFunc].Args, argtype)
-}
-
-func DefArg(file *os.File, regIdx int, argtype types.Type) {
-    if argtype.GetKind() == types.Str {
-        setArg(file, vars.GetLastOffset() + types.Ptr_Size, regIdx, types.Ptr_Size)
-        setArg(file, vars.GetLastOffset(), regIdx+1, types.I32_Size)
+func DefArg(file *os.File, regIdx int, v *vars.LocalVar) {
+    if v.Type.GetKind() == types.Str {
+        setArg(file, v.Addr(0), regIdx, types.Ptr_Size)
+        setArg(file, v.Addr(1), regIdx+1, types.I32_Size)
     } else {
-        setArg(file, vars.GetLastOffset(), regIdx, argtype.Size())
+        setArg(file, v.Addr(0), regIdx, v.Type.Size())
     }
 }
 
-func setArg(file *os.File, offset int, regIdx int, size int) {
+func setArg(file *os.File, addr string, regIdx int, size int) {
     if regIdx >= len(regs) {
         fmt.Fprintf(os.Stderr, "[ERROR] not enough regs left to set args (max 6) %d more needed\n", regIdx - len(regs) + 1)
         os.Exit(1)
@@ -127,9 +114,9 @@ func setArg(file *os.File, offset int, regIdx int, size int) {
     // adjust offset if reg is bigger than expected (no smaller reg available)
     if asm.GetSize(regs[regIdx], size) > size {
         file.WriteString(fmt.Sprintf("mov %s, %s\n", asm.GetReg(asm.RegA, asm.GetSize(regs[regIdx], size)), asm.GetReg(regs[regIdx], size)))
-        file.WriteString(fmt.Sprintf("mov %s [rbp-%d], %s\n", asm.GetWord(size), offset, asm.GetReg(asm.RegA, size)))
+        file.WriteString(fmt.Sprintf("mov %s [%s], %s\n", asm.GetWord(size), addr, asm.GetReg(asm.RegA, size)))
     } else {
-        file.WriteString(fmt.Sprintf("mov %s [rbp-%d], %s\n", asm.GetWord(size), offset, asm.GetReg(regs[regIdx], size)))
+        file.WriteString(fmt.Sprintf("mov %s [%s], %s\n", asm.GetWord(size), addr, asm.GetReg(regs[regIdx], size)))
     }
 }
 
@@ -158,25 +145,24 @@ func PassVal(file *os.File, fnName token.Token, regIdx int, value token.Token, v
     }
 }
 
-func PassVar(file *os.File, regIdx int, varname token.Token) {
-    if otherVar := vars.GetVar(varname.Str); otherVar != nil {
-        switch otherVar.GetType().GetKind() {
-        case types.Str:
-            file.WriteString(asm.MovRegDeref(regs[regIdx], otherVar.Addr(0), types.Ptr_Size))
-            file.WriteString(asm.MovRegDeref(regs[regIdx+1], otherVar.Addr(1), types.I32_Size))
+func PassVar(file *os.File, regIdx int, otherVar vars.Var) {
+    switch otherVar.GetType().GetKind() {
+    case types.Str:
+        file.WriteString(asm.MovRegDeref(regs[regIdx], otherVar.Addr(0), types.Ptr_Size))
+        file.WriteString(asm.MovRegDeref(regs[regIdx+1], otherVar.Addr(1), types.I32_Size))
 
-        case types.I32, types.Ptr:
-            file.WriteString(asm.MovRegDeref(regs[regIdx], otherVar.Addr(0), otherVar.GetType().Size()))
+    case types.I32, types.Ptr:
+        file.WriteString(asm.MovRegDeref(regs[regIdx], otherVar.Addr(0), otherVar.GetType().Size()))
 
-        case types.Bool:
-            size := otherVar.GetType().Size()
-            // TODO: use movzx in asm funcs if needed
-            file.WriteString(fmt.Sprintf("movzx %s, %s [%s]\n", asm.GetReg(regs[regIdx], size), asm.GetWord(size), otherVar.Addr(0)))
+    case types.Bool:
+        size := otherVar.GetType().Size()
+        // TODO: use movzx in asm funcs if needed
+        file.WriteString(fmt.Sprintf("movzx %s, %s [%s]\n", asm.GetReg(regs[regIdx], size), asm.GetWord(size), otherVar.Addr(0)))
 
-        default:
-            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", varname.Str)
-            os.Exit(1)
-        }
+    default:
+        // TODO
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var is not correct\n")
+        os.Exit(1)
     }
 }
 
@@ -197,7 +183,7 @@ func PassReg(file *os.File, regIdx int, argType types.Type) {
 
 func AddBuildIn(name string, argname string, argtype types.Type) {
     funcs = append(funcs, function{
-        Name: token.Token{ Str: name },
+        Name: token.Token{ Str: name, Type: token.Name },
         Args: []types.Type{ argtype },
     })
 }

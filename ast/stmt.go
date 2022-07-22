@@ -110,7 +110,7 @@ func (s *Assign) Compile(file *os.File) {
         }
 
         if e,ok := s.Value.(*Ident); ok {
-            vars.DerefSetVar(file, e.Ident)
+            vars.DerefSetVar(file, e.V)
             return
         }
 
@@ -119,32 +119,19 @@ func (s *Assign) Compile(file *os.File) {
         file.WriteString(asm.MovDerefReg("rdx", size, asm.RegA))
 
     case *Ident:
-        v := vars.GetVar(dest.Ident.Str)
-        if v == nil {
-            if c := vars.GetConst(dest.Ident.Str); c != nil {
-                fmt.Fprintf(os.Stderr, "[ERROR] you cannot change a const(%s)\n", dest.Ident.Str)
-                fmt.Fprintln(os.Stderr, "\t" + s.At())
-                os.Exit(1)
-            }
-
-            fmt.Fprintf(os.Stderr, "[ERROR] variable %s is not declared\n", dest.Ident.Str)
-            fmt.Fprintln(os.Stderr, "\t" + dest.Ident.At())
-            os.Exit(1)
-        }
-
         // compile time evaluation
         if val := s.Value.constEval(); val.Type != token.Unknown {
-            v.SetVal(file, val)
+            dest.V.SetVal(file, val)
             return
         }
 
         if e,ok := s.Value.(*Ident); ok {
-            v.SetVar(file, e.Ident)
+            dest.V.SetVar(file, e.V)
             return
         }
 
         s.Value.Compile(file)
-        v.SetExpr(file)
+        dest.V.SetExpr(file)
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] expected a variable or a dereferenced pointer but got \"%t\"\n", dest)
@@ -162,8 +149,6 @@ func (s *Block) Compile(file *os.File) {
 func (s *If) Compile(file *os.File) {
     s.typeCheck()
 
-    vars.CreateScope()
-
     // compile time evaluation
     if val := s.Cond.constEval(); val.Type != token.Unknown {
         if val.Str == "true" {
@@ -172,23 +157,20 @@ func (s *If) Compile(file *os.File) {
             s.Else.Block.Compile(file)
         }
 
-        vars.RemoveScope()
         return
     }
 
     hasElse := s.Else != nil || s.Elif != nil
 
     var count uint = 0
-    if c,ok := s.Cond.(*Ident); ok {
-        count = cond.IfIdent(file, c.Ident, hasElse)
+    if ident,ok := s.Cond.(*Ident); ok {
+        count = cond.IfVar(file, ident.V, hasElse)
     } else {
         s.Cond.Compile(file)
         count = cond.IfExpr(file, hasElse)
     }
 
     s.Block.Compile(file)
-
-    vars.RemoveScope()
 
     if hasElse {
         cond.ElseStart(file, count)
@@ -210,9 +192,6 @@ func (s *Elif) Compile(file *os.File) {
 }
 
 func (s *Case) Compile(file *os.File, switchCount uint) {
-    vars.CreateScope()
-    defer vars.RemoveScope()
-
     block := Block{ Stmts: s.Stmts }
 
     cond.CaseStart(file)
@@ -235,7 +214,7 @@ func (s *Case) Compile(file *os.File, switchCount uint) {
     }
 
     if i,ok := s.Cond.(*Ident); ok {
-        cond.CaseIdent(file, i.Ident)
+        cond.CaseVar(file, i.V)
     } else {
         s.Cond.Compile(file)
         cond.CaseExpr(file)
@@ -292,15 +271,10 @@ func (s *Through) Compile(file *os.File) {
 }
 
 func (s *Else) Compile(file *os.File) {
-    vars.CreateScope()
     s.Block.Compile(file)
-    vars.RemoveScope()
 }
 
 func (s *While) Compile(file *os.File) {
-    vars.CreateScope()
-    defer vars.RemoveScope()
-
     if s.Def != nil {
         s.Def.Compile(file)
     }
@@ -320,7 +294,7 @@ func (s *While) Compile(file *os.File) {
 
     count := loops.WhileStart(file)
     if e,ok := s.Cond.(*Ident); ok {
-        loops.WhileIdent(file, e.Ident)
+        loops.WhileVar(file, e.V)
     } else {
         s.Cond.Compile(file)
         loops.WhileExpr(file)
@@ -331,16 +305,13 @@ func (s *While) Compile(file *os.File) {
 }
 
 func (s *For) Compile(file *os.File) {
-    vars.CreateScope()
-    defer vars.RemoveScope()
-
     s.Def.Compile(file)
 
     s.typeCheck()
 
     count := loops.ForStart(file)
     if s.Limit != nil {
-        cond := Binary{ Operator: token.Token{ Type: token.Lss }, OperandL: &Ident{ Ident: s.Def.Name }, OperandR: s.Limit }
+        cond := Binary{ Operator: token.Token{ Type: token.Lss }, OperandL: &s.Def.Ident, OperandR: s.Limit }
         cond.Compile(file)
         loops.ForExpr(file)
     }
@@ -348,7 +319,7 @@ func (s *For) Compile(file *os.File) {
     s.Block.Compile(file)
     loops.ForBlockEnd(file, count)
 
-    step := Assign{ Dest: &Ident{ Ident: s.Def.Name }, Value: s.Step }
+    step := Assign{ Dest: &s.Def.Ident, Value: s.Step }
     step.Compile(file)
     loops.ForEnd(file, count)
 }

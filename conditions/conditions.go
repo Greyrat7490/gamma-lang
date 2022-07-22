@@ -4,7 +4,6 @@ import (
     "os"
     "fmt"
     "gorec/vars"
-    "gorec/token"
 )
 
 var ifCount uint = 0
@@ -16,14 +15,7 @@ func ResetCount() {
     switchCount = 0
 }
 
-func IfIdent(file *os.File, ident token.Token, hasElse bool) uint {
-    v := vars.GetVar(ident.Str)
-    if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", ident.Str)
-        fmt.Fprintln(os.Stderr, "\t" + ident.At())
-        os.Exit(1)
-    }
-
+func IfVar(file *os.File, v vars.Var, hasElse bool) uint {
     ifCount++
 
     file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", v.Addr(0)))

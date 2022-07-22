@@ -4,7 +4,6 @@ import (
     "os"
     "fmt"
     "gorec/vars"
-    "gorec/token"
 )
 
 
@@ -24,14 +23,7 @@ func WhileStart(file *os.File) uint {
     return whileCount
 }
 
-func WhileIdent(file *os.File, ident token.Token) {
-    v := vars.GetVar(ident.Str)
-    if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", ident.Str)
-        fmt.Fprintln(os.Stderr, "\t" + ident.At())
-        os.Exit(1)
-    }
-
+func WhileVar(file *os.File, v vars.Var) {
     file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", v.Addr(0)))
     file.WriteString(fmt.Sprintf("jne .while%dEnd\n", whileCount))
 }
@@ -52,18 +44,6 @@ func ForStart(file *os.File) uint {
     forCount++
     file.WriteString(fmt.Sprintf(".for%d:\n", forCount))
     return forCount
-}
-
-func ForIdent(file *os.File, ident token.Token) {
-    v := vars.GetVar(ident.Str)
-    if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", ident.Str)
-        fmt.Fprintln(os.Stderr, "\t" + ident.At())
-        os.Exit(1)
-    }
-
-    file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", v.Addr(0)))
-    file.WriteString(fmt.Sprintf("jne .for%dEnd\n", forCount))
 }
 
 func ForExpr(file *os.File) {

@@ -1,28 +1,20 @@
 package ast
 
 import (
-    "os"
-    "fmt"
-    "gorec/vars"
-    "gorec/func"
-    "gorec/token"
-    "gorec/types"
+	"os"
+	"fmt"
+	"gorec/func"
+	"gorec/token"
+	"gorec/types"
 )
 
 func (o *DefVar) typeCheck() {
-    v := vars.GetVar(o.Name.Str)
-    if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", o.Name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + o.Name.At())
-        os.Exit(1)
-    }
-
-    t1 := v.GetType()
+    t1 := o.Ident.V.GetType()
     t2 := o.Value.GetType()
 
     if !types.AreCompatible(t1, t2) {
-        fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.Name.Str, t1, t2)
-        fmt.Fprintln(os.Stderr, "\t" + o.Name.At())
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.Ident.Ident.Str, t1, t2)
+        fmt.Fprintln(os.Stderr, "\t" + o.Ident.Ident.At())
         os.Exit(1)
     }
 }
@@ -30,8 +22,8 @@ func (o *DefVar) typeCheck() {
 func (o *DefConst) typeCheck() {
     t2 := o.Value.GetType()
     if !types.AreCompatible(o.Type, t2) {
-        fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.Name.Str, o.Type, t2)
-        fmt.Fprintln(os.Stderr, "\t" + o.Name.At())
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.Ident.Ident.Str, o.Type, t2)
+        fmt.Fprintln(os.Stderr, "\t" + o.Ident.Ident.At())
         os.Exit(1)
     }
 }
@@ -225,19 +217,11 @@ func (o *FnCall)  GetType() types.Type { return nil }
 func (o *Lit)     GetType() types.Type { return o.Type }
 func (o *Paren)   GetType() types.Type { return o.Expr.GetType() }
 func (o *Ident)   GetType() types.Type {
-    c := vars.GetConst(o.Ident.Str)
-    if c != nil {
-        return c.Type
+    if o.C != nil {
+        return o.C.Type
     }
 
-    v := vars.GetVar(o.Ident.Str)
-    if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", o.Ident.Str)
-        fmt.Fprintln(os.Stderr, "\t" + o.Ident.At())
-        os.Exit(1)
-    }
-
-    return v.GetType()
+    return o.V.GetType()
 }
 
 func (o *Unary) GetType() types.Type {

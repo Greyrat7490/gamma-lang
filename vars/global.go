@@ -10,7 +10,6 @@ import (
 )
 
 var globalVars []GlobalVar
-
 var globalDefines []string
 
 type GlobalVar struct {
@@ -18,8 +17,13 @@ type GlobalVar struct {
     Type types.Type
 }
 
+
 func (v *GlobalVar) String() string {
     return fmt.Sprintf("{%s %s}", v.Name.Str, v.Type)
+}
+
+func (v *GlobalVar) GetName() token.Token {
+    return v.Name
 }
 
 func (v *GlobalVar) GetType() types.Type {
@@ -58,7 +62,7 @@ func (v *GlobalVar) DefVal(file *os.File, val token.Token) {
     }
 }
 
-func (v *GlobalVar) DefVar(file *os.File, name token.Token) {
+func (v *GlobalVar) DefVar(file *os.File, other Var) {
     fmt.Fprintln(os.Stderr, "[ERROR] you cannot define global vars with another var")
     fmt.Fprintln(os.Stderr, "\t" + v.Name.At())
     os.Exit(1)
@@ -92,18 +96,11 @@ func (v *GlobalVar) SetVal(file *os.File, val token.Token) {
     }
 }
 
-func (v *GlobalVar) SetVar(file *os.File, name token.Token) {
-    if v.Name.Str == name.Str {
+func (v *GlobalVar) SetVar(file *os.File, other Var) {
+    if v.Name.Str == other.GetName().Str {
         fmt.Fprintln(os.Stderr, "[WARNING] assigning a variable to itself is redundant")
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        fmt.Fprintln(os.Stderr, "\t" + other.GetName().At()) // TODO correct position
         return
-    }
-
-    other := GetVar(name.Str)
-    if other == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
     }
 
     switch v.Type.GetKind() {
@@ -115,10 +112,10 @@ func (v *GlobalVar) SetVar(file *os.File, name token.Token) {
         file.WriteString(asm.MovDerefDeref(v.Addr(0), other.Addr(0), v.Type.Size(), asm.RegA))
 
     case types.Ptr:
-        file.WriteString(asm.MovDerefVal(v.Addr(0), v.Type.Size(), name.Str))
+        file.WriteString(asm.MovDerefVal(v.Addr(0), v.Type.Size(), other.GetName().Str))
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", name.Str)
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", other.GetName().Str)
         os.Exit(1)
     }
 }
@@ -149,7 +146,7 @@ func isGlobalVarDec(varname string) bool {
     return false
 }
 
-func declareGlobal(varname token.Token, vartype types.Type) {
+func declareGlobal(varname token.Token, vartype types.Type) Var {
     if isGlobalVarDec(varname.Str) {
         fmt.Fprintf(os.Stderr, "[ERROR] a variable with the name \"%s\" is already declared\n", varname.Str)
         fmt.Fprintln(os.Stderr, "\t" + varname.At())
@@ -161,5 +158,7 @@ func declareGlobal(varname token.Token, vartype types.Type) {
         os.Exit(1)
     }
 
-    globalVars = append(globalVars, GlobalVar{ Name: varname, Type: vartype })
+    v := GlobalVar{ Name: varname, Type: vartype }
+    globalVars = append(globalVars, v)
+    return &v
 }

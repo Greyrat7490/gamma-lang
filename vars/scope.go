@@ -1,25 +1,31 @@
 package vars
 
-var scopes []Scope
+var scope Scope = Scope{}
+var curScope *Scope = &scope
 
 type Scope struct {
     vars []LocalVar
-    consts []Const
+    consts []*Const
+    parent *Scope
+    children []Scope
     maxSize int
 }
 
 func InGlobalScope() bool {
-    return len(scopes) == 0
+    return curScope.parent == nil
 }
 
 func CreateScope() {
-    scopes = append(scopes, Scope{})
+    curScope.children = append(curScope.children, Scope{ parent: curScope })
+    curScope = &curScope.children[len(curScope.children)-1]
 }
 
-func RemoveScope() {
-    localVarOffset = 0
+func EndScope() {
+    if !InGlobalScope() {
+        curScope = curScope.parent
 
-    if len(scopes) > 0 {
-        scopes = scopes[:len(scopes)-1]
+        if InGlobalScope() {
+            localVarOffset = 0
+        }
     }
 }

@@ -14,27 +14,32 @@ type Const struct {
 }
 
 
-var globalConsts []Const
+var globalConsts []*Const
 
 func GetConst(name string) *Const {
-    for i := len(scopes)-1; i >= 0; i-- {
-        for _, c := range scopes[i].consts {
-            if c.Name.Str == name {
-                return &c
+    scope := curScope
+
+    for scope != nil {
+        for i := len(scope.children)-1; i >= 0; i-- {
+            for _, c := range scope.children[i].consts {
+                if c.Name.Str == name {
+                    return c
+                }
             }
         }
+        scope = scope.parent
     }
 
     for _, c := range globalConsts {
         if c.Name.Str == name {
-            return &c
+            return c
         }
     }
 
     return nil
 }
 
-func DefConst(name token.Token, conType types.Type, val token.Token) {
+func DecConst(name token.Token, conType types.Type) *Const {
     if InGlobalScope() {
         if isGlobalVarDec(name.Str) {
             fmt.Fprintf(os.Stderr, "[ERROR] a variable with the name \"%s\" is already declared\n", name.Str)
@@ -48,7 +53,9 @@ func DefConst(name token.Token, conType types.Type, val token.Token) {
             os.Exit(1)
         }
 
-        globalConsts = append(globalConsts, Const{ Name: name, Type: conType, Val: val })
+        c := Const{ Name: name, Type: conType }
+        globalConsts = append(globalConsts, &c)
+        return &c
     } else {
         if varInCurScope(name.Str) {
             fmt.Fprintf(os.Stderr, "[ERROR] local var \"%s\" is already declared in this scope\n", name.Str)
@@ -62,12 +69,14 @@ func DefConst(name token.Token, conType types.Type, val token.Token) {
             os.Exit(1)
         }
 
-        scopes[len(scopes)-1].consts = append(scopes[len(scopes)-1].consts, Const{
-            Name: name,
-            Type: conType,
-            Val: val,
-        })
+        c := Const{ Name: name, Type: conType }
+        curScope.consts = append(curScope.consts, &c)
+        return &c
     }
+}
+
+func (c *Const) Define(val token.Token) {
+    c.Val = val
 }
 
 func isGlobalConstDec(name string) bool {
@@ -81,7 +90,7 @@ func isGlobalConstDec(name string) bool {
 }
 
 func constInCurScope(name string) bool {
-    for _,c := range scopes[len(scopes)-1].consts {
+    for _,c := range curScope.consts {
         if c.Name.Str == name {
             return true
         }

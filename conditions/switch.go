@@ -34,15 +34,7 @@ func CaseStart(file *os.File) {
     file.WriteString(fmt.Sprintf(".case%d:\n", caseCount))
 }
 
-func CaseIdent(file *os.File, ident token.Token) {
-    v := vars.GetVar(ident.Str)
-
-    if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", ident.Str)
-        fmt.Fprintln(os.Stderr, "\t" + ident.At())
-        os.Exit(1)
-    }
-
+func CaseVar(file *os.File, v vars.Var) {
     file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", v.Addr(0)))
     if !inLastCase {
         file.WriteString(fmt.Sprintf("jne .case%d\n", caseCount+1))

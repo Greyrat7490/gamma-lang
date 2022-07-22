@@ -4,6 +4,7 @@ import (
     "os"
     "fmt"
     "gorec/ast"
+    "gorec/vars"
     "gorec/token"
     "gorec/types"
 )
@@ -104,7 +105,30 @@ func getPrecedence() precedence {
 }
 
 func prsIdentExpr() *ast.Ident {
-    return &ast.Ident{ Ident: token.Cur() }
+    ident := token.Cur()
+
+    // if wildcard ("_")
+    if ident.Type == token.UndScr {
+        return &ast.Ident{ Ident: ident }
+    }
+
+    if ident.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", ident)
+        fmt.Fprintln(os.Stderr, "\t" + ident.At())
+        os.Exit(1)
+    }
+
+    if v := vars.GetVar(ident.Str); v != nil {
+        return &ast.Ident{ Ident: ident, V: v }
+    }
+    if c := vars.GetConst(ident.Str); c != nil {
+        return &ast.Ident{ Ident: ident, C: c }
+    }
+
+    fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared\n", ident.Str)
+    fmt.Fprintln(os.Stderr, "\t" + ident.At())
+    os.Exit(1)
+    return nil
 }
 
 func prsLitExpr() *ast.Lit {
@@ -342,7 +366,7 @@ func swap(expr *ast.Binary) {
     // only tmp
     case token.Div:
         return
-        
+
     case token.Geq:
         expr.Operator.Type = token.Leq
         expr.Operator.Str = "<="

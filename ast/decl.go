@@ -19,20 +19,20 @@ type Decl interface {
 type BadDecl struct {}
 
 type DecVar struct {
-    Name token.Token
+    Ident Ident
     Type types.Type
     TypePos token.Pos
 }
 
 type DefVar struct {
-    Name token.Token
+    Ident Ident
     Type types.Type
     ColPos token.Pos
     Value Expr
 }
 
 type DefConst struct {
-    Name token.Token
+    Ident Ident
     Type types.Type
     ColPos token.Pos
     Value Expr
@@ -46,13 +46,12 @@ type DefFn struct {
 }
 
 
-func (d *DecVar) Compile(file *os.File) {
-    vars.DecVar(d.Name, d.Type)
-}
+func (d *DecVar) Compile(file *os.File) {}
 
 func (d *DefConst) Compile(file *os.File) {
-    if d.Type == nil {
-        d.Type = d.Value.GetType()
+    if d.Ident.C.Type == nil {
+        d.Ident.C.Type = d.Value.GetType()
+        d.Type = d.Ident.C.Type
     }
 
     d.typeCheck()
@@ -65,54 +64,50 @@ func (d *DefConst) Compile(file *os.File) {
         os.Exit(1)
     }
 
-    vars.DefConst(d.Name, d.Type, val)
+    d.Ident.C.Define(val)
 }
 
 func (d *DefVar) Compile(file *os.File) {
-    if d.Type == nil {
-        d.Type = d.Value.GetType()
+    if d.Ident.V.GetType() == nil {
+        if g,ok := d.Ident.V.(*vars.GlobalVar); ok {
+            g.Type = d.Value.GetType()
+            d.Type = g.Type
+        } else if l,ok := d.Ident.V.(*vars.LocalVar); ok {
+            l.Type = d.Value.GetType()
+            d.Type = l.Type
+        }
     }
-
-    vars.DecVar(d.Name, d.Type)
 
     d.typeCheck()
 
-    v := vars.GetVar(d.Name.Str)
-    if v == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared\n", d.Name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + d.Name.At())
-        os.Exit(1)
-    }
 
     // compile time evaluation
     if val := d.Value.constEval(); val.Type != token.Unknown {
-        v.DefVal(file, val)
+        d.Ident.V.DefVal(file, val)
         return
     }
 
-    if vars.InGlobalScope() {
+    if _,ok := d.Ident.V.(*vars.GlobalVar); ok {
         fmt.Fprintln(os.Stderr, "[ERROR] defining a global variable with a non const expr is not allowed")
         fmt.Fprintln(os.Stderr, "\t" + d.Value.At())
         os.Exit(1)
     }
 
     d.Value.Compile(file)
-    v.DefExpr(file)
+    d.Ident.V.DefExpr(file)
 }
 
 func (d *DefFn) Compile(file *os.File) {
-    fn.Declare(d.FnName)
-
-    vars.CreateScope()
-
-    regIdx := 0
-
     fn.Define(file, d.FnName, argsSize(d.Args), d.Block.maxFrameSize())
 
+    regIdx := 0
     for _,a := range d.Args {
-        fn.AddArg(a.Type)
-        vars.DecVar(a.Name, a.Type)
-        fn.DefArg(file, regIdx, a.Type)
+        if v,ok := a.Ident.V.(*vars.LocalVar); ok {
+            fn.DefArg(file, regIdx, v)
+        } else {
+            fmt.Fprintln(os.Stderr, "[ERROR] decl.go Compile DefFn: (unreachable) expected argument to be local var")
+            os.Exit(1)
+        }
 
         if a.Type.GetKind() == types.Str {
             regIdx += 2
@@ -123,7 +118,6 @@ func (d *DefFn) Compile(file *os.File) {
 
     d.Block.Compile(file)
 
-    vars.RemoveScope()
     fn.End(file);
 }
 
@@ -208,7 +202,7 @@ func (d *DefConst) decl() {}
 func (d *DefFn)    decl() {}
 
 func (d *BadDecl)  At() string { return "" }
-func (d *DecVar)   At() string { return d.Name.At() }
+func (d *DecVar)   At() string { return d.Ident.Ident.At() }
 func (d *DefVar)   At() string { return d.ColPos.At() }
 func (d *DefConst) At() string { return d.ColPos.At() }
 func (d *DefFn)    At() string { return d.Pos.At() }

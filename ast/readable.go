@@ -11,7 +11,7 @@ func (o *DecVar) Readable(indent int) string {
     s2 := strings.Repeat("   ", indent+1)
 
     return s + "DEC_VAR:\n" +
-          s2 + fmt.Sprintf("%v(Name)\n", o.Name.Str) +
+          s2 + fmt.Sprintf("%s(Name)\n", o.Ident.Ident.Str) +
           s2 + fmt.Sprintf("%v(Typename)\n", o.Type)
 }
 
@@ -20,7 +20,7 @@ func (o *DefVar) Readable(indent int) string {
     s2 := strings.Repeat("   ", indent+1)
 
     res := s + "DEF_VAR:\n" +
-        s2 + fmt.Sprintf("%v(Name)\n", o.Name.Str)
+        s2 + fmt.Sprintf("%s(Name)\n", o.Ident.Ident.Str)
 
     if o.Type == nil {
         res += s2 + "infer type\n"
@@ -36,7 +36,7 @@ func (o *DefConst) Readable(indent int) string {
     s2 := strings.Repeat("   ", indent+1)
 
     res := s + "DEF_CONST:\n" +
-        s2 + fmt.Sprintf("%v(Name)\n", o.Name.Str)
+        s2 + fmt.Sprintf("%s(Name)\n", o.Ident.Ident.Str)
 
     if o.Type == nil {
         res += s2 + "infer type\n"
@@ -52,7 +52,7 @@ func (o *DefFn) Readable(indent int) string {
 
     s := ""
     for _,a := range o.Args {
-        s += fmt.Sprintf("%s(Name) %v(Typename), ", a.Name.Str, a.Type)
+        s += fmt.Sprintf("%s(Name) %v(Typename), ", a.Ident.Ident.Str, a.Type)
     }
     if len(s) > 0 { s = s[:len(s)-2] }
 
