@@ -9,37 +9,35 @@ import (
 
 // results in A-register
 func BinaryOp(file *os.File, opType token.TokenType, src string, size int) {
-    var s string
     switch opType {
     case token.Eql:
-        s = Eql(GetReg(RegA, size), src)
+        Eql(file, GetReg(RegA, size), src)
     case token.Neq:
-        s = Neq(GetReg(RegA, size), src)
+        Neq(file, GetReg(RegA, size), src)
     case token.Lss:
-        s = Lss(GetReg(RegA, size), src)
+        Lss(file, GetReg(RegA, size), src)
     case token.Grt:
-        s = Grt(GetReg(RegA, size), src)
+        Grt(file, GetReg(RegA, size), src)
     case token.Leq:
-        s = Leq(GetReg(RegA, size), src)
+        Leq(file, GetReg(RegA, size), src)
     case token.Geq:
-        s = Geq(GetReg(RegA, size), src)
+        Geq(file, GetReg(RegA, size), src)
 
     case token.Plus:
-        s = Add(src, size)
+        Add(file, src, size)
     case token.Minus:
-        s = Sub(src, size)
+        Sub(file, src, size)
     case token.Mul:
-        s = Mul(src, size)
+        Mul(file, src, size)
     case token.Div:
-        s = Div(src, size)
+        Div(file, src, size)
     case token.Mod:
-        s = Mod(src, size)
+        Mod(file, src, size)
+
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] unknown binary operator %v\n", opType)
         os.Exit(1)
     }
-
-    file.WriteString(s)
 }
 
 func BinaryOpReg(file *os.File, opType token.TokenType, reg RegGroup, size int) {

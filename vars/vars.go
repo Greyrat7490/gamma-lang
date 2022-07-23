@@ -11,17 +11,12 @@ import (
 
 type Var interface {
     DefVal(file *os.File, val token.Token)
-    DefVar(file *os.File, other Var)
-    DefExpr(file *os.File)
-
-    SetVal(file *os.File, val token.Token)
-    SetVar(file *os.File, other Var)
-    SetExpr(file *os.File)
 
     Addr(fieldNum int) string
-    String() string
-    GetName() token.Token
     GetType() types.Type
+    GetName() token.Token
+
+    String() string
 }
 
 
@@ -46,6 +41,7 @@ func varNameTaken(name string) bool {
 
     return false
 }
+
 
 func DecVar(varname token.Token, vartype types.Type) Var {
     if varname.Str[0] == '_' {
@@ -78,26 +74,95 @@ func DecVar(varname token.Token, vartype types.Type) Var {
 }
 
 
+func VarSetExpr(file *os.File, v Var) {
+    if v.GetType().GetKind() == types.Str {
+        asm.MovDerefReg(file, v.Addr(0), types.Ptr_Size, asm.RegA)
+        asm.MovDerefReg(file, v.Addr(1), types.I32_Size, asm.RegB)
+    } else {
+        asm.MovDerefReg(file, v.Addr(0), v.GetType().Size(), asm.RegA)
+    }
+}
+
+func VarSetVar(file *os.File, v Var, other Var) {
+    if v.GetName().Str == other.GetName().Str {
+        fmt.Fprintln(os.Stderr, "[WARNING] assigning a variable to itself is redundant")
+        fmt.Fprintln(os.Stderr, "\t" + v.GetName().At())
+        return
+    }
+
+    t := v.GetType()
+
+    switch t.GetKind() {
+    case types.Str:
+        asm.MovDerefDeref(file, v.Addr(0), other.Addr(0), types.Ptr_Size, asm.RegA)
+        asm.MovDerefDeref(file, v.Addr(1), other.Addr(1), types.I32_Size, asm.RegA)
+
+    case types.I32, types.Bool:
+        asm.MovDerefDeref(file, v.Addr(0), other.Addr(0), t.Size(), asm.RegA)
+
+    case types.Ptr:
+        asm.MovDerefVal(file, v.Addr(0), t.Size(), other.Addr(0))
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.GetName().Str)
+        fmt.Fprintln(os.Stderr, "\t" + v.GetName().At())
+        os.Exit(1)
+    }
+}
+
+func VarSetVal(file *os.File, v Var, val token.Token) {
+    t := v.GetType()
+    switch t.GetKind() {
+    case types.Str:
+        strIdx := str.Add(val)
+
+        asm.MovDerefVal(file, v.Addr(0), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx))
+        asm.MovDerefVal(file, v.Addr(1), types.I32_Size, fmt.Sprint(str.GetSize(strIdx)))
+
+    case types.Ptr:
+        if val.Type == token.Name {
+            file.WriteString(fmt.Sprintf("lea rax, [%s]\n", val.Str))
+            asm.MovDerefReg(file, v.Addr(0), v.GetType().Size(), asm.RegA)
+        } else {
+            asm.MovDerefVal(file, v.Addr(0), t.Size(), val.Str)
+        }
+
+    case types.Bool:
+        if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
+        fallthrough
+
+    case types.I32:
+        asm.MovDerefVal(file, v.Addr(0), t.Size(), val.Str)
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.GetName().Str)
+        fmt.Fprintln(os.Stderr, "\t" + v.GetName().At())
+        os.Exit(1)
+    }
+}
+
+
 func DerefSetVal(file *os.File, val token.Token, size int) {
     switch val.Type {
     case token.Str:
         strIdx := str.Add(val)
 
-        file.WriteString(asm.MovDerefVal("rax", types.Ptr_Size, fmt.Sprintf("_str%d\n", strIdx)))
-        file.WriteString(asm.MovDerefVal(fmt.Sprintf("rax+%d", types.Ptr_Size), types.I32_Size, fmt.Sprintf("%d\n", str.GetSize(strIdx))))
+        asm.MovDerefVal(file, "rax", types.Ptr_Size, fmt.Sprintf("_str%d\n", strIdx))
+        asm.MovDerefVal(file, fmt.Sprintf("rax+%d", types.Ptr_Size), types.I32_Size, fmt.Sprintf("%d\n", str.GetSize(strIdx)))
     case token.Boolean:
         if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
         fallthrough
+
     default:
-        file.WriteString(asm.MovDerefVal("rax", size, val.Str))
+        asm.MovDerefVal(file, "rax", size, val.Str)
     }
 }
 
 func DerefSetVar(file *os.File, other Var) {
     if other.GetType().GetKind() == types.Str {
-        file.WriteString(asm.MovDerefDeref("rax", other.Addr(0), types.Ptr_Size, asm.RegB))
-        file.WriteString(asm.MovDerefDeref(fmt.Sprintf("rax+%d", types.Ptr_Size), other.Addr(types.Ptr_Size), types.I32_Size, asm.RegB))
+        asm.MovDerefDeref(file, "rax", other.Addr(0), types.Ptr_Size, asm.RegB)
+        asm.MovDerefDeref(file, fmt.Sprintf("rax+%d", types.Ptr_Size), other.Addr(types.Ptr_Size), types.I32_Size, asm.RegB)
     } else {
-        file.WriteString(asm.MovDerefDeref("rax", other.Addr(0), other.GetType().Size(), asm.RegB))
+        asm.MovDerefDeref(file, "rax", other.Addr(0), other.GetType().Size(), asm.RegB)
     }
 }

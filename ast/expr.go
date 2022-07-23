@@ -47,6 +47,7 @@ type Unary struct {
 }
 
 type Binary struct {
+    Pos token.Pos
     OperandL Expr
     Operator token.Token
     OperandR Expr
@@ -77,13 +78,15 @@ func (e *Lit) Compile(file *os.File) {
     case token.Str:
         strIdx := str.Add(e.Val)
 
-        file.WriteString(asm.MovRegVal(asm.RegA, types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
-        file.WriteString(asm.MovRegVal(asm.RegB, types.I32_Size, fmt.Sprintf("%d", str.GetSize(strIdx))))
+        asm.MovRegVal(file, asm.RegA, types.Ptr_Size, fmt.Sprintf("_str%d", strIdx))
+        asm.MovRegVal(file, asm.RegB, types.I32_Size, fmt.Sprintf("%d", str.GetSize(strIdx)))
+
     case token.Boolean:
         if e.Val.Str == "true" { e.Val.Str = "1" } else { e.Val.Str = "0" }
         fallthrough
+
     default:
-        file.WriteString(asm.MovRegVal(asm.RegA, e.Type.Size(), e.Val.Str))
+        asm.MovRegVal(file, asm.RegA, e.Type.Size(), e.Val.Str)
     }
 }
 func (e *Ident) Compile(file *os.File) {
@@ -93,13 +96,14 @@ func (e *Ident) Compile(file *os.File) {
         return
     }
 
-    if e.V == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is not declared)\n", e.Ident.Str)
-        fmt.Fprintln(os.Stderr, "\t" + e.Ident.At())
-        os.Exit(1)
+    if e.V != nil {
+        asm.MovRegDeref(file, asm.RegA, e.V.Addr(0), e.V.GetType().Size())
+        return
     }
 
-    file.WriteString(asm.MovRegDeref(asm.RegA, e.V.Addr(0), e.V.GetType().Size()))
+    fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared)\n", e.Ident.Str)
+    fmt.Fprintln(os.Stderr, "\t" + e.Ident.At())
+    os.Exit(1)
 }
 func (e *Paren) Compile(file *os.File) { e.Expr.Compile(file) }
 func (e *Unary) Compile(file *os.File) {
@@ -107,7 +111,7 @@ func (e *Unary) Compile(file *os.File) {
 
     // compile time evaluation
     if c := e.constEval(); c.Type != token.Unknown {
-        file.WriteString(asm.MovRegVal(asm.RegA, e.Operand.GetType().Size(), c.Str))
+        asm.MovRegVal(file, asm.RegA, e.Operand.GetType().Size(), c.Str)
         return
     }
 
@@ -116,7 +120,7 @@ func (e *Unary) Compile(file *os.File) {
     switch e.Operator.Type {
     case token.Minus:
         size := e.Operand.GetType().Size()
-        file.WriteString(asm.Neg(asm.GetReg(asm.RegA, size), size))
+        asm.Neg(file, asm.GetReg(asm.RegA, size), size)
 
     case token.Mul:
         if _,ok := e.Operand.(*Ident); !ok {
@@ -127,7 +131,7 @@ func (e *Unary) Compile(file *os.File) {
             }
         }
 
-        file.WriteString(asm.DerefRax(e.GetType().Size()))
+        asm.DerefRax(file, e.GetType().Size())
     }
 }
 func (e *Binary) Compile(file *os.File) {
@@ -144,7 +148,7 @@ func (e *Binary) Compile(file *os.File) {
             if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
         }
 
-        file.WriteString(asm.MovRegVal(asm.RegA, size, c.Str))
+        asm.MovRegVal(file, asm.RegA, size, c.Str)
         return
     }
 
@@ -157,7 +161,7 @@ func (e *Binary) Compile(file *os.File) {
                 if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
             }
 
-            file.WriteString(asm.MovRegVal(asm.RegA, size, c.Str))
+            asm.MovRegVal(file, asm.RegA, size, c.Str)
         } else {
             e.OperandL.Compile(file)
 
@@ -174,18 +178,18 @@ func (e *Binary) Compile(file *os.File) {
 
         if ident,ok := e.OperandR.(*Ident); ok {
             if t := ident.V.GetType(); t.Size() < size {
-                file.WriteString(asm.MovRegDeref(asm.RegC, ident.V.Addr(0), t.Size()))
+                asm.MovRegDeref(file, asm.RegC, ident.V.Addr(0), t.Size())
                 asm.BinaryOpReg(file, e.Operator.Type, asm.RegC, size)
             } else {
                 asm.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), ident.V.Addr(0)), size)
             }
         } else {
-            file.WriteString(asm.Push(asm.RegA))
+            asm.Push(file, asm.RegA)
 
             e.OperandR.Compile(file)
-            file.WriteString(asm.MovRegReg(asm.RegB, asm.RegA, size))
+            asm.MovRegReg(file, asm.RegB, asm.RegA, size)
 
-            file.WriteString(asm.Pop(asm.RegA))
+            asm.Pop(file, asm.RegA)
             asm.BinaryOpReg(file, e.Operator.Type, asm.RegB, size)
         }
 
@@ -194,11 +198,11 @@ func (e *Binary) Compile(file *os.File) {
         // compile time evaluation
         if c := e.OperandL.constEval(); c.Type != token.Unknown {
             if e.Operator.Type == token.And && c.Str == "false" {
-                file.WriteString(asm.MovRegVal(asm.RegA, size, "0"))
+                asm.MovRegVal(file, asm.RegA, size, "0")
                 return
             }
             if e.Operator.Type == token.Or && c.Str == "true" {
-                file.WriteString(asm.MovRegVal(asm.RegA, size, "1"))
+                asm.MovRegVal(file, asm.RegA, size, "1")
                 return
             }
 
@@ -277,7 +281,7 @@ func (e *XSwitch) Compile(file *os.File) {
 
     // compile time evaluation
     if c := e.constEval(); c.Type != token.Unknown {
-        asm.MovRegVal(asm.RegA, types.TypeOfVal(c.Str).Size(), c.Str)
+        asm.MovRegVal(file, asm.RegA, types.TypeOfVal(c.Str).Size(), c.Str)
         return
     }
 

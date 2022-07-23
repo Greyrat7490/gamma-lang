@@ -94,7 +94,7 @@ func (d *DefVar) Compile(file *os.File) {
     }
 
     d.Value.Compile(file)
-    d.Ident.V.DefExpr(file)
+    vars.VarSetExpr(file, d.Ident.V)
 }
 
 func (d *DefFn) Compile(file *os.File) {

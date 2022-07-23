@@ -114,24 +114,24 @@ func (s *Assign) Compile(file *os.File) {
             return
         }
 
-        file.WriteString(asm.MovRegReg(asm.RegD, asm.RegA, types.Ptr_Size))
+        asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
         s.Value.Compile(file)
-        file.WriteString(asm.MovDerefReg("rdx", size, asm.RegA))
+        asm.MovDerefReg(file, "rdx", size, asm.RegA)
 
     case *Ident:
         // compile time evaluation
         if val := s.Value.constEval(); val.Type != token.Unknown {
-            dest.V.SetVal(file, val)
+            vars.VarSetVal(file, dest.V, val)
             return
         }
 
         if e,ok := s.Value.(*Ident); ok {
-            dest.V.SetVar(file, e.V)
+            vars.VarSetVar(file, dest.V, e.V)
             return
         }
 
         s.Value.Compile(file)
-        dest.V.SetExpr(file)
+        vars.VarSetExpr(file, dest.V)
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] expected a variable or a dereferenced pointer but got \"%t\"\n", dest)

@@ -111,13 +111,7 @@ func setArg(file *os.File, addr string, regIdx int, size int) {
         os.Exit(1)
     }
 
-    // adjust offset if reg is bigger than expected (no smaller reg available)
-    if asm.GetSize(regs[regIdx], size) > size {
-        file.WriteString(fmt.Sprintf("mov %s, %s\n", asm.GetReg(asm.RegA, asm.GetSize(regs[regIdx], size)), asm.GetReg(regs[regIdx], size)))
-        file.WriteString(fmt.Sprintf("mov %s [%s], %s\n", asm.GetWord(size), addr, asm.GetReg(asm.RegA, size)))
-    } else {
-        file.WriteString(fmt.Sprintf("mov %s [%s], %s\n", asm.GetWord(size), addr, asm.GetReg(regs[regIdx], size)))
-    }
+    asm.MovDerefReg(file, addr, size, regs[regIdx])
 }
 
 func PassVal(file *os.File, fnName token.Token, regIdx int, value token.Token, valtype types.Type) {
@@ -129,18 +123,18 @@ func PassVal(file *os.File, fnName token.Token, regIdx int, value token.Token, v
     switch valtype.GetKind() {
     case types.Str:
         strIdx := str.Add(value)
-        file.WriteString(asm.MovRegVal(regs[regIdx], types.Ptr_Size, fmt.Sprintf("_str%d", strIdx)))
-        file.WriteString(asm.MovRegVal(regs[regIdx+1], types.I32_Size, fmt.Sprint(str.GetSize(strIdx))))
+        asm.MovRegVal(file, regs[regIdx],   types.Ptr_Size, fmt.Sprintf("_str%d", strIdx))
+        asm.MovRegVal(file, regs[regIdx+1], types.I32_Size, fmt.Sprint(str.GetSize(strIdx)))
 
     case types.Bool:
         if value.Str == "true" { value.Str = "1" } else { value.Str = "0" }
         fallthrough
 
     case types.I32, types.Ptr:
-        file.WriteString(asm.MovRegVal(regs[regIdx], valtype.Size(), value.Str))
+        asm.MovRegVal(file, regs[regIdx], valtype.Size(), value.Str)
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] could not get type of value \"%s\"\n", value.Str)
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) could not get type of value \"%s\"\n", value.Str)
         os.Exit(1)
     }
 }
@@ -148,35 +142,24 @@ func PassVal(file *os.File, fnName token.Token, regIdx int, value token.Token, v
 func PassVar(file *os.File, regIdx int, otherVar vars.Var) {
     switch otherVar.GetType().GetKind() {
     case types.Str:
-        file.WriteString(asm.MovRegDeref(regs[regIdx], otherVar.Addr(0), types.Ptr_Size))
-        file.WriteString(asm.MovRegDeref(regs[regIdx+1], otherVar.Addr(1), types.I32_Size))
+        asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), types.Ptr_Size)
+        asm.MovRegDeref(file, regs[regIdx+1], otherVar.Addr(1), types.I32_Size)
 
-    case types.I32, types.Ptr:
-        file.WriteString(asm.MovRegDeref(regs[regIdx], otherVar.Addr(0), otherVar.GetType().Size()))
-
-    case types.Bool:
-        size := otherVar.GetType().Size()
-        // TODO: use movzx in asm funcs if needed
-        file.WriteString(fmt.Sprintf("movzx %s, %s [%s]\n", asm.GetReg(regs[regIdx], size), asm.GetWord(size), otherVar.Addr(0)))
+    case types.Bool, types.I32, types.Ptr:
+        asm.MovRegDeref(file, regs[regIdx], otherVar.Addr(0), otherVar.GetType().Size())
 
     default:
-        // TODO
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var is not correct\n")
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", otherVar.GetName())
         os.Exit(1)
     }
 }
 
 func PassReg(file *os.File, regIdx int, argType types.Type) {
     if argType.GetKind() == types.Str {
-        file.WriteString(fmt.Sprintf("mov %s, %s\n", asm.GetReg(regs[regIdx], types.Ptr_Size), asm.GetReg(asm.RegA, types.Ptr_Size)))
-        file.WriteString(fmt.Sprintf("mov %s, %s\n", asm.GetReg(regs[regIdx+1], types.I32_Size), asm.GetReg(asm.RegB, types.I32_Size)))
+        asm.MovRegReg(file, regs[regIdx],   asm.RegA, types.Ptr_Size)
+        asm.MovRegReg(file, regs[regIdx+1], asm.RegB, types.Ptr_Size)
     } else {
-        size := argType.Size()
-        if size < 2 {
-            file.WriteString(fmt.Sprintf("movzx %s, %s\n", asm.GetReg(regs[regIdx], size), asm.GetReg(asm.RegA, size)))
-        } else {
-            file.WriteString(fmt.Sprintf("mov %s, %s\n", asm.GetReg(regs[regIdx], size), asm.GetReg(asm.RegA, size)))
-        }
+        asm.MovRegReg(file, regs[regIdx], asm.RegA, argType.Size())
     }
 }
 
