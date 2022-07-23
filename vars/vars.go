@@ -29,12 +29,6 @@ func GetVar(name string) Var {
     scope := curScope
 
     for scope != nil {
-        for i := len(scope.children)-1; i >= 0; i-- {
-            if v,ok := scope.children[i].vars[name]; ok {
-                return v
-            }
-        }
-
         if v,ok := scope.vars[name]; ok {
             return v
         }
@@ -45,7 +39,7 @@ func GetVar(name string) Var {
     return nil
 }
 
-func varInCurScope(name string) bool {
+func varNameTaken(name string) bool {
     if _,ok := curScope.vars[name]; ok {
         return ok
     }
@@ -60,13 +54,13 @@ func DecVar(varname token.Token, vartype types.Type) Var {
         os.Exit(1)
     }
 
-    if varInCurScope(varname.Str) {
+    if varNameTaken(varname.Str) {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is already declared in this scope\n", varname.Str)
         fmt.Fprintln(os.Stderr, "\t" + varname.At())
         os.Exit(1)
     }
 
-    if constInCurScope(varname.Str) {
+    if constNameTaken(varname.Str) {
         fmt.Fprintf(os.Stderr, "[ERROR] const \"%s\" is already declared in this scope\n", varname.Str)
         fmt.Fprintln(os.Stderr, "\t" + varname.At())
         os.Exit(1)
@@ -79,7 +73,6 @@ func DecVar(varname token.Token, vartype types.Type) Var {
         v = &LocalVar{ Name: varname, Type: vartype, offset: calcOffset(vartype) }
     }
 
-    curScope.minFrameSize += vartype.Size()
     curScope.vars[varname.Str] = v
     return v
 }

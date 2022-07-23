@@ -18,12 +18,6 @@ func GetConst(name string) *Const {
     scope := curScope
 
     for scope != nil {
-        for i := len(scope.children)-1; i >= 0; i-- {
-            if c,ok := scope.children[i].consts[name]; ok {
-                return c
-            }
-        }
-
         if c,ok := scope.consts[name]; ok {
             return c
         }
@@ -41,13 +35,13 @@ func DecConst(name token.Token, conType types.Type) *Const {
         os.Exit(1)
     }
 
-    if varInCurScope(name.Str) {
+    if varNameTaken(name.Str) {
         fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is already declared in this scope\n", name.Str)
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
 
-    if constInCurScope(name.Str) {
+    if constNameTaken(name.Str) {
         fmt.Fprintf(os.Stderr, "[ERROR] const \"%s\" is already declared in this scope\n", name.Str)
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
@@ -62,7 +56,7 @@ func (c *Const) Define(val token.Token) {
     c.Val = val
 }
 
-func constInCurScope(name string) bool {
+func constNameTaken(name string) bool {
     if _,ok := curScope.consts[name]; ok {
         return ok
     }

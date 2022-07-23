@@ -9,8 +9,7 @@ type Scope struct {
     vars map[string]Var
     consts map[string]*Const
     parent *Scope
-    children []Scope
-    minFrameSize int
+    innerSize int
 }
 
 func GetCurScope() *Scope {
@@ -18,36 +17,40 @@ func GetCurScope() *Scope {
 }
 
 func (s *Scope) GetMaxFrameSize() int {
-    maxInner := 0
-    for _,c := range s.children {
-        size := c.GetMaxFrameSize()
-        if size > maxInner {
-            maxInner = size
-        }
-    }
-
-    return s.minFrameSize + maxInner
+    return s.calcFrameSize()
 }
 
 func InGlobalScope() bool {
     return curScope.parent == nil
 }
 
-func CreateScope() {
-    curScope.children = append(curScope.children, Scope{
+func StartScope() {
+    curScope = &Scope{
         vars: map[string]Var{},
         consts: map[string]*Const{},
         parent: curScope,
-    })
-    curScope = &curScope.children[len(curScope.children)-1]
+    }
 }
 
 func EndScope() {
     if !InGlobalScope() {
+        size := curScope.calcFrameSize()
+        if curScope.parent.innerSize < size {
+            curScope.parent.innerSize = size
+        }
+
         curScope = curScope.parent
 
         if InGlobalScope() {
             localVarOffset = 0
         }
     }
+}
+
+func (s *Scope) calcFrameSize() (size int) {
+    for _,v := range s.vars {
+        size += v.GetType().Size()
+    }
+
+    return size + curScope.innerSize
 }

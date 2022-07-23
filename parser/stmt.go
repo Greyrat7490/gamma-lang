@@ -153,7 +153,7 @@ func prsAssignVar(dest ast.Expr) ast.Assign {
 }
 
 func prsIfStmt() ast.If {
-    vars.CreateScope()
+    vars.StartScope()
     defer vars.EndScope()
 
     pos := token.Cur().Pos
@@ -194,7 +194,7 @@ func prsElif() ast.Elif {
 }
 
 func prsElse() ast.Else {
-    vars.CreateScope()
+    vars.StartScope()
     defer vars.EndScope()
 
     pos := token.Cur().Pos
@@ -205,7 +205,7 @@ func prsElse() ast.Else {
 }
 
 func prsWhileStmt() ast.While {
-    vars.CreateScope()
+    vars.StartScope()
     defer vars.EndScope()
 
     var op ast.While = ast.While{ WhilePos: token.Cur().Pos, Def: nil }
@@ -244,7 +244,7 @@ func prsWhileStmt() ast.While {
 }
 
 func prsForStmt() ast.For {
-    vars.CreateScope()
+    vars.StartScope()
     defer vars.EndScope()
 
     var op ast.For = ast.For{
@@ -497,7 +497,7 @@ func prsSwitch(pos token.Pos, condBase ast.Expr) ast.Switch {
         os.Exit(1)
     }
 
-    vars.CreateScope()
+    vars.StartScope()
     switchStmt.Cases = prsCases(condBase)
     vars.EndScope()
 

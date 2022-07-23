@@ -142,7 +142,7 @@ func prsDefine() ast.Decl {
 
 
 func prsDefFn() ast.DefFn {
-    vars.CreateScope()
+    vars.StartScope()
     defer vars.EndScope()
 
     pos := token.Cur().Pos
