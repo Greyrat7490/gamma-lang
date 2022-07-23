@@ -3,13 +3,12 @@ package fn
 import (
     "os"
     "fmt"
-    "gorec/vars"
-    "gorec/loops"
     "gorec/token"
     "gorec/types"
     "gorec/types/str"
-    "gorec/conditions"
     "gorec/asm/x86_64"
+    "gorec/identObj/vars"
+    "gorec/identObj/scope"
 )
 
 /*
@@ -28,18 +27,18 @@ var regs []asm.RegGroup = []asm.RegGroup{ asm.RegDi, asm.RegSi, asm.RegD, asm.Re
 var funcs []function
 
 type function struct {
-    Name token.Token
+    name token.Token
     Args []types.Type
-    Scope *vars.Scope
+    scope *scope.Scope
 }
 
 func (f *function) At() string {
-    return f.Name.At()
+    return f.name.At()
 }
 
 func GetFn(name string) *function {
     for _, f := range funcs {
-        if f.Name.Str == name {
+        if f.name.Str == name {
             return &f
         }
     }
@@ -54,7 +53,7 @@ func Declare(name token.Token, args []types.Type) {
         os.Exit(1)
     }
 
-    funcs = append(funcs, function{ Name: name, Args: args, Scope: vars.GetCurScope() })
+    funcs = append(funcs, function{ name: name, Args: args, scope: scope.GetCur() })
 }
 
 func Define(file *os.File, name token.Token) {
@@ -67,7 +66,7 @@ func Define(file *os.File, name token.Token) {
 
     file.WriteString(name.Str + ":\n")
     file.WriteString("push rbp\nmov rbp, rsp\n")
-    reserveSpace(file, f.Scope.GetMaxFrameSize())
+    reserveSpace(file, f.scope.GetMaxFrameSize())
 }
 
 func reserveSpace(file *os.File, size int) {
@@ -79,14 +78,11 @@ func reserveSpace(file *os.File, size int) {
 }
 
 func End(file *os.File) {
-    cond.ResetCount()
-    loops.ResetCount()
-
     file.WriteString("leave\n")
     file.WriteString("ret\n\n")
 }
 
-func CallFunc(file *os.File, fnName token.Token) {
+func Call(file *os.File, fnName token.Token) {
     if f := GetFn(fnName.Str); f == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] undeclared name \"%s\"\n", fnName.Str)
         fmt.Fprintln(os.Stderr, "\t" + fnName.At())
@@ -96,12 +92,14 @@ func CallFunc(file *os.File, fnName token.Token) {
     file.WriteString("call " + fnName.Str + "\n")
 }
 
-func DefArg(file *os.File, regIdx int, v *vars.LocalVar) {
-    if v.Type.GetKind() == types.Str {
+func DefArg(file *os.File, regIdx int, v vars.Var) {
+    t := v.GetType()
+
+    if t.GetKind() == types.Str {
         setArg(file, v.Addr(0), regIdx, types.Ptr_Size)
         setArg(file, v.Addr(1), regIdx+1, types.I32_Size)
     } else {
-        setArg(file, v.Addr(0), regIdx, v.Type.Size())
+        setArg(file, v.Addr(0), regIdx, t.Size())
     }
 }
 
@@ -140,13 +138,15 @@ func PassVal(file *os.File, fnName token.Token, regIdx int, value token.Token, v
 }
 
 func PassVar(file *os.File, regIdx int, otherVar vars.Var) {
-    switch otherVar.GetType().GetKind() {
+    t := otherVar.GetType()
+
+    switch t.GetKind() {
     case types.Str:
         asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), types.Ptr_Size)
         asm.MovRegDeref(file, regs[regIdx+1], otherVar.Addr(1), types.I32_Size)
 
     case types.Bool, types.I32, types.Ptr:
-        asm.MovRegDeref(file, regs[regIdx], otherVar.Addr(0), otherVar.GetType().Size())
+        asm.MovRegDeref(file, regs[regIdx], otherVar.Addr(0), t.Size())
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", otherVar.GetName())
@@ -166,7 +166,7 @@ func PassReg(file *os.File, regIdx int, argType types.Type) {
 
 func AddBuildIn(name string, argname string, argtype types.Type) {
     funcs = append(funcs, function{
-        Name: token.Token{ Str: name, Type: token.Name },
+        name: token.Token{ Str: name, Type: token.Name },
         Args: []types.Type{ argtype },
     })
 }

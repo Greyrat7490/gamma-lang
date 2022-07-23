@@ -4,9 +4,9 @@ import (
     "os"
     "fmt"
     "gorec/ast"
-    "gorec/vars"
     "gorec/token"
     "gorec/types"
+    "gorec/identObj/scope"
 )
 
 func prsStmt(ignoreUnusedExpr bool) ast.Stmt {
@@ -153,8 +153,8 @@ func prsAssignVar(dest ast.Expr) ast.Assign {
 }
 
 func prsIfStmt() ast.If {
-    vars.StartScope()
-    defer vars.EndScope()
+    scope.Start()
+    defer scope.End()
 
     pos := token.Cur().Pos
 
@@ -194,8 +194,8 @@ func prsElif() ast.Elif {
 }
 
 func prsElse() ast.Else {
-    vars.StartScope()
-    defer vars.EndScope()
+    scope.Start()
+    defer scope.End()
 
     pos := token.Cur().Pos
     token.Next()
@@ -205,8 +205,8 @@ func prsElse() ast.Else {
 }
 
 func prsWhileStmt() ast.While {
-    vars.StartScope()
-    defer vars.EndScope()
+    scope.Start()
+    defer scope.End()
 
     var op ast.While = ast.While{ WhilePos: token.Cur().Pos, Def: nil }
 
@@ -244,8 +244,8 @@ func prsWhileStmt() ast.While {
 }
 
 func prsForStmt() ast.For {
-    vars.StartScope()
-    defer vars.EndScope()
+    scope.Start()
+    defer scope.End()
 
     var op ast.For = ast.For{
         ForPos: token.Cur().Pos,
@@ -497,9 +497,9 @@ func prsSwitch(pos token.Pos, condBase ast.Expr) ast.Switch {
         os.Exit(1)
     }
 
-    vars.StartScope()
+    scope.Start()
     switchStmt.Cases = prsCases(condBase)
-    vars.EndScope()
+    scope.End()
 
     switchStmt.BraceRPos = token.Cur().Pos
 

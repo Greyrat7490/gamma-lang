@@ -5,8 +5,8 @@ import (
     "fmt"
     "os/exec"
     "strings"
-    "gorec/vars"
     "gorec/types/str"
+    "gorec/identObj/vars"
 )
 
 func Header(file *os.File) {

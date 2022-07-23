@@ -2,8 +2,8 @@ package std
 
 import (
     "os"
-    "gorec/func"
     "gorec/types"
+    "gorec/identObj/func"
 )
 
 func Declare() {

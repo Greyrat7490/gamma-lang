@@ -3,10 +3,10 @@ package ast
 import (
     "os"
     "fmt"
-    "gorec/vars"
-    "gorec/func"
     "gorec/types"
     "gorec/token"
+    "gorec/identObj/vars"
+    "gorec/identObj/func"
 )
 
 
@@ -69,13 +69,8 @@ func (d *DefConst) Compile(file *os.File) {
 
 func (d *DefVar) Compile(file *os.File) {
     if d.Ident.V.GetType() == nil {
-        if g,ok := d.Ident.V.(*vars.GlobalVar); ok {
-            g.Type = d.Value.GetType()
-            d.Type = g.Type
-        } else if l,ok := d.Ident.V.(*vars.LocalVar); ok {
-            l.Type = d.Value.GetType()
-            d.Type = l.Type
-        }
+        d.Type = d.Value.GetType()
+        d.Ident.V.SetType(d.Type)
     }
 
     d.typeCheck()
@@ -102,12 +97,7 @@ func (d *DefFn) Compile(file *os.File) {
 
     regIdx := 0
     for _,a := range d.Args {
-        if v,ok := a.Ident.V.(*vars.LocalVar); ok {
-            fn.DefArg(file, regIdx, v)
-        } else {
-            fmt.Fprintln(os.Stderr, "[ERROR] decl.go Compile DefFn: (unreachable) expected argument to be local var")
-            os.Exit(1)
-        }
+        fn.DefArg(file, regIdx, a.Ident.V)
 
         if a.Type.GetKind() == types.Str {
             regIdx += 2

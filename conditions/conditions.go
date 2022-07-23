@@ -3,7 +3,7 @@ package cond
 import (
     "os"
     "fmt"
-    "gorec/vars"
+    "gorec/identObj/vars"
 )
 
 var ifCount uint = 0

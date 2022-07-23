@@ -11,6 +11,7 @@ import (
 
 type Var interface {
     DefVal(file *os.File, val token.Token)
+    SetType(t types.Type)
 
     Addr(fieldNum int) string
     GetType() types.Type
@@ -18,61 +19,6 @@ type Var interface {
 
     String() string
 }
-
-
-func GetVar(name string) Var {
-    scope := curScope
-
-    for scope != nil {
-        if v,ok := scope.vars[name]; ok {
-            return v
-        }
-
-        scope = scope.parent
-    }
-
-    return nil
-}
-
-func varNameTaken(name string) bool {
-    if _,ok := curScope.vars[name]; ok {
-        return ok
-    }
-
-    return false
-}
-
-
-func DecVar(varname token.Token, vartype types.Type) Var {
-    if varname.Str[0] == '_' {
-        fmt.Fprintln(os.Stderr, "[ERROR] names starting with \"_\" are reserved for the compiler")
-        fmt.Fprintln(os.Stderr, "\t" + varname.At())
-        os.Exit(1)
-    }
-
-    if varNameTaken(varname.Str) {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is already declared in this scope\n", varname.Str)
-        fmt.Fprintln(os.Stderr, "\t" + varname.At())
-        os.Exit(1)
-    }
-
-    if constNameTaken(varname.Str) {
-        fmt.Fprintf(os.Stderr, "[ERROR] const \"%s\" is already declared in this scope\n", varname.Str)
-        fmt.Fprintln(os.Stderr, "\t" + varname.At())
-        os.Exit(1)
-    }
-
-    var v Var
-    if InGlobalScope() {
-        v = &GlobalVar{ Name: varname, Type: vartype }
-    } else {
-        v = &LocalVar{ Name: varname, Type: vartype, offset: calcOffset(vartype) }
-    }
-
-    curScope.vars[varname.Str] = v
-    return v
-}
-
 
 func VarSetExpr(file *os.File, v Var) {
     if v.GetType().GetKind() == types.Str {

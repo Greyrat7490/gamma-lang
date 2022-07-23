@@ -3,8 +3,8 @@ package cond
 import (
     "os"
     "fmt"
-    "gorec/vars"
     "gorec/token"
+    "gorec/identObj/vars"
 )
 
 var inSwitch bool = false

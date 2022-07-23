@@ -3,13 +3,14 @@ package ast
 import (
     "os"
     "fmt"
-    "gorec/func"
-    "gorec/vars"
     "gorec/token"
     "gorec/types"
     "gorec/types/str"
     "gorec/conditions"
     "gorec/asm/x86_64"
+    "gorec/identObj/func"
+    "gorec/identObj/vars"
+    "gorec/identObj/consts"
 )
 
 type Expr interface {
@@ -38,7 +39,7 @@ type Ident struct {
     Ident token.Token
     // TODO: IdentObj
     V vars.Var
-    C *vars.Const
+    C *consts.Const
 }
 
 type Unary struct {
@@ -241,7 +242,7 @@ func (e *FnCall) Compile(file *os.File) {
         }
     }
 
-    fn.CallFunc(file, e.Name)
+    fn.Call(file, e.Name)
 }
 
 func (e *XCase) Compile(file *os.File, switchCount uint) {

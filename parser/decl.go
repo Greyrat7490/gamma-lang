@@ -4,10 +4,11 @@ import (
     "os"
     "fmt"
     "gorec/ast"
-    "gorec/func"
-    "gorec/vars"
     "gorec/token"
     "gorec/types"
+    "gorec/identObj"
+    "gorec/identObj/func"
+    "gorec/identObj/scope"
 )
 
 func prsDecl() ast.Decl {
@@ -49,12 +50,12 @@ func prsDecVar() ast.DecVar {
     t := prsType()
     end := token.Cur().Pos
 
-    v := vars.DecVar(name, t)
+    v := identObj.DecVar(name, t)
     return ast.DecVar{ Ident: ast.Ident{ Ident: name, V: v }, Type: t, TypePos: end }
 }
 
 func prsDefVar(name token.Token, t types.Type) ast.DefVar {
-    v := vars.DecVar(name, t)
+    v := identObj.DecVar(name, t)
 
     pos := token.Cur().Pos
     token.Next()
@@ -62,7 +63,7 @@ func prsDefVar(name token.Token, t types.Type) ast.DefVar {
 }
 
 func prsDefConst(name token.Token, t types.Type) ast.DefConst {
-    c := vars.DecConst(name, t)
+    c := identObj.DecConst(name, t)
 
     pos := token.Cur().Pos
     token.Next()
@@ -76,7 +77,7 @@ func prsDefVarInfer() ast.DefVar {
     val := prsExpr()
 
     t := val.GetType()
-    v := vars.DecVar(name, t)
+    v := identObj.DecVar(name, t)
     return ast.DefVar{ Ident: ast.Ident{ Ident: name, V: v }, Type: t, ColPos: pos, Value: val }
 }
 
@@ -87,7 +88,7 @@ func prsDefConstInfer() ast.DefConst {
     val := prsExpr()
 
     t := val.GetType()
-    c := vars.DecConst(name, t)
+    c := identObj.DecConst(name, t)
     return ast.DefConst{ Ident: ast.Ident{ Ident: name, C: c }, Type: t, ColPos: pos, Value: val }
 }
 
@@ -142,8 +143,8 @@ func prsDefine() ast.Decl {
 
 
 func prsDefFn() ast.DefFn {
-    vars.StartScope()
-    defer vars.EndScope()
+    scope.Start()
+    defer scope.End()
 
     pos := token.Cur().Pos
     name := token.Next()

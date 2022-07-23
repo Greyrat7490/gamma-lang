@@ -4,9 +4,9 @@ import (
     "os"
     "fmt"
     "gorec/ast"
-    "gorec/vars"
     "gorec/token"
     "gorec/types"
+    "gorec/identObj/scope"
 )
 
 type precedence int
@@ -118,10 +118,10 @@ func prsIdentExpr() *ast.Ident {
         os.Exit(1)
     }
 
-    if v := vars.GetVar(ident.Str); v != nil {
+    if v := scope.GetVar(ident.Str); v != nil {
         return &ast.Ident{ Ident: ident, V: v }
     }
-    if c := vars.GetConst(ident.Str); c != nil {
+    if c := scope.GetConst(ident.Str); c != nil {
         return &ast.Ident{ Ident: ident, C: c }
     }
 

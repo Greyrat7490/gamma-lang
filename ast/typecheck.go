@@ -3,9 +3,9 @@ package ast
 import (
 	"os"
 	"fmt"
-	"gorec/func"
 	"gorec/token"
 	"gorec/types"
+	"gorec/identObj/func"
 )
 
 func (o *DefVar) typeCheck() {

@@ -3,7 +3,7 @@ package loops
 import (
     "os"
     "fmt"
-    "gorec/vars"
+    "gorec/identObj/vars"
 )
 
 
