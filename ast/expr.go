@@ -24,7 +24,7 @@ type Expr interface {
 type BadExpr struct{}
 
 type FnCall struct {
-    Name token.Token
+    Ident Ident
     ParenLPos token.Pos
     Values []Expr
     ParenRPos token.Pos
@@ -40,6 +40,7 @@ type Ident struct {
     // TODO: IdentObj
     V vars.Var
     C *consts.Const
+    F *fn.Func
 }
 
 type Unary struct {
@@ -99,6 +100,12 @@ func (e *Ident) Compile(file *os.File) {
 
     if e.V != nil {
         asm.MovRegDeref(file, asm.RegA, e.V.Addr(0), e.V.GetType().Size())
+        return
+    }
+
+    if e.F != nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] TODO: expr.go compile Ident for functions\n")
+        os.Exit(1)
         return
     }
 
@@ -225,7 +232,7 @@ func (e *FnCall) Compile(file *os.File) {
     for _, val := range e.Values {
         // compile time evaluation:
         if v := val.constEval(); v.Type != token.Unknown {
-            fn.PassVal(file, e.Name, regIdx, v, val.GetType())
+            fn.PassVal(file, regIdx, v, val.GetType())
 
         } else if v,ok := val.(*Ident); ok {
             fn.PassVar(file, regIdx, v.V)
@@ -242,7 +249,7 @@ func (e *FnCall) Compile(file *os.File) {
         }
     }
 
-    fn.Call(file, e.Name)
+    e.Ident.F.Call(file)
 }
 
 func (e *XCase) Compile(file *os.File, switchCount uint) {
@@ -304,7 +311,7 @@ func (e *BadExpr) Compile(file *os.File) {
 
 
 func (e *BadExpr) At() string { return "" }
-func (e *FnCall)  At() string { return e.Name.At() }
+func (e *FnCall)  At() string { return e.Ident.At() }
 func (e *Lit)     At() string { return e.Val.At() }
 func (e *Ident)   At() string { return e.Ident.At() }
 func (e *Unary)   At() string { return e.Operator.At() }

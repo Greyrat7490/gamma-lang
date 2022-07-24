@@ -27,7 +27,6 @@ func compile() {
 
     nasm.Header(asm)
 
-    std.Declare()
     std.Define(asm)
 
     ast.Compile(asm)

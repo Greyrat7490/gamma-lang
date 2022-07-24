@@ -40,7 +40,7 @@ type DefConst struct {
 
 type DefFn struct {
     Pos token.Pos
-    FnName token.Token
+    Ident Ident
     Args []DecVar
     Block Block
 }
@@ -93,7 +93,7 @@ func (d *DefVar) Compile(file *os.File) {
 }
 
 func (d *DefFn) Compile(file *os.File) {
-    fn.Define(file, d.FnName)
+    d.Ident.F.Define(file)
 
     regIdx := 0
     for _,a := range d.Args {

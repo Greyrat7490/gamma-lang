@@ -8,7 +8,6 @@ import (
     "gorec/types/str"
     "gorec/asm/x86_64"
     "gorec/identObj/vars"
-    "gorec/identObj/scope"
 )
 
 /*
@@ -24,49 +23,51 @@ System V AMD64 ABI calling convention
 
 var regs []asm.RegGroup = []asm.RegGroup{ asm.RegDi, asm.RegSi, asm.RegD, asm.RegC, asm.RegR8, asm.RegR9 }
 
-var funcs []function
-
-type function struct {
+type Func struct {
     name token.Token
-    Args []types.Type
-    scope *scope.Scope
+    args []types.Type
+    frameSize int
 }
 
-func (f *function) At() string {
+func CreateFunc(name token.Token) Func {
+    return Func{ name: name, args: nil, frameSize: -1 }
+}
+func CreateFuncWithArgs(name token.Token, args []types.Type) Func {
+    return Func{ name: name, args: args, frameSize: -1 }
+}
+func (f *Func) SetArgs(args []types.Type) {
+    if f.args != nil {
+        fmt.Println("[ERROR] setting the arguments of a function again is not allowed")
+        os.Exit(1)
+    }
+
+    f.args = args
+}
+func (f *Func) GetArgs() []types.Type {
+    return f.args
+}
+
+func (f *Func) GetName() token.Token {
+    return f.name
+}
+
+func (f *Func) At() string {
     return f.name.At()
 }
 
-func GetFn(name string) *function {
-    for _, f := range funcs {
-        if f.name.Str == name {
-            return &f
-        }
-    }
-
-    return nil
-}
-
-func Declare(name token.Token, args []types.Type) {
-    if name.Str[0] == '_' {
-        fmt.Fprintln(os.Stderr, "[ERROR] function names starting with \"_\" are reserved for the compiler")
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
+func (f *Func) SetFrameSize(frameSize int) {
+    if f.frameSize != -1 {
+        fmt.Println("[ERROR] setting the frameSize of a function again is not allowed")
         os.Exit(1)
     }
 
-    funcs = append(funcs, function{ name: name, Args: args, scope: scope.GetCur() })
+    f.frameSize = frameSize
 }
 
-func Define(file *os.File, name token.Token) {
-    f := GetFn(name.Str)
-    if f == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not declared\n", name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
-    }
-
-    file.WriteString(name.Str + ":\n")
+func (f *Func) Define(file *os.File) {
+    file.WriteString(f.name.Str + ":\n")
     file.WriteString("push rbp\nmov rbp, rsp\n")
-    reserveSpace(file, f.scope.GetMaxFrameSize())
+    reserveSpace(file, f.frameSize)
 }
 
 func reserveSpace(file *os.File, size int) {
@@ -82,14 +83,8 @@ func End(file *os.File) {
     file.WriteString("ret\n\n")
 }
 
-func Call(file *os.File, fnName token.Token) {
-    if f := GetFn(fnName.Str); f == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] undeclared name \"%s\"\n", fnName.Str)
-        fmt.Fprintln(os.Stderr, "\t" + fnName.At())
-        os.Exit(1)
-    }
-
-    file.WriteString("call " + fnName.Str + "\n")
+func (f *Func) Call(file *os.File) {
+    file.WriteString("call " + f.name.Str + "\n")
 }
 
 func DefArg(file *os.File, regIdx int, v vars.Var) {
@@ -112,12 +107,7 @@ func setArg(file *os.File, addr string, regIdx int, size int) {
     asm.MovDerefReg(file, addr, size, regs[regIdx])
 }
 
-func PassVal(file *os.File, fnName token.Token, regIdx int, value token.Token, valtype types.Type) {
-    if f := GetFn(fnName.Str); f == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not defined", fnName.Str)
-        os.Exit(1)
-    }
-
+func PassVal(file *os.File, regIdx int, value token.Token, valtype types.Type) {
     switch valtype.GetKind() {
     case types.Str:
         strIdx := str.Add(value)
@@ -161,12 +151,4 @@ func PassReg(file *os.File, regIdx int, argType types.Type) {
     } else {
         asm.MovRegReg(file, regs[regIdx], asm.RegA, argType.Size())
     }
-}
-
-
-func AddBuildIn(name string, argname string, argtype types.Type) {
-    funcs = append(funcs, function{
-        name: token.Token{ Str: name, Type: token.Name },
-        Args: []types.Type{ argtype },
-    })
 }

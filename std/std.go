@@ -3,16 +3,16 @@ package std
 import (
     "os"
     "gorec/types"
-    "gorec/identObj/func"
+    "gorec/identObj/scope"
 )
 
 func Declare() {
-    fn.AddBuildIn("printStr",  "s", types.StrType{})
-    fn.AddBuildIn("printInt",  "i", types.I32Type{})
-    fn.AddBuildIn("printPtr",  "i", types.PtrType{})
-    fn.AddBuildIn("printBool", "b", types.BoolType{})
+    scope.AddBuildIn("printStr",  "s", types.StrType{})
+    scope.AddBuildIn("printInt",  "i", types.I32Type{})
+    scope.AddBuildIn("printPtr",  "i", types.PtrType{})
+    scope.AddBuildIn("printBool", "b", types.BoolType{})
 
-    fn.AddBuildIn("exit", "i", types.I32Type{})
+    scope.AddBuildIn("exit", "i", types.I32Type{})
 }
 
 func Define(file *os.File) {

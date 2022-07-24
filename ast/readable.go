@@ -56,7 +56,7 @@ func (o *DefFn) Readable(indent int) string {
     }
     if len(s) > 0 { s = s[:len(s)-2] }
 
-    res += fmt.Sprintf("%s%s(%v) [%s]\n", strings.Repeat("   ", indent+1), o.FnName.Str, o.FnName.Type, s) +
+    res += fmt.Sprintf("%s%s(Name) [%s]\n", strings.Repeat("   ", indent+1), o.Ident.Ident.Str, s) +
         o.Block.Readable(indent+2)
 
     return res
@@ -81,7 +81,7 @@ func (o *FnCall) Readable(indent int) string {
     s2 := strings.Repeat("   ", indent+1)
 
     res := s + "CALL_FN:\n" +
-          s2 + o.Name.Str + "(Name)\n"
+          s2 + o.Ident.Ident.Str + "(Name)\n"
 
     for _,e := range o.Values {
         res += e.Readable(indent+1)

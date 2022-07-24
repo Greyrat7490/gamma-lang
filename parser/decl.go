@@ -7,7 +7,6 @@ import (
     "gorec/token"
     "gorec/types"
     "gorec/identObj"
-    "gorec/identObj/func"
     "gorec/identObj/scope"
 )
 
@@ -143,9 +142,6 @@ func prsDefine() ast.Decl {
 
 
 func prsDefFn() ast.DefFn {
-    scope.Start()
-    defer scope.End()
-
     pos := token.Cur().Pos
     name := token.Next()
 
@@ -154,25 +150,29 @@ func prsDefFn() ast.DefFn {
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
-
     if name.Str == "main" {
         isMainDefined = true
     }
 
-    op := ast.DefFn{ Pos: pos, FnName: name }
+    f := identObj.DecFunc(name)
+
+    scope.Start()
     token.Next()
-    op.Args = prsDecArgs()
+    argDecs := prsDecArgs()
 
     var args []types.Type
-    for _,a := range op.Args {
+    for _,a := range argDecs {
         args = append(args, a.Type)
     }
-    fn.Declare(name, args)
+    f.SetArgs(args)
 
     token.Next()
-    op.Block = prsBlock()
+    block := prsBlock()
+    scope.End()
 
-    return op
+    f.SetFrameSize(scope.GetMaxFrameSize())
+
+    return ast.DefFn{ Pos: pos, Ident: ast.Ident{ Ident: name, F: f }, Args: argDecs, Block: block }
 }
 
 func prsDecArgs() []ast.DecVar {

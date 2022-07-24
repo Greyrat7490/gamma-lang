@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"gorec/token"
 	"gorec/types"
-	"gorec/identObj/func"
 )
 
 func (o *DefVar) typeCheck() {
@@ -176,29 +175,24 @@ func (o *XSwitch) typeCheck() {
 }
 
 func (o *FnCall) typeCheck() {
-    f := fn.GetFn(o.Name.Str)
-    if f == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] function \"%s\" is not declared\n", o.Name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + o.Name.At())
-        os.Exit(1)
-    }
+    args := o.Ident.F.GetArgs()
 
-    if len(f.Args) != len(o.Values) {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected %d args for function \"%s\" but got %d\n", len(f.Args), o.Name.Str, len(o.Values))
-        fmt.Fprintf(os.Stderr, "\texpected: %v\n", f.Args)
+    if len(args) != len(o.Values) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected %d args for function \"%s\" but got %d\n", len(args), o.Ident.F.GetName().Str, len(o.Values))
+        fmt.Fprintf(os.Stderr, "\texpected: %v\n", args)
         fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))
-        fmt.Fprintln(os.Stderr, "\t" + o.Name.At())
+        fmt.Fprintln(os.Stderr, "\t" + o.Ident.F.At())
         os.Exit(1)
     }
 
-    for i, t1 := range f.Args {
+    for i, t1 := range args {
         t2 := o.Values[i].GetType()
 
         if !types.AreCompatible(t1, t2) {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected %v as arg %d but got %v for function \"%s\"\n", t1, i, t2, o.Name.Str)
-            fmt.Fprintf(os.Stderr, "\texpected: %v\n", f.Args)
+            fmt.Fprintf(os.Stderr, "[ERROR] expected %v as arg %d but got %v for function \"%s\"\n", t1, i, t2, o.Ident.F.GetName().Str)
+            fmt.Fprintf(os.Stderr, "\texpected: %v\n", args)
             fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))
-            fmt.Fprintln(os.Stderr, "\t" + o.Name.At())
+            fmt.Fprintln(os.Stderr, "\t" + o.Ident.F.GetName().At())
             os.Exit(1)
         }
     }

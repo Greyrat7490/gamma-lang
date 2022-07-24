@@ -124,6 +124,9 @@ func prsIdentExpr() *ast.Ident {
     if c := scope.GetConst(ident.Str); c != nil {
         return &ast.Ident{ Ident: ident, C: c }
     }
+    if f := scope.GetFunc(ident.Str); f != nil {
+        return &ast.Ident{ Ident: ident, F: f }
+    }
 
     fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared\n", ident.Str)
     fmt.Fprintln(os.Stderr, "\t" + ident.At())
@@ -391,12 +394,12 @@ func swap(expr *ast.Binary) {
 
 
 func prsCallFn() *ast.FnCall {
-    name := token.Cur()
+    ident := prsIdentExpr()
     posL := token.Next().Pos
     vals := prsPassArgs()
     posR := token.Cur().Pos
 
-    return &ast.FnCall{ Name: name, Values: vals, ParenLPos: posL, ParenRPos: posR }
+    return &ast.FnCall{ Ident: *ident, Values: vals, ParenLPos: posL, ParenRPos: posR }
 }
 
 func prsPassArgs() []ast.Expr {

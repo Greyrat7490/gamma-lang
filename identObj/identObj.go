@@ -5,6 +5,7 @@ import (
     "fmt"
     "gorec/token"
     "gorec/types"
+    "gorec/identObj/func"
     "gorec/identObj/vars"
     "gorec/identObj/scope"
     "gorec/identObj/consts"
@@ -32,6 +33,14 @@ func DecConst(name token.Token, t types.Type) *consts.Const {
     return &c
 }
 
+func DecFunc(name token.Token) *fn.Func {
+    checkName(name)
+
+    f := fn.CreateFunc(name)
+    scope.AddFunc(&f)
+    return &f
+}
+
 
 func checkName(name token.Token) {
     if name.Str[0] == '_' {
@@ -40,14 +49,8 @@ func checkName(name token.Token) {
         os.Exit(1)
     }
 
-    if scope.VarNameTaken(name.Str) {
-        fmt.Fprintf(os.Stderr, "[ERROR] var \"%s\" is already declared in this scope\n", name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
-    }
-
-    if scope.ConstNameTaken(name.Str) {
-        fmt.Fprintf(os.Stderr, "[ERROR] const \"%s\" is already declared in this scope\n", name.Str)
+    if scope.NameTaken(name.Str) {
+        fmt.Fprintf(os.Stderr, "[ERROR] name \"%s\" is already taken in this scope\n", name.Str)
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }

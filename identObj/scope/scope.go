@@ -1,8 +1,13 @@
 package scope
 
 import (
+    "os"
+    "fmt"
     "gorec/loops"
+    "gorec/token"
+    "gorec/types"
     "gorec/conditions"
+    "gorec/identObj/func"
     "gorec/identObj/vars"
     "gorec/identObj/consts"
 )
@@ -10,11 +15,13 @@ import (
 var curScope *Scope = &Scope{
     vars: map[string]vars.Var{},
     consts: map[string]*consts.Const{},
+    funcs: map[string]*fn.Func{},
 }
 
 type Scope struct {
     vars map[string]vars.Var
     consts map[string]*consts.Const
+    funcs map[string]*fn.Func
     parent *Scope
     innerSize int
 }
@@ -23,8 +30,8 @@ func GetCur() *Scope {
     return curScope
 }
 
-func (s *Scope) GetMaxFrameSize() int {
-    return s.calcFrameSize()
+func GetMaxFrameSize() int {
+    return curScope.calcFrameSize()
 }
 
 func InGlobal() bool {
@@ -35,6 +42,7 @@ func Start() {
     curScope = &Scope{
         vars: map[string]vars.Var{},
         consts: map[string]*consts.Const{},
+        funcs: map[string]*fn.Func{},
         parent: curScope,
     }
 }
@@ -63,6 +71,22 @@ func AddVar(v vars.Var) {
 func AddConst(c *consts.Const) {
     curScope.consts[c.Name.Str] = c
 }
+func AddFunc(f *fn.Func) {
+    curScope.funcs[f.GetName().Str] = f
+}
+func AddBuildIn(name string, argname string, argtype types.Type) {
+    if !InGlobal() {
+        fmt.Fprintln(os.Stderr, "[ERROR] AddBuildIn has to be called in the global scope")
+        os.Exit(1)
+    }
+
+    f := fn.CreateFuncWithArgs(
+        token.Token{ Str: name, Type: token.Name },
+        []types.Type{ argtype },
+    )
+    curScope.funcs[name] = &f
+}
+
 
 func GetVar(name string) vars.Var {
     scope := curScope
@@ -92,17 +116,29 @@ func GetConst(name string) *consts.Const {
     return nil
 }
 
-func VarNameTaken(name string) bool {
-    if _,ok := curScope.vars[name]; ok {
-        return ok
+func GetFunc(name string) *fn.Func {
+    scope := curScope
+
+    for scope != nil {
+        if f,ok := scope.funcs[name]; ok {
+            return f
+        }
+
+        scope = scope.parent
     }
 
-    return false
+    return nil
 }
 
-func ConstNameTaken(name string) bool {
+func NameTaken(name string) bool {
+    if _,ok := curScope.vars[name]; ok {
+        return true
+    }
     if _,ok := curScope.consts[name]; ok {
-        return ok
+        return true
+    }
+    if _,ok := curScope.funcs[name]; ok {
+        return true
     }
 
     return false
