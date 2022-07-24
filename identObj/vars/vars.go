@@ -18,6 +18,8 @@ type Var interface {
     GetName() token.Token
 
     String() string
+
+    Identobj()
 }
 
 func VarSetExpr(file *os.File, v Var) {

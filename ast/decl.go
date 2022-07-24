@@ -5,8 +5,9 @@ import (
     "fmt"
     "gorec/types"
     "gorec/token"
-    "gorec/identObj/vars"
     "gorec/identObj/func"
+    "gorec/identObj/vars"
+    "gorec/identObj/consts"
 )
 
 
@@ -49,66 +50,86 @@ type DefFn struct {
 func (d *DecVar) Compile(file *os.File) {}
 
 func (d *DefConst) Compile(file *os.File) {
-    if d.Ident.C.Type == nil {
-        d.Ident.C.Type = d.Value.GetType()
-        d.Type = d.Ident.C.Type
-    }
-
     d.typeCheck()
 
-    val := d.Value.constEval()
+    if c,ok := d.Ident.Obj.(*consts.Const); ok {
+        if c.Type == nil {
+            c.Type = d.Value.GetType()
+            d.Type = c.Type
+        }
 
-    if val.Type == token.Unknown {
-        fmt.Fprintln(os.Stderr, "[ERROR] cannot evaluate expr at compile time (not const)")
-        fmt.Fprintln(os.Stderr, "\t" + d.Value.At())
+        val := d.Value.constEval()
+
+        if val.Type == token.Unknown {
+            fmt.Fprintln(os.Stderr, "[ERROR] cannot evaluate expr at compile time (not const)")
+            fmt.Fprintln(os.Stderr, "\t" + d.Value.At())
+            os.Exit(1)
+        }
+
+        c.Define(val)
+    } else {
+        fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a const (in decl.go DefConst Compile)")
         os.Exit(1)
     }
-
-    d.Ident.C.Define(val)
 }
 
 func (d *DefVar) Compile(file *os.File) {
-    if d.Ident.V.GetType() == nil {
-        d.Type = d.Value.GetType()
-        d.Ident.V.SetType(d.Type)
-    }
+    if v,ok := d.Ident.Obj.(vars.Var); ok {
+        if v.GetType() == nil {
+            d.Type = d.Value.GetType()
+            v.SetType(d.Type)
+        }
 
-    d.typeCheck()
+        d.typeCheck()
 
 
-    // compile time evaluation
-    if val := d.Value.constEval(); val.Type != token.Unknown {
-        d.Ident.V.DefVal(file, val)
-        return
-    }
+        // compile time evaluation
+        if val := d.Value.constEval(); val.Type != token.Unknown {
+            v.DefVal(file, val)
+            return
+        }
 
-    if _,ok := d.Ident.V.(*vars.GlobalVar); ok {
-        fmt.Fprintln(os.Stderr, "[ERROR] defining a global variable with a non const expr is not allowed")
-        fmt.Fprintln(os.Stderr, "\t" + d.Value.At())
+        if _,ok := v.(*vars.GlobalVar); ok {
+            fmt.Fprintln(os.Stderr, "[ERROR] defining a global variable with a non const expr is not allowed")
+            fmt.Fprintln(os.Stderr, "\t" + d.Value.At())
+            os.Exit(1)
+        }
+
+        d.Value.Compile(file)
+        vars.VarSetExpr(file, v)
+    } else {
+        fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a var (in decl.go DefVar Compile)")
         os.Exit(1)
     }
-
-    d.Value.Compile(file)
-    vars.VarSetExpr(file, d.Ident.V)
 }
 
 func (d *DefFn) Compile(file *os.File) {
-    d.Ident.F.Define(file)
+    if f,ok := d.Ident.Obj.(*fn.Func); ok {
+        f.Define(file)
 
-    regIdx := 0
-    for _,a := range d.Args {
-        fn.DefArg(file, regIdx, a.Ident.V)
+        regIdx := 0
+        for _,a := range d.Args {
+            if v,ok := a.Ident.Obj.(vars.Var); ok {
+                fn.DefArg(file, regIdx, v)
+            } else {
+                fmt.Fprintln(os.Stderr, "[ERROR] expected identObj of an argument to be a var (in decl.go DefFn Compile)")
+                os.Exit(1)
+            }
 
-        if a.Type.GetKind() == types.Str {
-            regIdx += 2
-        } else {
-            regIdx++
+            if a.Type.GetKind() == types.Str {
+                regIdx += 2
+            } else {
+                regIdx++
+            }
         }
+
+        d.Block.Compile(file)
+
+        fn.End(file);
+    } else {
+        fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a func (in decl.go DefFn Compile)")
+        os.Exit(1)
     }
-
-    d.Block.Compile(file)
-
-    fn.End(file);
 }
 
 func (d *BadDecl) Compile(file *os.File) {

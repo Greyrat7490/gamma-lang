@@ -14,3 +14,5 @@ type Const struct {
 func (c *Const) Define(val token.Token) {
     c.Val = val
 }
+
+func (c *Const) Identobj() {}

@@ -6,7 +6,7 @@ import (
     "gorec/ast"
     "gorec/token"
     "gorec/types"
-    "gorec/identObj/scope"
+    "gorec/identObj"
 )
 
 type precedence int
@@ -118,14 +118,8 @@ func prsIdentExpr() *ast.Ident {
         os.Exit(1)
     }
 
-    if v := scope.GetVar(ident.Str); v != nil {
-        return &ast.Ident{ Ident: ident, V: v }
-    }
-    if c := scope.GetConst(ident.Str); c != nil {
-        return &ast.Ident{ Ident: ident, C: c }
-    }
-    if f := scope.GetFunc(ident.Str); f != nil {
-        return &ast.Ident{ Ident: ident, F: f }
+    if obj := identObj.Get(ident.Str); obj != nil {
+        return &ast.Ident{ Ident: ident, Obj: obj }
     }
 
     fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared\n", ident.Str)

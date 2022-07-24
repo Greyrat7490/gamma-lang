@@ -1,19 +1,27 @@
 package ast
 
 import (
-	"os"
-	"fmt"
-	"gorec/token"
-	"gorec/types"
+    "os"
+    "fmt"
+    "gorec/token"
+    "gorec/types"
+    "gorec/identObj/func"
+    "gorec/identObj/vars"
+    "gorec/identObj/consts"
 )
 
 func (o *DefVar) typeCheck() {
-    t1 := o.Ident.V.GetType()
-    t2 := o.Value.GetType()
+    if v,ok := o.Ident.Obj.(vars.Var); ok {
+        t1 := v.GetType()
+        t2 := o.Value.GetType()
 
-    if !types.AreCompatible(t1, t2) {
-        fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.Ident.Ident.Str, t1, t2)
-        fmt.Fprintln(os.Stderr, "\t" + o.Ident.Ident.At())
+        if !types.AreCompatible(t1, t2) {
+            fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.Ident.Ident.Str, t1, t2)
+            fmt.Fprintln(os.Stderr, "\t" + o.Ident.Ident.At())
+            os.Exit(1)
+        }
+    } else {
+        fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a var (in typecheck.go DefVar)")
         os.Exit(1)
     }
 }
@@ -175,26 +183,31 @@ func (o *XSwitch) typeCheck() {
 }
 
 func (o *FnCall) typeCheck() {
-    args := o.Ident.F.GetArgs()
+    if f,ok := o.Ident.Obj.(*fn.Func); ok {
+        args := f.GetArgs()
 
-    if len(args) != len(o.Values) {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected %d args for function \"%s\" but got %d\n", len(args), o.Ident.F.GetName().Str, len(o.Values))
-        fmt.Fprintf(os.Stderr, "\texpected: %v\n", args)
-        fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))
-        fmt.Fprintln(os.Stderr, "\t" + o.Ident.F.At())
-        os.Exit(1)
-    }
-
-    for i, t1 := range args {
-        t2 := o.Values[i].GetType()
-
-        if !types.AreCompatible(t1, t2) {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected %v as arg %d but got %v for function \"%s\"\n", t1, i, t2, o.Ident.F.GetName().Str)
+        if len(args) != len(o.Values) {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected %d args for function \"%s\" but got %d\n", len(args), f.GetName().Str, len(o.Values))
             fmt.Fprintf(os.Stderr, "\texpected: %v\n", args)
             fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))
-            fmt.Fprintln(os.Stderr, "\t" + o.Ident.F.GetName().At())
+            fmt.Fprintln(os.Stderr, "\t" + f.At())
             os.Exit(1)
         }
+
+        for i, t1 := range args {
+            t2 := o.Values[i].GetType()
+
+            if !types.AreCompatible(t1, t2) {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected %v as arg %d but got %v for function \"%s\"\n", t1, i, t2, f.GetName().Str)
+                fmt.Fprintf(os.Stderr, "\texpected: %v\n", args)
+                fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))
+                fmt.Fprintln(os.Stderr, "\t" + f.GetName().At())
+                os.Exit(1)
+            }
+        }
+    } else {
+        fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a func (in typecheck.go FnCall)")
+        os.Exit(1)
     }
 }
 
@@ -211,11 +224,17 @@ func (o *FnCall)  GetType() types.Type { return nil }
 func (o *Lit)     GetType() types.Type { return o.Type }
 func (o *Paren)   GetType() types.Type { return o.Expr.GetType() }
 func (o *Ident)   GetType() types.Type {
-    if o.C != nil {
-        return o.C.Type
+    if c,ok := o.Obj.(*consts.Const); ok {
+        return c.Type
     }
 
-    return o.V.GetType()
+    if v,ok := o.Obj.(vars.Var); ok {
+        return v.GetType()
+    }
+
+    // TODO: function
+
+    return nil
 }
 
 func (o *Unary) GetType() types.Type {

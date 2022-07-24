@@ -110,7 +110,7 @@ func (s *Assign) Compile(file *os.File) {
         }
 
         if e,ok := s.Value.(*Ident); ok {
-            vars.DerefSetVar(file, e.V)
+            vars.DerefSetVar(file, e.Obj.(vars.Var))
             return
         }
 
@@ -121,17 +121,17 @@ func (s *Assign) Compile(file *os.File) {
     case *Ident:
         // compile time evaluation
         if val := s.Value.constEval(); val.Type != token.Unknown {
-            vars.VarSetVal(file, dest.V, val)
+            vars.VarSetVal(file, dest.Obj.(vars.Var), val)
             return
         }
 
         if e,ok := s.Value.(*Ident); ok {
-            vars.VarSetVar(file, dest.V, e.V)
+            vars.VarSetVar(file, dest.Obj.(vars.Var), e.Obj.(vars.Var))
             return
         }
 
         s.Value.Compile(file)
-        vars.VarSetExpr(file, dest.V)
+        vars.VarSetExpr(file, dest.Obj.(vars.Var))
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] expected a variable or a dereferenced pointer but got \"%t\"\n", dest)
@@ -164,7 +164,7 @@ func (s *If) Compile(file *os.File) {
 
     var count uint = 0
     if ident,ok := s.Cond.(*Ident); ok {
-        count = cond.IfVar(file, ident.V, hasElse)
+        count = cond.IfVar(file, ident.Obj.(vars.Var), hasElse)
     } else {
         s.Cond.Compile(file)
         count = cond.IfExpr(file, hasElse)
@@ -214,7 +214,7 @@ func (s *Case) Compile(file *os.File, switchCount uint) {
     }
 
     if i,ok := s.Cond.(*Ident); ok {
-        cond.CaseVar(file, i.V)
+        cond.CaseVar(file, i.Obj.(vars.Var))
     } else {
         s.Cond.Compile(file)
         cond.CaseExpr(file)
@@ -294,7 +294,7 @@ func (s *While) Compile(file *os.File) {
 
     count := loops.WhileStart(file)
     if e,ok := s.Cond.(*Ident); ok {
-        loops.WhileVar(file, e.V)
+        loops.WhileVar(file, e.Obj.(vars.Var))
     } else {
         s.Cond.Compile(file)
         loops.WhileExpr(file)

@@ -152,3 +152,5 @@ func PassReg(file *os.File, regIdx int, argType types.Type) {
         asm.MovRegReg(file, regs[regIdx], asm.RegA, argType.Size())
     }
 }
+
+func (f *Func) Identobj() {}

@@ -6,6 +6,7 @@ import (
     "gorec/token"
     "gorec/types"
     "gorec/types/str"
+    "gorec/identObj"
     "gorec/conditions"
     "gorec/asm/x86_64"
     "gorec/identObj/func"
@@ -37,10 +38,7 @@ type Lit struct {
 
 type Ident struct {
     Ident token.Token
-    // TODO: IdentObj
-    V vars.Var
-    C *consts.Const
-    F *fn.Func
+    Obj identObj.IdentObj
 }
 
 type Unary struct {
@@ -92,18 +90,18 @@ func (e *Lit) Compile(file *os.File) {
     }
 }
 func (e *Ident) Compile(file *os.File) {
-    if e.C != nil {
-        l := Lit{ Val: e.C.Val, Type: e.C.Type }
+    if c,ok := e.Obj.(*consts.Const); ok {
+        l := Lit{ Val: c.Val, Type: c.Type }
         l.Compile(file)
         return
     }
 
-    if e.V != nil {
-        asm.MovRegDeref(file, asm.RegA, e.V.Addr(0), e.V.GetType().Size())
+    if v,ok := e.Obj.(vars.Var); ok {
+        asm.MovRegDeref(file, asm.RegA, v.Addr(0), v.GetType().Size())
         return
     }
 
-    if e.F != nil {
+    if _,ok := e.Obj.(*fn.Func); ok {
         fmt.Fprintf(os.Stderr, "[ERROR] TODO: expr.go compile Ident for functions\n")
         os.Exit(1)
         return
@@ -185,11 +183,13 @@ func (e *Binary) Compile(file *os.File) {
         }
 
         if ident,ok := e.OperandR.(*Ident); ok {
-            if t := ident.V.GetType(); t.Size() < size {
-                asm.MovRegDeref(file, asm.RegC, ident.V.Addr(0), t.Size())
-                asm.BinaryOpReg(file, e.Operator.Type, asm.RegC, size)
-            } else {
-                asm.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), ident.V.Addr(0)), size)
+            if v,ok := ident.Obj.(vars.Var); ok {
+                if t := v.GetType(); t.Size() < size {
+                    asm.MovRegDeref(file, asm.RegC, v.Addr(0), t.Size())
+                    asm.BinaryOpReg(file, e.Operator.Type, asm.RegC, size)
+                } else {
+                    asm.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), v.Addr(0)), size)
+                }
             }
         } else {
             asm.Push(file, asm.RegA)
@@ -234,8 +234,8 @@ func (e *FnCall) Compile(file *os.File) {
         if v := val.constEval(); v.Type != token.Unknown {
             fn.PassVal(file, regIdx, v, val.GetType())
 
-        } else if v,ok := val.(*Ident); ok {
-            fn.PassVar(file, regIdx, v.V)
+        } else if ident,ok := val.(*Ident); ok {
+            fn.PassVar(file, regIdx, ident.Obj.(vars.Var))
 
         } else {
             val.Compile(file)
@@ -249,7 +249,7 @@ func (e *FnCall) Compile(file *os.File) {
         }
     }
 
-    e.Ident.F.Call(file)
+    e.Ident.Obj.(*fn.Func).Call(file)
 }
 
 func (e *XCase) Compile(file *os.File, switchCount uint) {
@@ -273,7 +273,7 @@ func (e *XCase) Compile(file *os.File, switchCount uint) {
     }
 
     if i,ok := e.Cond.(*Ident); ok {
-        cond.CaseVar(file, i.V)
+        cond.CaseVar(file, i.Obj.(vars.Var))
     } else {
         e.Cond.Compile(file)
         cond.CaseExpr(file)

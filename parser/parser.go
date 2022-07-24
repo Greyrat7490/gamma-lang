@@ -14,7 +14,7 @@ func Parse() {
     fmt.Println("[INFO] parsing...")
 
     std.Declare()
-    
+
     for token.Peek().Type != token.EOF {
         ast.AddNode(prsDecl())
     }

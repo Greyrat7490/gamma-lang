@@ -75,3 +75,5 @@ func DefineGlobalVars(file *os.File) {
         file.WriteString(s)
     }
 }
+
+func (v *GlobalVar) Identobj() {}

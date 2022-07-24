@@ -1,24 +1,33 @@
 package ast
 
 import (
+    "os"
+    "fmt"
     "gorec/token"
     "gorec/asm/x86_64"
+    "gorec/identObj/vars"
+    "gorec/identObj/consts"
 )
 
 func (e *Lit) constEval() token.Token { return e.Val }
 func (e *Unary) constEval() token.Token {
-    v := e.Operand.constEval()
+    val := e.Operand.constEval()
 
     switch e.Operator.Type {
     case token.Minus:
-        return token.Token{ Str: e.Operator.Str + v.Str, Type: v.Type, Pos: e.Operator.Pos }
+        return token.Token{ Str: e.Operator.Str + val.Str, Type: val.Type, Pos: e.Operator.Pos }
 
     case token.Plus:
-        return v
+        return val
 
     case token.Amp:
         if ident,ok := e.Operand.(*Ident); ok {
-            return token.Token{ Str: ident.V.Addr(0), Type: token.Name, Pos: e.Operator.Pos }
+            if v,ok := ident.Obj.(vars.Var); ok {
+                return token.Token{ Str: v.Addr(0), Type: token.Name, Pos: e.Operator.Pos }
+            } else {
+                fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a var (in constEval.go Unary)")
+                os.Exit(1)
+            }
         }
     }
 
@@ -29,8 +38,8 @@ func (e *BadExpr) constEval() token.Token { return token.Token{ Type: token.Unkn
 func (e *FnCall) constEval() token.Token { return token.Token{ Type: token.Unknown } }
 
 func (e *Ident) constEval() token.Token {
-    if e.C != nil {
-        return e.C.Val
+    if c,ok := e.Obj.(*consts.Const); ok {
+        return c.Val
     }
 
     return token.Token{ Type: token.Unknown }

@@ -71,3 +71,5 @@ func calcOffset(vartype types.Type) (offset int) {
 func ResetLocalVarOffset() {
     localVarOffset = 0
 }
+
+func (v *LocalVar) Identobj() {}

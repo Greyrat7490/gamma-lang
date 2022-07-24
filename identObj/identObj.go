@@ -7,20 +7,21 @@ import (
     "gorec/types"
     "gorec/identObj/func"
     "gorec/identObj/vars"
-    "gorec/identObj/scope"
     "gorec/identObj/consts"
 )
 
-func DecVar(name token.Token, t types.Type) vars.Var {
-    checkName(name)
+type IdentObj interface {
+    Identobj()
+}
 
-    if scope.InGlobal() {
+func DecVar(name token.Token, t types.Type) vars.Var {
+    if InGlobalScope() {
         v := vars.CreateGlobalVar(name, t)
-        scope.AddVar(&v)
+        curScope.identObjs[name.Str] = &v
         return &v
     } else {
         v := vars.CreateLocal(name, t)
-        scope.AddVar(&v)
+        curScope.identObjs[name.Str] = &v
         return &v
     }
 }
@@ -29,7 +30,7 @@ func DecConst(name token.Token, t types.Type) *consts.Const {
     checkName(name)
 
     c := consts.Const{ Name: name, Type: t }
-    scope.AddConst(&c)
+    curScope.identObjs[name.Str] = &c
     return &c
 }
 
@@ -37,21 +38,20 @@ func DecFunc(name token.Token) *fn.Func {
     checkName(name)
 
     f := fn.CreateFunc(name)
-    scope.AddFunc(&f)
+    curScope.identObjs[name.Str] = &f
     return &f
 }
 
-
-func checkName(name token.Token) {
-    if name.Str[0] == '_' {
-        fmt.Fprintln(os.Stderr, "[ERROR] names starting with \"_\" are reserved for the compiler")
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
+func AddBuildIn(name string, argname string, argtype types.Type) {
+    if !InGlobalScope() {
+        fmt.Fprintln(os.Stderr, "[ERROR] AddBuildIn has to be called in the global scope")
         os.Exit(1)
     }
 
-    if scope.NameTaken(name.Str) {
-        fmt.Fprintf(os.Stderr, "[ERROR] name \"%s\" is already taken in this scope\n", name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
-    }
+    f := fn.CreateFuncWithArgs(
+        token.Token{ Str: name, Type: token.Name },
+        []types.Type{ argtype },
+    )
+
+    curScope.identObjs[name] = &f
 }
