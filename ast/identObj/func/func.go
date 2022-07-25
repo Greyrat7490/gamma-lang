@@ -7,7 +7,7 @@ import (
     "gorec/types"
     "gorec/types/str"
     "gorec/asm/x86_64"
-    "gorec/identObj/vars"
+    "gorec/ast/identObj/vars"
 )
 
 /*
@@ -24,40 +24,46 @@ System V AMD64 ABI calling convention
 var regs []asm.RegGroup = []asm.RegGroup{ asm.RegDi, asm.RegSi, asm.RegD, asm.RegC, asm.RegR8, asm.RegR9 }
 
 type Func struct {
-    name token.Token
+    decPos token.Pos
+    name string
     args []types.Type
     frameSize int
 }
 
-func CreateFunc(name token.Token) Func {
-    return Func{ name: name, args: nil, frameSize: -1 }
+func CreateFunc(name token.Token, args []types.Type) Func {
+    return Func{ name: name.Str, decPos: name.Pos, args: args, frameSize: -1 }
 }
-func CreateFuncWithArgs(name token.Token, args []types.Type) Func {
-    return Func{ name: name, args: args, frameSize: -1 }
-}
+
 func (f *Func) SetArgs(args []types.Type) {
     if f.args != nil {
-        fmt.Println("[ERROR] setting the arguments of a function again is not allowed")
+        fmt.Fprintln(os.Stderr, "[ERROR] setting the arguments of a function again is not allowed")
         os.Exit(1)
     }
 
     f.args = args
 }
+
 func (f *Func) GetArgs() []types.Type {
     return f.args
 }
 
-func (f *Func) GetName() token.Token {
+func (f *Func) GetName() string {
     return f.name
 }
 
-func (f *Func) At() string {
-    return f.name.At()
+func (f *Func) GetPos() token.Pos {
+    return f.decPos
+}
+
+func (f *Func) Addr(fieldNum int) string {
+    fmt.Fprintln(os.Stderr, "[ERROR] TODO: func.go Addr()")
+    os.Exit(1)
+    return ""
 }
 
 func (f *Func) SetFrameSize(frameSize int) {
     if f.frameSize != -1 {
-        fmt.Println("[ERROR] setting the frameSize of a function again is not allowed")
+        fmt.Fprintln(os.Stderr, "[ERROR] setting the frameSize of a function again is not allowed")
         os.Exit(1)
     }
 
@@ -65,7 +71,7 @@ func (f *Func) SetFrameSize(frameSize int) {
 }
 
 func (f *Func) Define(file *os.File) {
-    file.WriteString(f.name.Str + ":\n")
+    file.WriteString(f.name + ":\n")
     file.WriteString("push rbp\nmov rbp, rsp\n")
     reserveSpace(file, f.frameSize)
 }
@@ -84,7 +90,7 @@ func End(file *os.File) {
 }
 
 func (f *Func) Call(file *os.File) {
-    file.WriteString("call " + f.name.Str + "\n")
+    file.WriteString("call " + f.name + "\n")
 }
 
 func DefArg(file *os.File, regIdx int, v vars.Var) {
@@ -152,5 +158,3 @@ func PassReg(file *os.File, regIdx int, argType types.Type) {
         asm.MovRegReg(file, regs[regIdx], asm.RegA, argType.Size())
     }
 }
-
-func (f *Func) Identobj() {}

@@ -4,9 +4,8 @@ import (
     "os"
     "fmt"
     "gorec/token"
-    "gorec/loops"
-    "gorec/conditions"
-    "gorec/identObj/vars"
+    "gorec/asm/x86_64/loops"
+    "gorec/asm/x86_64/conditions"
 )
 
 var curScope *Scope = &Scope{ identObjs: map[string]IdentObj{} }
@@ -15,14 +14,15 @@ type Scope struct {
     identObjs map[string]IdentObj
     parent *Scope
     innerSize int
+    frameSize int
 }
 
 func GetCur() *Scope {
     return curScope
 }
 
-func GetMaxFrameSize() int {
-    return curScope.calcFrameSize()
+func GetFrameSize() int {
+    return curScope.frameSize + curScope.innerSize
 }
 
 func InGlobalScope() bool {
@@ -30,12 +30,12 @@ func InGlobalScope() bool {
 }
 
 func StartScope() {
-    curScope = &Scope{ parent: curScope, identObjs: map[string]IdentObj{} }
+    curScope = &Scope{ parent: curScope, frameSize: curScope.frameSize, identObjs: map[string]IdentObj{} }
 }
 
 func EndScope() {
     if !InGlobalScope() {
-        size := curScope.calcFrameSize()
+        size := curScope.frameSize + curScope.innerSize
         if curScope.parent.innerSize < size {
             curScope.parent.innerSize = size
         }
@@ -43,7 +43,7 @@ func EndScope() {
         curScope = curScope.parent
 
         if InGlobalScope() {
-            vars.ResetLocalVarOffset()
+            curScope.frameSize = 0
             cond.ResetCount()
             loops.ResetCount()
         }
@@ -72,16 +72,6 @@ func nameTaken(name string) bool {
     return false
 }
 
-
-func (s *Scope) calcFrameSize() (size int) {
-    for _,v := range s.identObjs {
-        if v,ok := v.(vars.Var); ok {
-            size += v.GetType().Size()
-        }
-    }
-
-    return size + curScope.innerSize
-}
 
 func checkName(name token.Token) {
     if name.Str[0] == '_' {

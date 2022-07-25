@@ -11,7 +11,7 @@ func (o *DecVar) Readable(indent int) string {
     s2 := strings.Repeat("   ", indent+1)
 
     return s + "DEC_VAR:\n" +
-          s2 + fmt.Sprintf("%s(Name)\n", o.Ident.Ident.Str) +
+          s2 + fmt.Sprintf("%s(Name)\n", o.V.GetName()) +
           s2 + fmt.Sprintf("%v(Typename)\n", o.Type)
 }
 
@@ -20,7 +20,7 @@ func (o *DefVar) Readable(indent int) string {
     s2 := strings.Repeat("   ", indent+1)
 
     res := s + "DEF_VAR:\n" +
-        s2 + fmt.Sprintf("%s(Name)\n", o.Ident.Ident.Str)
+        s2 + fmt.Sprintf("%s(Name)\n", o.V.GetName())
 
     if o.Type == nil {
         res += s2 + "infer type\n"
@@ -36,7 +36,7 @@ func (o *DefConst) Readable(indent int) string {
     s2 := strings.Repeat("   ", indent+1)
 
     res := s + "DEF_CONST:\n" +
-        s2 + fmt.Sprintf("%s(Name)\n", o.Ident.Ident.Str)
+        s2 + fmt.Sprintf("%s(Name)\n", o.C.GetName())
 
     if o.Type == nil {
         res += s2 + "infer type\n"
@@ -52,11 +52,11 @@ func (o *DefFn) Readable(indent int) string {
 
     s := ""
     for _,a := range o.Args {
-        s += fmt.Sprintf("%s(Name) %v(Typename), ", a.Ident.Ident.Str, a.Type)
+        s += fmt.Sprintf("%s(Name) %v(Typename), ", a.V.GetName(), a.Type)
     }
     if len(s) > 0 { s = s[:len(s)-2] }
 
-    res += fmt.Sprintf("%s%s(Name) [%s]\n", strings.Repeat("   ", indent+1), o.Ident.Ident.Str, s) +
+    res += fmt.Sprintf("%s%s(Name) [%s]\n", strings.Repeat("   ", indent+1), o.F.GetName(), s) +
         o.Block.Readable(indent+2)
 
     return res
@@ -73,7 +73,7 @@ func (o *Lit) Readable(indent int) string {
 }
 
 func (o *Ident) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + o.Ident.Str + "(Name)\n"
+    return strings.Repeat("   ", indent) + o.Name + "(Name)\n"
 }
 
 func (o *FnCall) Readable(indent int) string {
@@ -81,7 +81,7 @@ func (o *FnCall) Readable(indent int) string {
     s2 := strings.Repeat("   ", indent+1)
 
     res := s + "CALL_FN:\n" +
-          s2 + o.Ident.Ident.Str + "(Name)\n"
+          s2 + o.Ident.Name + "(Name)\n"
 
     for _,e := range o.Values {
         res += e.Readable(indent+1)

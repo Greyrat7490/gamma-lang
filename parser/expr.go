@@ -6,7 +6,7 @@ import (
     "gorec/ast"
     "gorec/token"
     "gorec/types"
-    "gorec/identObj"
+    "gorec/ast/identObj"
 )
 
 type precedence int
@@ -109,7 +109,7 @@ func prsIdentExpr() *ast.Ident {
 
     // if wildcard ("_")
     if ident.Type == token.UndScr {
-        return &ast.Ident{ Ident: ident }
+        return &ast.Ident{ Name: "_", Pos: ident.Pos, Obj: nil }
     }
 
     if ident.Type != token.Name {
@@ -119,7 +119,7 @@ func prsIdentExpr() *ast.Ident {
     }
 
     if obj := identObj.Get(ident.Str); obj != nil {
-        return &ast.Ident{ Ident: ident, Obj: obj }
+        return &ast.Ident{ Name: ident.Str, Pos: ident.Pos, Obj: obj }
     }
 
     fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared\n", ident.Str)

@@ -6,7 +6,7 @@ import (
     "os/exec"
     "strings"
     "gorec/types/str"
-    "gorec/identObj/vars"
+    "gorec/ast/identObj/vars"
 )
 
 func Header(file *os.File) {

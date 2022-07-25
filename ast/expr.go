@@ -6,12 +6,12 @@ import (
     "gorec/token"
     "gorec/types"
     "gorec/types/str"
-    "gorec/identObj"
-    "gorec/conditions"
     "gorec/asm/x86_64"
-    "gorec/identObj/func"
-    "gorec/identObj/vars"
-    "gorec/identObj/consts"
+    "gorec/asm/x86_64/conditions"
+    "gorec/ast/identObj"
+    "gorec/ast/identObj/func"
+    "gorec/ast/identObj/vars"
+    "gorec/ast/identObj/consts"
 )
 
 type Expr interface {
@@ -37,7 +37,8 @@ type Lit struct {
 }
 
 type Ident struct {
-    Ident token.Token
+    Name string
+    Pos token.Pos
     Obj identObj.IdentObj
 }
 
@@ -91,7 +92,7 @@ func (e *Lit) Compile(file *os.File) {
 }
 func (e *Ident) Compile(file *os.File) {
     if c,ok := e.Obj.(*consts.Const); ok {
-        l := Lit{ Val: c.Val, Type: c.Type }
+        l := Lit{ Val: c.GetVal(), Type: c.GetType() }
         l.Compile(file)
         return
     }
@@ -107,8 +108,8 @@ func (e *Ident) Compile(file *os.File) {
         return
     }
 
-    fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared)\n", e.Ident.Str)
-    fmt.Fprintln(os.Stderr, "\t" + e.Ident.At())
+    fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not declared\n", e.Name)
+    fmt.Fprintln(os.Stderr, "\t" + e.Pos.At())
     os.Exit(1)
 }
 func (e *Paren) Compile(file *os.File) { e.Expr.Compile(file) }
@@ -273,7 +274,7 @@ func (e *XCase) Compile(file *os.File, switchCount uint) {
     }
 
     if i,ok := e.Cond.(*Ident); ok {
-        cond.CaseVar(file, i.Obj.(vars.Var))
+        cond.CaseVar(file, i.Obj.Addr(0))
     } else {
         e.Cond.Compile(file)
         cond.CaseExpr(file)
@@ -313,7 +314,7 @@ func (e *BadExpr) Compile(file *os.File) {
 func (e *BadExpr) At() string { return "" }
 func (e *FnCall)  At() string { return e.Ident.At() }
 func (e *Lit)     At() string { return e.Val.At() }
-func (e *Ident)   At() string { return e.Ident.At() }
+func (e *Ident)   At() string { return e.Pos.At() }
 func (e *Unary)   At() string { return e.Operator.At() }
 func (e *Binary)  At() string { return e.OperandL.At() }    // TODO: At() of Operand with higher precedence
 func (e *Paren)   At() string { return e.ParenLPos.At() }
@@ -323,7 +324,7 @@ func (e *XCase)   At() string { return e.ColonPos.At() }
 func (e *BadExpr) End() string { return "" }
 func (e *FnCall)  End() string { return e.ParenRPos.At() }
 func (e *Lit)     End() string { return e.Val.At() }
-func (e *Ident)   End() string { return e.Ident.At() }
+func (e *Ident)   End() string { return e.Pos.At() }
 func (e *Unary)   End() string { return e.Operand.At() }
 func (e *Binary)  End() string { return e.OperandR.At() }
 func (e *Paren)   End() string { return e.ParenRPos.At() }

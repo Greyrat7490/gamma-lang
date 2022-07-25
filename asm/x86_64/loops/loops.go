@@ -3,7 +3,6 @@ package loops
 import (
     "os"
     "fmt"
-    "gorec/identObj/vars"
 )
 
 
@@ -23,8 +22,8 @@ func WhileStart(file *os.File) uint {
     return whileCount
 }
 
-func WhileVar(file *os.File, v vars.Var) {
-    file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", v.Addr(0)))
+func WhileVar(file *os.File, addr string) {
+    file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", addr))
     file.WriteString(fmt.Sprintf("jne .while%dEnd\n", whileCount))
 }
 

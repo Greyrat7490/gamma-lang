@@ -6,7 +6,7 @@ import (
     "gorec/ast"
     "gorec/token"
     "gorec/types"
-    "gorec/identObj"
+    "gorec/ast/identObj"
 )
 
 func prsStmt(ignoreUnusedExpr bool) ast.Stmt {
@@ -213,7 +213,7 @@ func prsWhileStmt() ast.While {
     token.Next()
     if isDec() {
         dec := prsDecVar()
-        op.Def = &ast.DefVar{ Ident: dec.Ident, Type: dec.Type }
+        op.Def = &ast.DefVar{ V: dec.V, Type: dec.Type }
 
         if token.Next().Type != token.Comma {
             fmt.Fprintln(os.Stderr, "[ERROR] missing \",\"")
@@ -260,12 +260,12 @@ func prsForStmt() ast.For {
 
     token.Next()
     dec := prsDecVar()
-    op.Def.Ident = dec.Ident
+    op.Def.V = dec.V
     op.Def.Type = dec.Type
 
     op.Step = &ast.Binary{
         Operator: token.Token{ Type: token.Plus },
-        OperandL: &op.Def.Ident,
+        OperandL: &ast.Ident{ Obj: op.Def.V, Name: op.Def.V.GetName(), Pos: op.Def.V.GetPos() },
         OperandR: &ast.Lit{
             Val: token.Token{ Str: "1", Type: token.Number },
             Type: types.I32Type{},
@@ -331,7 +331,7 @@ func getPlaceholder(cond ast.Expr) (expr *ast.Expr) {
 // if expr2 is set they get combined with logical or
 func completeCond(placeholder *ast.Expr, condBase ast.Expr, expr1 ast.Expr, expr2 ast.Expr) ast.Expr {
     if ident, ok := expr1.(*ast.Ident); ok {
-        if ident.Ident.Type == token.UndScr {
+        if ident.Obj == nil && ident.Name == "_" {
             return nil
         }
     }

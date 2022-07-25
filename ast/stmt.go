@@ -3,12 +3,12 @@ package ast
 import (
     "os"
     "fmt"
-    "gorec/loops"
     "gorec/token"
     "gorec/types"
-    "gorec/conditions"
     "gorec/asm/x86_64"
-    "gorec/identObj/vars"
+    "gorec/asm/x86_64/loops"
+    "gorec/asm/x86_64/conditions"
+    "gorec/ast/identObj/vars"
 )
 
 type Stmt interface {
@@ -164,7 +164,7 @@ func (s *If) Compile(file *os.File) {
 
     var count uint = 0
     if ident,ok := s.Cond.(*Ident); ok {
-        count = cond.IfVar(file, ident.Obj.(vars.Var), hasElse)
+        count = cond.IfVar(file, ident.Obj.Addr(0), hasElse)
     } else {
         s.Cond.Compile(file)
         count = cond.IfExpr(file, hasElse)
@@ -214,7 +214,7 @@ func (s *Case) Compile(file *os.File, switchCount uint) {
     }
 
     if i,ok := s.Cond.(*Ident); ok {
-        cond.CaseVar(file, i.Obj.(vars.Var))
+        cond.CaseVar(file, i.Obj.Addr(0))
     } else {
         s.Cond.Compile(file)
         cond.CaseExpr(file)
@@ -294,7 +294,7 @@ func (s *While) Compile(file *os.File) {
 
     count := loops.WhileStart(file)
     if e,ok := s.Cond.(*Ident); ok {
-        loops.WhileVar(file, e.Obj.(vars.Var))
+        loops.WhileVar(file, e.Obj.Addr(0))
     } else {
         s.Cond.Compile(file)
         loops.WhileExpr(file)
@@ -311,7 +311,11 @@ func (s *For) Compile(file *os.File) {
 
     count := loops.ForStart(file)
     if s.Limit != nil {
-        cond := Binary{ Operator: token.Token{ Type: token.Lss }, OperandL: &s.Def.Ident, OperandR: s.Limit }
+        cond := Binary{
+            Operator: token.Token{ Type: token.Lss },
+            OperandL: &Ident{ Obj: s.Def.V, Name: s.Def.V.GetName(), Pos: s.Def.V.GetPos() },
+            OperandR: s.Limit,
+        }
         cond.Compile(file)
         loops.ForExpr(file)
     }
@@ -319,7 +323,10 @@ func (s *For) Compile(file *os.File) {
     s.Block.Compile(file)
     loops.ForBlockEnd(file, count)
 
-    step := Assign{ Dest: &s.Def.Ident, Value: s.Step }
+    step := Assign{
+        Dest: &Ident{ Obj: s.Def.V, Name: s.Def.V.GetName(), Pos: s.Def.V.GetPos() },
+        Value: s.Step,
+    }
     step.Compile(file)
     loops.ForEnd(file, count)
 }

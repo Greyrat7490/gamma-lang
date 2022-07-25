@@ -5,23 +5,18 @@ import (
     "fmt"
     "gorec/token"
     "gorec/types"
-    "gorec/identObj/func"
-    "gorec/identObj/vars"
-    "gorec/identObj/consts"
+    "gorec/ast/identObj/func"
+    "gorec/ast/identObj/vars"
+    "gorec/ast/identObj/consts"
 )
 
 func (o *DefVar) typeCheck() {
-    if v,ok := o.Ident.Obj.(vars.Var); ok {
-        t1 := v.GetType()
-        t2 := o.Value.GetType()
+    t1 := o.V.GetType()
+    t2 := o.Value.GetType()
 
-        if !types.AreCompatible(t1, t2) {
-            fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.Ident.Ident.Str, t1, t2)
-            fmt.Fprintln(os.Stderr, "\t" + o.Ident.Ident.At())
-            os.Exit(1)
-        }
-    } else {
-        fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a var (in typecheck.go DefVar)")
+    if !types.AreCompatible(t1, t2) {
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.V.GetName(), t1, t2)
+        fmt.Fprintln(os.Stderr, "\t" + o.At())
         os.Exit(1)
     }
 }
@@ -29,8 +24,8 @@ func (o *DefVar) typeCheck() {
 func (o *DefConst) typeCheck() {
     t2 := o.Value.GetType()
     if !types.AreCompatible(o.Type, t2) {
-        fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.Ident.Ident.Str, o.Type, t2)
-        fmt.Fprintln(os.Stderr, "\t" + o.Ident.Ident.At())
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.C.GetName(), o.Type, t2)
+        fmt.Fprintln(os.Stderr, "\t" + o.At())
         os.Exit(1)
     }
 }
@@ -187,10 +182,10 @@ func (o *FnCall) typeCheck() {
         args := f.GetArgs()
 
         if len(args) != len(o.Values) {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected %d args for function \"%s\" but got %d\n", len(args), f.GetName().Str, len(o.Values))
+            fmt.Fprintf(os.Stderr, "[ERROR] expected %d args for function \"%s\" but got %d\n", len(args), f.GetName(), len(o.Values))
             fmt.Fprintf(os.Stderr, "\texpected: %v\n", args)
             fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))
-            fmt.Fprintln(os.Stderr, "\t" + f.At())
+            fmt.Fprintln(os.Stderr, "\t" + o.At())
             os.Exit(1)
         }
 
@@ -198,10 +193,10 @@ func (o *FnCall) typeCheck() {
             t2 := o.Values[i].GetType()
 
             if !types.AreCompatible(t1, t2) {
-                fmt.Fprintf(os.Stderr, "[ERROR] expected %v as arg %d but got %v for function \"%s\"\n", t1, i, t2, f.GetName().Str)
+                fmt.Fprintf(os.Stderr, "[ERROR] expected %v as arg %d but got %v for function \"%s\"\n", t1, i, t2, f.GetName())
                 fmt.Fprintf(os.Stderr, "\texpected: %v\n", args)
                 fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))
-                fmt.Fprintln(os.Stderr, "\t" + f.GetName().At())
+                fmt.Fprintln(os.Stderr, "\t" + o.At())
                 os.Exit(1)
             }
         }
@@ -225,7 +220,7 @@ func (o *Lit)     GetType() types.Type { return o.Type }
 func (o *Paren)   GetType() types.Type { return o.Expr.GetType() }
 func (o *Ident)   GetType() types.Type {
     if c,ok := o.Obj.(*consts.Const); ok {
-        return c.Type
+        return c.GetType()
     }
 
     if v,ok := o.Obj.(vars.Var); ok {

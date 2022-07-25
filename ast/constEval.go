@@ -5,8 +5,8 @@ import (
     "fmt"
     "gorec/token"
     "gorec/asm/x86_64"
-    "gorec/identObj/vars"
-    "gorec/identObj/consts"
+    "gorec/ast/identObj/vars"
+    "gorec/ast/identObj/consts"
 )
 
 func (e *Lit) constEval() token.Token { return e.Val }
@@ -39,7 +39,7 @@ func (e *FnCall) constEval() token.Token { return token.Token{ Type: token.Unkno
 
 func (e *Ident) constEval() token.Token {
     if c,ok := e.Obj.(*consts.Const); ok {
-        return c.Val
+        return c.GetVal()
     }
 
     return token.Token{ Type: token.Unknown }

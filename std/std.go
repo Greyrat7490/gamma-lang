@@ -3,7 +3,7 @@ package std
 import (
     "os"
     "gorec/types"
-    "gorec/identObj"
+    "gorec/ast/identObj"
 )
 
 func Declare() {

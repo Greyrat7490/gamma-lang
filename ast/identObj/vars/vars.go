@@ -12,14 +12,12 @@ import (
 type Var interface {
     DefVal(file *os.File, val token.Token)
     SetType(t types.Type)
-
     Addr(fieldNum int) string
+
     GetType() types.Type
-    GetName() token.Token
-
+    GetName() string
+    GetPos() token.Pos
     String() string
-
-    Identobj()
 }
 
 func VarSetExpr(file *os.File, v Var) {
@@ -32,9 +30,9 @@ func VarSetExpr(file *os.File, v Var) {
 }
 
 func VarSetVar(file *os.File, v Var, other Var) {
-    if v.GetName().Str == other.GetName().Str {
+    if v.GetName() == other.GetName() {
         fmt.Fprintln(os.Stderr, "[WARNING] assigning a variable to itself is redundant")
-        fmt.Fprintln(os.Stderr, "\t" + v.GetName().At())
+        fmt.Fprintln(os.Stderr, "\t" + v.GetPos().At())
         return
     }
 
@@ -52,8 +50,8 @@ func VarSetVar(file *os.File, v Var, other Var) {
         asm.MovDerefVal(file, v.Addr(0), t.Size(), other.Addr(0))
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.GetName().Str)
-        fmt.Fprintln(os.Stderr, "\t" + v.GetName().At())
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.GetName())
+        fmt.Fprintln(os.Stderr, "\t" + v.GetPos().At())
         os.Exit(1)
     }
 }
@@ -83,8 +81,8 @@ func VarSetVal(file *os.File, v Var, val token.Token) {
         asm.MovDerefVal(file, v.Addr(0), t.Size(), val.Str)
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.GetName().Str)
-        fmt.Fprintln(os.Stderr, "\t" + v.GetName().At())
+        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.GetName())
+        fmt.Fprintln(os.Stderr, "\t" + v.GetPos().At())
         os.Exit(1)
     }
 }

@@ -4,7 +4,6 @@ import (
     "os"
     "fmt"
     "gorec/token"
-    "gorec/identObj/vars"
 )
 
 var inSwitch bool = false
@@ -34,8 +33,8 @@ func CaseStart(file *os.File) {
     file.WriteString(fmt.Sprintf(".case%d:\n", caseCount))
 }
 
-func CaseVar(file *os.File, v vars.Var) {
-    file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", v.Addr(0)))
+func CaseVar(file *os.File, addr string) {
+    file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", addr))
     if !inLastCase {
         file.WriteString(fmt.Sprintf("jne .case%d\n", caseCount+1))
     }
@@ -57,7 +56,7 @@ func CaseBodyEnd(file *os.File, count uint) {
 }
 
 func Through(file *os.File, pos token.Pos) {
-    if inSwitch == false {
+    if !inSwitch {
         fmt.Fprintln(os.Stderr, "[ERROR] through can only be used inside a switch")
         fmt.Fprintln(os.Stderr, "\t" + pos.At())
         os.Exit(1)

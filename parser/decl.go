@@ -6,7 +6,7 @@ import (
     "gorec/ast"
     "gorec/token"
     "gorec/types"
-    "gorec/identObj"
+    "gorec/ast/identObj"
 )
 
 func prsDecl() ast.Decl {
@@ -49,7 +49,7 @@ func prsDecVar() ast.DecVar {
     end := token.Cur().Pos
 
     v := identObj.DecVar(name, t)
-    return ast.DecVar{ Ident: ast.Ident{ Ident: name, Obj: v }, Type: t, TypePos: end }
+    return ast.DecVar{ V: v, Type: t, TypePos: end }
 }
 
 func prsDefVar(name token.Token, t types.Type) ast.DefVar {
@@ -57,7 +57,7 @@ func prsDefVar(name token.Token, t types.Type) ast.DefVar {
 
     pos := token.Cur().Pos
     token.Next()
-    return ast.DefVar{ Ident: ast.Ident{ Ident: name, Obj: v }, Type: t, ColPos: pos, Value: prsExpr() }
+    return ast.DefVar{ V: v, Type: t, ColPos: pos, Value: prsExpr() }
 }
 
 func prsDefConst(name token.Token, t types.Type) ast.DefConst {
@@ -65,7 +65,7 @@ func prsDefConst(name token.Token, t types.Type) ast.DefConst {
 
     pos := token.Cur().Pos
     token.Next()
-    return ast.DefConst{ Ident: ast.Ident{ Ident: name, Obj: c }, Type: t, ColPos: pos, Value: prsExpr() }
+    return ast.DefConst{ C: c, Type: t, ColPos: pos, Value: prsExpr() }
 }
 
 func prsDefVarInfer() ast.DefVar {
@@ -76,7 +76,7 @@ func prsDefVarInfer() ast.DefVar {
 
     t := val.GetType()
     v := identObj.DecVar(name, t)
-    return ast.DefVar{ Ident: ast.Ident{ Ident: name, Obj: v }, Type: t, ColPos: pos, Value: val }
+    return ast.DefVar{ V: v, Type: t, ColPos: pos, Value: val }
 }
 
 func prsDefConstInfer() ast.DefConst {
@@ -87,7 +87,7 @@ func prsDefConstInfer() ast.DefConst {
 
     t := val.GetType()
     c := identObj.DecConst(name, t)
-    return ast.DefConst{ Ident: ast.Ident{ Ident: name, Obj: c }, Type: t, ColPos: pos, Value: val }
+    return ast.DefConst{ C: c, Type: t, ColPos: pos, Value: val }
 }
 
 func prsDefine() ast.Decl {
@@ -169,9 +169,9 @@ func prsDefFn() ast.DefFn {
     block := prsBlock()
     identObj.EndScope()
 
-    f.SetFrameSize(identObj.GetMaxFrameSize())
+    f.SetFrameSize(identObj.GetFrameSize())
 
-    return ast.DefFn{ Pos: pos, Ident: ast.Ident{ Ident: name, Obj: f }, Args: argDecs, Block: block }
+    return ast.DefFn{ Pos: pos, F: f, Args: argDecs, Block: block }
 }
 
 func prsDecArgs() []ast.DecVar {
