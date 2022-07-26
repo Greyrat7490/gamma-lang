@@ -26,6 +26,9 @@ func prsExpr() ast.Expr {
     case token.Number, token.Str, token.Boolean:
         expr = prsLitExpr()
 
+    case token.BrackL:
+        return prsArrayLit()
+
     case token.Name:
         if token.Peek().Type == token.ParenL {
             return prsCallFn()  // only tmp because binary ops are not supported with func calls yet
@@ -133,6 +136,50 @@ func prsLitExpr() *ast.Lit {
     t := types.TypeOfVal(val.Str)
 
     return &ast.Lit{ Val: val, Type: t }
+}
+
+func prsArrayLit() *ast.ArrayLit {
+    lit := ast.ArrayLit{ BrackLPos: token.Cur().Pos }
+
+    token.Next()
+    lit.Len = prsExpr()
+
+    pos := token.Next()
+    if pos.Type != token.BrackR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"]\" but got %v\n", token.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+    lit.BrackRPos = pos.Pos
+
+    token.Next()
+    lit.BaseType = prsType()
+
+    pos = token.Next()
+    if pos.Type != token.BraceL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", token.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+    lit.BraceLPos = pos.Pos
+
+    if token.Next().Type != token.BraceR {
+        lit.Values = append(lit.Values, prsExpr())
+        for token.Next().Type == token.Comma {
+            token.Next()
+            lit.Values = append(lit.Values, prsExpr())
+        }
+
+        if token.Cur().Type != token.BraceR {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected \"}\" but got %v\n", token.Cur())
+            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+            os.Exit(1)
+        }
+    }
+
+    lit.BraceRPos = token.Cur().Pos
+
+    return &lit
 }
 
 func prsValue() ast.Expr {

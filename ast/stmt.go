@@ -104,7 +104,7 @@ func (s *Assign) Compile(file *os.File) {
         dest.Operand.Compile(file)
 
         // compile time evaluation
-        if val := s.Value.constEval(); val.Type != token.Unknown {
+        if val := s.Value.ConstEval(); val.Type != token.Unknown {
             vars.DerefSetVal(file, val, size)
             return
         }
@@ -120,7 +120,7 @@ func (s *Assign) Compile(file *os.File) {
 
     case *Ident:
         // compile time evaluation
-        if val := s.Value.constEval(); val.Type != token.Unknown {
+        if val := s.Value.ConstEval(); val.Type != token.Unknown {
             vars.VarSetVal(file, dest.Obj.(vars.Var), val)
             return
         }
@@ -150,7 +150,7 @@ func (s *If) Compile(file *os.File) {
     s.typeCheck()
 
     // compile time evaluation
-    if val := s.Cond.constEval(); val.Type != token.Unknown {
+    if val := s.Cond.ConstEval(); val.Type != token.Unknown {
         if val.Str == "true" {
             s.Block.Compile(file)
         } else if s.Else != nil {
@@ -203,7 +203,7 @@ func (s *Case) Compile(file *os.File, switchCount uint) {
     }
 
     // compile time evaluation
-    if val := s.Cond.constEval(); val.Type != token.Unknown {
+    if val := s.Cond.ConstEval(); val.Type != token.Unknown {
         if val.Str == "true" {
             cond.CaseBody(file)
             block.Compile(file)
@@ -238,7 +238,7 @@ func (s *Switch) Compile(file *os.File) {
             return
         }
 
-        cond := c.Cond.constEval()
+        cond := c.Cond.ConstEval()
 
         if cond.Type == token.Boolean && cond.Str == "true" {
             for _,s := range c.Stmts {
@@ -282,7 +282,7 @@ func (s *While) Compile(file *os.File) {
     s.typeCheck()
 
     // compile time evaluation
-    if c := s.Cond.constEval(); c.Type != token.Unknown {
+    if c := s.Cond.ConstEval(); c.Type != token.Unknown {
         if c.Str == "true" {
             count := loops.WhileStart(file)
             s.Block.Compile(file)

@@ -3,9 +3,11 @@ package vars
 import (
     "os"
     "fmt"
+    "strconv"
     "gorec/token"
     "gorec/types"
     "gorec/types/str"
+    "gorec/types/array"
     "gorec/asm/x86_64"
 )
 
@@ -46,7 +48,7 @@ func VarSetVar(file *os.File, v Var, other Var) {
     case types.I32, types.Bool:
         asm.MovDerefDeref(file, v.Addr(0), other.Addr(0), t.Size(), asm.RegA)
 
-    case types.Ptr:
+    case types.Ptr, types.Arr:
         asm.MovDerefVal(file, v.Addr(0), t.Size(), other.Addr(0))
 
     default:
@@ -64,6 +66,16 @@ func VarSetVal(file *os.File, v Var, val token.Token) {
 
         asm.MovDerefVal(file, v.Addr(0), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx))
         asm.MovDerefVal(file, v.Addr(1), types.I32_Size, fmt.Sprint(str.GetSize(strIdx)))
+
+    case types.Arr:
+        if size,err := strconv.ParseUint(val.Str, 10, 64); err == nil {
+            arrIdx := array.Add(size)
+            asm.MovDerefVal(file, v.Addr(0), types.Ptr_Size, fmt.Sprintf("_arr%d", arrIdx))
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected size of array to be a Number but got %v\n", val)
+            fmt.Fprintln(os.Stderr, "\t" + val.At())
+            os.Exit(1)
+        }
 
     case types.Ptr:
         if val.Type == token.Name {

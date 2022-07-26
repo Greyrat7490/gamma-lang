@@ -3,6 +3,7 @@ package ast
 import (
     "os"
     "fmt"
+    "strconv"
     "gorec/token"
     "gorec/types"
     "gorec/ast/identObj/func"
@@ -128,6 +129,24 @@ func (o *Unary)   typeCheck() {
         os.Exit(1)
     }
 }
+
+func (o *ArrayLit) typeCheck() {
+    for _,v := range o.Values {
+        t := v.GetType()
+        if t != o.BaseType {
+            fmt.Fprintf(os.Stderr, "[ERROR] all values in the ArrayLit should be of type %v but got a value of %v\n", o.BaseType, t)
+            fmt.Fprintln(os.Stderr, "\t" + v.At())
+            os.Exit(1)
+        }
+
+        if v.ConstEval().Type == token.Unknown {
+            fmt.Fprintln(os.Stderr, "[ERROR] all values in the ArrayLit should be const")
+            fmt.Fprintln(os.Stderr, "\t" + v.At())
+            os.Exit(1)
+        }
+    }
+}
+
 func (o *Binary) typeCheck() {
     t1 := o.OperandL.GetType()
     t2 := o.OperandR.GetType()
@@ -214,11 +233,16 @@ func valuesToTypes(values []Expr) (res []types.Type) {
     return res
 }
 
-func (o *BadExpr) GetType() types.Type { return nil }
-func (o *FnCall)  GetType() types.Type { return nil }
-func (o *Lit)     GetType() types.Type { return o.Type }
-func (o *Paren)   GetType() types.Type { return o.Expr.GetType() }
-func (o *Ident)   GetType() types.Type {
+func (o *BadExpr)  GetType() types.Type { return nil }
+func (o *FnCall)   GetType() types.Type { return nil }
+func (o *Lit)      GetType() types.Type { return o.Type }
+func (o *ArrayLit) GetType() types.Type {
+    eval := o.Len.ConstEval()
+    lenght,_ := strconv.ParseUint(eval.Str, 10, 64)
+    return types.ArrType{ Ptr: types.PtrType{ BaseType: o.BaseType }, Len: lenght }
+}
+func (o *Paren)    GetType() types.Type { return o.Expr.GetType() }
+func (o *Ident)    GetType() types.Type {
     if c,ok := o.Obj.(*consts.Const); ok {
         return c.GetType()
     }

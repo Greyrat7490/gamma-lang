@@ -165,7 +165,7 @@ func ToTokenType(s string) TokenType {
         return XSwitch
 
     default:
-        if types.ToType(s, false) != nil {
+        if types.ToBaseType(s) != nil {
             return Typename
         } else if s[0] == '"' && s[len(s) - 1] == '"' {
             return Str
@@ -410,7 +410,7 @@ func Tokenize(path string) {
                 fallthrough
 
             // split at non space char (and keep char)
-            case '(', ')', '{', '}', '+', '-', '*', '%', ',', ';', '$':
+            case '(', ')', '{', '}', '[', ']', '+', '-', '*', '%', ',', ';', '$':
                 split(line, start, i, lineNum)
 
                 tokens = append(tokens, Token{ ToTokenType(string(line[i])), string(line[i]), Pos{lineNum, i+1} })

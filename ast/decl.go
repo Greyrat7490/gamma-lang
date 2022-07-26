@@ -57,7 +57,7 @@ func (d *DefConst) Compile(file *os.File) {
         d.C.SetType(d.Type)
     }
 
-    val := d.Value.constEval()
+    val := d.Value.ConstEval()
 
     if val.Type == token.Unknown {
         fmt.Fprintln(os.Stderr, "[ERROR] cannot evaluate expr at compile time (not const)")
@@ -78,7 +78,7 @@ func (d *DefVar) Compile(file *os.File) {
 
 
     // compile time evaluation
-    if val := d.Value.constEval(); val.Type != token.Unknown {
+    if val := d.Value.ConstEval(); val.Type != token.Unknown {
         d.V.DefVal(file, val)
         return
     }

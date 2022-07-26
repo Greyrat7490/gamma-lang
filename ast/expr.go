@@ -19,7 +19,7 @@ type Expr interface {
     Compile(file *os.File)
     GetType() types.Type
     typeCheck()
-    constEval() token.Token
+    ConstEval() token.Token
 }
 
 type BadExpr struct{}
@@ -34,6 +34,16 @@ type FnCall struct {
 type Lit struct {
     Val token.Token
     Type types.Type
+}
+
+type ArrayLit struct {
+    BrackLPos token.Pos
+    Len Expr
+    BrackRPos token.Pos
+    BaseType types.Type
+    BraceLPos token.Pos
+    Values []Expr
+    BraceRPos token.Pos
 }
 
 type Ident struct {
@@ -90,6 +100,9 @@ func (e *Lit) Compile(file *os.File) {
         asm.MovRegVal(file, asm.RegA, e.Type.Size(), e.Val.Str)
     }
 }
+
+func (e *ArrayLit) Compile(file *os.File) {}
+
 func (e *Ident) Compile(file *os.File) {
     if c,ok := e.Obj.(*consts.Const); ok {
         l := Lit{ Val: c.GetVal(), Type: c.GetType() }
@@ -117,7 +130,7 @@ func (e *Unary) Compile(file *os.File) {
     e.typeCheck()
 
     // compile time evaluation
-    if c := e.constEval(); c.Type != token.Unknown {
+    if c := e.ConstEval(); c.Type != token.Unknown {
         asm.MovRegVal(file, asm.RegA, e.Operand.GetType().Size(), c.Str)
         return
     }
@@ -150,7 +163,7 @@ func (e *Binary) Compile(file *os.File) {
     }
 
     // compile time evaluation (constEval whole expr)
-    if c := e.constEval(); c.Type != token.Unknown {
+    if c := e.ConstEval(); c.Type != token.Unknown {
         if c.Type == token.Boolean {
             if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
         }
@@ -163,7 +176,7 @@ func (e *Binary) Compile(file *os.File) {
     // +,-,*,/, <,<=,>,>=,==,!=
     if e.Operator.Type != token.And && e.Operator.Type != token.Or {
         // compile time evaluation (constEval only left expr)
-        if c := e.OperandL.constEval(); c.Type != token.Unknown {
+        if c := e.OperandL.ConstEval(); c.Type != token.Unknown {
             if c.Type == token.Boolean {
                 if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
             }
@@ -173,7 +186,7 @@ func (e *Binary) Compile(file *os.File) {
             e.OperandL.Compile(file)
 
             // compile time evaluation (constEval only right expr)
-            if c := e.OperandR.constEval(); c.Type != token.Unknown {
+            if c := e.OperandR.ConstEval(); c.Type != token.Unknown {
                 if c.Type == token.Boolean {
                     if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
                 }
@@ -205,7 +218,7 @@ func (e *Binary) Compile(file *os.File) {
     // &&, ||
     } else {
         // compile time evaluation
-        if c := e.OperandL.constEval(); c.Type != token.Unknown {
+        if c := e.OperandL.ConstEval(); c.Type != token.Unknown {
             if e.Operator.Type == token.And && c.Str == "false" {
                 asm.MovRegVal(file, asm.RegA, size, "0")
                 return
@@ -232,7 +245,7 @@ func (e *FnCall) Compile(file *os.File) {
     regIdx := 0
     for _, val := range e.Values {
         // compile time evaluation:
-        if v := val.constEval(); v.Type != token.Unknown {
+        if v := val.ConstEval(); v.Type != token.Unknown {
             fn.PassVal(file, regIdx, v, val.GetType())
 
         } else if ident,ok := val.(*Ident); ok {
@@ -263,7 +276,7 @@ func (e *XCase) Compile(file *os.File, switchCount uint) {
     }
 
     // compile time evaluation
-    if val := e.Cond.constEval(); val.Type != token.Unknown {
+    if val := e.Cond.ConstEval(); val.Type != token.Unknown {
         if val.Str == "true" {
             cond.CaseBody(file)
             e.Expr.Compile(file)
@@ -289,7 +302,7 @@ func (e *XSwitch) Compile(file *os.File) {
     e.typeCheck()
 
     // compile time evaluation
-    if c := e.constEval(); c.Type != token.Unknown {
+    if c := e.ConstEval(); c.Type != token.Unknown {
         asm.MovRegVal(file, asm.RegA, types.TypeOfVal(c.Str).Size(), c.Str)
         return
     }
@@ -311,22 +324,24 @@ func (e *BadExpr) Compile(file *os.File) {
 }
 
 
-func (e *BadExpr) At() string { return "" }
-func (e *FnCall)  At() string { return e.Ident.At() }
-func (e *Lit)     At() string { return e.Val.At() }
-func (e *Ident)   At() string { return e.Pos.At() }
-func (e *Unary)   At() string { return e.Operator.At() }
-func (e *Binary)  At() string { return e.OperandL.At() }    // TODO: At() of Operand with higher precedence
-func (e *Paren)   At() string { return e.ParenLPos.At() }
-func (e *XSwitch) At() string { return e.Pos.At() }
-func (e *XCase)   At() string { return e.ColonPos.At() }
+func (e *BadExpr)  At() string { return "" }
+func (e *FnCall)   At() string { return e.Ident.At() }
+func (e *Lit)      At() string { return e.Val.At() }
+func (e *ArrayLit) At() string { return e.BrackLPos.At() }
+func (e *Ident)    At() string { return e.Pos.At() }
+func (e *Unary)    At() string { return e.Operator.At() }
+func (e *Binary)   At() string { return e.OperandL.At() }    // TODO: At() of Operand with higher precedence
+func (e *Paren)    At() string { return e.ParenLPos.At() }
+func (e *XSwitch)  At() string { return e.Pos.At() }
+func (e *XCase)    At() string { return e.ColonPos.At() }
 
-func (e *BadExpr) End() string { return "" }
-func (e *FnCall)  End() string { return e.ParenRPos.At() }
-func (e *Lit)     End() string { return e.Val.At() }
-func (e *Ident)   End() string { return e.Pos.At() }
-func (e *Unary)   End() string { return e.Operand.At() }
-func (e *Binary)  End() string { return e.OperandR.At() }
-func (e *Paren)   End() string { return e.ParenRPos.At() }
-func (e *XSwitch) End() string { return e.BraceRPos.At() }
-func (e *XCase)   End() string { return e.Expr.At() }
+func (e *BadExpr)  End() string { return "" }
+func (e *FnCall)   End() string { return e.ParenRPos.At() }
+func (e *Lit)      End() string { return e.Val.At() }
+func (e *ArrayLit) End() string { return e.BraceRPos.At() }
+func (e *Ident)    End() string { return e.Pos.At() }
+func (e *Unary)    End() string { return e.Operand.At() }
+func (e *Binary)   End() string { return e.OperandR.At() }
+func (e *Paren)    End() string { return e.ParenRPos.At() }
+func (e *XSwitch)  End() string { return e.BraceRPos.At() }
+func (e *XCase)    End() string { return e.Expr.At() }

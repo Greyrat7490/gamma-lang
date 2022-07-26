@@ -47,45 +47,20 @@ func prsStmt(ignoreUnusedExpr bool) ast.Stmt {
 
     case token.Number, token.Str, token.Boolean, token.ParenL:
         expr := prsExpr()
-        if !ignoreUnusedExpr && expr.GetType() != nil{
+        if !ignoreUnusedExpr && expr.GetType() != nil {
             fmt.Fprintln(os.Stderr, "[ERROR] unused expr")
-            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+            fmt.Fprintln(os.Stderr, "\t" + expr.At())
             os.Exit(1)
         }
         return &ast.ExprStmt{ Expr: expr }
 
-    case token.Name, token.UndScr, token.Plus, token.Minus, token.Mul, token.Amp:
-        // define var/const (type is given)
-        if isDec() {
-            name := token.Cur()
-            t := prsType()
-
-            token.Next()
-            if token.Cur().Type == token.DefVar {
-                d := prsDefVar(name, t)
-                return &ast.DeclStmt{ Decl: &d }
-            }
-            if token.Cur().Type == token.DefConst {
-                d := prsDefConst(name, t)
-                return &ast.DeclStmt{ Decl: &d }
-            }
-
-            fmt.Fprintln(os.Stderr, "[ERROR] declaring without initializing is not allowed")
-            fmt.Fprintln(os.Stderr, "\t" + name.At())
-            os.Exit(1)
+    case token.Name:
+        if isDec() || isDefInfer() {
+            return &ast.DeclStmt{ Decl: prsDefine() }
         }
+        fallthrough
 
-        // define var (infer the type with the value)
-        if token.Peek().Type == token.DefVar {
-            d := prsDefVarInfer()
-            return &ast.DeclStmt{ Decl: &d }
-        }
-        // define const (infer the type with the value)
-        if token.Peek().Type == token.DefConst {
-            d := prsDefConstInfer()
-            return &ast.DeclStmt{ Decl: &d }
-        }
-
+    case token.UndScr, token.XSwitch, token.Plus, token.Minus, token.Mul, token.Amp:
         expr := prsExpr()
 
         if token.Peek().Type == token.Assign {
@@ -94,7 +69,7 @@ func prsStmt(ignoreUnusedExpr bool) ast.Stmt {
         } else {
             if !ignoreUnusedExpr && expr.GetType() != nil {
                 fmt.Fprintln(os.Stderr, "[ERROR] unused expr")
-                fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+                fmt.Fprintln(os.Stderr, "\t" + expr.At())
                 os.Exit(1)
             }
             return &ast.ExprStmt{ Expr: expr }

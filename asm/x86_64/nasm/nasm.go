@@ -6,6 +6,7 @@ import (
     "os/exec"
     "strings"
     "gorec/types/str"
+    "gorec/types/array"
     "gorec/ast/identObj/vars"
 )
 
@@ -34,7 +35,8 @@ func Footer(file *os.File) {
 
     file.WriteString("\nsection .bss\n")
     file.WriteString("\tresb 1024 * 1024\n_stack_top:\n") // 1MiB
-    file.WriteString("_intBuf:\n\tresb 21") // max 64bit -> 20 digits max + sign -> 21 char string max
+    file.WriteString("_intBuf: resb 21\n") // max 64bit -> 20 digits max + sign -> 21 char string max
+    array.WriteArrayLits(file)
 }
 
 func GenExe() {

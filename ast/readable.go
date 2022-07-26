@@ -71,6 +71,18 @@ func (o *BadDecl) Readable(indent int) string {
 func (o *Lit) Readable(indent int) string {
     return strings.Repeat("   ", indent) + fmt.Sprintf("%s(%v)\n", o.Val.Str, o.Type)
 }
+func (o *ArrayLit) Readable(indent int) string {
+    s := strings.Repeat("   ", indent+1)
+    res := strings.Repeat("   ", indent) + "ARRAY_LIT:\n" +
+           fmt.Sprintf("%sType: %v\n", s, o.BaseType) +
+           fmt.Sprintf("%sLen: %s\n", s, o.Len.ConstEval().Str)
+
+    for _,v := range o.Values {
+        res += v.Readable(indent+1)
+    }
+
+    return res
+}
 
 func (o *Ident) Readable(indent int) string {
     return strings.Repeat("   ", indent) + o.Name + "(Name)\n"

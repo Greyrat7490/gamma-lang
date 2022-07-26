@@ -1,42 +1,6 @@
-dummy i32 := 0
-
-// temporary way to create and use arrays
-// UNSAFE!!
-
-// array "grows" from stack end   (smallest stack address)
-//                 to stack start (biggest stack address / stack_top)
+arr := [3]i32{ 0, 0, 0 }
+arr2 [4]i32 := [4]i32{}
 
 fn main() {
-    arr *i32 := &dummy
 
-    printStr("write to \"array\"\n")
-
-    printStr("arr[0] = dummy -> 0\n")
-
-    printStr("arr[1] = -86\n")
-    *(arr+8) = -86
-
-    printStr("arr[2] = 69420\n")
-    *(arr+16) = 69420
-
-
-    printStr("read from \"array\"\n")
-
-    printStr("arr[0](addr: ")
-    printPtr(arr)
-    printStr("): ")
-    printInt(*arr)
-    printStr("\n")
-
-    printStr("arr[1](addr: ")
-    printPtr(arr+8)
-    printStr("): ")
-    printInt(*(arr+8))
-    printStr("\n")
-
-    printStr("arr[2](addr: ")
-    printPtr(arr+16)
-    printStr("): ")
-    printInt(*(arr+16))
-    printStr("\n")
 }

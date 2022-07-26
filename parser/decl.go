@@ -3,10 +3,11 @@ package prs
 import (
     "os"
     "fmt"
+    "strconv"
     "gorec/ast"
+    "gorec/ast/identObj"
     "gorec/token"
     "gorec/types"
-    "gorec/ast/identObj"
 )
 
 func prsDecl() ast.Decl {
@@ -16,7 +17,13 @@ func prsDecl() ast.Decl {
         return &d
 
     case token.Name:
-        return prsDefine()
+        d := prsDefine()
+        if _,ok := d.(*ast.BadDecl); ok {
+            fmt.Fprintln(os.Stderr, "[ERROR] declaring without initializing is not allowed")
+            fmt.Fprintln(os.Stderr, "\t" + d.At())
+            os.Exit(1)
+        }
+        return d
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] unknown word \"%s\"\n", t.Str)
@@ -28,28 +35,77 @@ func prsDecl() ast.Decl {
 }
 
 func prsType() types.Type {
-    isPtr := false
-    typename := token.Next()
-    if typename.Type == token.Mul {
-        typename = token.Next()
-        isPtr = true
-    }
-    if typename.Type != token.Typename {
-        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", typename.Str)
-        fmt.Fprintln(os.Stderr, "\t" + typename.At())
-        os.Exit(1)
-    }
+    typename := token.Cur()
 
-    return types.ToType(typename.Str, isPtr)
+    switch typename.Type {
+    case token.Mul:
+        typename = token.Next()
+
+        if typename.Type != token.Typename {
+            fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", typename.Str)
+            fmt.Fprintln(os.Stderr, "\t" + typename.At())
+            os.Exit(1)
+        }
+
+        if baseType := types.ToBaseType(typename.Str); baseType != nil {
+            return types.PtrType{ BaseType: baseType }
+        } else {
+            return nil
+        }
+
+    case token.BrackL:
+        token.Next()
+        expr := prsExpr()
+
+        if token.Next().Type != token.BrackR {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected %v but got %v\n", token.BrackR, token.Cur())
+            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+            os.Exit(1)
+        }
+
+        typename = token.Next()
+        if typename.Type != token.Typename {
+            fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", typename.Str)
+            fmt.Fprintln(os.Stderr, "\t" + typename.At())
+            os.Exit(1)
+        }
+
+        eval := expr.ConstEval()
+        if eval.Type != token.Number {
+            if eval.Type == token.Unknown {
+                fmt.Fprintln(os.Stderr, "[ERROR] lenght of an array has to a const/eval at compile time")
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] lenght of an array has to a Number but got (%v)\n", eval.Type)
+            }
+            fmt.Fprintln(os.Stderr, "\t" + eval.At())
+            os.Exit(1)
+        }
+
+        lenght,_ := strconv.ParseUint(eval.Str, 10, 64)
+        return types.ArrType{ Ptr: types.PtrType{ BaseType: types.ToBaseType(typename.Str) }, Len: lenght }
+    default:
+        return types.ToBaseType(typename.Str)
+    }
 }
 
 func prsDecVar() ast.DecVar {
     name := token.Cur()
+    token.Next()
     t := prsType()
     end := token.Cur().Pos
 
     v := identObj.DecVar(name, t)
     return ast.DecVar{ V: v, Type: t, TypePos: end }
+}
+
+func isDec() bool {
+    return token.Cur().Type == token.Name &&
+        (token.Peek().Type == token.Typename ||
+            token.Peek().Type == token.Mul || token.Peek().Type == token.BrackL)
+}
+func isDefInfer() bool {
+    return token.Cur().Type == token.Name &&
+        (token.Peek().Type == token.DefVar || token.Peek().Type == token.DefConst)
 }
 
 func prsDefVar(name token.Token, t types.Type) ast.DefVar {
@@ -68,9 +124,8 @@ func prsDefConst(name token.Token, t types.Type) ast.DefConst {
     return ast.DefConst{ C: c, Type: t, ColPos: pos, Value: prsExpr() }
 }
 
-func prsDefVarInfer() ast.DefVar {
-    name := token.Cur()
-    pos := token.Next().Pos
+func prsDefVarInfer(name token.Token) ast.DefVar {
+    pos := token.Cur().Pos
     token.Next()
     val := prsExpr()
 
@@ -79,9 +134,8 @@ func prsDefVarInfer() ast.DefVar {
     return ast.DefVar{ V: v, Type: t, ColPos: pos, Value: val }
 }
 
-func prsDefConstInfer() ast.DefConst {
-    name := token.Cur()
-    pos := token.Next().Pos
+func prsDefConstInfer(name token.Token) ast.DefConst {
+    pos := token.Cur().Pos
     token.Next()
     val := prsExpr()
 
@@ -91,13 +145,21 @@ func prsDefConstInfer() ast.DefConst {
 }
 
 func prsDefine() ast.Decl {
-    // define var/const (type is given)
-    if isDec() {
-        name := token.Cur()
-        t := prsType()
+    name := token.Cur()
+    token.Next()
+    t := prsType()
 
-        token.Next()
+    if t == nil {       // infer the type with the value
         if token.Cur().Type == token.DefVar {
+            d := prsDefVarInfer(name)
+            return &d
+        }
+        if token.Cur().Type == token.DefConst {
+            d := prsDefConstInfer(name)
+            return &d
+        }
+    } else {            // type is given
+        if token.Next().Type == token.DefVar {
             d := prsDefVar(name, t)
             return &d
         }
@@ -105,37 +167,8 @@ func prsDefine() ast.Decl {
             d := prsDefConst(name, t)
             return &d
         }
-
-        fmt.Fprintln(os.Stderr, "[ERROR] declaring without initializing is not allowed")
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
     }
 
-    // define var (infer the type with the value)
-    if token.Peek().Type == token.DefVar {
-        d := prsDefVarInfer()
-        return &d
-    }
-    // define const (infer the type with the value)
-    if token.Peek().Type == token.DefConst {
-        d := prsDefConstInfer()
-        return &d
-    }
-
-
-    if token.Peek().Type == token.ParenL {
-        fmt.Fprintln(os.Stderr, "[ERROR] function calls are not allowed in global scope")
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
-        os.Exit(1)
-    }
-    if token.Peek().Type == token.Assign {
-        fmt.Fprintln(os.Stderr, "[ERROR] assigning variables is not allowed in global scope (but defining)")
-        fmt.Fprintln(os.Stderr, "\t" + token.Peek().At())
-        os.Exit(1)
-    }
-    fmt.Fprintf(os.Stderr, "[ERROR] identifier \"%s\" is not used (maybe forgot to previde a type)\n", token.Cur().Str)
-    fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
-    os.Exit(1)
     return &ast.BadDecl{}
 }
 
@@ -201,9 +234,4 @@ func prsDecArgs() []ast.DecVar {
     }
 
     return decs
-}
-
-func isDec() bool {
-    return token.Cur().Type == token.Name &&
-        (token.Peek().Type == token.Typename || (token.Peek().Type == token.Mul && token.Peek2().Type == token.Typename))
 }

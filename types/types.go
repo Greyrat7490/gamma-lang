@@ -1,7 +1,8 @@
 package types
 
 import (
-    "strconv"
+	"fmt"
+	"strconv"
 )
 
 type TypeKind int
@@ -9,6 +10,7 @@ const (
     I32  TypeKind = iota
     Bool TypeKind = iota
     Ptr  TypeKind = iota
+    Arr  TypeKind = iota
     Str  TypeKind = iota
 )
 
@@ -16,6 +18,7 @@ const (
     I32_Size  int = 4
     Bool_Size int = 1
     Ptr_Size  int = 8
+    Arr_Size  int = 8
     Str_Size  int = Ptr_Size + I32_Size
 )
 
@@ -30,6 +33,10 @@ type BoolType struct {}
 type PtrType  struct {
     BaseType Type
 }
+type ArrType  struct {
+    Ptr PtrType
+    Len uint64
+}
 type StrType  struct {
     ptr  PtrType
     size I32Type
@@ -37,13 +44,15 @@ type StrType  struct {
 
 func (t I32Type)  GetKind() TypeKind { return I32  }
 func (t BoolType) GetKind() TypeKind { return Bool }
-func (t PtrType)  GetKind() TypeKind { return Ptr  }
 func (t StrType)  GetKind() TypeKind { return Str  }
+func (t PtrType)  GetKind() TypeKind { return Ptr  }
+func (t ArrType)  GetKind() TypeKind { return Arr  }
 
 func (t I32Type)  Size() int { return I32_Size }
 func (t BoolType) Size() int { return Bool_Size }
-func (t PtrType)  Size() int { return Ptr_Size }
 func (t StrType)  Size() int { return t.ptr.Size() + t.size.Size() }
+func (t PtrType)  Size() int { return Ptr_Size }
+func (t ArrType)  Size() int { return Arr_Size }
 
 func (t I32Type)  String() string { return "i32"  }
 func (t BoolType) String() string { return "bool" }
@@ -54,26 +63,22 @@ func (t PtrType)  String() string {
     }
     return "*" + t.BaseType.String()
 }
+func (t ArrType)  String() string {
+    return fmt.Sprintf("[%d]%v", t.Len, t.Ptr.BaseType)
+}
 
 
-func ToType(s string, isPtr bool) Type {
-    var base Type
+func ToBaseType(s string) Type {
     switch s {
     case "str":
-        base = StrType{} // TODO: set ptr to *char
+        return StrType{} // TODO: set ptr to *char
     case "i32":
-        base = I32Type{}
+        return I32Type{}
     case "bool":
-        base = BoolType{}
+        return BoolType{}
     default:
         return nil
     }
-
-    if isPtr {
-        return PtrType{ BaseType: base }
-    }
-
-    return base
 }
 
 func TypeOfVal(val string) Type {

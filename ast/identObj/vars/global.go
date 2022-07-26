@@ -3,9 +3,11 @@ package vars
 import (
     "os"
     "fmt"
+    "strconv"
     "gorec/token"
     "gorec/types"
     "gorec/types/str"
+    "gorec/types/array"
     "gorec/asm/x86_64"
 )
 
@@ -63,6 +65,17 @@ func (v *GlobalVar) DefVal(file *os.File, val token.Token) {
         strIdx := str.Add(val)
         globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s _str%d\n  %s %d\n",
             v.name, asm.GetDataSize(types.Ptr_Size), strIdx, asm.GetDataSize(types.I32_Size), str.GetSize(strIdx)))
+
+    case types.Arr:
+        if size,err := strconv.ParseUint(val.Str, 10, 64); err == nil {
+            arrIdx := array.Add(size)
+            globalDefines = append(globalDefines, fmt.Sprintf("%s: %s _arr%d\n",
+                v.name, asm.GetDataSize(types.Ptr_Size), arrIdx))
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected size of array to be a Number but got %v\n", val)
+            fmt.Fprintln(os.Stderr, "\t" + val.At())
+            os.Exit(1)
+        }
 
     case types.Bool:
         if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }

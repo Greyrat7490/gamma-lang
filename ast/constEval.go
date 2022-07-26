@@ -3,15 +3,28 @@ package ast
 import (
     "os"
     "fmt"
+    "strconv"
     "gorec/token"
     "gorec/asm/x86_64"
     "gorec/ast/identObj/vars"
     "gorec/ast/identObj/consts"
 )
 
-func (e *Lit) constEval() token.Token { return e.Val }
-func (e *Unary) constEval() token.Token {
-    val := e.Operand.constEval()
+func (e *Lit)      ConstEval() token.Token { return e.Val }
+func (e *ArrayLit) ConstEval() token.Token {
+    sizeStr := e.Len.ConstEval()
+    if size,err := strconv.ParseUint(sizeStr.Str, 10, 64); err == nil {
+        return token.Token{
+            Type: token.Number,
+            Str: fmt.Sprint(size * uint64(e.BaseType.Size())),
+        }
+    }
+
+    return token.Token{ Type: token.Unknown }
+}
+
+func (e *Unary) ConstEval() token.Token {
+    val := e.Operand.ConstEval()
 
     switch e.Operator.Type {
     case token.Minus:
@@ -34,10 +47,10 @@ func (e *Unary) constEval() token.Token {
     return token.Token{ Type: token.Unknown }
 }
 
-func (e *BadExpr) constEval() token.Token { return token.Token{ Type: token.Unknown } }
-func (e *FnCall) constEval() token.Token { return token.Token{ Type: token.Unknown } }
+func (e *BadExpr) ConstEval() token.Token { return token.Token{ Type: token.Unknown } }
+func (e *FnCall) ConstEval() token.Token { return token.Token{ Type: token.Unknown } }
 
-func (e *Ident) constEval() token.Token {
+func (e *Ident) ConstEval() token.Token {
     if c,ok := e.Obj.(*consts.Const); ok {
         return c.GetVal()
     }
@@ -45,26 +58,26 @@ func (e *Ident) constEval() token.Token {
     return token.Token{ Type: token.Unknown }
 }
 
-func (e *Paren) constEval() token.Token { return e.Expr.constEval() }
+func (e *Paren) ConstEval() token.Token { return e.Expr.ConstEval() }
 
-func (e *XCase) constEval() token.Token {
+func (e *XCase) ConstEval() token.Token {
     if e.Cond == nil {
         return token.Token{ Type: token.Unknown }
     }
 
-    return e.Cond.constEval()
+    return e.Cond.ConstEval()
 }
 
-func (e *XSwitch) constEval() token.Token {
+func (e *XSwitch) ConstEval() token.Token {
     for _,c := range e.Cases {
         if c.Cond == nil {
-            return c.Expr.constEval()
+            return c.Expr.ConstEval()
         }
 
-        v := c.constEval()
+        v := c.ConstEval()
 
         if v.Type == token.Boolean && v.Str == "true" {
-            return c.Expr.constEval()
+            return c.Expr.ConstEval()
         } else if v.Type == token.Unknown {
             return token.Token{ Type: token.Unknown }
         }
@@ -73,9 +86,9 @@ func (e *XSwitch) constEval() token.Token {
     return token.Token{ Type: token.Unknown }
 }
 
-func (e *Binary) constEval() token.Token {
-    l := e.OperandL.constEval()
-    r := e.OperandR.constEval()
+func (e *Binary) ConstEval() token.Token {
+    l := e.OperandL.ConstEval()
+    r := e.OperandR.ConstEval()
 
     if l.Type != token.Unknown && r.Type != token.Unknown {
         if l.Type == token.Name {
