@@ -13,6 +13,25 @@ func (e *Lit)      ConstEval() token.Token { return e.Val }
 func (e *ArrayLit) ConstEval() token.Token {
     return token.Token{ Type: token.Number, Str: fmt.Sprint(e.Idx) }
 }
+func (e *Indexed) ConstEval() token.Token {
+    return token.Token{ Type: token.Unknown }
+
+/*
+    idxToken := e.Index.ConstEval()
+    arrToken := e.ArrExpr.ConstEval()
+
+    if idxToken.Type != token.Unknown && arrToken.Type != token.Unknown {
+        if _,err := strconv.ParseUint(idxToken.Str, 10, 64); err == nil {
+            // TODO in work
+        } else {
+            // TODO
+            os.Exit(1)
+        }
+    }
+
+    return token.Token{ Type: token.Unknown }
+*/
+}
 
 func (e *Unary) ConstEval() token.Token {
     val := e.Operand.ConstEval()

@@ -118,6 +118,13 @@ func (s *Assign) Compile(file *os.File) {
         s.Value.Compile(file)
         asm.MovDerefReg(file, "rdx", size, asm.RegA)
 
+    case *Indexed:
+        addr := dest.CompileToAddr(file)
+
+        file.WriteString(fmt.Sprintf("lea rdx, [%s]\n", addr))
+        s.Value.Compile(file)
+        asm.MovDerefReg(file, "rdx", size, asm.RegA)
+
     case *Ident:
         // compile time evaluation
         if val := s.Value.ConstEval(); val.Type != token.Unknown {

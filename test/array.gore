@@ -1,6 +1,41 @@
 arr := [3]i32{ -420, 69, 64 }
 arr2 [4]i32 := [4]i32{}
 
-fn main() {
+fn globalArr() {
+    printInt(arr[0]) printStr("\n")
+    printInt(arr[1]) printStr("\n")
+    printInt(arr[2]) printStr("\n")
 
+    printStr("----\n")
+
+    arr[0] = 64
+    arr[1] = 0
+    arr[2] = 420
+
+    printInt(arr[0]) printStr("\n")
+    printInt(arr[1]) printStr("\n")
+    printInt(arr[2]) printStr("\n")
+}
+
+fn localArr() {
+    arr := [2]i32{ 69, 64 }
+
+    printInt(arr[0]) printStr("\n")
+    printInt(arr[1]) printStr("\n")
+
+    printStr("----\n")
+
+    arr[0] = -420
+    arr[1] = -69
+
+    printInt(arr[0]) printStr("\n")
+    printInt(arr[1]) printStr("\n")
+}
+
+fn main() {
+    printStr("global ---------\n")
+    globalArr()
+
+    printStr("\nlocal ---------\n")
+    localArr()
 }

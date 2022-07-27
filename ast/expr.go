@@ -3,6 +3,7 @@ package ast
 import (
     "os"
     "fmt"
+    "strconv"
     "gorec/token"
     "gorec/types"
     "gorec/types/str"
@@ -45,6 +46,13 @@ type ArrayLit struct {
     BraceLPos token.Pos
     Values []Expr
     BraceRPos token.Pos
+}
+
+type Indexed struct {
+    ArrExpr Expr
+    BrackLPos token.Pos
+    Index Expr
+    BrackRPos token.Pos
 }
 
 type Ident struct {
@@ -99,6 +107,65 @@ func (e *Lit) Compile(file *os.File) {
 
     default:
         asm.MovRegVal(file, asm.RegA, e.Type.Size(), e.Val.Str)
+    }
+}
+
+func (e *Indexed) CompileToAddr(file *os.File) (addr string) {
+    e.typeCheck()
+
+    arrType,_ := e.ArrExpr.GetType().(types.ArrType)
+
+    e.ArrExpr.Compile(file)
+
+    idxToken := e.Index.ConstEval()
+    if idxToken.Type != token.Unknown {
+        if idxToken.Type != token.Number {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a number as index but got %v\n", idxToken.Type)
+            os.Exit(1)
+        }
+
+        idx,_ := strconv.ParseUint(idxToken.Str, 10, 64)
+        offset := idx * uint64(arrType.Ptr.BaseType.Size())
+        if offset < 0 {
+            addr = fmt.Sprintf("rax%d", offset)
+        } else {
+            addr = fmt.Sprintf("rax+%d", offset)
+        }
+    }
+
+    return
+}
+
+func (e *Indexed) Compile(file *os.File) {
+    e.typeCheck()
+
+    arrType,_ := e.ArrExpr.GetType().(types.ArrType)
+
+    e.ArrExpr.Compile(file)
+
+    var addr string
+    idxToken := e.Index.ConstEval()
+    if idxToken.Type != token.Unknown {
+        if idxToken.Type != token.Number {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a number as index but got %v\n", idxToken.Type)
+            os.Exit(1)
+        }
+
+        idx,_ := strconv.ParseUint(idxToken.Str, 10, 64)
+        offset := idx * uint64(arrType.Ptr.BaseType.Size())
+        if offset < 0 {
+            addr = fmt.Sprintf("rax%d", offset)
+        } else {
+            addr = fmt.Sprintf("rax+%d", offset)
+        }
+    }
+
+    t := arrType.Ptr.BaseType
+    if t.GetKind() == types.Str {
+        fmt.Fprintln(os.Stderr, "[ERROR] TODO expr.go Compile IndexedExpr for Str type")
+        os.Exit(1)
+    } else {
+        asm.MovRegDeref(file, asm.RegA, addr, t.Size())
     }
 }
 
@@ -329,6 +396,7 @@ func (e *BadExpr)  At() string { return "" }
 func (e *FnCall)   At() string { return e.Ident.At() }
 func (e *Lit)      At() string { return e.Val.At() }
 func (e *ArrayLit) At() string { return e.BrackLPos.At() }
+func (e *Indexed)  At() string { return e.ArrExpr.At() }
 func (e *Ident)    At() string { return e.Pos.At() }
 func (e *Unary)    At() string { return e.Operator.At() }
 func (e *Binary)   At() string { return e.OperandL.At() }    // TODO: At() of Operand with higher precedence
@@ -340,6 +408,7 @@ func (e *BadExpr)  End() string { return "" }
 func (e *FnCall)   End() string { return e.ParenRPos.At() }
 func (e *Lit)      End() string { return e.Val.At() }
 func (e *ArrayLit) End() string { return e.BraceRPos.At() }
+func (e *Indexed)  End() string { return e.BrackRPos.At() }
 func (e *Ident)    End() string { return e.Pos.At() }
 func (e *Unary)    End() string { return e.Operand.At() }
 func (e *Binary)   End() string { return e.OperandR.At() }

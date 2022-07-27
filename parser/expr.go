@@ -58,6 +58,11 @@ func prsExpr() ast.Expr {
         return &ast.BadExpr{}
     }
 
+    if token.Peek().Type == token.BrackL {
+        token.Next()
+        expr = prsIndexExpr(expr)
+    }
+
     if isBinaryExpr() {
         expr = prsBinary(expr, 0)
     }
@@ -137,8 +142,6 @@ func prsLitExpr() *ast.Lit {
     val := token.Cur()
     t := types.TypeOfVal(val.Str)
 
-    // TODO: str.Add() here
-
     return &ast.Lit{ Val: val, Type: t }
 }
 
@@ -200,6 +203,22 @@ func prsArrayLit() *ast.ArrayLit {
     lit.BraceRPos = token.Cur().Pos
 
     return &lit
+}
+
+func prsIndexExpr(expr ast.Expr) *ast.Indexed {
+    res := ast.Indexed{ ArrExpr: expr, BrackLPos: token.Cur().Pos }
+
+    token.Next()
+    idx := prsExpr()
+    res.Index = idx
+
+    posR := token.Next()
+    if posR.Type != token.BrackR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"]\" but got %v\n", posR)
+        os.Exit(1)
+    }
+
+    return &res
 }
 
 func prsValue() ast.Expr {

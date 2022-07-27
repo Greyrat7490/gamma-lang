@@ -99,13 +99,47 @@ func prsDecVar() ast.DecVar {
 }
 
 func isDec() bool {
-    return token.Cur().Type == token.Name &&
-        (token.Peek().Type == token.Typename ||
-            token.Peek().Type == token.Mul || token.Peek().Type == token.BrackL)
+    if token.Cur().Type != token.Name {
+        return false
+    }
+
+    return isNextType()
 }
 func isDefInfer() bool {
-    return token.Cur().Type == token.Name &&
-        (token.Peek().Type == token.DefVar || token.Peek().Type == token.DefConst)
+    return token.Cur().Type == token.Name && (token.Peek().Type == token.DefVar || token.Peek().Type == token.DefConst)
+}
+func isNextType() bool {
+    token.SaveIdx()
+    defer token.ResetIdx()
+
+    switch token.Next().Type {
+    case token.Mul:
+        typename := token.Next()
+
+        if typename.Type != token.Typename {
+            return false
+        }
+
+        return types.ToBaseType(typename.Str) != nil
+
+    case token.BrackL:
+        token.Next()
+        expr := prsExpr()
+
+        if token.Next().Type != token.BrackR {
+            return false
+        }
+
+        typename := token.Next()
+        if typename.Type != token.Typename {
+            return false
+        }
+
+        return expr.ConstEval().Type != token.Number
+
+    default:
+        return types.ToBaseType(token.Cur().Str) != nil
+    }
 }
 
 func prsDefVar(name token.Token, t types.Type) ast.DefVar {

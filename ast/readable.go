@@ -84,6 +84,12 @@ func (o *ArrayLit) Readable(indent int) string {
     return res
 }
 
+func (o *Indexed) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "INDEXED:\n" +
+        o.ArrExpr.Readable(indent+1) +
+        o.Index.Readable(indent+1)
+}
+
 func (o *Ident) Readable(indent int) string {
     return strings.Repeat("   ", indent) + o.Name + "(Name)\n"
 }

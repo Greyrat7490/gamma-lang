@@ -10,6 +10,7 @@ import (
 
 var tokens []Token
 var idx int = -1
+var savedIdx int = -1
 
 type TokenType uint
 const (
@@ -497,4 +498,18 @@ func FindNext (t TokenType) Pos {
     }
 
     return Pos{ -1, -1 }
+}
+
+func SaveIdx() {
+    savedIdx = idx
+}
+
+func ResetIdx() {
+    if savedIdx == -1 {
+        fmt.Fprintln(os.Stderr, "[ERROR] no saved idx")
+        os.Exit(1)
+    }
+
+    idx = savedIdx
+    savedIdx = -1
 }

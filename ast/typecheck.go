@@ -98,6 +98,13 @@ func (o *BadExpr) typeCheck() {}
 func (o *Lit)     typeCheck() {}
 func (o *Paren)   typeCheck() {}
 func (o *Ident)   typeCheck() {}
+func (o *Indexed) typeCheck() {
+    t := o.ArrExpr.GetType()
+    if t.GetKind() != types.Arr {
+        fmt.Fprintf(os.Stderr, "[ERROR] you can only index an array but got %v\n", t)
+        os.Exit(1)
+    }
+}
 func (o *Unary)   typeCheck() {
     switch o.Operator.Type {
     case token.Mul:
@@ -240,6 +247,15 @@ func (o *ArrayLit) GetType() types.Type {
     eval := o.Len.ConstEval()
     lenght,_ := strconv.ParseUint(eval.Str, 10, 64)
     return types.ArrType{ Ptr: types.PtrType{ BaseType: o.BaseType }, Len: lenght }
+}
+func (o *Indexed) GetType() types.Type {
+    if t,ok := o.ArrExpr.GetType().(types.ArrType); ok {
+        return t.Ptr.BaseType
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] you can only index an array but got %v\n", t)
+        os.Exit(1)
+        return nil
+    }
 }
 func (o *Paren)    GetType() types.Type { return o.Expr.GetType() }
 func (o *Ident)    GetType() types.Type {
