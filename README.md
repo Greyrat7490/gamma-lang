@@ -50,12 +50,11 @@ And because it is written in Go...
   * [x] get addr (via "&")
   * [x] arithmetic
 * [x] consts
-  * [x] define
+  * [x] define/use
   * [x] compile time eval
 * [ ] arrays
-  * [ ] declare
-    * [ ] with literal
-    * [ ] with const
+  * [x] define/use
+  * [ ] compile time eval
 * [ ] structs
 * [x] turing complete -> actual programming language
   * [x] proof with Rule 110 programm
