@@ -3,10 +3,12 @@ package prs
 import (
     "os"
     "fmt"
+    "strconv"
     "gorec/ast"
+    "gorec/ast/identObj"
     "gorec/token"
     "gorec/types"
-    "gorec/ast/identObj"
+    "gorec/types/array"
 )
 
 type precedence int
@@ -135,6 +137,8 @@ func prsLitExpr() *ast.Lit {
     val := token.Cur()
     t := types.TypeOfVal(val.Str)
 
+    // TODO: str.Add() here
+
     return &ast.Lit{ Val: val, Type: t }
 }
 
@@ -143,6 +147,13 @@ func prsArrayLit() *ast.ArrayLit {
 
     token.Next()
     lit.Len = prsExpr()
+    lenToken := lit.Len.ConstEval()
+    length,_ := strconv.ParseUint(lenToken.Str, 10, 64)
+    if lenToken.Type != token.Number {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected size of array to be a Number but got %v\n", lenToken)
+        fmt.Fprintln(os.Stderr, "\t" + lenToken.At())
+        os.Exit(1)
+    }
 
     pos := token.Next()
     if pos.Type != token.BrackR {
@@ -163,11 +174,18 @@ func prsArrayLit() *ast.ArrayLit {
     }
     lit.BraceLPos = pos.Pos
 
+    var values []string
     if token.Next().Type != token.BraceR {
-        lit.Values = append(lit.Values, prsExpr())
+        expr := prsExpr()
+
+        lit.Values = append(lit.Values, expr)
+        values = append(values, expr.ConstEval().Str)
         for token.Next().Type == token.Comma {
             token.Next()
-            lit.Values = append(lit.Values, prsExpr())
+            expr := prsExpr()
+
+            lit.Values = append(lit.Values, expr)
+            values = append(values, expr.ConstEval().Str)
         }
 
         if token.Cur().Type != token.BraceR {
@@ -176,6 +194,8 @@ func prsArrayLit() *ast.ArrayLit {
             os.Exit(1)
         }
     }
+
+    lit.Idx = array.Add(lit.BaseType, length, values)
 
     lit.BraceRPos = token.Cur().Pos
 

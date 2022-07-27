@@ -5,10 +5,40 @@ import (
     "fmt"
     "os/exec"
     "strings"
-    "gorec/types/str"
-    "gorec/types/array"
-    "gorec/ast/identObj/vars"
 )
+
+var rodata string
+var data string
+var bss string
+
+func AddRodata(s string) {
+    rodata += s + "\n"
+}
+func AddData(s string) {
+    data += s + "\n"
+}
+func AddBss(s string) {
+    bss += s + "\n"
+}
+
+func writeRodata(file *os.File) {
+    file.WriteString("\nsection .rodata\n")
+    file.WriteString("_true: db \"true\"\n")
+    file.WriteString("_false: db \"false\"\n")
+    file.WriteString(rodata)
+}
+
+func writeBss(file *os.File) {
+    file.WriteString("\nsection .bss\n")
+    file.WriteString("\tresb 1024 * 1024\n_stack_top:\n") // 1MiB
+    file.WriteString("_intBuf: resb 21\n") // max 64bit -> 20 digits max + sign -> 21 char string max
+    file.WriteString(bss)
+}
+
+func writeData(file *os.File) {
+    file.WriteString("\nsection .data\n")
+    file.WriteString(data)
+}
 
 func Header(file *os.File) {
     file.WriteString("[BITS 64]\n")
@@ -25,18 +55,9 @@ func Footer(file *os.File) {
     file.WriteString("\nmov rdi, 0\n")
     file.WriteString("call exit\n")
 
-    file.WriteString("\nsection .rodata\n")
-    file.WriteString("_true: db \"true\"\n")
-    file.WriteString("_false: db \"false\"\n")
-    str.WriteStrLits(file)
-
-    file.WriteString("\nsection .data\n")
-    vars.DefineGlobalVars(file)
-
-    file.WriteString("\nsection .bss\n")
-    file.WriteString("\tresb 1024 * 1024\n_stack_top:\n") // 1MiB
-    file.WriteString("_intBuf: resb 21\n") // max 64bit -> 20 digits max + sign -> 21 char string max
-    array.WriteArrayLits(file)
+    writeRodata(file)
+    writeData(file)
+    writeBss(file)
 }
 
 func GenExe() {

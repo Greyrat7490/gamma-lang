@@ -3,15 +3,12 @@ package vars
 import (
     "os"
     "fmt"
-    "strconv"
     "gorec/token"
     "gorec/types"
     "gorec/types/str"
-    "gorec/types/array"
     "gorec/asm/x86_64"
+    "gorec/asm/x86_64/nasm"
 )
-
-var globalDefines []string
 
 type GlobalVar struct {
     decPos token.Pos
@@ -63,36 +60,22 @@ func (v *GlobalVar) DefVal(file *os.File, val token.Token) {
     switch v.vartype.GetKind() {
     case types.Str:
         strIdx := str.Add(val)
-        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s _str%d\n  %s %d\n",
+        nasm.AddData(fmt.Sprintf("%s:\n  %s _str%d\n  %s %d",
             v.name, asm.GetDataSize(types.Ptr_Size), strIdx, asm.GetDataSize(types.I32_Size), str.GetSize(strIdx)))
 
     case types.Arr:
-        if size,err := strconv.ParseUint(val.Str, 10, 64); err == nil {
-            arrIdx := array.Add(size)
-            globalDefines = append(globalDefines, fmt.Sprintf("%s: %s _arr%d\n",
-                v.name, asm.GetDataSize(types.Ptr_Size), arrIdx))
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected size of array to be a Number but got %v\n", val)
-            fmt.Fprintln(os.Stderr, "\t" + val.At())
-            os.Exit(1)
-        }
+        nasm.AddData(fmt.Sprintf("%s:\n  %s _arr%s\n", v.name, asm.GetDataSize(types.Ptr_Size), val.Str))
 
     case types.Bool:
         if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
         fallthrough
 
     case types.I32, types.Ptr:
-        globalDefines = append(globalDefines, fmt.Sprintf("%s:\n  %s %s\n", v.name, asm.GetDataSize(v.vartype.Size()), val.Str))
+        nasm.AddData(fmt.Sprintf("%s:\n  %s %s\n", v.name, asm.GetDataSize(v.vartype.Size()), val.Str))
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.name)
         fmt.Fprintln(os.Stderr, "\t" + v.decPos.At())
         os.Exit(1)
-    }
-}
-
-func DefineGlobalVars(file *os.File) {
-    for _, s := range globalDefines {
-        file.WriteString(s)
     }
 }

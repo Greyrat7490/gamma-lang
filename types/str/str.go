@@ -1,10 +1,11 @@
 package str
 
 import (
-	"fmt"
-	"os"
-	"strings"
-	"gorec/token"
+    "os"
+    "fmt"
+    "strings"
+    "gorec/token"
+    "gorec/asm/x86_64/nasm"
 )
 
 type strLit struct {
@@ -27,14 +28,13 @@ func Add(s token.Token) (idx int) {
 
     idx = len(strLits)
     strLits = append(strLits, strLit{str, size})
+    nasm.AddRodata(GetDefineStr(idx))
 
     return idx
 }
 
-func WriteStrLits(file *os.File) {
-    for i, str := range strLits {
-        file.WriteString(fmt.Sprintf("_str%d: db %s\n", i, str.value))
-    }
+func GetDefineStr(idx int) string {
+    return fmt.Sprintf("_str%d: db %s", idx, strLits[idx].value)
 }
 
 func escape(s token.Token) (string, int) {

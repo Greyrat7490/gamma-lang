@@ -3,6 +3,7 @@ package fn
 import (
     "os"
     "fmt"
+    "strconv"
     "gorec/token"
     "gorec/types"
     "gorec/types/str"
@@ -117,8 +118,18 @@ func PassVal(file *os.File, regIdx int, value token.Token, valtype types.Type) {
     switch valtype.GetKind() {
     case types.Str:
         strIdx := str.Add(value)
+
         asm.MovRegVal(file, regs[regIdx],   types.Ptr_Size, fmt.Sprintf("_str%d", strIdx))
         asm.MovRegVal(file, regs[regIdx+1], types.I32_Size, fmt.Sprint(str.GetSize(strIdx)))
+
+    case types.Arr:
+        if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
+            asm.MovRegVal(file, regs[regIdx], types.Ptr_Size, fmt.Sprintf("_arr%d", idx))
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected size of array to be a Number but got %v\n", value)
+            fmt.Fprintln(os.Stderr, "\t" + value.At())
+            os.Exit(1)
+        }
 
     case types.Bool:
         if value.Str == "true" { value.Str = "1" } else { value.Str = "0" }

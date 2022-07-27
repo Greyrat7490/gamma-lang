@@ -15,8 +15,9 @@ var regs [][]string = [][]string{
     { "r11" },
 }
 
-var words       []string = []string{ "BYTE", "WORD", "DWORD", "QWORD" }
-var defineSizes []string = []string{ "db", "dw", "dd", "dq" }
+var words     []string = []string{ "BYTE", "WORD", "DWORD", "QWORD" }
+var dataSizes []string = []string{ "db", "dw", "dd", "dq" }
+var bssSizes  []string = []string{ "resb", "resw", "resd", "resq" }
 
 type RegGroup = uint8
 const (
@@ -42,9 +43,15 @@ func GetWord(bytes int) string {
 }
 func GetDataSize(bytes int) string {
     if bytes == 8 {
-        return defineSizes[3]
+        return dataSizes[3]
     }
-    return defineSizes[bytes/2]
+    return dataSizes[bytes/2]
+}
+func GetBssSize(bytes int) string {
+    if bytes == 8 {
+        return bssSizes[3]
+    }
+    return bssSizes[bytes/2]
 }
 
 func GetReg(g RegGroup, size int) string {

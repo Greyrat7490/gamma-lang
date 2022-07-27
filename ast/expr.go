@@ -37,6 +37,7 @@ type Lit struct {
 }
 
 type ArrayLit struct {
+    Idx int
     BrackLPos token.Pos
     Len Expr
     BrackRPos token.Pos

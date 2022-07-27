@@ -3,7 +3,6 @@ package ast
 import (
     "os"
     "fmt"
-    "strconv"
     "gorec/token"
     "gorec/asm/x86_64"
     "gorec/ast/identObj/vars"
@@ -12,15 +11,7 @@ import (
 
 func (e *Lit)      ConstEval() token.Token { return e.Val }
 func (e *ArrayLit) ConstEval() token.Token {
-    sizeStr := e.Len.ConstEval()
-    if size,err := strconv.ParseUint(sizeStr.Str, 10, 64); err == nil {
-        return token.Token{
-            Type: token.Number,
-            Str: fmt.Sprint(size * uint64(e.BaseType.Size())),
-        }
-    }
-
-    return token.Token{ Type: token.Unknown }
+    return token.Token{ Type: token.Number, Str: fmt.Sprint(e.Idx) }
 }
 
 func (e *Unary) ConstEval() token.Token {

@@ -7,7 +7,6 @@ import (
     "gorec/token"
     "gorec/types"
     "gorec/types/str"
-    "gorec/types/array"
     "gorec/asm/x86_64"
 )
 
@@ -68,9 +67,8 @@ func VarSetVal(file *os.File, v Var, val token.Token) {
         asm.MovDerefVal(file, v.Addr(1), types.I32_Size, fmt.Sprint(str.GetSize(strIdx)))
 
     case types.Arr:
-        if size,err := strconv.ParseUint(val.Str, 10, 64); err == nil {
-            arrIdx := array.Add(size)
-            asm.MovDerefVal(file, v.Addr(0), types.Ptr_Size, fmt.Sprintf("_arr%d", arrIdx))
+        if idx,err := strconv.ParseUint(val.Str, 10, 64); err == nil {
+            asm.MovDerefVal(file, v.Addr(0), types.Ptr_Size, fmt.Sprintf("_arr%d", idx))
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] expected size of array to be a Number but got %v\n", val)
             fmt.Fprintln(os.Stderr, "\t" + val.At())
