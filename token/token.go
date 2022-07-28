@@ -346,7 +346,7 @@ func Tokenize(path string) {
 
             // in multiline comment
             if mlComment {
-                if i+2 < len(line) && line[i:i+2] == "*/" {
+                if i+2 <= len(line) && line[i:i+2] == "*/" {
                     mlComment = false
                     start = i+2
                     i++
