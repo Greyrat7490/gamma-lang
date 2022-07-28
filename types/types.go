@@ -67,6 +67,16 @@ func (t ArrType)  String() string {
     return fmt.Sprintf("[%d]%v", t.Len, t.Ptr.BaseType)
 }
 
+func (t ArrType) GetLens() (lens []uint64) {
+    lens = append(lens, t.Len)
+
+    for t.Ptr.BaseType.GetKind() == Arr {
+        t = t.Ptr.BaseType.(ArrType)
+        lens = append(lens, t.Len)
+    }
+
+    return
+}
 
 func ToBaseType(s string) Type {
     switch s {

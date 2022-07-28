@@ -47,17 +47,14 @@ fn strArray() {
     printStr(arr[1])
 }
 
-/* in work
- * multi dim arrays as one dim array
 fn multiDimArray() {
-    arr := [2][2]i32{ 
-        [2]i32{ 0, 0 }, // TODO: be able to remove [2]i32 (get array type from [2][2]i32)
-        [2]i32{ 0, 0 }
+    arr := [2][2][2]i32{
+        { { 0, 1 }, { 2, 3 } },
+        { { 4, 5 }, { 6, 7 } }
     }
 
-    printInt(arr[0][0])
+    // printInt(arr[0][0][0])
 }
-*/
 
 fn main() {
     printStr("global ---------\n")
@@ -69,6 +66,6 @@ fn main() {
     printStr("\nstring ---------\n")
     strArray()
 
-    // printStr("\n2D array ---------\n")
-    // multiDimArray()
+    printStr("\n2D array ---------\n")
+    multiDimArray()
 }

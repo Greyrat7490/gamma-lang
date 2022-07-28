@@ -54,6 +54,7 @@ And because it is written in Go...
   * [x] compile time eval
 * [ ] arrays
   * [x] define/use
+  * [ ] multi-dimensionale
   * [ ] compile time eval
 * [ ] structs
 * [x] turing complete -> actual programming language

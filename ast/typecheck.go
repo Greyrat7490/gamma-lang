@@ -3,7 +3,6 @@ package ast
 import (
     "os"
     "fmt"
-    "strconv"
     "gorec/token"
     "gorec/types"
     "gorec/ast/identObj/func"
@@ -140,8 +139,8 @@ func (o *Unary)   typeCheck() {
 func (o *ArrayLit) typeCheck() {
     for _,v := range o.Values {
         t := v.GetType()
-        if t != o.BaseType {
-            fmt.Fprintf(os.Stderr, "[ERROR] all values in the ArrayLit should be of type %v but got a value of %v\n", o.BaseType, t)
+        if t != o.Type.Ptr.BaseType {
+            fmt.Fprintf(os.Stderr, "[ERROR] all values in the ArrayLit should be of type %v but got a value of %v\n", o.Type.Ptr.BaseType, t)
             fmt.Fprintln(os.Stderr, "\t" + v.At())
             os.Exit(1)
         }
@@ -243,11 +242,7 @@ func valuesToTypes(values []Expr) (res []types.Type) {
 func (o *BadExpr)  GetType() types.Type { return nil }
 func (o *FnCall)   GetType() types.Type { return nil }
 func (o *Lit)      GetType() types.Type { return o.Type }
-func (o *ArrayLit) GetType() types.Type {
-    eval := o.Len.ConstEval()
-    lenght,_ := strconv.ParseUint(eval.Str, 10, 64)
-    return types.ArrType{ Ptr: types.PtrType{ BaseType: o.BaseType }, Len: lenght }
-}
+func (o *ArrayLit) GetType() types.Type { return o.Type }
 func (o *Indexed) GetType() types.Type {
     if t,ok := o.ArrExpr.GetType().(types.ArrType); ok {
         return t.Ptr.BaseType

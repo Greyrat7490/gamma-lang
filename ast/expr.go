@@ -39,10 +39,8 @@ type Lit struct {
 
 type ArrayLit struct {
     Idx int
-    BrackLPos token.Pos
-    Len Expr
-    BrackRPos token.Pos
-    BaseType types.Type
+    Pos token.Pos
+    Type types.ArrType
     BraceLPos token.Pos
     Values []Expr
     BraceRPos token.Pos
@@ -396,7 +394,7 @@ func (e *BadExpr) Compile(file *os.File) {
 func (e *BadExpr)  At() string { return "" }
 func (e *FnCall)   At() string { return e.Ident.At() }
 func (e *Lit)      At() string { return e.Val.At() }
-func (e *ArrayLit) At() string { return e.BrackLPos.At() }
+func (e *ArrayLit) At() string { return e.Pos.At() }
 func (e *Indexed)  At() string { return e.ArrExpr.At() }
 func (e *Ident)    At() string { return e.Pos.At() }
 func (e *Unary)    At() string { return e.Operator.At() }

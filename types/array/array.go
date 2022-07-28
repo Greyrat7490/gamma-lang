@@ -1,32 +1,33 @@
 package array
 
 import (
-	"fmt"
-	"gorec/asm/x86_64"
-	"gorec/asm/x86_64/nasm"
-	"gorec/token"
-	"gorec/types"
-	"gorec/types/str"
-	"os"
+    "os"
+    "fmt"
+    "gorec/token"
+    "gorec/types"
+    "gorec/types/str"
+    "gorec/asm/x86_64"
+    "gorec/asm/x86_64/nasm"
 )
 
 var arrLits []arrLit
 
 type arrLit struct {
-    typ types.Type
-    len uint64
+    baseType types.Type
     values []token.Token
 }
 
-func Add(typ types.Type, length uint64, values []token.Token) (i int) {
+func Add(typ types.ArrType, values []token.Token) (i int) {
+    // TODO check for unknown tokens
+
     i = len(arrLits)
-    arr := arrLit{ typ: typ, len: length, values: values }
+    arr := arrLit{ baseType: typ.Ptr.BaseType, values: values }
     arrLits = append(arrLits, arr)
 
     if len(arr.values) == 0 {
-        nasm.AddBss(fmt.Sprintf("_arr%d: %s %d", i, asm.GetBssSize(arr.typ.Size()), arr.len))
+        nasm.AddBss(fmt.Sprintf("_arr%d: %s %d", i, asm.GetBssSize(arr.baseType.Size()), len(arr.values)))
     } else {
-        switch typ.GetKind() {
+        switch arr.baseType.GetKind() {
         case types.Str:
             d1size := asm.GetDataSize(types.Ptr_Size)
             d2size := asm.GetDataSize(types.I32_Size)
@@ -41,7 +42,7 @@ func Add(typ types.Type, length uint64, values []token.Token) (i int) {
             nasm.AddData(res)
 
         case types.Bool, types.I32, types.Ptr, types.Arr:
-            dsize := asm.GetDataSize(arr.typ.Size())
+            dsize := asm.GetDataSize(arr.baseType.Size())
 
             res := fmt.Sprintf("_arr%d:", i)
             for _, v := range arr.values {

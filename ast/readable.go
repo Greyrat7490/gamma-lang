@@ -74,8 +74,7 @@ func (o *Lit) Readable(indent int) string {
 func (o *ArrayLit) Readable(indent int) string {
     s := strings.Repeat("   ", indent+1)
     res := strings.Repeat("   ", indent) + "ARRAY_LIT:\n" +
-           fmt.Sprintf("%sType: %v\n", s, o.BaseType) +
-           fmt.Sprintf("%sLen: %s\n", s, o.Len.ConstEval().Str)
+           fmt.Sprintf("%sType: %v\n", s, o.Type)
 
     for _,v := range o.Values {
         res += v.Readable(indent+1)

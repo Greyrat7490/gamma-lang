@@ -83,7 +83,7 @@ func GetOffsetedReg(g RegGroup, size int, offset int) string {
     if offset == 0 {
         return reg
     }
-    
+
     if offset > 0 {
         return fmt.Sprintf("%s+%d", reg, offset)
     }

@@ -3,7 +3,6 @@ package prs
 import (
     "os"
     "fmt"
-    "strconv"
     "gorec/ast"
     "gorec/ast/identObj"
     "gorec/token"
@@ -146,30 +145,11 @@ func prsLitExpr() *ast.Lit {
 }
 
 func prsArrayLit() *ast.ArrayLit {
-    lit := ast.ArrayLit{ BrackLPos: token.Cur().Pos }
+    lit := ast.ArrayLit{ Pos: token.Cur().Pos }
 
-    token.Next()
-    lit.Len = prsExpr()
-    lenToken := lit.Len.ConstEval()
-    length,_ := strconv.ParseUint(lenToken.Str, 10, 64)
-    if lenToken.Type != token.Number {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected size of array to be a Number but got %v\n", lenToken)
-        fmt.Fprintln(os.Stderr, "\t" + lenToken.At())
-        os.Exit(1)
-    }
+    lit.Type = prsArrType()
 
     pos := token.Next()
-    if pos.Type != token.BrackR {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"]\" but got %v\n", token.Cur())
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
-        os.Exit(1)
-    }
-    lit.BrackRPos = pos.Pos
-
-    token.Next()
-    lit.BaseType = prsType()
-
-    pos = token.Next()
     if pos.Type != token.BraceL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", token.Cur())
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
@@ -177,32 +157,70 @@ func prsArrayLit() *ast.ArrayLit {
     }
     lit.BraceLPos = pos.Pos
 
-    var values []token.Token
-    if token.Next().Type != token.BraceR {
-        expr := prsExpr()
-
-        lit.Values = append(lit.Values, expr)
-        values = append(values, expr.ConstEval())
-        for token.Next().Type == token.Comma {
-            token.Next()
-            expr := prsExpr()
-
-            lit.Values = append(lit.Values, expr)
-            values = append(values, expr.ConstEval())
-        }
-
-        if token.Cur().Type != token.BraceR {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected \"}\" but got %v\n", token.Cur())
-            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
-            os.Exit(1)
-        }
-    }
-
-    lit.Idx = array.Add(lit.BaseType, length, values)
+    token.Next()
+    lit.Values = prsArrayLitExprs(lit.Type.GetLens())
 
     lit.BraceRPos = token.Cur().Pos
 
+    var values []token.Token
+    for _,v := range lit.Values {
+        values = append(values, v.ConstEval())
+    }
+    lit.Idx = array.Add(lit.Type, values)
+
     return &lit
+}
+
+func prsArrayLitExprs(lenghts []uint64) (exprs []ast.Expr) {
+    // TODO test len of parsed []expr
+    switch token.Cur().Type {
+        case token.BraceL:
+            if len(lenghts) == 1 {
+                // TODO better error
+                fmt.Fprintln(os.Stderr, "[ERROR] unexpected \"{\" maybe a missing \"}\" or one \"{\" to much")
+                fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+                os.Exit(1)
+            }
+
+            token.Next()
+            tmp := prsArrayLitExprs(lenghts[1:])
+            for _,e := range tmp {
+                exprs = append(exprs, e)
+            }
+
+        case token.BraceR:
+            return
+
+        case token.XSwitch, token.UndScr:
+            fmt.Fprintln(os.Stderr, "[ERROR] XSwitch(\"$\") and Wildcard(\"_\") are not supported in ArrayLits (yet)")
+            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+            os.Exit(1)
+
+        default:
+            if len(lenghts) == 1 {
+                exprs = append(exprs, prsExpr())
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", token.Cur())
+                fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+                os.Exit(1)
+            }
+    }
+
+    if token.Next().Type == token.Comma {
+        token.Next()
+        tmp := prsArrayLitExprs(lenghts)
+        for _,e := range tmp {
+            exprs = append(exprs, e)
+        }
+    }
+
+    if token.Cur().Type != token.BraceR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"}\" but got %v\n", token.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+
+    return
 }
 
 func prsIndexExpr(expr ast.Expr) *ast.Indexed {
