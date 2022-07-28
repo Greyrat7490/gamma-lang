@@ -58,7 +58,7 @@ func prsExpr() ast.Expr {
         return &ast.BadExpr{}
     }
 
-    if token.Peek().Type == token.BrackL {
+    for token.Peek().Type == token.BrackL {
         token.Next()
         expr = prsIndexExpr(expr)
     }
@@ -177,18 +177,18 @@ func prsArrayLit() *ast.ArrayLit {
     }
     lit.BraceLPos = pos.Pos
 
-    var values []string
+    var values []token.Token
     if token.Next().Type != token.BraceR {
         expr := prsExpr()
 
         lit.Values = append(lit.Values, expr)
-        values = append(values, expr.ConstEval().Str)
+        values = append(values, expr.ConstEval())
         for token.Next().Type == token.Comma {
             token.Next()
             expr := prsExpr()
 
             lit.Values = append(lit.Values, expr)
-            values = append(values, expr.ConstEval().Str)
+            values = append(values, expr.ConstEval())
         }
 
         if token.Cur().Type != token.BraceR {

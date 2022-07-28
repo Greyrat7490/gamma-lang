@@ -140,10 +140,17 @@ func (e *Indexed) Compile(file *os.File) {
     e.typeCheck()
 
     arrType,_ := e.ArrExpr.GetType().(types.ArrType)
+    t := arrType.Ptr.BaseType
 
     e.ArrExpr.Compile(file)
 
-    var addr string
+    addrReg := asm.RegA
+    if t.GetKind() == types.Str {
+        asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
+        addrReg = asm.RegD
+    }
+
+    var offset uint64
     idxToken := e.Index.ConstEval()
     if idxToken.Type != token.Unknown {
         if idxToken.Type != token.Number {
@@ -152,20 +159,14 @@ func (e *Indexed) Compile(file *os.File) {
         }
 
         idx,_ := strconv.ParseUint(idxToken.Str, 10, 64)
-        offset := idx * uint64(arrType.Ptr.BaseType.Size())
-        if offset < 0 {
-            addr = fmt.Sprintf("rax%d", offset)
-        } else {
-            addr = fmt.Sprintf("rax+%d", offset)
-        }
+        offset = idx * uint64(t.Size())
     }
 
-    t := arrType.Ptr.BaseType
     if t.GetKind() == types.Str {
-        fmt.Fprintln(os.Stderr, "[ERROR] TODO expr.go Compile IndexedExpr for Str type")
-        os.Exit(1)
+        asm.MovRegDeref(file, asm.RegA, asm.GetOffsetedReg(addrReg, types.Ptr_Size, int(offset)), types.Ptr_Size)
+        asm.MovRegDeref(file, asm.RegB, asm.GetOffsetedReg(addrReg, types.Ptr_Size, int(offset)+8), types.I32_Size)
     } else {
-        asm.MovRegDeref(file, asm.RegA, addr, t.Size())
+        asm.MovRegDeref(file, asm.RegA, asm.GetOffsetedReg(addrReg, t.Size(), int(offset)), t.Size())
     }
 }
 

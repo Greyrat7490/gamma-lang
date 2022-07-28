@@ -32,10 +32,43 @@ fn localArr() {
     printInt(arr[1]) printStr("\n")
 }
 
+fn strArray() {
+    arr := [2]str{ "index0\n", "str at index 1\n" }
+
+    printStr(arr[0])
+    printStr(arr[1])
+
+    printStr("----\n")
+
+    arr[0] = "changed index 0\n"
+    arr[1] = "index 1 got changed too\n"
+
+    printStr(arr[0])
+    printStr(arr[1])
+}
+
+/* in work
+ * multi dim arrays as one dim array
+fn multiDimArray() {
+    arr := [2][2]i32{ 
+        [2]i32{ 0, 0 }, // TODO: be able to remove [2]i32 (get array type from [2][2]i32)
+        [2]i32{ 0, 0 }
+    }
+
+    printInt(arr[0][0])
+}
+*/
+
 fn main() {
     printStr("global ---------\n")
     globalArr()
 
     printStr("\nlocal ---------\n")
     localArr()
+
+    printStr("\nstring ---------\n")
+    strArray()
+
+    // printStr("\n2D array ---------\n")
+    // multiDimArray()
 }

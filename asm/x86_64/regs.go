@@ -1,5 +1,7 @@
 package asm
 
+import "fmt"
+
 var regs [][]string = [][]string{
     { "al", "ax", "eax", "rax" },
     { "bl", "bx", "ebx", "rbx" },
@@ -73,6 +75,20 @@ func GetReg(g RegGroup, size int) string {
         return regs[g][3]
     }
     return regs[g][size / 2]
+}
+
+func GetOffsetedReg(g RegGroup, size int, offset int) string {
+    reg := GetReg(g, size)
+
+    if offset == 0 {
+        return reg
+    }
+    
+    if offset > 0 {
+        return fmt.Sprintf("%s+%d", reg, offset)
+    }
+
+    return fmt.Sprintf("%s%d", reg, offset)
 }
 
 func GetSize(g RegGroup, size int) int {

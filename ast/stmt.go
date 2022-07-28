@@ -116,14 +116,26 @@ func (s *Assign) Compile(file *os.File) {
 
         asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
         s.Value.Compile(file)
-        asm.MovDerefReg(file, "rdx", size, asm.RegA)
+
+        if s.Dest.GetType().GetKind() == types.Str {
+            asm.MovDerefReg(file, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size, asm.RegA)
+            asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegD, types.Ptr_Size, types.Ptr_Size), types.I32_Size, asm.RegB)
+        } else {
+            asm.MovDerefReg(file, asm.GetReg(asm.RegD, types.Ptr_Size), size, asm.RegA)
+        }
 
     case *Indexed:
         addr := dest.CompileToAddr(file)
 
         file.WriteString(fmt.Sprintf("lea rdx, [%s]\n", addr))
         s.Value.Compile(file)
-        asm.MovDerefReg(file, "rdx", size, asm.RegA)
+
+        if s.Dest.GetType().GetKind() == types.Str {
+            asm.MovDerefReg(file, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size, asm.RegA)
+            asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegD, types.Ptr_Size, types.Ptr_Size), types.I32_Size, asm.RegB)
+        } else {
+            asm.MovDerefReg(file, asm.GetReg(asm.RegD, types.Ptr_Size), size, asm.RegA)
+        }
 
     case *Ident:
         // compile time evaluation
