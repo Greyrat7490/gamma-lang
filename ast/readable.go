@@ -84,9 +84,14 @@ func (o *ArrayLit) Readable(indent int) string {
 }
 
 func (o *Indexed) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + "INDEXED:\n" +
-        o.ArrExpr.Readable(indent+1) +
-        o.Index.Readable(indent+1)
+    res := strings.Repeat("   ", indent) + "INDEXED:\n" +
+        o.ArrExpr.Readable(indent+1)
+
+    for _, idx := range o.Indices {
+        res += idx.Readable(indent+1)
+    }
+
+    return res
 }
 
 func (o *Ident) Readable(indent int) string {

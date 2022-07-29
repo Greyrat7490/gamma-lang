@@ -78,6 +78,16 @@ func (t ArrType) GetLens() (lens []uint64) {
     return
 }
 
+func (t ArrType) GetBaseTyp() Type {
+    for {
+        if bt,ok := t.Ptr.BaseType.(ArrType); ok {
+            t = bt
+        } else {
+            return t.Ptr.BaseType
+        }
+    }
+}
+
 func ToBaseType(s string) Type {
     switch s {
     case "str":

@@ -243,9 +243,9 @@ func (o *BadExpr)  GetType() types.Type { return nil }
 func (o *FnCall)   GetType() types.Type { return nil }
 func (o *Lit)      GetType() types.Type { return o.Type }
 func (o *ArrayLit) GetType() types.Type { return o.Type }
-func (o *Indexed) GetType() types.Type {
+func (o *Indexed)  GetType() types.Type {
     if t,ok := o.ArrExpr.GetType().(types.ArrType); ok {
-        return t.Ptr.BaseType
+        return t.GetBaseTyp()
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] you can only index an array but got %v\n", t)
         os.Exit(1)

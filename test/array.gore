@@ -48,12 +48,26 @@ fn strArray() {
 }
 
 fn multiDimArray() {
-    arr := [2][2][2]i32{
+    arr := [2][2]i32{
+        { 0, 1 },
+        { 2, 3 }
+    }
+    printInt(arr[1][0]) printStr("\n----\n")
+
+    arr[1][0] = 69
+    printInt(arr[1][0]) printStr("\n")
+
+    printStr("3D array ----\n")
+
+    arr2 := [2][2][2]i32{
         { { 0, 1 }, { 2, 3 } },
         { { 4, 5 }, { 6, 7 } }
     }
 
-    // printInt(arr[0][0][0])
+    printInt(arr2[1][0][1]) printStr("\n----\n")
+
+    arr2[1][0][1] = 64
+    printInt(arr2[1][0][1]) printStr("\n")
 }
 
 fn main() {
@@ -66,6 +80,6 @@ fn main() {
     printStr("\nstring ---------\n")
     strArray()
 
-    printStr("\n2D array ---------\n")
+    printStr("\nmulti-dim ---------\n")
     multiDimArray()
 }

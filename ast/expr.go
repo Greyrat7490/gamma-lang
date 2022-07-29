@@ -49,7 +49,7 @@ type ArrayLit struct {
 type Indexed struct {
     ArrExpr Expr
     BrackLPos token.Pos
-    Index Expr
+    Indices []Expr
     BrackRPos token.Pos
 }
 
@@ -108,30 +108,54 @@ func (e *Lit) Compile(file *os.File) {
     }
 }
 
-func (e *Indexed) CompileToAddr(file *os.File) (addr string) {
-    e.typeCheck()
-
+func (e *Indexed) GetOffset() (offset uint64) {
     arrType,_ := e.ArrExpr.GetType().(types.ArrType)
+    lens := arrType.GetLens()
 
-    e.ArrExpr.Compile(file)
+    if len(e.Indices) > len(lens) {
+        fmt.Fprintf(os.Stderr, "[ERROR] dimension of the array is %d but got %d\n", len(lens), len(e.Indices))
+        os.Exit(1)
+    }
 
-    idxToken := e.Index.ConstEval()
-    if idxToken.Type != token.Unknown {
+    var size uint64 = 1
+    for i := 0; i < len(e.Indices); i++ {
+        idxToken := e.Indices[len(e.Indices)-1-i].ConstEval()
         if idxToken.Type != token.Number {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected a number as index but got %v\n", idxToken.Type)
+            if idxToken.Type == token.Unknown {
+                fmt.Fprintln(os.Stderr, "[ERROR] index has to be const")
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected a number as index but got %v\n", idxToken.Type)
+            }
+            fmt.Fprintln(os.Stderr, "\t" + e.Indices[len(e.Indices)-1-i].At())
             os.Exit(1)
         }
 
         idx,_ := strconv.ParseUint(idxToken.Str, 10, 64)
-        offset := idx * uint64(arrType.Ptr.BaseType.Size())
-        if offset < 0 {
-            addr = fmt.Sprintf("rax%d", offset)
-        } else {
-            addr = fmt.Sprintf("rax+%d", offset)
+
+        if idx >= lens[i] {
+            fmt.Fprintf(os.Stderr, "[ERROR] index out of bounds (got %d but len is %d)\n", idx, lens[i])
+            fmt.Fprintln(os.Stderr, "\t" + e.Indices[len(e.Indices)-1-i].At())
+            os.Exit(1)
         }
+
+        offset += idx * size
+        size *= lens[i]
     }
 
-    return
+    return offset * uint64(arrType.GetBaseTyp().Size())
+}
+
+func (e *Indexed) CompileToAddr(file *os.File) string {
+    e.typeCheck()
+
+    e.ArrExpr.Compile(file)
+
+    offset := e.GetOffset()
+    if offset < 0 {
+        return fmt.Sprintf("rax%d", offset)
+    } else {
+        return fmt.Sprintf("rax+%d", offset)
+    }
 }
 
 func (e *Indexed) Compile(file *os.File) {
@@ -148,17 +172,7 @@ func (e *Indexed) Compile(file *os.File) {
         addrReg = asm.RegD
     }
 
-    var offset uint64
-    idxToken := e.Index.ConstEval()
-    if idxToken.Type != token.Unknown {
-        if idxToken.Type != token.Number {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected a number as index but got %v\n", idxToken.Type)
-            os.Exit(1)
-        }
-
-        idx,_ := strconv.ParseUint(idxToken.Str, 10, 64)
-        offset = idx * uint64(t.Size())
-    }
+    offset := e.GetOffset()
 
     if t.GetKind() == types.Str {
         asm.MovRegDeref(file, asm.RegA, asm.GetOffsetedReg(addrReg, types.Ptr_Size, int(offset)), types.Ptr_Size)

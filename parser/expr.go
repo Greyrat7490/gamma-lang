@@ -227,13 +227,24 @@ func prsIndexExpr(expr ast.Expr) *ast.Indexed {
     res := ast.Indexed{ ArrExpr: expr, BrackLPos: token.Cur().Pos }
 
     token.Next()
-    idx := prsExpr()
-    res.Index = idx
+    res.Indices = append(res.Indices, prsExpr())
 
     posR := token.Next()
     if posR.Type != token.BrackR {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"]\" but got %v\n", posR)
         os.Exit(1)
+    }
+
+    for token.Peek().Type == token.BrackL {
+        token.Next()
+        token.Next()
+        res.Indices = append(res.Indices, prsExpr())
+
+        posR := token.Next()
+        if posR.Type != token.BrackR {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected \"]\" but got %v\n", posR)
+            os.Exit(1)
+        }
     }
 
     return &res

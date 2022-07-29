@@ -27,7 +27,7 @@ func Add(typ types.ArrType, values []token.Token) (i int) {
     if len(arr.values) == 0 {
         nasm.AddBss(fmt.Sprintf("_arr%d: %s %d", i, asm.GetBssSize(arr.baseType.Size()), len(arr.values)))
     } else {
-        switch arr.baseType.GetKind() {
+        switch typ.GetBaseTyp().GetKind() {
         case types.Str:
             d1size := asm.GetDataSize(types.Ptr_Size)
             d2size := asm.GetDataSize(types.I32_Size)
@@ -42,7 +42,7 @@ func Add(typ types.ArrType, values []token.Token) (i int) {
             nasm.AddData(res)
 
         case types.Bool, types.I32, types.Ptr, types.Arr:
-            dsize := asm.GetDataSize(arr.baseType.Size())
+            dsize := asm.GetDataSize(typ.GetBaseTyp().Size())
 
             res := fmt.Sprintf("_arr%d:", i)
             for _, v := range arr.values {
