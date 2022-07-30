@@ -125,9 +125,8 @@ func (s *Assign) Compile(file *os.File) {
         }
 
     case *Indexed:
-        addr := dest.CompileToAddr(file)
+        dest.AddrToRdx(file)
 
-        file.WriteString(fmt.Sprintf("lea rdx, [%s]\n", addr))
         s.Value.Compile(file)
 
         if s.Dest.GetType().GetKind() == types.Str {

@@ -17,9 +17,11 @@ type arrLit struct {
     values []token.Token
 }
 
-func Add(typ types.ArrType, values []token.Token) (i int) {
-    // TODO check for unknown tokens
+func GetValues(arrLitIdx int) []token.Token {
+    return arrLits[arrLitIdx].values
+}
 
+func Add(typ types.ArrType, values []token.Token) (i int) {
     i = len(arrLits)
     arr := arrLit{ baseType: typ.Ptr.BaseType, values: values }
     arrLits = append(arrLits, arr)

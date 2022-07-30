@@ -108,7 +108,41 @@ func (e *Lit) Compile(file *os.File) {
     }
 }
 
-func (e *Indexed) GetOffset() (offset uint64) {
+func (e *Indexed) flattenIndex() Expr {
+    if len(e.Indices) == 1 {
+        return e.Indices[0]
+    }
+
+
+    arrType,_ := e.ArrExpr.GetType().(types.ArrType)
+    lens := arrType.GetLens()
+
+    var size uint64 = 1
+    res := Binary{ Operator: token.Token{ Str: "+", Type: token.Plus } }
+    operand := &res.OperandR
+    for i := 0; i < len(e.Indices); i++ {
+        if size == 1 {
+            *operand = e.Indices[len(e.Indices)-1-i]
+        } else {
+            *operand = &Binary{
+                Operator: token.Token{ Str: "*", Type: token.Mul },
+                OperandL: e.Indices[len(e.Indices)-1-i],
+                OperandR: &Lit{ Val: token.Token{ Str: fmt.Sprint(size), Type: token.Number }, Type: types.I32Type{} },
+            }
+        }
+
+        size *= lens[i]
+        operand = &res.OperandL
+    }
+
+    return &res
+}
+
+func (e *Indexed) AddrToRdx(file *os.File) {
+    e.typeCheck()
+
+    e.ArrExpr.Compile(file)
+
     arrType,_ := e.ArrExpr.GetType().(types.ArrType)
     lens := arrType.GetLens()
 
@@ -117,44 +151,25 @@ func (e *Indexed) GetOffset() (offset uint64) {
         os.Exit(1)
     }
 
-    var size uint64 = 1
-    for i := 0; i < len(e.Indices); i++ {
-        idxToken := e.Indices[len(e.Indices)-1-i].ConstEval()
-        if idxToken.Type != token.Number {
-            if idxToken.Type == token.Unknown {
-                fmt.Fprintln(os.Stderr, "[ERROR] index has to be const")
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] expected a number as index but got %v\n", idxToken.Type)
-            }
-            fmt.Fprintln(os.Stderr, "\t" + e.Indices[len(e.Indices)-1-i].At())
+    idxExpr := e.flattenIndex()
+    val := idxExpr.ConstEval()
+    if val.Type != token.Unknown {
+        if val.Type != token.Number {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", val)
+            fmt.Fprintln(os.Stderr, "\t" + idxExpr.At())
             os.Exit(1)
         }
 
-        idx,_ := strconv.ParseUint(idxToken.Str, 10, 64)
-
-        if idx >= lens[i] {
-            fmt.Fprintf(os.Stderr, "[ERROR] index out of bounds (got %d but len is %d)\n", idx, lens[i])
-            fmt.Fprintln(os.Stderr, "\t" + e.Indices[len(e.Indices)-1-i].At())
-            os.Exit(1)
-        }
-
-        offset += idx * size
-        size *= lens[i]
-    }
-
-    return offset * uint64(arrType.GetBaseTyp().Size())
-}
-
-func (e *Indexed) CompileToAddr(file *os.File) string {
-    e.typeCheck()
-
-    e.ArrExpr.Compile(file)
-
-    offset := e.GetOffset()
-    if offset < 0 {
-        return fmt.Sprintf("rax%d", offset)
+        idx,_ := strconv.ParseUint(val.Str, 10, 64)
+        file.WriteString(fmt.Sprintf("lea rdx, [rax+%d]\n", idx * uint64(arrType.GetBaseTyp().Size())))
     } else {
-        return fmt.Sprintf("rax+%d", offset)
+        asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
+        idxExpr.Compile(file)
+
+        asm.Mul(file, fmt.Sprint(arrType.GetBaseTyp().Size()), types.Ptr_Size)
+        asm.Add(file, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size)
+
+        asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
     }
 }
 
@@ -162,23 +177,15 @@ func (e *Indexed) Compile(file *os.File) {
     e.typeCheck()
 
     arrType,_ := e.ArrExpr.GetType().(types.ArrType)
-    t := arrType.Ptr.BaseType
+    t := arrType.GetBaseTyp()
 
-    e.ArrExpr.Compile(file)
-
-    addrReg := asm.RegA
-    if t.GetKind() == types.Str {
-        asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
-        addrReg = asm.RegD
-    }
-
-    offset := e.GetOffset()
+    e.AddrToRdx(file)
 
     if t.GetKind() == types.Str {
-        asm.MovRegDeref(file, asm.RegA, asm.GetOffsetedReg(addrReg, types.Ptr_Size, int(offset)), types.Ptr_Size)
-        asm.MovRegDeref(file, asm.RegB, asm.GetOffsetedReg(addrReg, types.Ptr_Size, int(offset)+8), types.I32_Size)
+        asm.MovRegDeref(file, asm.RegA, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size)
+        asm.MovRegDeref(file, asm.RegB, asm.GetOffsetedReg(asm.RegD, types.Ptr_Size, 8), types.I32_Size)
     } else {
-        asm.MovRegDeref(file, asm.RegA, asm.GetOffsetedReg(addrReg, t.Size(), int(offset)), t.Size())
+        asm.MovRegDeref(file, asm.RegA, asm.GetReg(asm.RegD, types.Ptr_Size), t.Size())
     }
 }
 

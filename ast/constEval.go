@@ -3,7 +3,10 @@ package ast
 import (
     "os"
     "fmt"
+    "strconv"
     "gorec/token"
+    "gorec/types"
+    "gorec/types/array"
     "gorec/asm/x86_64"
     "gorec/ast/identObj/vars"
     "gorec/ast/identObj/consts"
@@ -14,23 +17,39 @@ func (e *ArrayLit) ConstEval() token.Token {
     return token.Token{ Type: token.Number, Str: fmt.Sprint(e.Idx) }
 }
 func (e *Indexed) ConstEval() token.Token {
-    return token.Token{ Type: token.Unknown }
+    arrType,_ := e.ArrExpr.GetType().(types.ArrType)
+    lens := arrType.GetLens()
 
-/*
-    idxToken := e.Index.ConstEval()
-    arrToken := e.ArrExpr.ConstEval()
+    if len(e.Indices) > len(lens) {
+        fmt.Fprintf(os.Stderr, "[ERROR] dimension of the array is %d but got %d\n", len(lens), len(e.Indices))
+        os.Exit(1)
+    }
 
-    if idxToken.Type != token.Unknown && arrToken.Type != token.Unknown {
-        if _,err := strconv.ParseUint(idxToken.Str, 10, 64); err == nil {
-            // TODO in work
-        } else {
-            // TODO
+    idxExpr := e.flattenIndex()
+    val := idxExpr.ConstEval()
+    if val.Type != token.Unknown {
+        if val.Type != token.Number {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", val)
+            fmt.Fprintln(os.Stderr, "\t" + idxExpr.At())
             os.Exit(1)
+        }
+
+        idx,_ := strconv.ParseUint(val.Str, 10, 64)
+
+        arr := e.ArrExpr.ConstEval()
+        if arr.Type != token.Unknown {
+            if arr.Type != token.Number {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", val)
+                fmt.Fprintln(os.Stderr, "\t" + idxExpr.At())
+                os.Exit(1)
+            }
+
+            arrIdx,_ := strconv.Atoi(arr.Str)
+            return array.GetValues(arrIdx)[idx]
         }
     }
 
     return token.Token{ Type: token.Unknown }
-*/
 }
 
 func (e *Unary) ConstEval() token.Token {

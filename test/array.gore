@@ -64,10 +64,26 @@ fn multiDimArray() {
         { { 4, 5 }, { 6, 7 } }
     }
 
-    printInt(arr2[1][0][1]) printStr("\n----\n")
+    for i i32, 2 {
+        printInt(arr2[1][0][i]) printStr("\n")
+    }
+    printStr("----\n")
 
-    arr2[1][0][1] = 64
-    printInt(arr2[1][0][1]) printStr("\n")
+    for i i32, 2 {
+        arr2[1][0][i] = 64
+    }
+
+    for i i32, 2 {
+        printInt(arr2[1][0][i]) printStr("\n")
+    }
+}
+
+fn constArr() {
+    arr :: [3]i32{ 420, 64, 69 }
+
+    printInt(arr[0]) printStr("\n")
+    printInt(arr[1]) printStr("\n")
+    printInt(arr[2]) printStr("\n")
 }
 
 fn main() {
@@ -82,4 +98,7 @@ fn main() {
 
     printStr("\nmulti-dim ---------\n")
     multiDimArray()
+
+    printStr("\nconst ---------\n")
+    constArr()
 }

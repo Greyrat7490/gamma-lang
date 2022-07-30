@@ -162,13 +162,23 @@ func prsArrayLit() *ast.ArrayLit {
 
     lit.BraceRPos = token.Cur().Pos
 
-    var values []token.Token
-    for _,v := range lit.Values {
-        values = append(values, v.ConstEval())
-    }
-    lit.Idx = array.Add(lit.Type, values)
+    lit.Idx = array.Add(lit.Type, constEvalExprs(lit.Values))
 
     return &lit
+}
+
+func constEvalExprs(values []ast.Expr) (res []token.Token) {
+    for _,v := range values {
+        constVal := v.ConstEval()
+        if constVal.Type == token.Unknown {
+            fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
+            fmt.Fprintln(os.Stderr, "\t" + v.At())
+            os.Exit(1)
+        }
+        res = append(res, constVal)
+    }
+
+    return
 }
 
 func prsArrayLitExprs(lenghts []uint64) (exprs []ast.Expr) {
@@ -183,8 +193,8 @@ func prsArrayLitExprs(lenghts []uint64) (exprs []ast.Expr) {
             }
 
             token.Next()
-            tmp := prsArrayLitExprs(lenghts[1:])
-            for _,e := range tmp {
+            es := prsArrayLitExprs(lenghts[1:])
+            for _,e := range es {
                 exprs = append(exprs, e)
             }
 
@@ -208,8 +218,8 @@ func prsArrayLitExprs(lenghts []uint64) (exprs []ast.Expr) {
 
     if token.Next().Type == token.Comma {
         token.Next()
-        tmp := prsArrayLitExprs(lenghts)
-        for _,e := range tmp {
+        es := prsArrayLitExprs(lenghts)
+        for _,e := range es {
             exprs = append(exprs, e)
         }
     }

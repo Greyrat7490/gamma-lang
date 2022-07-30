@@ -105,8 +105,20 @@ func prsArrType() types.ArrType {
 
 func prsDecVar() ast.DecVar {
     name := token.Cur()
+    if name.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", token.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + token.Last().At())
+        os.Exit(1)
+    }
+
     token.Next()
     t := prsType()
+    if t == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", token.Last().Str)
+        fmt.Fprintln(os.Stderr, "\t" + token.Last().At())
+        os.Exit(1)
+    }
+
     end := token.Cur().Pos
 
     v := identObj.DecVar(name, t)
