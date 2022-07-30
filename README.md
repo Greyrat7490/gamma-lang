@@ -52,10 +52,10 @@ And because it is written in Go...
 * [x] consts
   * [x] define/use
   * [x] compile time eval
-* [ ] arrays
+* [x] arrays
   * [x] define/use
-  * [ ] multi-dimensionale
-  * [ ] compile time eval
+  * [x] multi-dimensionale
+  * [x] compile time eval
 * [ ] structs
 * [x] turing complete -> actual programming language
   * [x] proof with Rule 110 programm
