@@ -5,7 +5,6 @@ import (
     "fmt"
     "strconv"
     "gorec/token"
-    "gorec/types"
     "gorec/types/array"
     "gorec/asm/x86_64"
     "gorec/ast/identObj/vars"
@@ -17,15 +16,9 @@ func (e *ArrayLit) ConstEval() token.Token {
     return token.Token{ Type: token.Number, Str: fmt.Sprint(e.Idx) }
 }
 func (e *Indexed) ConstEval() token.Token {
-    arrType,_ := e.ArrExpr.GetType().(types.ArrType)
-    lens := arrType.GetLens()
+    e.typeCheck()
 
-    if len(e.Indices) > len(lens) {
-        fmt.Fprintf(os.Stderr, "[ERROR] dimension of the array is %d but got %d\n", len(lens), len(e.Indices))
-        os.Exit(1)
-    }
-
-    idxExpr := e.flattenIndex()
+    idxExpr := e.flatten()
     val := idxExpr.ConstEval()
     if val.Type != token.Unknown {
         if val.Type != token.Number {

@@ -152,7 +152,7 @@ func PassVar(file *os.File, regIdx int, otherVar vars.Var) {
         asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), types.Ptr_Size)
         asm.MovRegDeref(file, regs[regIdx+1], otherVar.Addr(1), types.I32_Size)
 
-    case types.Bool, types.I32, types.Ptr:
+    case types.Bool, types.I32, types.Ptr, types.Arr:
         asm.MovRegDeref(file, regs[regIdx], otherVar.Addr(0), t.Size())
 
     default:

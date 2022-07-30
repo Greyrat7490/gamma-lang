@@ -14,7 +14,7 @@ func (o *DefVar) typeCheck() {
     t1 := o.V.GetType()
     t2 := o.Value.GetType()
 
-    if !types.AreCompatible(t1, t2) {
+    if !types.Check(t1, t2) {
         fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.V.GetName(), t1, t2)
         fmt.Fprintln(os.Stderr, "\t" + o.At())
         os.Exit(1)
@@ -23,7 +23,7 @@ func (o *DefVar) typeCheck() {
 
 func (o *DefConst) typeCheck() {
     t2 := o.Value.GetType()
-    if !types.AreCompatible(o.Type, t2) {
+    if !types.Check(o.Type, t2) {
         fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", o.C.GetName(), o.Type, t2)
         fmt.Fprintln(os.Stderr, "\t" + o.At())
         os.Exit(1)
@@ -36,7 +36,7 @@ func (o *Assign)   typeCheck() {
     t1 := o.Dest.GetType()
     t2 := o.Value.GetType()
 
-    if !types.AreCompatible(t1, t2) {
+    if !types.Check(t1, t2) {
         fmt.Fprintf(os.Stderr, "[ERROR] cannot assign a type: %v with type: %v\n", t1, t2)
         fmt.Fprintln(os.Stderr, "\t" + o.Pos.At())
         os.Exit(1)
@@ -70,14 +70,14 @@ func (o *For) typeCheck() {
     t := o.Def.Type
 
     if o.Limit != nil {
-        if t2 := o.Limit.GetType(); !types.AreCompatible(t, t2) {
+        if t2 := o.Limit.GetType(); !types.Check(t, t2) {
             fmt.Fprintf(os.Stderr, "[ERROR] expected %v as for iterator limit type but got %v\n", t, t2)
             fmt.Fprintln(os.Stderr, "\t" + o.ForPos.At())
             os.Exit(1)
         }
     }
 
-    if t2 := o.Step.GetType(); !types.AreCompatible(t, t2) {
+    if t2 := o.Step.GetType(); !types.Check(t, t2) {
         fmt.Fprintf(os.Stderr, "[ERROR] expected %v as for iterator step type but got %v\n", t, t2)
         fmt.Fprintln(os.Stderr, "\t" + o.ForPos.At())
         os.Exit(1)
@@ -98,10 +98,15 @@ func (o *Lit)     typeCheck() {}
 func (o *Paren)   typeCheck() {}
 func (o *Ident)   typeCheck() {}
 func (o *Indexed) typeCheck() {
-    t := o.ArrExpr.GetType()
-    if t.GetKind() != types.Arr {
+    if t,ok := o.ArrExpr.GetType().(types.ArrType); !ok {
         fmt.Fprintf(os.Stderr, "[ERROR] you can only index an array but got %v\n", t)
         os.Exit(1)
+    } else {
+        if len(t.Lens) < len(o.Indices){
+            fmt.Fprintf(os.Stderr, "[ERROR] dimension of the array is %d but got %d\n", len(t.Lens), len(o.Indices))
+            fmt.Fprintln(os.Stderr, "\t" + o.At())
+            os.Exit(1)
+        }
     }
 }
 func (o *Unary)   typeCheck() {
@@ -164,7 +169,7 @@ func (o *Binary) typeCheck() {
             os.Exit(1)
         }
     } else {
-        if !types.AreCompatible(t1, t2) {
+        if !types.Check(t1, t2) {
             if (t1.GetKind() == types.Ptr && t2.GetKind() == types.I32) ||
                (t2.GetKind() == types.Ptr && t1.GetKind() == types.I32) {
                 if o.Operator.Type == token.Plus || o.Operator.Type == token.Minus {
@@ -217,7 +222,7 @@ func (o *FnCall) typeCheck() {
         for i, t1 := range args {
             t2 := o.Values[i].GetType()
 
-            if !types.AreCompatible(t1, t2) {
+            if !types.Check(t1, t2) {
                 fmt.Fprintf(os.Stderr, "[ERROR] expected %v as arg %d but got %v for function \"%s\"\n", t1, i, t2, f.GetName())
                 fmt.Fprintf(os.Stderr, "\texpected: %v\n", args)
                 fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))
@@ -245,7 +250,7 @@ func (o *Lit)      GetType() types.Type { return o.Type }
 func (o *ArrayLit) GetType() types.Type { return o.Type }
 func (o *Indexed)  GetType() types.Type {
     if t,ok := o.ArrExpr.GetType().(types.ArrType); ok {
-        return t.GetBaseTyp()
+        return t.Ptr.BaseType
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] you can only index an array but got %v\n", t)
         os.Exit(1)
@@ -264,6 +269,8 @@ func (o *Ident)    GetType() types.Type {
 
     // TODO: function
 
+    fmt.Fprintf(os.Stderr, "[ERROR] could not get type of %s\n", o.Name)
+    os.Exit(1)
     return nil
 }
 

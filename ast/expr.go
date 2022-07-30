@@ -108,31 +108,36 @@ func (e *Lit) Compile(file *os.File) {
     }
 }
 
-func (e *Indexed) flattenIndex() Expr {
+func (e *Indexed) flatten() Expr {
+    // for dim = 1 (no need to flatten)
     if len(e.Indices) == 1 {
         return e.Indices[0]
     }
 
+    res := Binary{ Operator: token.Token{ Str: "+", Type: token.Plus }, OperandR: e.Indices[len(e.Indices)-1] }
+    expr := &res.OperandL
 
+    // for dim > 3
     arrType,_ := e.ArrExpr.GetType().(types.ArrType)
-    lens := arrType.GetLens()
-
-    var size uint64 = 1
-    res := Binary{ Operator: token.Token{ Str: "+", Type: token.Plus } }
-    operand := &res.OperandR
-    for i := 0; i < len(e.Indices); i++ {
-        if size == 1 {
-            *operand = e.Indices[len(e.Indices)-1-i]
-        } else {
-            *operand = &Binary{
+    var innerLen uint64 = arrType.Lens[0]
+    for i := 1; i < len(e.Indices)-1; i++ {
+        b := Binary{
+            Operator: token.Token{ Str: "+", Type: token.Plus }, OperandR: &Binary{
                 Operator: token.Token{ Str: "*", Type: token.Mul },
                 OperandL: e.Indices[len(e.Indices)-1-i],
-                OperandR: &Lit{ Val: token.Token{ Str: fmt.Sprint(size), Type: token.Number }, Type: types.I32Type{} },
-            }
-        }
+                OperandR: &Lit{ Val: token.Token{ Str: fmt.Sprint(innerLen), Type: token.Number }, Type: types.I32Type{} },
+        } }
 
-        size *= lens[i]
-        operand = &res.OperandL
+        *expr = &b
+        expr = &b.OperandL
+
+        innerLen *= arrType.Lens[i]
+    }
+
+    *expr = &Binary{
+        Operator: token.Token{ Str: "*", Type: token.Mul },
+        OperandL: e.Indices[0],
+        OperandR: &Lit{ Val: token.Token{ Str: fmt.Sprint(innerLen), Type: token.Number }, Type: types.I32Type{} },
     }
 
     return &res
@@ -144,14 +149,15 @@ func (e *Indexed) AddrToRdx(file *os.File) {
     e.ArrExpr.Compile(file)
 
     arrType,_ := e.ArrExpr.GetType().(types.ArrType)
-    lens := arrType.GetLens()
+    baseTypeSize := uint64(arrType.Ptr.BaseType.Size())
 
-    if len(e.Indices) > len(lens) {
-        fmt.Fprintf(os.Stderr, "[ERROR] dimension of the array is %d but got %d\n", len(lens), len(e.Indices))
+    if len(arrType.Lens) < len(e.Indices){
+        fmt.Fprintf(os.Stderr, "[ERROR] dimension of the array is %d but got %d\n", len(arrType.Lens), len(e.Indices))
+        fmt.Fprintln(os.Stderr, "\t" + e.At())
         os.Exit(1)
     }
 
-    idxExpr := e.flattenIndex()
+    idxExpr := e.flatten()
     val := idxExpr.ConstEval()
     if val.Type != token.Unknown {
         if val.Type != token.Number {
@@ -161,12 +167,12 @@ func (e *Indexed) AddrToRdx(file *os.File) {
         }
 
         idx,_ := strconv.ParseUint(val.Str, 10, 64)
-        file.WriteString(fmt.Sprintf("lea rdx, [rax+%d]\n", idx * uint64(arrType.GetBaseTyp().Size())))
+        file.WriteString(fmt.Sprintf("lea rdx, [rax+%d]\n", idx * baseTypeSize))
     } else {
         asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
         idxExpr.Compile(file)
 
-        asm.Mul(file, fmt.Sprint(arrType.GetBaseTyp().Size()), types.Ptr_Size)
+        asm.Mul(file, fmt.Sprint(baseTypeSize), types.Ptr_Size)
         asm.Add(file, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size)
 
         asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
@@ -177,15 +183,14 @@ func (e *Indexed) Compile(file *os.File) {
     e.typeCheck()
 
     arrType,_ := e.ArrExpr.GetType().(types.ArrType)
-    t := arrType.GetBaseTyp()
 
     e.AddrToRdx(file)
 
-    if t.GetKind() == types.Str {
+    if arrType.Ptr.BaseType.GetKind() == types.Str {
         asm.MovRegDeref(file, asm.RegA, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size)
         asm.MovRegDeref(file, asm.RegB, asm.GetOffsetedReg(asm.RegD, types.Ptr_Size, 8), types.I32_Size)
     } else {
-        asm.MovRegDeref(file, asm.RegA, asm.GetReg(asm.RegD, types.Ptr_Size), t.Size())
+        asm.MovRegDeref(file, asm.RegA, asm.GetReg(asm.RegD, types.Ptr_Size), arrType.Ptr.BaseType.Size())
     }
 }
 

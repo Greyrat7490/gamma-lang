@@ -158,7 +158,7 @@ func prsArrayLit() *ast.ArrayLit {
     lit.BraceLPos = pos.Pos
 
     token.Next()
-    lit.Values = prsArrayLitExprs(lit.Type.GetLens())
+    lit.Values = prsArrayLitExprs(lit.Type.Lens)
 
     lit.BraceRPos = token.Cur().Pos
 

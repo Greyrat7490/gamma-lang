@@ -1,8 +1,8 @@
 package types
 
 import (
-	"fmt"
-	"strconv"
+    "fmt"
+    "strconv"
 )
 
 type TypeKind int
@@ -35,7 +35,7 @@ type PtrType  struct {
 }
 type ArrType  struct {
     Ptr PtrType
-    Len uint64
+    Lens []uint64
 }
 type StrType  struct {
     ptr  PtrType
@@ -64,28 +64,12 @@ func (t PtrType)  String() string {
     return "*" + t.BaseType.String()
 }
 func (t ArrType)  String() string {
-    return fmt.Sprintf("[%d]%v", t.Len, t.Ptr.BaseType)
-}
-
-func (t ArrType) GetLens() (lens []uint64) {
-    lens = append(lens, t.Len)
-
-    for t.Ptr.BaseType.GetKind() == Arr {
-        t = t.Ptr.BaseType.(ArrType)
-        lens = append(lens, t.Len)
+    res := ""
+    for _,l := range t.Lens {
+        res += fmt.Sprintf("[%d]", l)
     }
 
-    return
-}
-
-func (t ArrType) GetBaseTyp() Type {
-    for {
-        if bt,ok := t.Ptr.BaseType.(ArrType); ok {
-            t = bt
-        } else {
-            return t.Ptr.BaseType
-        }
-    }
+    return res + t.Ptr.BaseType.String()
 }
 
 func ToBaseType(s string) Type {
@@ -113,16 +97,32 @@ func TypeOfVal(val string) Type {
     }
 }
 
-func AreCompatible(destType Type, srcType Type) bool {
-    if destType == srcType {
-        return true
-    }
+func Check(destType Type, srcType Type) bool {
+    switch t := destType.(type) {
+    case ArrType:
+        if t2,ok := srcType.(ArrType); ok {
+            if t.Ptr.BaseType == t2.Ptr.BaseType {
+                if len(t.Lens) == len(t2.Lens) {
+                    for i,l := range t.Lens {
+                        if l != t2.Lens[i] {
+                            return false
+                        }
+                    }
 
-    // allow generic ptr with any other pointer
-    if destType.GetKind() == Ptr && srcType.GetKind() == Ptr {
-        if p, ok := destType.(PtrType); ok {
-            if p.BaseType == nil { return true }
+                    return true
+                }
+            }
         }
+
+    case PtrType:
+        // allow generic ptr with any other pointer
+        if t.BaseType == nil && srcType.GetKind() == Ptr {
+            return true
+        }
+        return destType == srcType
+
+    default:
+        return destType == srcType
     }
 
     return false

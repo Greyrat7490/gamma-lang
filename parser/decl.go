@@ -68,39 +68,41 @@ func prsArrType() types.ArrType {
         os.Exit(1)
     }
 
-    token.Next()
-    expr := prsExpr()
-    eval := expr.ConstEval()
-    if eval.Type != token.Number {
-        if eval.Type == token.Unknown {
-            fmt.Fprintln(os.Stderr, "[ERROR] lenght of an array has to a const/eval at compile time")
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] lenght of an array has to a Number but got (%v)\n", eval.Type)
+    var lens []uint64
+    for token.Cur().Type == token.BrackL {
+        token.Next()
+        expr := prsExpr()
+        eval := expr.ConstEval()
+        if eval.Type != token.Number {
+            if eval.Type == token.Unknown {
+                fmt.Fprintln(os.Stderr, "[ERROR] lenght of an array has to a const/eval at compile time")
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] lenght of an array has to a Number but got (%v)\n", eval.Type)
+            }
+            fmt.Fprintln(os.Stderr, "\t" + eval.At())
+            os.Exit(1)
         }
-        fmt.Fprintln(os.Stderr, "\t" + eval.At())
-        os.Exit(1)
+
+        lenght,_ := strconv.ParseUint(eval.Str, 10, 64)
+        lens = append(lens, lenght)
+
+        if token.Next().Type != token.BrackR {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected %v but got %v\n", token.BrackR, token.Cur())
+            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+            os.Exit(1)
+        }
+
+        token.Next()
     }
 
-    lenght,_ := strconv.ParseUint(eval.Str, 10, 64)
-
-    if token.Next().Type != token.BrackR {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected %v but got %v\n", token.BrackR, token.Cur())
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
-        os.Exit(1)
-    }
-
-    typename := token.Next()
-    if token.Cur().Type == token.BrackL {
-        return types.ArrType{ Ptr: types.PtrType{ BaseType: prsArrType() }, Len: lenght }
-    }
-
+    typename := token.Cur()
     if typename.Type != token.Typename {
         fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", typename.Str)
         fmt.Fprintln(os.Stderr, "\t" + typename.At())
         os.Exit(1)
     }
 
-    return types.ArrType{ Ptr: types.PtrType{ BaseType: types.ToBaseType(typename.Str) }, Len: lenght }
+    return types.ArrType{ Ptr: types.PtrType{ BaseType: types.ToBaseType(typename.Str) }, Lens: lens }
 }
 
 func prsDecVar() ast.DecVar {
