@@ -3,9 +3,9 @@ package identObj
 import (
     "os"
     "fmt"
-    "gorec/token"
-    "gorec/asm/x86_64/loops"
-    "gorec/asm/x86_64/conditions"
+    "gamma/token"
+    "gamma/asm/x86_64/loops"
+    "gamma/asm/x86_64/conditions"
 )
 
 var curScope *Scope = &Scope{ identObjs: map[string]IdentObj{} }

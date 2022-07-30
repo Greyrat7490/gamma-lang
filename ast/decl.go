@@ -3,11 +3,11 @@ package ast
 import (
     "os"
     "fmt"
-    "gorec/types"
-    "gorec/token"
-    "gorec/ast/identObj/func"
-    "gorec/ast/identObj/vars"
-    "gorec/ast/identObj/consts"
+    "gamma/types"
+    "gamma/token"
+    "gamma/ast/identObj/func"
+    "gamma/ast/identObj/vars"
+    "gamma/ast/identObj/consts"
 )
 
 

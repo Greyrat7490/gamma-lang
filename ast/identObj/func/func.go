@@ -4,11 +4,11 @@ import (
     "os"
     "fmt"
     "strconv"
-    "gorec/token"
-    "gorec/types"
-    "gorec/types/str"
-    "gorec/asm/x86_64"
-    "gorec/ast/identObj/vars"
+    "gamma/token"
+    "gamma/types"
+    "gamma/types/str"
+    "gamma/asm/x86_64"
+    "gamma/ast/identObj/vars"
 )
 
 /*

@@ -140,9 +140,9 @@ func test(t *testing.T, flagStr string, recDir string, fileDir string) {
     }
 
     for _, f := range files {
-        if filepath.Ext(f.Name()) == ".gore" {
+        if filepath.Ext(f.Name()) == ".gma" {
             fmt.Print(f.Name())
-            cmd := exec.Command("go", "run", "gorec", flagStr, f.Name())
+            cmd := exec.Command("go", "run", "gamma", flagStr, f.Name())
 
             var stdout, stderr strings.Builder
             cmd.Stdout = &stdout

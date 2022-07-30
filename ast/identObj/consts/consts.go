@@ -3,8 +3,8 @@ package consts
 import (
     "os"
     "fmt"
-    "gorec/token"
-    "gorec/types"
+    "gamma/token"
+    "gamma/types"
 )
 
 type Const struct {

@@ -3,11 +3,11 @@ package prs
 import (
     "os"
     "fmt"
-    "gorec/ast"
-    "gorec/ast/identObj"
-    "gorec/token"
-    "gorec/types"
-    "gorec/types/array"
+    "gamma/ast"
+    "gamma/ast/identObj"
+    "gamma/token"
+    "gamma/types"
+    "gamma/types/array"
 )
 
 type precedence int

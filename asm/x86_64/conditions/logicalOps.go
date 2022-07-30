@@ -3,7 +3,7 @@ package cond
 import (
 	"os"
 	"fmt"
-	"gorec/token"
+	"gamma/token"
 )
 
 var logCount int = 0

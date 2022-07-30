@@ -3,11 +3,11 @@ package identObj
 import (
     "os"
     "fmt"
-    "gorec/token"
-    "gorec/types"
-    "gorec/ast/identObj/func"
-    "gorec/ast/identObj/vars"
-    "gorec/ast/identObj/consts"
+    "gamma/token"
+    "gamma/types"
+    "gamma/ast/identObj/func"
+    "gamma/ast/identObj/vars"
+    "gamma/ast/identObj/consts"
 )
 
 type IdentObj interface {

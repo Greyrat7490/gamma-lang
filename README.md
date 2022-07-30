@@ -1,10 +1,8 @@
-# gore-lang
+# gamma-lang
 
-> Fun Project to write my own language, to learn Go and to see how a good language would look like for me. So it will probably end up like a modern C ... so Go
+> Fun Project to write my own language, to learn Go and to see how a good language would look like for me. So it will probably end up like a modern C
 
 A statically and strongly typed programming language similar to Go, but with more focus on memory. It is more like a mix of C, Go and Rust.
-It is named Gore, because I took everything out of C, Go and Rust I like to write this bloody mess.
-And because it is written in Go...
 
 * fast
 * easy
@@ -69,16 +67,16 @@ And because it is written in Go...
 
 compile a source file
 ```console
-$ go run gorec <source_file>
+$ go run gamma <source_file>
 ```
 run tests
 ```console
 $ go test ./test -v
 ```
-gorec usage
+gamma usage
 ```console
-$ go run gorec --help
-gorec usage:
+$ go run gamma --help
+gamma usage:
   -ast
     	show the AST
   -r	run the compiled executable

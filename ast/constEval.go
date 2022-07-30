@@ -4,11 +4,11 @@ import (
     "os"
     "fmt"
     "strconv"
-    "gorec/token"
-    "gorec/types/array"
-    "gorec/asm/x86_64"
-    "gorec/ast/identObj/vars"
-    "gorec/ast/identObj/consts"
+    "gamma/token"
+    "gamma/types/array"
+    "gamma/asm/x86_64"
+    "gamma/ast/identObj/vars"
+    "gamma/ast/identObj/consts"
 )
 
 func (e *Lit)      ConstEval() token.Token { return e.Val }

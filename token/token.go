@@ -5,7 +5,7 @@ import (
     "fmt"
     "bufio"
     "strconv"
-    "gorec/types"
+    "gamma/types"
 )
 
 var tokens []Token

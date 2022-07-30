@@ -4,10 +4,10 @@ import (
     "os"
     "fmt"
     "strconv"
-    "gorec/ast"
-    "gorec/ast/identObj"
-    "gorec/token"
-    "gorec/types"
+    "gamma/ast"
+    "gamma/ast/identObj"
+    "gamma/token"
+    "gamma/types"
 )
 
 func prsDecl() ast.Decl {

@@ -3,12 +3,12 @@ package ast
 import (
     "os"
     "fmt"
-    "gorec/token"
-    "gorec/types"
-    "gorec/asm/x86_64"
-    "gorec/asm/x86_64/loops"
-    "gorec/asm/x86_64/conditions"
-    "gorec/ast/identObj/vars"
+    "gamma/token"
+    "gamma/types"
+    "gamma/asm/x86_64"
+    "gamma/asm/x86_64/loops"
+    "gamma/asm/x86_64/conditions"
+    "gamma/ast/identObj/vars"
 )
 
 type Stmt interface {

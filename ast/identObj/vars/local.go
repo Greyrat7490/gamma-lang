@@ -3,8 +3,8 @@ package vars
 import (
     "os"
     "fmt"
-    "gorec/token"
-    "gorec/types"
+    "gamma/token"
+    "gamma/types"
 )
 
 type LocalVar struct {

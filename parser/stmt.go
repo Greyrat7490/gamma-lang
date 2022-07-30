@@ -3,10 +3,10 @@ package prs
 import (
     "os"
     "fmt"
-    "gorec/ast"
-    "gorec/token"
-    "gorec/types"
-    "gorec/ast/identObj"
+    "gamma/ast"
+    "gamma/token"
+    "gamma/types"
+    "gamma/ast/identObj"
 )
 
 func prsStmt(ignoreUnusedExpr bool) ast.Stmt {

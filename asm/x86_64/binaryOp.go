@@ -4,7 +4,7 @@ import (
     "os"
     "fmt"
     "strconv"
-    "gorec/token"
+    "gamma/token"
 )
 
 // results in A-register

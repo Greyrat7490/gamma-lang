@@ -3,9 +3,9 @@ package prs
 import (
     "os"
     "fmt"
-    "gorec/ast"
-    "gorec/token"
-    "gorec/std"
+    "gamma/ast"
+    "gamma/token"
+    "gamma/std"
 )
 
 var isMainDefined bool = false

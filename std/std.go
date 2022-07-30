@@ -2,8 +2,8 @@ package std
 
 import (
     "os"
-    "gorec/types"
-    "gorec/ast/identObj"
+    "gamma/types"
+    "gamma/ast/identObj"
 )
 
 func Declare() {

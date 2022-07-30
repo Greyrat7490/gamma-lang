@@ -4,8 +4,8 @@ import (
     "os"
     "fmt"
     "strings"
-    "gorec/token"
-    "gorec/asm/x86_64/nasm"
+    "gamma/token"
+    "gamma/asm/x86_64/nasm"
 )
 
 type strLit struct {

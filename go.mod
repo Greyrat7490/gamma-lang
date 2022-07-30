@@ -1,3 +1,3 @@
-module gorec
+module gamma
 
 go 1.17

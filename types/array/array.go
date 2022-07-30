@@ -3,11 +3,11 @@ package array
 import (
     "os"
     "fmt"
-    "gorec/token"
-    "gorec/types"
-    "gorec/types/str"
-    "gorec/asm/x86_64"
-    "gorec/asm/x86_64/nasm"
+    "gamma/token"
+    "gamma/types"
+    "gamma/types/str"
+    "gamma/asm/x86_64"
+    "gamma/asm/x86_64/nasm"
 )
 
 var arrLits []arrLit

@@ -5,11 +5,11 @@ import (
     "fmt"
     "flag"
     "os/exec"
-    "gorec/std"
-    "gorec/ast"
-    "gorec/token"
-    "gorec/parser"
-    "gorec/asm/x86_64/nasm"
+    "gamma/std"
+    "gamma/ast"
+    "gamma/token"
+    "gamma/parser"
+    "gamma/asm/x86_64/nasm"
 )
 
 var run bool
@@ -49,7 +49,7 @@ func init() {
     flag.BoolVar(&showAst, "ast", false, "show the AST")
 
     flag.Usage = func() {
-        fmt.Println("gorec usage:")
+        fmt.Println("gamma usage:")
         flag.PrintDefaults()
     }
 
