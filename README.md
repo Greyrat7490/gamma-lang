@@ -1,4 +1,7 @@
-# gamma-lang
+<div align="center">
+ <img width="20%" src="https://user-images.githubusercontent.com/35865858/182031998-8febc538-375a-4663-9a71-d61e90907e39.svg">
+  <h1>Gamma Programming Language</h1>
+</div>
 
 > Fun Project to write my own language, to learn Go and to see how a good language would look like for me. So it will probably end up like a modern C
 
@@ -24,24 +27,20 @@ A statically and strongly typed programming language similar to Go, but with mor
 * [x] generate assembly file
   * [x] nasm
   * [ ] fasm (preferable!)
-* [x] generate executable
 * [x] variables
 * [x] functions
-* [x] syscalls
+* [x] io
+  * [x] print
 * [x] arithmetics
   * [x] unary ops
   * [x] binary ops
     * [x] parse by precedence
   * [x] parentheses
 * [x] controll structures
-  * [x] if
-  * [x] else
-  * [x] elif
-  * [x] while
-  * [x] for
+  * [x] if, else, elif
+  * [x] while, for
   * [x] switch
   * [x] xswitch (expr switch)
-  * [x] &&, ||
 * [x] pointer
   * [x] define/assign
   * [x] deref
