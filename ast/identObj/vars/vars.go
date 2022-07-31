@@ -22,10 +22,17 @@ type Var interface {
 }
 
 func VarSetExpr(file *os.File, v Var) {
-    if v.GetType().GetKind() == types.Str {
+    switch t := v.GetType().(type) {
+    case types.StrType:
         asm.MovDerefReg(file, v.Addr(0), types.Ptr_Size, asm.RegA)
         asm.MovDerefReg(file, v.Addr(1), types.I32_Size, asm.RegB)
-    } else {
+
+    case types.StructType:
+        for i,t := range t.Types {
+            asm.MovDerefReg(file, v.Addr(i), t.Size(), uint8(i))
+        }
+
+    default:
         asm.MovDerefReg(file, v.Addr(0), v.GetType().Size(), asm.RegA)
     }
 }

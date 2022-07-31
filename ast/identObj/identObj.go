@@ -8,6 +8,7 @@ import (
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
     "gamma/ast/identObj/consts"
+    "gamma/ast/identObj/struct"
 )
 
 type IdentObj interface {
@@ -43,6 +44,19 @@ func DecFunc(name token.Token) *fn.Func {
     f := fn.CreateFunc(name, nil)
     curScope.identObjs[name.Str] = &f
     return &f
+}
+
+func DecStruct(name token.Token, ts []types.Type) *structDec.Struct {
+    if InGlobalScope() {
+        s := structDec.CreateStruct(name, ts)
+        curScope.identObjs[name.Str] = &s
+        return &s
+    } else {
+        fmt.Fprintln(os.Stderr, "[ERROR] you can only declare a struct in the global scope")
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+        return nil
+    }
 }
 
 func AddBuildIn(name string, argname string, argtype types.Type) {

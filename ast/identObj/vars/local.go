@@ -44,16 +44,26 @@ func (v *LocalVar) GetType() types.Type {
 }
 
 func (v *LocalVar) Addr(fieldNum int) string {
-    if v.typ.GetKind() == types.Str {
+    switch t := v.typ.(type) {
+    case types.StrType:
         offset := v.offset
         if fieldNum == 0 {
             offset += types.Ptr_Size
         }
 
         return fmt.Sprintf("rbp-%d", offset)
-    }
 
-    return fmt.Sprintf("rbp-%d", v.offset)
+    case types.StructType:
+        offset := v.offset
+        for i := len(t.Types)-1; i > fieldNum; i-- {
+            offset += t.Types[i].Size()
+        }
+
+        return fmt.Sprintf("rbp-%d", offset)
+
+    default:
+        return fmt.Sprintf("rbp-%d", v.offset)
+    }
 }
 
 
@@ -62,9 +72,14 @@ func (v *LocalVar) DefVal(file *os.File, val token.Token) {
 }
 
 func calcOffset(vartype types.Type, frameSize int) int {
-    if vartype.GetKind() == types.Str {
+    switch t := vartype.(type) {
+    case types.StrType:
         return frameSize + types.I32_Size
-    } else {
+
+    case types.StructType:
+        return frameSize + t.Types[0].Size()
+
+    default:
         return frameSize + vartype.Size()
     }
 }

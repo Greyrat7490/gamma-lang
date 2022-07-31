@@ -7,11 +7,12 @@ import (
 
 type TypeKind int
 const (
-    I32  TypeKind = iota
-    Bool TypeKind = iota
-    Ptr  TypeKind = iota
-    Arr  TypeKind = iota
-    Str  TypeKind = iota
+    I32    TypeKind = iota
+    Bool   TypeKind = iota
+    Ptr    TypeKind = iota
+    Arr    TypeKind = iota
+    Str    TypeKind = iota
+    Struct TypeKind = iota
 )
 
 const (
@@ -41,18 +42,30 @@ type StrType  struct {
     ptr  PtrType
     size I32Type
 }
+type StructType struct {
+    Name string
+    Types []Type
+}
 
-func (t I32Type)  GetKind() TypeKind { return I32  }
-func (t BoolType) GetKind() TypeKind { return Bool }
-func (t StrType)  GetKind() TypeKind { return Str  }
-func (t PtrType)  GetKind() TypeKind { return Ptr  }
-func (t ArrType)  GetKind() TypeKind { return Arr  }
+func (t I32Type)    GetKind() TypeKind { return I32  }
+func (t BoolType)   GetKind() TypeKind { return Bool }
+func (t StrType)    GetKind() TypeKind { return Str  }
+func (t PtrType)    GetKind() TypeKind { return Ptr  }
+func (t ArrType)    GetKind() TypeKind { return Arr  }
+func (t StructType) GetKind() TypeKind { return Struct }
 
-func (t I32Type)  Size() int { return I32_Size }
-func (t BoolType) Size() int { return Bool_Size }
-func (t StrType)  Size() int { return t.ptr.Size() + t.size.Size() }
-func (t PtrType)  Size() int { return Ptr_Size }
-func (t ArrType)  Size() int { return Arr_Size }
+func (t I32Type)    Size() int { return I32_Size }
+func (t BoolType)   Size() int { return Bool_Size }
+func (t StrType)    Size() int { return t.ptr.Size() + t.size.Size() }
+func (t PtrType)    Size() int { return Ptr_Size }
+func (t ArrType)    Size() int { return Arr_Size }
+func (t StructType) Size() int {
+    res := 0
+    for _,t := range t.Types {
+        res += t.Size()
+    }
+    return res
+}
 
 func (t I32Type)  String() string { return "i32"  }
 func (t BoolType) String() string { return "bool" }
@@ -71,6 +84,7 @@ func (t ArrType)  String() string {
 
     return res + t.Ptr.BaseType.String()
 }
+func (t StructType) String() string { return t.Name }
 
 func ToBaseType(s string) Type {
     switch s {
@@ -120,6 +134,17 @@ func Check(destType Type, srcType Type) bool {
             return true
         }
         return destType == srcType
+
+    case StructType:
+        if t2,ok := srcType.(StructType); ok {
+            for i,t := range t.Types {
+                if !Check(t, t2.Types[i]) {
+                    return false
+                }
+            }
+
+            return true
+        }
 
     default:
         return destType == srcType

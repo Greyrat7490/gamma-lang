@@ -46,6 +46,20 @@ type ArrayLit struct {
     BraceRPos token.Pos
 }
 
+type StructLit struct {
+    Pos token.Pos
+    StructType types.StructType
+    BraceLPos token.Pos
+    Fields []FieldLit
+    BraceRPos token.Pos
+}
+
+type FieldLit struct {
+    Name token.Token
+    Pos token.Pos
+    Literal Lit
+}
+
 type Indexed struct {
     ArrExpr Expr
     BrackLPos token.Pos
@@ -107,6 +121,29 @@ func (e *Lit) Compile(file *os.File) {
         asm.MovRegVal(file, asm.RegA, e.Type.Size(), e.Val.Str)
     }
 }
+
+func (e *StructLit) Compile(file *os.File) {
+    for i := 0; i < len(e.Fields); i++ {
+        l := e.Fields[i].Literal
+        switch l.Val.Type {
+        case token.Str:
+            strIdx := str.Add(l.Val)
+
+            asm.MovRegVal(file, uint8(i), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx))
+            i++
+            asm.MovRegVal(file, uint8(i), types.I32_Size, fmt.Sprintf("%d", str.GetSize(strIdx)))
+
+        case token.Boolean:
+            if l.Val.Str == "true" { l.Val.Str = "1" } else { l.Val.Str = "0" }
+            fallthrough
+
+        default:
+            asm.MovRegVal(file, uint8(i), l.Type.Size(), l.Val.Str)
+        }
+    }
+}
+
+func (e *FieldLit) Compile(file *os.File) {}
 
 func (e *Indexed) flatten() Expr {
     // for dim = 1 (no need to flatten)
@@ -417,26 +454,30 @@ func (e *BadExpr) Compile(file *os.File) {
 }
 
 
-func (e *BadExpr)  At() string { return "" }
-func (e *FnCall)   At() string { return e.Ident.At() }
-func (e *Lit)      At() string { return e.Val.At() }
-func (e *ArrayLit) At() string { return e.Pos.At() }
-func (e *Indexed)  At() string { return e.ArrExpr.At() }
-func (e *Ident)    At() string { return e.Pos.At() }
-func (e *Unary)    At() string { return e.Operator.At() }
-func (e *Binary)   At() string { return e.OperandL.At() }    // TODO: At() of Operand with higher precedence
-func (e *Paren)    At() string { return e.ParenLPos.At() }
-func (e *XSwitch)  At() string { return e.Pos.At() }
-func (e *XCase)    At() string { return e.ColonPos.At() }
+func (e *BadExpr)   At() string { return "" }
+func (e *FnCall)    At() string { return e.Ident.At() }
+func (e *Lit)       At() string { return e.Val.At() }
+func (e *FieldLit)  At() string { return e.Name.At() }
+func (e *StructLit) At() string { return e.Pos.At() }
+func (e *ArrayLit)  At() string { return e.Pos.At() }
+func (e *Indexed)   At() string { return e.ArrExpr.At() }
+func (e *Ident)     At() string { return e.Pos.At() }
+func (e *Unary)     At() string { return e.Operator.At() }
+func (e *Binary)    At() string { return e.OperandL.At() }    // TODO: At() of Operand with higher precedence
+func (e *Paren)     At() string { return e.ParenLPos.At() }
+func (e *XSwitch)   At() string { return e.Pos.At() }
+func (e *XCase)     At() string { return e.ColonPos.At() }
 
-func (e *BadExpr)  End() string { return "" }
-func (e *FnCall)   End() string { return e.ParenRPos.At() }
-func (e *Lit)      End() string { return e.Val.At() }
-func (e *ArrayLit) End() string { return e.BraceRPos.At() }
-func (e *Indexed)  End() string { return e.BrackRPos.At() }
-func (e *Ident)    End() string { return e.Pos.At() }
-func (e *Unary)    End() string { return e.Operand.At() }
-func (e *Binary)   End() string { return e.OperandR.At() }
-func (e *Paren)    End() string { return e.ParenRPos.At() }
-func (e *XSwitch)  End() string { return e.BraceRPos.At() }
-func (e *XCase)    End() string { return e.Expr.At() }
+func (e *BadExpr)   End() string { return "" }
+func (e *FnCall)    End() string { return e.ParenRPos.At() }
+func (e *Lit)       End() string { return e.Val.At() }
+func (e *FieldLit)  End() string { return e.Literal.End() }
+func (e *StructLit) End() string { return e.BraceRPos.At() }
+func (e *ArrayLit)  End() string { return e.BraceRPos.At() }
+func (e *Indexed)   End() string { return e.BrackRPos.At() }
+func (e *Ident)     End() string { return e.Pos.At() }
+func (e *Unary)     End() string { return e.Operand.At() }
+func (e *Binary)    End() string { return e.OperandR.At() }
+func (e *Paren)     End() string { return e.ParenRPos.At() }
+func (e *XSwitch)   End() string { return e.BraceRPos.At() }
+func (e *XCase)     End() string { return e.Expr.At() }

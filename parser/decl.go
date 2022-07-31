@@ -6,6 +6,7 @@ import (
     "strconv"
     "gamma/ast"
     "gamma/ast/identObj"
+    "gamma/ast/identObj/struct"
     "gamma/token"
     "gamma/types"
 )
@@ -14,6 +15,10 @@ func prsDecl() ast.Decl {
     switch t := token.Next(); t.Type {
     case token.Fn:
         d := prsDefFn()
+        return &d
+
+    case token.Struct:
+        d := prsStruct()
         return &d
 
     case token.Name:
@@ -49,16 +54,23 @@ func prsType() types.Type {
 
         if baseType := types.ToBaseType(typename.Str); baseType != nil {
             return types.PtrType{ BaseType: baseType }
-        } else {
-            return nil
         }
 
     case token.BrackL:
         return prsArrType()
 
+    case token.Name:
+        if obj := identObj.Get(typename.Str); obj != nil {
+            if strct,ok := obj.(*structDec.Struct); ok {
+                return strct.GetType()
+            }
+        }
+
     default:
         return types.ToBaseType(typename.Str)
     }
+
+    return nil
 }
 
 func prsArrType() types.ArrType {
@@ -166,6 +178,13 @@ func isNextType() bool {
 
         return expr.ConstEval().Type != token.Number
 
+    case token.Name:
+        if obj := identObj.Get(token.Cur().Str); obj != nil {
+            _,ok := obj.(*structDec.Struct)
+            return ok
+        }
+        return false
+
     default:
         return types.ToBaseType(token.Cur().Str) != nil
     }
@@ -235,6 +254,28 @@ func prsDefine() ast.Decl {
     return &ast.BadDecl{}
 }
 
+func prsStruct() ast.DefStruct {
+    pos := token.Cur().Pos
+
+    name := token.Next()
+    if name.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+    }
+
+    braceLPos := token.Next().Pos
+    fields := prsDecFields()
+    braceRPos := token.Cur().Pos
+
+    var ts []types.Type
+    for _,f := range fields {
+        ts = append(ts, f.Type)
+    }
+    s := identObj.DecStruct(name, ts)
+
+    return ast.DefStruct{ S: s, Pos: pos, Name: name, Fields: fields, BraceLPos: braceLPos, BraceRPos: braceRPos }
+}
 
 func prsDefFn() ast.DefFn {
     pos := token.Cur().Pos
@@ -268,6 +309,33 @@ func prsDefFn() ast.DefFn {
     f.SetFrameSize(identObj.GetFrameSize())
 
     return ast.DefFn{ Pos: pos, F: f, Args: argDecs, Block: block }
+}
+
+func prsDecFields() (decs []ast.DecVar) {
+    if token.Cur().Type != token.BraceL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", token.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+
+    if token.Next().Type != token.BraceR {
+        d := prsDecVar()
+        decs = append(decs, d)
+
+        for token.Next().Type == token.Comma {
+            token.Next()
+            d := prsDecVar()
+            decs = append(decs, d)
+        }
+    }
+
+    if token.Cur().Type != token.BraceR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"}\" but got %v\n", token.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+
+    return
 }
 
 func prsDecArgs() []ast.DecVar {

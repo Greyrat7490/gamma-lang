@@ -8,6 +8,7 @@ import (
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
     "gamma/ast/identObj/consts"
+    "gamma/ast/identObj/struct"
 )
 
 
@@ -44,6 +45,15 @@ type DefFn struct {
     Pos token.Pos
     Args []DecVar
     Block Block
+}
+
+type DefStruct struct {
+    S *structDec.Struct
+    Pos token.Pos
+    Name token.Token
+    BraceLPos token.Pos
+    Fields []DecVar
+    BraceRPos token.Pos
 }
 
 
@@ -112,26 +122,31 @@ func (d *DefFn) Compile(file *os.File) {
     fn.End(file);
 }
 
+func (d *DefStruct) Compile(file *os.File) {}
+
 func (d *BadDecl) Compile(file *os.File) {
     fmt.Fprintln(os.Stderr, "[ERROR] bad declaration")
     os.Exit(1)
 }
 
 
-func (d *BadDecl)  decl() {}
-func (d *DecVar)   decl() {}
-func (d *DefVar)   decl() {}
-func (d *DefConst) decl() {}
-func (d *DefFn)    decl() {}
+func (d *BadDecl)   decl() {}
+func (d *DecVar)    decl() {}
+func (d *DefVar)    decl() {}
+func (d *DefConst)  decl() {}
+func (d *DefFn)     decl() {}
+func (d *DefStruct) decl() {}
 
-func (d *BadDecl)  At() string { return "" }
-func (d *DecVar)   At() string { return d.V.GetPos().At() }
-func (d *DefVar)   At() string { return d.ColPos.At() }
-func (d *DefConst) At() string { return d.ColPos.At() }
-func (d *DefFn)    At() string { return d.Pos.At() }
+func (d *BadDecl)   At() string { return "" }
+func (d *DecVar)    At() string { return d.V.GetPos().At() }
+func (d *DefVar)    At() string { return d.ColPos.At() }
+func (d *DefConst)  At() string { return d.ColPos.At() }
+func (d *DefFn)     At() string { return d.Pos.At() }
+func (d *DefStruct) At() string { return d.Pos.At() }
 
-func (d *BadDecl)  End() string { return "" }
-func (d *DecVar)   End() string { return d.TypePos.At() }
-func (d *DefVar)   End() string { return d.Value.End() }
-func (d *DefConst) End() string { return d.Value.End() }
-func (d *DefFn)    End() string { return d.Block.End() }
+func (d *BadDecl)   End() string { return "" }
+func (d *DecVar)    End() string { return d.TypePos.At() }
+func (d *DefVar)    End() string { return d.Value.End() }
+func (d *DefConst)  End() string { return d.Value.End() }
+func (d *DefFn)     End() string { return d.Block.End() }
+func (d *DefStruct) End() string { return d.BraceRPos.At() }

@@ -5,6 +5,7 @@ import (
     "fmt"
     "gamma/ast"
     "gamma/ast/identObj"
+    "gamma/ast/identObj/struct"
     "gamma/token"
     "gamma/types"
     "gamma/types/array"
@@ -31,9 +32,19 @@ func prsExpr() ast.Expr {
         return prsArrayLit()
 
     case token.Name:
-        if token.Peek().Type == token.ParenL {
+        switch token.Peek().Type {
+        case token.ParenL:
             return prsCallFn()  // only tmp because binary ops are not supported with func calls yet
-        } else {
+
+        case token.BraceL:
+            if obj := identObj.Get(token.Cur().Str); obj != nil {
+                if _,ok := obj.(*structDec.Struct); ok {
+                    return prsStructLit()
+                }
+            }
+            fallthrough
+
+        default:
             expr = prsIdentExpr()
         }
 
@@ -165,6 +176,75 @@ func prsArrayLit() *ast.ArrayLit {
     lit.Idx = array.Add(lit.Type, constEvalExprs(lit.Values))
 
     return &lit
+}
+
+func prsStructLit() *ast.StructLit {
+    name := token.Cur()
+    if name.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+    }
+
+    var t types.StructType
+    if obj := identObj.Get(name.Str); obj != nil {
+        if strct,ok := obj.(*structDec.Struct); ok {
+            t = strct.GetType()
+        }
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not defined\n", name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+    }
+
+    braceL := token.Next()
+    if braceL.Type != token.BraceL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", token.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+
+    var fields []ast.FieldLit
+    if token.Next().Type != token.BraceR {
+        f := prsFieldLit()
+        fields = append(fields, f)
+
+        for token.Next().Type == token.Comma {
+            token.Next()
+            f := prsFieldLit()
+            fields = append(fields, f)
+        }
+    }
+
+    if token.Cur().Type != token.BraceR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"}\" but got %v\n", token.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+
+    s := ast.StructLit{ Pos: name.Pos, StructType: t, BraceLPos: braceL.Pos, BraceRPos: token.Cur().Pos, Fields: fields }
+    return &s
+}
+
+func prsFieldLit() ast.FieldLit {
+    name := token.Cur()
+    if name.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+    }
+
+    colon := token.Next()
+    if colon.Type != token.Colon {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a \":\" but got %v\n", colon)
+        fmt.Fprintln(os.Stderr, "\t" + colon.At())
+        os.Exit(1)
+    }
+
+    token.Next()
+    lit := prsLitExpr()
+
+    return ast.FieldLit{ Name: name, Pos: colon.Pos, Literal: *lit }
 }
 
 func constEvalExprs(values []ast.Expr) (res []token.Token) {

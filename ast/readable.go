@@ -20,7 +20,7 @@ func (o *DefVar) Readable(indent int) string {
     s2 := strings.Repeat("   ", indent+1)
 
     res := s + "DEF_VAR:\n" +
-        s2 + fmt.Sprintf("%s(Name)\n", o.V.GetName())
+        s2 + fmt.Sprintf("%v(Name)\n", o.V.GetName())
 
     if o.Type == nil {
         res += s2 + "infer type\n"
@@ -61,6 +61,18 @@ func (o *DefFn) Readable(indent int) string {
 
     return res
 }
+
+func (o *DefStruct) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) + "DEF_STRUCT:\n" +
+        strings.Repeat("   ", indent+1) + o.Name.String() + "\n"
+
+    for _,f := range o.Fields {
+        res += f.Readable(indent+1)
+    }
+
+    return res
+}
+
 func (o *BadDecl) Readable(indent int) string {
     fmt.Fprintln(os.Stderr, "[ERROR] bad declaration")
     os.Exit(1)
@@ -70,6 +82,18 @@ func (o *BadDecl) Readable(indent int) string {
 
 func (o *Lit) Readable(indent int) string {
     return strings.Repeat("   ", indent) + fmt.Sprintf("%s(%v)\n", o.Val.Str, o.Type)
+}
+func (o *FieldLit) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + fmt.Sprintf("%s: %s(%v)\n", o.Name, o.Literal.Val.Str, o.Literal.Type)
+}
+func (o *StructLit) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) + "STRUCT_LIT:\n"
+
+    for _,f := range o.Fields {
+        res += f.Readable(indent+1)
+    }
+
+    return res
 }
 func (o *ArrayLit) Readable(indent int) string {
     s := strings.Repeat("   ", indent+1)

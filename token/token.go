@@ -69,6 +69,7 @@ const (
     Break           // break
     Continue        // continue
     Through         // through
+    Struct          // struct
     XSwitch         // $
 
     TokenTypeCount uint = iota
@@ -162,6 +163,8 @@ func ToTokenType(s string) TokenType {
         return Continue
     case "through":
         return Through
+    case "struct":
+        return Struct
     case "$":
         return XSwitch
 
@@ -266,6 +269,8 @@ func (t TokenType) String() string {
         return "Continue"
     case Through:
         return "Through"
+    case Struct:
+        return "Struct"
     case XSwitch:
         return "XSwitch"
 

@@ -8,6 +8,7 @@ import (
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
     "gamma/ast/identObj/consts"
+    "gamma/ast/identObj/struct"
 )
 
 func (o *DefVar) typeCheck() {
@@ -157,6 +158,18 @@ func (o *ArrayLit) typeCheck() {
         }
     }
 }
+func (o *StructLit) typeCheck() {
+    t := o.StructType
+
+    for i,f := range o.Fields {
+        if types.Check(t.Types[i], f.GetType()) {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a %v as field %d of struct %s but got %v\n",
+                t.Types[i], i, o.StructType.Name, f.GetType())
+            fmt.Fprintln(os.Stderr, "\t" + f.At())
+            os.Exit(1)
+        }
+    }
+}
 
 func (o *Binary) typeCheck() {
     t1 := o.OperandL.GetType()
@@ -244,11 +257,13 @@ func valuesToTypes(values []Expr) (res []types.Type) {
     return res
 }
 
-func (o *BadExpr)  GetType() types.Type { return nil }
-func (o *FnCall)   GetType() types.Type { return nil }
-func (o *Lit)      GetType() types.Type { return o.Type }
-func (o *ArrayLit) GetType() types.Type { return o.Type }
-func (o *Indexed)  GetType() types.Type {
+func (o *BadExpr)   GetType() types.Type { return nil }
+func (o *FnCall)    GetType() types.Type { return nil }
+func (o *Lit)       GetType() types.Type { return o.Type }
+func (o *FieldLit)  GetType() types.Type { return o.Literal.Type }
+func (o *StructLit) GetType() types.Type { return o.StructType }
+func (o *ArrayLit)  GetType() types.Type { return o.Type }
+func (o *Indexed)   GetType() types.Type {
     if t,ok := o.ArrExpr.GetType().(types.ArrType); ok {
         return t.Ptr.BaseType
     } else {
@@ -265,6 +280,10 @@ func (o *Ident)    GetType() types.Type {
 
     if v,ok := o.Obj.(vars.Var); ok {
         return v.GetType()
+    }
+
+    if s,ok := o.Obj.(*structDec.Struct); ok {
+        return s.GetType()
     }
 
     // TODO: function
