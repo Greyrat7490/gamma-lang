@@ -4,9 +4,10 @@ struct Coord {
     z i32
 }
 
+c1 Coord := Coord{ x: 69, y: 420, z: -64 }
+
 fn main() {
-    c1 Coord := Coord{ x: 69, y: 420, z: 64 }
-    c2 := Coord{ x: 69, y: 420, z: 64 }
+    c2 := Coord{ x: 69, y: -420, z: 64 }
 
     // printInt(c1.x)
     // printInt(c1.y)

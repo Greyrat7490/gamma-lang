@@ -47,6 +47,7 @@ type ArrayLit struct {
 }
 
 type StructLit struct {
+    Idx int
     Pos token.Pos
     StructType types.StructType
     BraceLPos token.Pos
@@ -57,7 +58,7 @@ type StructLit struct {
 type FieldLit struct {
     Name token.Token
     Pos token.Pos
-    Literal Lit
+    Value Expr
 }
 
 type Indexed struct {
@@ -124,21 +125,24 @@ func (e *Lit) Compile(file *os.File) {
 
 func (e *StructLit) Compile(file *os.File) {
     for i := 0; i < len(e.Fields); i++ {
-        l := e.Fields[i].Literal
-        switch l.Val.Type {
-        case token.Str:
-            strIdx := str.Add(l.Val)
+        l := e.Fields[i].Value
+        switch l.GetType().GetKind() {
+        case types.Str:
+            strIdx := str.Add(l.ConstEval())
 
             asm.MovRegVal(file, uint8(i), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx))
             i++
             asm.MovRegVal(file, uint8(i), types.I32_Size, fmt.Sprintf("%d", str.GetSize(strIdx)))
 
-        case token.Boolean:
-            if l.Val.Str == "true" { l.Val.Str = "1" } else { l.Val.Str = "0" }
-            fallthrough
+        case types.Bool:
+            if l.ConstEval().Str == "true" {
+                asm.MovRegVal(file, uint8(i), types.Bool_Size, "1")
+            } else {
+                asm.MovRegVal(file, uint8(i), types.Bool_Size, "0")
+            }
 
         default:
-            asm.MovRegVal(file, uint8(i), l.Type.Size(), l.Val.Str)
+            asm.MovRegVal(file, uint8(i), l.GetType().Size(), l.ConstEval().Str)
         }
     }
 }
@@ -471,7 +475,7 @@ func (e *XCase)     At() string { return e.ColonPos.At() }
 func (e *BadExpr)   End() string { return "" }
 func (e *FnCall)    End() string { return e.ParenRPos.At() }
 func (e *Lit)       End() string { return e.Val.At() }
-func (e *FieldLit)  End() string { return e.Literal.End() }
+func (e *FieldLit)  End() string { return e.Value.End() }
 func (e *StructLit) End() string { return e.BraceRPos.At() }
 func (e *ArrayLit)  End() string { return e.BraceRPos.At() }
 func (e *Indexed)   End() string { return e.BrackRPos.At() }

@@ -7,6 +7,7 @@ import (
     "gamma/token"
     "gamma/types"
     "gamma/types/str"
+    "gamma/types/struct"
     "gamma/asm/x86_64"
 )
 
@@ -79,6 +80,24 @@ func VarSetVal(file *os.File, v Var, val token.Token) {
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] expected size of array to be a Number but got %v\n", val)
             fmt.Fprintln(os.Stderr, "\t" + val.At())
+            os.Exit(1)
+        }
+
+    case types.Struct:
+        if t,ok := t.(types.StructType); ok {
+            if val.Type != token.Number {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", val)
+                fmt.Fprintln(os.Stderr, "\t" + val.At())
+                os.Exit(1)
+            }
+
+            idx,_ := strconv.Atoi(val.Str)
+
+            for i,val := range structLit.GetValues(idx) {
+                asm.MovDerefVal(file, v.Addr(i), t.Types[i].Size(), val.Str)
+            }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) expected StructType but got %v\n", t)
             os.Exit(1)
         }
 

@@ -84,7 +84,7 @@ func (o *Lit) Readable(indent int) string {
     return strings.Repeat("   ", indent) + fmt.Sprintf("%s(%v)\n", o.Val.Str, o.Type)
 }
 func (o *FieldLit) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + fmt.Sprintf("%s: %s(%v)\n", o.Name, o.Literal.Val.Str, o.Literal.Type)
+    return strings.Repeat("   ", indent) + fmt.Sprintf("%s: %s\n", o.Name, o.Value.Readable(0))
 }
 func (o *StructLit) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "STRUCT_LIT:\n"

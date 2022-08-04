@@ -3,9 +3,11 @@ package vars
 import (
     "os"
     "fmt"
+    "strconv"
     "gamma/token"
     "gamma/types"
     "gamma/types/str"
+    "gamma/types/struct"
     "gamma/asm/x86_64"
     "gamma/asm/x86_64/nasm"
 )
@@ -46,12 +48,20 @@ func (v *GlobalVar) GetType() types.Type {
 }
 
 func (v *GlobalVar) Addr(fieldNum int) string {
-    if v.vartype.GetKind() == types.Str {
+    switch t := v.vartype.(type) {
+    case types.StrType:
         if fieldNum == 1 {
-            return v.name + "+" + fmt.Sprint(types.Ptr_Size)
+            return fmt.Sprintf("%s+%d", v.name, types.Ptr_Size)
         }
-    }
 
+    case types.StructType:
+        offset := 0
+        for _,t := range t.Types {
+            offset += t.Size()
+        }
+
+        return fmt.Sprintf("%s+%d", v.name, offset)
+    }
     return v.name
 }
 
@@ -65,6 +75,25 @@ func (v *GlobalVar) DefVal(file *os.File, val token.Token) {
 
     case types.Arr:
         nasm.AddData(fmt.Sprintf("%s:\n  %s _arr%s\n", v.name, asm.GetDataSize(types.Ptr_Size), val.Str))
+
+    case types.Struct:
+        if t,ok := v.vartype.(types.StructType); ok {
+            if val.Type != token.Number {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", val)
+                fmt.Fprintln(os.Stderr, "\t" + val.At())
+                os.Exit(1)
+            }
+
+            idx,_ := strconv.Atoi(val.Str)
+
+            nasm.AddData(fmt.Sprintf("%s:", v.name))
+            for i,v := range structLit.GetValues(idx) {
+                nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(t.Types[i].Size()), v.Str))
+            }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) expected StructType but got %v\n", v.vartype)
+            os.Exit(1)
+        }
 
     case types.Bool:
         if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }

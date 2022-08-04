@@ -260,7 +260,7 @@ func valuesToTypes(values []Expr) (res []types.Type) {
 func (o *BadExpr)   GetType() types.Type { return nil }
 func (o *FnCall)    GetType() types.Type { return nil }
 func (o *Lit)       GetType() types.Type { return o.Type }
-func (o *FieldLit)  GetType() types.Type { return o.Literal.Type }
+func (o *FieldLit)  GetType() types.Type { return o.Value.GetType() }
 func (o *StructLit) GetType() types.Type { return o.StructType }
 func (o *ArrayLit)  GetType() types.Type { return o.Type }
 func (o *Indexed)   GetType() types.Type {

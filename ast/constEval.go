@@ -12,9 +12,9 @@ import (
 )
 
 func (e *Lit)      ConstEval() token.Token { return e.Val }
-func (e *FieldLit) ConstEval() token.Token { return e.Literal.ConstEval() }
+func (e *FieldLit) ConstEval() token.Token { return e.Value.ConstEval() }
 func (e *StructLit) ConstEval() token.Token {
-    return token.Token{ Type: token.Unknown }
+    return token.Token{ Type: token.Number, Str: fmt.Sprint(e.Idx) }
 }
 func (e *ArrayLit) ConstEval() token.Token {
     return token.Token{ Type: token.Number, Str: fmt.Sprint(e.Idx) }

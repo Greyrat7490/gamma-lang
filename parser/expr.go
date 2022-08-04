@@ -9,6 +9,7 @@ import (
     "gamma/token"
     "gamma/types"
     "gamma/types/array"
+    "gamma/types/struct"
 )
 
 type precedence int
@@ -222,7 +223,13 @@ func prsStructLit() *ast.StructLit {
         os.Exit(1)
     }
 
-    s := ast.StructLit{ Pos: name.Pos, StructType: t, BraceLPos: braceL.Pos, BraceRPos: token.Cur().Pos, Fields: fields }
+    s := ast.StructLit{
+        Idx: structLit.Add(name.Str, constEvalFields(fields)),
+        Pos: name.Pos, StructType: t,
+        BraceLPos: braceL.Pos,
+        BraceRPos: token.Cur().Pos,
+        Fields: fields,
+    }
     return &s
 }
 
@@ -242,9 +249,15 @@ func prsFieldLit() ast.FieldLit {
     }
 
     token.Next()
-    lit := prsLitExpr()
+    expr := prsExpr()
+    constVal := expr.ConstEval()
+    if constVal.Type == token.Unknown {
+        fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
+        fmt.Fprintln(os.Stderr, "\t" + expr.At())
+        os.Exit(1)
+    }
 
-    return ast.FieldLit{ Name: name, Pos: colon.Pos, Literal: *lit }
+    return ast.FieldLit{ Name: name, Pos: colon.Pos, Value: expr }
 }
 
 func constEvalExprs(values []ast.Expr) (res []token.Token) {
@@ -253,6 +266,20 @@ func constEvalExprs(values []ast.Expr) (res []token.Token) {
         if constVal.Type == token.Unknown {
             fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
             fmt.Fprintln(os.Stderr, "\t" + v.At())
+            os.Exit(1)
+        }
+        res = append(res, constVal)
+    }
+
+    return
+}
+
+func constEvalFields(fields []ast.FieldLit) (res []token.Token) {
+    for _,f := range fields {
+        constVal := f.ConstEval()
+        if constVal.Type == token.Unknown {
+            fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
+            fmt.Fprintln(os.Stderr, "\t" + f.At())
             os.Exit(1)
         }
         res = append(res, constVal)
