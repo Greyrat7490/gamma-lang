@@ -27,7 +27,11 @@ func Add(typ types.ArrType, values []token.Token) (i int) {
     arrLits = append(arrLits, arr)
 
     if len(arr.values) == 0 {
-        nasm.AddBss(fmt.Sprintf("_arr%d: %s %d", i, asm.GetBssSize(arr.baseType.Size()), len(arr.values)))
+        var total uint64 = 1
+        for _,l := range typ.Lens {
+            total *= l
+        }
+        nasm.AddBss(fmt.Sprintf("_arr%d: %s %d", i, asm.GetBssSize(arr.baseType.Size()), total))
     } else {
         switch typ.Ptr.BaseType.GetKind() {
         case types.Str:
