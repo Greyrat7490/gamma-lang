@@ -268,11 +268,13 @@ func prsStruct() ast.DefStruct {
     fields := prsDecFields()
     braceRPos := token.Cur().Pos
 
-    var ts []types.Type
+    var types []types.Type
+    var names []string
     for _,f := range fields {
-        ts = append(ts, f.Type)
+        types = append(types, f.Type)
+        names = append(names, f.V.GetName())
     }
-    s := identObj.DecStruct(name, ts)
+    s := identObj.DecStruct(name, names, types)
 
     return ast.DefStruct{ S: s, Pos: pos, Name: name, Fields: fields, BraceLPos: braceLPos, BraceRPos: braceRPos }
 }

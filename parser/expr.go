@@ -224,7 +224,7 @@ func prsStructLit() *ast.StructLit {
     }
 
     s := ast.StructLit{
-        Idx: structLit.Add(name.Str, constEvalFields(fields)),
+        Idx: structLit.Add(name.Str, constEvalFields(name.Str, fields)),
         Pos: name.Pos, StructType: t,
         BraceLPos: braceL.Pos,
         BraceRPos: token.Cur().Pos,
@@ -274,15 +274,22 @@ func constEvalExprs(values []ast.Expr) (res []token.Token) {
     return
 }
 
-func constEvalFields(fields []ast.FieldLit) (res []token.Token) {
-    for _,f := range fields {
-        constVal := f.ConstEval()
-        if constVal.Type == token.Unknown {
-            fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
-            fmt.Fprintln(os.Stderr, "\t" + f.At())
-            os.Exit(1)
+func constEvalFields(structName string, fields []ast.FieldLit) (res []token.Token) {
+    s := identObj.Get(structName).(*structDec.Struct)
+
+    for _,n := range s.GetNames() {
+        for _,l := range fields {
+            if l.Name.Str == n {
+                constVal := l.ConstEval()
+                if constVal.Type == token.Unknown {
+                    fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
+                    fmt.Fprintln(os.Stderr, "\t" + l.At())
+                    os.Exit(1)
+                }
+                res = append(res, constVal)
+                break
+            }
         }
-        res = append(res, constVal)
     }
 
     return

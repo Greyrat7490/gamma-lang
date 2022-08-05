@@ -46,9 +46,9 @@ func DecFunc(name token.Token) *fn.Func {
     return &f
 }
 
-func DecStruct(name token.Token, ts []types.Type) *structDec.Struct {
+func DecStruct(name token.Token, names []string, types []types.Type) *structDec.Struct {
     if InGlobalScope() {
-        s := structDec.CreateStruct(name, ts)
+        s := structDec.CreateStruct(name, names, types)
         curScope.identObjs[name.Str] = &s
         return &s
     } else {

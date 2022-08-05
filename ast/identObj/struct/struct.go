@@ -8,11 +8,12 @@ import (
 type Struct struct {
     decPos token.Pos
     name string
-    fields []types.Type
+    fieldNames []string
+    fieldTypes []types.Type
 }
 
-func CreateStruct(name token.Token, fields []types.Type) Struct {
-    return Struct{ decPos: name.Pos, name: name.Str, fields: fields }
+func CreateStruct(name token.Token, fieldNames []string, fieldTypes []types.Type) Struct {
+    return Struct{ decPos: name.Pos, name: name.Str, fieldNames: fieldNames, fieldTypes: fieldTypes }
 }
 
 func (s *Struct) GetName() string {
@@ -28,5 +29,13 @@ func (s *Struct) Addr(fieldNum int) string {
 }
 
 func (s *Struct) GetType() types.StructType {
-    return types.StructType{ Name: s.name, Types: s.fields }
+    return types.StructType{ Name: s.name, Types: s.fieldTypes }
+}
+
+func (s *Struct) GetTypes() []types.Type {
+    return s.fieldTypes
+}
+
+func (s *Struct) GetNames() []string {
+    return s.fieldNames
 }
