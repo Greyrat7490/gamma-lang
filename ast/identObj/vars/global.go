@@ -55,13 +55,18 @@ func (v *GlobalVar) Addr(fieldNum int) string {
         }
 
     case types.StructType:
-        offset := 0
-        for _,t := range t.Types {
-            offset += t.Size()
-        }
+        if fieldNum == 0 {
+            return v.name
+        } else {
+            offset := 0
+            for i := 1; i <= fieldNum; i++ {
+                offset += t.Types[i].Size()
+            }
 
-        return fmt.Sprintf("%s+%d", v.name, offset)
+            return fmt.Sprintf("%s+%d", v.name, offset)
+        }
     }
+
     return v.name
 }
 

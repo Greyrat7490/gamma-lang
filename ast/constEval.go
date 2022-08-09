@@ -48,6 +48,10 @@ func (e *Indexed) ConstEval() token.Token {
 
     return token.Token{ Type: token.Unknown }
 }
+func (e *Field) ConstEval() token.Token {
+    // TODO
+    return token.Token{}
+}
 
 func (e *Unary) ConstEval() token.Token {
     val := e.Operand.ConstEval()

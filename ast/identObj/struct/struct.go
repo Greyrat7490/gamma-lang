@@ -39,3 +39,23 @@ func (s *Struct) GetTypes() []types.Type {
 func (s *Struct) GetNames() []string {
     return s.fieldNames
 }
+
+func (s *Struct) GetTypeOfField(name string) types.Type {
+    for i,f := range s.fieldNames {
+        if f == name {
+            return s.fieldTypes[i]
+        }
+    }
+
+    return nil
+}
+
+func (s *Struct) GetFieldNum(name string) int {
+    for i,f := range s.fieldNames {
+        if f == name {
+            return i
+        }
+    }
+
+    return -1
+}

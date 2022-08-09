@@ -37,6 +37,9 @@ func prsExpr() ast.Expr {
         case token.ParenL:
             return prsCallFn()  // only tmp because binary ops are not supported with func calls yet
 
+        case token.Dot:
+            expr = prsField()
+
         case token.BraceL:
             if obj := identObj.Get(token.Cur().Str); obj != nil {
                 if _,ok := obj.(*structDec.Struct); ok {
@@ -356,6 +359,7 @@ func prsIndexExpr(expr ast.Expr) *ast.Indexed {
     posR := token.Next()
     if posR.Type != token.BrackR {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"]\" but got %v\n", posR)
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
         os.Exit(1)
     }
 
@@ -367,11 +371,32 @@ func prsIndexExpr(expr ast.Expr) *ast.Indexed {
         posR := token.Next()
         if posR.Type != token.BrackR {
             fmt.Fprintf(os.Stderr, "[ERROR] expected \"]\" but got %v\n", posR)
+            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
             os.Exit(1)
         }
     }
 
     return &res
+}
+
+func prsField() *ast.Field {
+    objName := token.Cur()
+
+    dot := token.Next()
+    if dot.Type != token.Dot {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \".\" but got %v\n", dot)
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+
+    fieldName := token.Next()
+    if fieldName.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", fieldName)
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+
+    return &ast.Field{ Pos: objName.Pos, Obj: identObj.Get(objName.Str), DotPos: dot.Pos, FieldName: fieldName }
 }
 
 func prsValue() ast.Expr {

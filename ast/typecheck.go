@@ -5,6 +5,7 @@ import (
     "fmt"
     "gamma/token"
     "gamma/types"
+    "gamma/ast/identObj"
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
     "gamma/ast/identObj/consts"
@@ -98,6 +99,7 @@ func (o *BadExpr) typeCheck() {}
 func (o *Lit)     typeCheck() {}
 func (o *Paren)   typeCheck() {}
 func (o *Ident)   typeCheck() {}
+func (o *Field)   typeCheck() {}
 func (o *Indexed) typeCheck() {
     if t,ok := o.ArrExpr.GetType().(types.ArrType); !ok {
         fmt.Fprintf(os.Stderr, "[ERROR] you can only index an array but got %v\n", t)
@@ -272,6 +274,25 @@ func (o *Indexed)   GetType() types.Type {
         return nil
     }
 }
+func (o *Field) GetType() types.Type {
+    if v,ok := o.Obj.(vars.Var); ok {
+        t := v.GetType()
+
+        if sType,ok := t.(types.StructType); ok {
+            obj := identObj.Get(sType.Name)
+            if s,ok := obj.(*structDec.Struct); ok {
+                return s.GetTypeOfField(o.FieldName.Str)
+            }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] %s is not a struct but a %v\n", o.Obj.GetName(), t)
+            fmt.Fprintln(os.Stderr, "\t" + o.At())
+            os.Exit(1)
+        }
+    }
+
+    return nil
+}
+
 func (o *Paren)    GetType() types.Type { return o.Expr.GetType() }
 func (o *Ident)    GetType() types.Type {
     if c,ok := o.Obj.(*consts.Const); ok {

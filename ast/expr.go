@@ -13,6 +13,7 @@ import (
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
     "gamma/ast/identObj/consts"
+    "gamma/ast/identObj/struct"
 )
 
 type Expr interface {
@@ -66,6 +67,13 @@ type Indexed struct {
     BrackLPos token.Pos
     Indices []Expr
     BrackRPos token.Pos
+}
+
+type Field struct {
+    Pos token.Pos
+    Obj identObj.IdentObj
+    DotPos token.Pos
+    FieldName token.Token
 }
 
 type Ident struct {
@@ -232,6 +240,25 @@ func (e *Indexed) Compile(file *os.File) {
         asm.MovRegDeref(file, asm.RegB, asm.GetOffsetedReg(asm.RegD, types.Ptr_Size, 8), types.I32_Size)
     } else {
         asm.MovRegDeref(file, asm.RegA, asm.GetReg(asm.RegD, types.Ptr_Size), arrType.Ptr.BaseType.Size())
+    }
+}
+
+func (e *Field) Compile(file *os.File) {
+    if v,ok := e.Obj.(vars.Var); ok {
+        t := v.GetType()
+
+        if sType,ok := t.(types.StructType); ok {
+            obj := identObj.Get(sType.Name)
+            if s,ok := obj.(*structDec.Struct); ok {
+                i := s.GetFieldNum(e.FieldName.Str)
+                s := s.GetTypes()[i].Size()
+                asm.MovRegDeref(file, asm.RegA, v.Addr(i), s)
+            }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] %s is not a struct but a %v\n", e.Obj.GetName(), t)
+            fmt.Fprintln(os.Stderr, "\t" + e.At())
+            os.Exit(1)
+        }
     }
 }
 
@@ -465,6 +492,7 @@ func (e *FieldLit)  At() string { return e.Name.At() }
 func (e *StructLit) At() string { return e.Pos.At() }
 func (e *ArrayLit)  At() string { return e.Pos.At() }
 func (e *Indexed)   At() string { return e.ArrExpr.At() }
+func (e *Field)     At() string { return e.Pos.At() }
 func (e *Ident)     At() string { return e.Pos.At() }
 func (e *Unary)     At() string { return e.Operator.At() }
 func (e *Binary)    At() string { return e.OperandL.At() }    // TODO: At() of Operand with higher precedence
@@ -479,6 +507,7 @@ func (e *FieldLit)  End() string { return e.Value.End() }
 func (e *StructLit) End() string { return e.BraceRPos.At() }
 func (e *ArrayLit)  End() string { return e.BraceRPos.At() }
 func (e *Indexed)   End() string { return e.BrackRPos.At() }
+func (e *Field)     End() string { return e.FieldName.At() }
 func (e *Ident)     End() string { return e.Pos.At() }
 func (e *Unary)     End() string { return e.Operand.At() }
 func (e *Binary)    End() string { return e.OperandR.At() }

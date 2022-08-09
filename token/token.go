@@ -51,6 +51,7 @@ const (
     BraceR          // }
     UndScr          // _
 
+    Dot             // .
     Comma           // ,
     Colon           // :
     SemiCol         // ;
@@ -129,6 +130,8 @@ func ToTokenType(s string) TokenType {
     case "_":
         return UndScr
 
+    case ".":
+        return Dot
     case ",":
         return Comma
     case ";":
@@ -235,6 +238,8 @@ func (t TokenType) String() string {
     case UndScr:
         return "UnderS"
 
+    case Dot:
+        return "Dot"
     case Comma:
         return "Comma"
     case SemiCol:
@@ -416,7 +421,7 @@ func Tokenize(path string) {
                 fallthrough
 
             // split at non space char (and keep char)
-            case '(', ')', '{', '}', '[', ']', '+', '-', '*', '%', ',', ';', '$':
+            case '(', ')', '{', '}', '[', ']', '+', '-', '*', '%', '.', ',', ';', '$':
                 split(line, start, i, lineNum)
 
                 tokens = append(tokens, Token{ ToTokenType(string(line[i])), string(line[i]), Pos{lineNum, i+1} })

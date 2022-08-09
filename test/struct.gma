@@ -6,9 +6,24 @@ struct Coord {
 
 c1 Coord := Coord{ y: 69, x: 420, z: -64 }
 
-fn main() {
+fn test_global() {
+    printStr("x: ") printInt(c1.x) printStr("\n")
+    printStr("y: ") printInt(c1.y) printStr("\n")
+    printStr("z: ") printInt(c1.z) printStr("\n")
+}
+
+fn test_local() {
     c2 := Coord{ z: 69, y: -420, x: 64 }
 
-    // printInt(c1.x)
-    // printInt(c1.y)
+    printStr("x: ") printInt(c2.x) printStr("\n")
+    printStr("y: ") printInt(c2.y) printStr("\n")
+    printStr("z: ") printInt(c2.z) printStr("\n")
+}
+
+fn main() {
+    printStr("global ---------\n")
+    test_global()
+
+    printStr("local ---------\n")
+    test_local()
 }
