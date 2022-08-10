@@ -53,7 +53,11 @@ A statically and strongly typed programming language similar to Go, but with mor
   * [x] define/use
   * [x] multi-dimensionale
   * [x] compile time eval
-* [ ] structs
+* [x] structs
+  * [x] define struct type
+  * [x] define object
+  * [x] access fields (read/write)
+  * [x] compile time eval
 * [x] turing complete -> actual programming language
   * [x] proof with Rule 110 programm
 * [x] type checking
