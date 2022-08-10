@@ -244,21 +244,19 @@ func (e *Indexed) Compile(file *os.File) {
 }
 
 func (e *Field) Compile(file *os.File) {
-    if v,ok := e.Obj.(vars.Var); ok {
-        t := v.GetType()
+    t := e.Obj.GetType()
 
-        if sType,ok := t.(types.StructType); ok {
-            obj := identObj.Get(sType.Name)
-            if s,ok := obj.(*structDec.Struct); ok {
-                i := s.GetFieldNum(e.FieldName.Str)
-                s := s.GetTypes()[i].Size()
-                asm.MovRegDeref(file, asm.RegA, v.Addr(i), s)
-            }
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] %s is not a struct but a %v\n", e.Obj.GetName(), t)
-            fmt.Fprintln(os.Stderr, "\t" + e.At())
-            os.Exit(1)
+    if sType,ok := t.(types.StructType); ok {
+        obj := identObj.Get(sType.Name)
+        if s,ok := obj.(*structDec.Struct); ok {
+            i := s.GetFieldNum(e.FieldName.Str)
+            s := s.GetTypes()[i].Size()
+            asm.MovRegDeref(file, asm.RegA, e.Obj.Addr(i), s)
         }
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] %s is not a struct but a %v\n", e.Obj.GetName(), t)
+        fmt.Fprintln(os.Stderr, "\t" + e.At())
+        os.Exit(1)
     }
 }
 

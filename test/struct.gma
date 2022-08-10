@@ -20,10 +20,56 @@ fn test_local() {
     printStr("z: ") printInt(c2.z) printStr("\n")
 }
 
+fn assign() {
+    c2 := Coord{ x: 64, y: -420, z: 69 }
+
+    printStr("c1:\n")
+    printStr("x: ") printInt(c1.x) printStr("\n")
+    printStr("y: ") printInt(c1.y) printStr("\n")
+    printStr("z: ") printInt(c1.z) printStr("\n")
+
+    printStr("c2:\n")
+    printStr("x: ") printInt(c2.x) printStr("\n")
+    printStr("y: ") printInt(c2.y) printStr("\n")
+    printStr("z: ") printInt(c2.z) printStr("\n")
+
+    printStr("-----\n")
+
+    printStr("c1.y = -69\n")
+    printStr("c2.y = -69\n")
+    c1.y = -69
+    c2.y = -69
+
+    printStr("c1:\n")
+    printStr("x: ") printInt(c1.x) printStr("\n")
+    printStr("y: ") printInt(c1.y) printStr("\n")
+    printStr("z: ") printInt(c1.z) printStr("\n")
+
+    printStr("c2:\n")
+    printStr("x: ") printInt(c2.x) printStr("\n")
+    printStr("y: ") printInt(c2.y) printStr("\n")
+    printStr("z: ") printInt(c2.z) printStr("\n")
+}
+
+fn const() {
+    c2 :: Coord{ x: 64, y: 69, z: -64 }
+
+    printStr("c2:\n")
+    printStr("x: ") printInt(c2.x) printStr("\n")
+    printStr("y: ") printInt(c2.y) printStr("\n")
+    printStr("z: ") printInt(c2.z) printStr("\n")
+}
+
 fn main() {
     printStr("global ---------\n")
     test_global()
 
     printStr("local ---------\n")
     test_local()
+
+    printStr("assign ---------\n")
+    assign()
+
+    printStr("const ---------\n")
+    const()
 }

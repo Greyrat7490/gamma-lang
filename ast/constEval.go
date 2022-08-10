@@ -5,10 +5,14 @@ import (
     "fmt"
     "strconv"
     "gamma/token"
+    "gamma/types"
     "gamma/types/array"
+    "gamma/types/struct"
     "gamma/asm/x86_64"
+    "gamma/ast/identObj"
     "gamma/ast/identObj/vars"
     "gamma/ast/identObj/consts"
+    "gamma/ast/identObj/struct"
 )
 
 func (e *Lit)      ConstEval() token.Token { return e.Val }
@@ -48,9 +52,35 @@ func (e *Indexed) ConstEval() token.Token {
 
     return token.Token{ Type: token.Unknown }
 }
+
 func (e *Field) ConstEval() token.Token {
-    // TODO
-    return token.Token{}
+    e.typeCheck()
+
+    if c,ok := e.Obj.(*consts.Const); ok {
+        t := c.GetType()
+
+        if sType,ok := t.(types.StructType); ok {
+            obj := identObj.Get(sType.Name)
+            if s,ok := obj.(*structDec.Struct); ok {
+                i := s.GetFieldNum(e.FieldName.Str)
+                constVal := c.GetVal()
+                if constVal.Type != token.Number {
+                    fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", constVal)
+                    fmt.Fprintln(os.Stderr, "\t" + constVal.At())
+                    os.Exit(1)
+                }
+
+                idx,_ := strconv.Atoi(constVal.Str)
+                return structLit.GetValues(idx)[i]
+            }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] %s is not a struct but a %v\n", e.Obj.GetName(), t)
+            fmt.Fprintln(os.Stderr, "\t" + e.At())
+            os.Exit(1)
+        }
+    }
+
+    return token.Token{ Type: token.Unknown }
 }
 
 func (e *Unary) ConstEval() token.Token {

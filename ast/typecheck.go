@@ -275,19 +275,17 @@ func (o *Indexed)   GetType() types.Type {
     }
 }
 func (o *Field) GetType() types.Type {
-    if v,ok := o.Obj.(vars.Var); ok {
-        t := v.GetType()
+    t := o.Obj.GetType()
 
-        if sType,ok := t.(types.StructType); ok {
-            obj := identObj.Get(sType.Name)
-            if s,ok := obj.(*structDec.Struct); ok {
-                return s.GetTypeOfField(o.FieldName.Str)
-            }
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] %s is not a struct but a %v\n", o.Obj.GetName(), t)
-            fmt.Fprintln(os.Stderr, "\t" + o.At())
-            os.Exit(1)
+    if sType,ok := t.(types.StructType); ok {
+        obj := identObj.Get(sType.Name)
+        if s,ok := obj.(*structDec.Struct); ok {
+            return s.GetTypeOfField(o.FieldName.Str)
         }
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] %s is not a struct but a %v\n", o.Obj.GetName(), t)
+        fmt.Fprintln(os.Stderr, "\t" + o.At())
+        os.Exit(1)
     }
 
     return nil

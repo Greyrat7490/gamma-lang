@@ -52,6 +52,11 @@ func (f *Func) GetName() string {
     return f.name
 }
 
+func (f *Func) GetType() types.Type {
+    // TODO
+    return nil
+}
+
 func (f *Func) GetPos() token.Pos {
     return f.decPos
 }

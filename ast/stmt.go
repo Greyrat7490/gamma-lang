@@ -8,7 +8,9 @@ import (
     "gamma/asm/x86_64"
     "gamma/asm/x86_64/loops"
     "gamma/asm/x86_64/conditions"
+    "gamma/ast/identObj"
     "gamma/ast/identObj/vars"
+    "gamma/ast/identObj/struct"
 )
 
 type Stmt interface {
@@ -126,6 +128,30 @@ func (s *Assign) Compile(file *os.File) {
 
     case *Indexed:
         dest.AddrToRdx(file)
+
+        s.Value.Compile(file)
+
+        if s.Dest.GetType().GetKind() == types.Str {
+            asm.MovDerefReg(file, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size, asm.RegA)
+            asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegD, types.Ptr_Size, types.Ptr_Size), types.I32_Size, asm.RegB)
+        } else {
+            asm.MovDerefReg(file, asm.GetReg(asm.RegD, types.Ptr_Size), size, asm.RegA)
+        }
+
+    case *Field:
+        t := dest.Obj.GetType()
+
+        if sType,ok := t.(types.StructType); ok {
+            obj := identObj.Get(sType.Name)
+            if strct,ok := obj.(*structDec.Struct); ok {
+                i := strct.GetFieldNum(dest.FieldName.Str)
+                file.WriteString(fmt.Sprintf("lea rdx, [%s]\n", dest.Obj.Addr(i)))
+            }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] %s is not a struct but a %v\n", dest.Obj.GetName(), t)
+            fmt.Fprintln(os.Stderr, "\t" + dest.At())
+            os.Exit(1)
+        }
 
         s.Value.Compile(file)
 

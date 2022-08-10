@@ -193,7 +193,7 @@ func prsStructLit() *ast.StructLit {
     var t types.StructType
     if obj := identObj.Get(name.Str); obj != nil {
         if strct,ok := obj.(*structDec.Struct); ok {
-            t = strct.GetType()
+            t = strct.GetType().(types.StructType)
         }
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not defined\n", name.Str)

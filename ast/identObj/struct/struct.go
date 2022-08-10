@@ -28,7 +28,7 @@ func (s *Struct) Addr(fieldNum int) string {
     return ""
 }
 
-func (s *Struct) GetType() types.StructType {
+func (s *Struct) GetType() types.Type {
     return types.StructType{ Name: s.name, Types: s.fieldTypes }
 }
 
