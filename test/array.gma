@@ -95,6 +95,9 @@ fn constArr() {
     printInt(arr[0]) printStr("\n")
     printInt(arr[1]) printStr("\n")
     printInt(arr[2]) printStr("\n")
+
+    printStr("2 * arr[1] / 8 = ")
+    printInt(2 * arr[1] / 8) printStr("\n")
 }
 
 fn main() {

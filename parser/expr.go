@@ -399,14 +399,6 @@ func prsField() *ast.Field {
     return &ast.Field{ Pos: objName.Pos, Obj: identObj.Get(objName.Str), DotPos: dot.Pos, FieldName: fieldName }
 }
 
-func prsValue() ast.Expr {
-    if token.Cur().Type == token.Name {
-        return prsIdentExpr()
-    } else {
-        return prsLitExpr()
-    }
-}
-
 func prsParenExpr() *ast.Paren {
     expr := ast.Paren{ ParenLPos: token.Cur().Pos }
 
@@ -438,8 +430,11 @@ func prsUnaryExpr() *ast.Unary {
         token.Next()
         expr.Operand = prsIdentExpr()
     default:
-        token.Next()
-        expr.Operand = prsValue()
+        if token.Next().Type == token.Name {
+            expr.Operand = prsIdentExpr()           
+        } else {
+            expr.Operand = prsLitExpr()
+        }
     }
 
     return &expr
@@ -595,8 +590,18 @@ func prsBinary(expr ast.Expr, min_precedence precedence) ast.Expr {
             b.OperandR = prsParenExpr()
         case isUnaryExpr():
             b.OperandR = prsUnaryExpr()
+        case token.Cur().Type == token.Name:
+            if token.Peek().Type == token.Dot {
+                b.OperandR = prsField()
+            } else if token.Peek().Type == token.BrackL {
+                expr := prsIdentExpr()
+                token.Next()
+                b.OperandR = prsIndexExpr(expr)
+            } else {
+                b.OperandR = prsIdentExpr()
+            }
         default:
-            b.OperandR = prsValue()
+            b.OperandR = prsLitExpr()
         }
 
         if isBinaryExpr() {

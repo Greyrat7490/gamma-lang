@@ -58,6 +58,9 @@ fn const() {
     printStr("x: ") printInt(c2.x) printStr("\n")
     printStr("y: ") printInt(c2.y) printStr("\n")
     printStr("z: ") printInt(c2.z) printStr("\n")
+
+    printStr("2 * c2.x / 8 = ")
+    printInt(2 * c2.x / 8) printStr("\n")
 }
 
 fn main() {
