@@ -91,7 +91,7 @@ func VarSetVal(file *os.File, v Var, val token.Token) {
                 os.Exit(1)
             }
 
-            idx,_ := strconv.Atoi(val.Str)
+            idx,_ := strconv.ParseUint(val.Str, 10, 64)
 
             for i,val := range structLit.GetValues(idx) {
                 asm.MovDerefVal(file, v.Addr(i), t.Types[i].Size(), val.Str)

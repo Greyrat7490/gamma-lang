@@ -9,7 +9,7 @@ type structLit struct {
     fields []token.Token
 }
 
-func GetValues(structLitIdx int) (res []token.Token) {
+func GetValues(structLitIdx uint64) (res []token.Token) {
     return structLits[structLitIdx].fields
 }
 

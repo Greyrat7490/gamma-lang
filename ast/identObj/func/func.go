@@ -7,6 +7,7 @@ import (
     "gamma/token"
     "gamma/types"
     "gamma/types/str"
+    "gamma/types/struct"
     "gamma/asm/x86_64"
     "gamma/ast/identObj/vars"
 )
@@ -102,10 +103,18 @@ func (f *Func) Call(file *os.File) {
 func DefArg(file *os.File, regIdx int, v vars.Var) {
     t := v.GetType()
 
-    if t.GetKind() == types.Str {
+    switch t.GetKind() {
+    case types.Str:
         setArg(file, v.Addr(0), regIdx, types.Ptr_Size)
         setArg(file, v.Addr(1), regIdx+1, types.I32_Size)
-    } else {
+
+    case types.Struct:
+        t := t.(types.StructType)
+        for i,fieldType := range t.Types {
+            setArg(file, v.Addr(i), regIdx+i, fieldType.Size())
+        }
+
+    default:
         setArg(file, v.Addr(0), regIdx, t.Size())
     }
 }
@@ -131,7 +140,21 @@ func PassVal(file *os.File, regIdx int, value token.Token, valtype types.Type) {
         if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
             asm.MovRegVal(file, regs[regIdx], types.Ptr_Size, fmt.Sprintf("_arr%d", idx))
         } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected size of array to be a Number but got %v\n", value)
+            fmt.Fprintf(os.Stderr, "[ERROR] expected array literal converted to a Number but got %v\n", value)
+            fmt.Fprintln(os.Stderr, "\t" + value.At())
+            os.Exit(1)
+        }
+
+    case types.Struct:
+        if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
+            t := valtype.(types.StructType)
+
+            fields := structLit.GetValues(idx)
+            for i,fieldType := range t.Types {
+                asm.MovRegVal(file, regs[regIdx+i], fieldType.Size(), fields[i].Str)
+            }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected struct literal converted to a Number but got %v\n", value)
             fmt.Fprintln(os.Stderr, "\t" + value.At())
             os.Exit(1)
         }
@@ -144,7 +167,8 @@ func PassVal(file *os.File, regIdx int, value token.Token, valtype types.Type) {
         asm.MovRegVal(file, regs[regIdx], valtype.Size(), value.Str)
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) could not get type of value \"%s\"\n", value.Str)
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot pass value of type %v yet\n", valtype)
+        fmt.Fprintln(os.Stderr, "\t" + value.At())
         os.Exit(1)
     }
 }
@@ -157,11 +181,17 @@ func PassVar(file *os.File, regIdx int, otherVar vars.Var) {
         asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), types.Ptr_Size)
         asm.MovRegDeref(file, regs[regIdx+1], otherVar.Addr(1), types.I32_Size)
 
+    case types.Struct:
+        t := t.(types.StructType)
+        for i,fieldType := range t.Types {
+            asm.MovRegDeref(file, regs[regIdx+i], otherVar.Addr(i), fieldType.Size())
+        }
+
     case types.Bool, types.I32, types.Ptr, types.Arr:
         asm.MovRegDeref(file, regs[regIdx], otherVar.Addr(0), t.Size())
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) type of var \"%s\" is not correct\n", otherVar.GetName())
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot pass var %s of type %v yet\n", otherVar.GetName(), t)
         os.Exit(1)
     }
 }

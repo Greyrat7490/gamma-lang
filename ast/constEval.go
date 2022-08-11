@@ -70,7 +70,7 @@ func (e *Field) ConstEval() token.Token {
                     os.Exit(1)
                 }
 
-                idx,_ := strconv.Atoi(constVal.Str)
+                idx,_ := strconv.ParseUint(constVal.Str, 10, 64)
                 return structLit.GetValues(idx)[i]
             }
         } else {

@@ -89,7 +89,7 @@ func (v *GlobalVar) DefVal(file *os.File, val token.Token) {
                 os.Exit(1)
             }
 
-            idx,_ := strconv.Atoi(val.Str)
+            idx,_ := strconv.ParseUint(val.Str, 10, 64)
 
             nasm.AddData(fmt.Sprintf("%s:", v.name))
             for i,v := range structLit.GetValues(idx) {

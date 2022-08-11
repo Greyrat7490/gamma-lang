@@ -63,6 +63,12 @@ fn const() {
     printInt(2 * c2.x / 8) printStr("\n")
 }
 
+fn printCoord(c Coord) {
+    printStr("x: ") printInt(c.x) printStr("\n")
+    printStr("y: ") printInt(c.y) printStr("\n")
+    printStr("z: ") printInt(c.z) printStr("\n")
+}
+
 fn main() {
     printStr("global ---------\n")
     test_global()
@@ -75,4 +81,10 @@ fn main() {
 
     printStr("const ---------\n")
     const()
+
+    printStr("pass as arg ---------\n")
+    printStr("c1:\n")
+    printCoord(c1)
+    printStr("struct literal:\n")
+    printCoord(Coord{ y: 420, x: 64, z: -64 })
 }
