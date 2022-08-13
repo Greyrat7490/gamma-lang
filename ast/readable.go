@@ -50,16 +50,22 @@ func (o *DefConst) Readable(indent int) string {
 func (o *DefFn) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "DEF_FN:\n"
 
-    s := ""
+    args := ""
     for _,a := range o.Args {
-        s += fmt.Sprintf("%s(Name) %v(Typename), ", a.V.GetName(), a.Type)
+        args += fmt.Sprintf("%s(Name) %v(Type), ", a.V.GetName(), a.Type)
     }
-    if len(s) > 0 { s = s[:len(s)-2] }
+    if len(args) > 0 { args = args[:len(args)-2] }
 
-    res += fmt.Sprintf("%s%s(Name) [%s]\n", strings.Repeat("   ", indent+1), o.F.GetName(), s) +
-        o.Block.Readable(indent+2)
+    s := strings.Repeat("   ", indent+1)
 
-    return res
+    res += fmt.Sprintf("%sName: %s\n", s, o.F.GetName()) +
+        fmt.Sprintf("%sArgs: [%s]\n", s, args)
+
+    if o.RetType != nil {
+        res += fmt.Sprintf("%sRet: %v\n", s, o.RetType)
+    }
+
+    return res + o.Block.Readable(indent+2)
 }
 
 func (o *DefStruct) Readable(indent int) string {
@@ -302,6 +308,10 @@ func (o *Break) Readable(indent int) string {
 
 func (o *Continue) Readable(indent int) string {
     return strings.Repeat("   ", indent) + "CONTINUE\n"
+}
+
+func (o *Ret) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "RET\n"
 }
 
 func (o *ExprStmt) Readable(indent int) string {

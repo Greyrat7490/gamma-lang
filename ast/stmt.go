@@ -9,6 +9,7 @@ import (
     "gamma/asm/x86_64/loops"
     "gamma/asm/x86_64/conditions"
     "gamma/ast/identObj"
+    "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
     "gamma/ast/identObj/struct"
 )
@@ -95,6 +96,11 @@ type Continue struct {
     Pos token.Pos
 }
 
+type Ret struct {
+    F *fn.Func
+    Pos token.Pos
+    RetExpr Expr    // nil -> return nothing
+}
 
 func (s *Assign) Compile(file *os.File) {
     s.typeCheck()
@@ -383,6 +389,15 @@ func (s *Continue) Compile(file *os.File) {
     loops.Continue(file)
 }
 
+func (s *Ret) Compile(file *os.File) {
+    s.typecheck()
+
+    if s.RetExpr != nil {
+        s.RetExpr.Compile(file)
+    }
+    fn.End(file)
+}
+
 func (s *ExprStmt) Compile(file *os.File) {
     s.Expr.Compile(file)
 }
@@ -412,6 +427,7 @@ func (s *For)      stmt() {}
 func (s *While)    stmt() {}
 func (s *Break)    stmt() {}
 func (s *Continue) stmt() {}
+func (s *Ret)      stmt() {}
 
 func (s *BadStmt)  At() string { return "" }
 func (s *DeclStmt) At() string { return s.Decl.At() }
@@ -428,6 +444,7 @@ func (s *For)      At() string { return s.ForPos.At() }
 func (s *While)    At() string { return s.WhilePos.At() }
 func (s *Break)    At() string { return s.Pos.At() }
 func (s *Continue) At() string { return s.Pos.At() }
+func (s *Ret)      At() string { return s.Pos.At() }
 
 func (s *BadStmt)  End() string { return "" }
 func (s *DeclStmt) End() string { return s.Decl.End() }
@@ -444,3 +461,4 @@ func (s *For)      End() string { return s.Block.End() }
 func (s *While)    End() string { return s.Block.End() }
 func (s *Break)    End() string { return s.Pos.At() }
 func (s *Continue) End() string { return s.Pos.At() }
+func (s *Ret)      End() string { return s.Pos.At() }

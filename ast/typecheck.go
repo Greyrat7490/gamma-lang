@@ -94,6 +94,23 @@ func (o *While) typeCheck() {
     }
 }
 
+func (o *Ret) typecheck() {
+    t1 := o.F.GetRetType()
+
+    if t1 == nil {
+        if o.RetExpr != nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected nothing to return but got %v\n", o.RetExpr.GetType())
+            fmt.Fprintln(os.Stderr, "\t" + o.At())
+            os.Exit(1)
+        }
+    } else {
+        if !types.Check(o.RetExpr.GetType(), t1) {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected to return %v but got %v\n", t1, o.RetExpr.GetType())
+            fmt.Fprintln(os.Stderr, "\t" + o.At())
+            os.Exit(1)
+        }
+    }
+}
 
 func (o *BadExpr) typeCheck() {}
 func (o *Lit)     typeCheck() {}
@@ -260,7 +277,7 @@ func valuesToTypes(values []Expr) (res []types.Type) {
 }
 
 func (o *BadExpr)   GetType() types.Type { return nil }
-func (o *FnCall)    GetType() types.Type { return nil }
+func (o *FnCall)    GetType() types.Type { return o.F.GetRetType() }
 func (o *Lit)       GetType() types.Type { return o.Type }
 func (o *FieldLit)  GetType() types.Type { return o.Value.GetType() }
 func (o *StructLit) GetType() types.Type { return o.StructType }

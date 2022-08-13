@@ -5,17 +5,17 @@ import (
     "fmt"
 )
 
-func MovRegVal(file *os.File, dest RegGroup, size int, val string) {
+func MovRegVal(file *os.File, dest RegGroup, size uint, val string) {
     file.WriteString(fmt.Sprintf("mov %s, %s\n", GetReg(dest, size), val))
 }
-func MovRegReg(file *os.File, dest RegGroup, src RegGroup, size int) {
+func MovRegReg(file *os.File, dest RegGroup, src RegGroup, size uint) {
     if GetSize(dest, size) > size {
         file.WriteString(fmt.Sprintf("movzx %s, %s\n", GetReg(dest, size), GetReg(src, size)))
     } else {
         file.WriteString(fmt.Sprintf("mov %s, %s\n", GetReg(dest, size), GetReg(src, size)))
     }
 }
-func MovRegDeref(file *os.File, dest RegGroup, addr string, size int) {
+func MovRegDeref(file *os.File, dest RegGroup, addr string, size uint) {
     if GetSize(dest, size) > size {
         file.WriteString(fmt.Sprintf("movzx %s, %s [%s]\n", GetReg(dest, size), GetWord(size), addr))
     } else {
@@ -23,10 +23,10 @@ func MovRegDeref(file *os.File, dest RegGroup, addr string, size int) {
     }
 }
 
-func MovDerefVal(file *os.File, addr string, size int, val string) {
+func MovDerefVal(file *os.File, addr string, size uint, val string) {
     file.WriteString(fmt.Sprintf("mov %s [%s], %s\n", GetWord(size), addr, val))
 }
-func MovDerefReg(file *os.File, addr string, size int, reg RegGroup) {
+func MovDerefReg(file *os.File, addr string, size uint, reg RegGroup) {
     srcSize := GetSize(reg, size)
 
     if size < srcSize {
@@ -36,11 +36,11 @@ func MovDerefReg(file *os.File, addr string, size int, reg RegGroup) {
         file.WriteString(fmt.Sprintf("mov %s [%s], %s\n", GetWord(size), addr, GetReg(reg, size)))
     }
 }
-func MovDerefDeref(file *os.File, dest string, src string, size int, reg RegGroup) {
+func MovDerefDeref(file *os.File, dest string, src string, size uint, reg RegGroup) {
     MovRegDeref(file, reg, src, size)
     MovDerefReg(file, dest, size, reg)
 }
 
-func DerefRax(file *os.File, size int) {
+func DerefRax(file *os.File, size uint) {
     file.WriteString(fmt.Sprintf("mov %s, %s [rax]\n", GetReg(RegA, size), GetWord(size)))
 }

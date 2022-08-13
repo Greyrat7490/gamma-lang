@@ -37,26 +37,26 @@ const (
     RegR11 RegGroup = iota
 )
 
-func GetWord(bytes int) string {
+func GetWord(bytes uint) string {
     if bytes == 8 {
         return words[3]
     }
     return words[bytes/2]
 }
-func GetDataSize(bytes int) string {
+func GetDataSize(bytes uint) string {
     if bytes == 8 {
         return dataSizes[3]
     }
     return dataSizes[bytes/2]
 }
-func GetBssSize(bytes int) string {
+func GetBssSize(bytes uint) string {
     if bytes == 8 {
         return bssSizes[3]
     }
     return bssSizes[bytes/2]
 }
 
-func GetReg(g RegGroup, size int) string {
+func GetReg(g RegGroup, size uint) string {
     if g >= RegR8 {
         return regs[g][0]
     }
@@ -77,7 +77,7 @@ func GetReg(g RegGroup, size int) string {
     return regs[g][size / 2]
 }
 
-func GetOffsetedReg(g RegGroup, size int, offset int) string {
+func GetOffsetedReg(g RegGroup, size uint, offset uint) string {
     reg := GetReg(g, size)
 
     if offset == 0 {
@@ -91,7 +91,7 @@ func GetOffsetedReg(g RegGroup, size int, offset int) string {
     return fmt.Sprintf("%s%d", reg, offset)
 }
 
-func GetSize(g RegGroup, size int) int {
+func GetSize(g RegGroup, size uint) uint {
     switch {
     case g >= RegR8:
         return 8

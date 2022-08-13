@@ -16,15 +16,15 @@ const (
 )
 
 const (
-    I32_Size  int = 4
-    Bool_Size int = 1
-    Ptr_Size  int = 8
-    Arr_Size  int = 8
-    Str_Size  int = Ptr_Size + I32_Size
+    I32_Size  uint = 4
+    Bool_Size uint = 1
+    Ptr_Size  uint = 8
+    Arr_Size  uint = 8
+    Str_Size  uint = Ptr_Size + I32_Size
 )
 
 type Type interface {
-    Size()    int
+    Size()    uint
     String()  string
     GetKind() TypeKind
 }
@@ -54,13 +54,13 @@ func (t PtrType)    GetKind() TypeKind { return Ptr  }
 func (t ArrType)    GetKind() TypeKind { return Arr  }
 func (t StructType) GetKind() TypeKind { return Struct }
 
-func (t I32Type)    Size() int { return I32_Size }
-func (t BoolType)   Size() int { return Bool_Size }
-func (t StrType)    Size() int { return t.ptr.Size() + t.size.Size() }
-func (t PtrType)    Size() int { return Ptr_Size }
-func (t ArrType)    Size() int { return Arr_Size }
-func (t StructType) Size() int {
-    res := 0
+func (t I32Type)    Size() uint { return I32_Size }
+func (t BoolType)   Size() uint { return Bool_Size }
+func (t StrType)    Size() uint { return t.ptr.Size() + t.size.Size() }
+func (t PtrType)    Size() uint { return Ptr_Size }
+func (t ArrType)    Size() uint { return Arr_Size }
+func (t StructType) Size() uint {
+    var res uint = 0
     for _,t := range t.Types {
         res += t.Size()
     }

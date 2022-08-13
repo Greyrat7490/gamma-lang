@@ -18,6 +18,12 @@ type IdentObj interface {
     Addr(fieldNum int) string
 }
 
+var curFunc *fn.Func = nil
+
+func GetCurFunc() *fn.Func {
+    return curFunc
+}
+
 func DecVar(name token.Token, t types.Type) vars.Var {
     if InGlobalScope() {
         v := vars.CreateGlobalVar(name, t)
@@ -39,11 +45,12 @@ func DecConst(name token.Token, t types.Type) *consts.Const {
     return &c
 }
 
-func DecFunc(name token.Token) *fn.Func {
+func DecFunc(name token.Token, args []types.Type, retType types.Type) *fn.Func {
     checkName(name)
 
-    f := fn.CreateFunc(name, nil)
-    curScope.identObjs[name.Str] = &f
+    f := fn.CreateFunc(name, args, retType, GetFrameSize())
+    curScope.parent.identObjs[name.Str] = &f
+    curFunc = &f
     return &f
 }
 
@@ -60,7 +67,7 @@ func DecStruct(name token.Token, names []string, types []types.Type) *structDec.
     }
 }
 
-func AddBuildIn(name string, argname string, argtype types.Type) {
+func AddBuildIn(name string, argname string, argtype types.Type, retType types.Type) {
     if !InGlobalScope() {
         fmt.Fprintln(os.Stderr, "[ERROR] AddBuildIn has to be called in the global scope")
         os.Exit(1)
@@ -69,6 +76,8 @@ func AddBuildIn(name string, argname string, argtype types.Type) {
     f := fn.CreateFunc(
         token.Token{ Str: name, Type: token.Name },
         []types.Type{ argtype },
+        retType,
+        0,
     )
 
     curScope.identObjs[name] = &f

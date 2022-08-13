@@ -45,6 +45,10 @@ func prsStmt(ignoreUnusedExpr bool) ast.Stmt {
         c := prsContinue()
         return &c
 
+    case token.Ret:
+        r := prsRet()
+        return &r
+
     case token.Number, token.Str, token.Boolean, token.ParenL:
         expr := prsExpr()
         if !ignoreUnusedExpr && expr.GetType() != nil {
@@ -269,15 +273,23 @@ func prsForStmt() ast.For {
 }
 
 func prsBreak() ast.Break {
-    var op ast.Break = ast.Break{ Pos: token.Cur().Pos }
-    return op
+    return ast.Break{ Pos: token.Cur().Pos }
 }
 
 func prsContinue() ast.Continue {
-    var op ast.Continue = ast.Continue{ Pos: token.Cur().Pos }
-    return op
+    return ast.Continue{ Pos: token.Cur().Pos }
 }
 
+func prsRet() ast.Ret {
+    r := ast.Ret{ Pos: token.Cur().Pos, F: identObj.GetCurFunc() }
+
+    if r.F.GetRetType() != nil {
+        token.Next()
+        r.RetExpr = prsExpr()
+    }
+
+    return r
+}
 
 func getPlaceholder(cond ast.Expr) (expr *ast.Expr) {
     if cond == nil {

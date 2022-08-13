@@ -7,12 +7,12 @@ import (
 )
 
 func Declare() {
-    identObj.AddBuildIn("printStr",  "s", types.StrType{})
-    identObj.AddBuildIn("printInt",  "i", types.I32Type{})
-    identObj.AddBuildIn("printPtr",  "i", types.PtrType{})
-    identObj.AddBuildIn("printBool", "b", types.BoolType{})
+    identObj.AddBuildIn("printStr",  "s", types.StrType{}, nil)
+    identObj.AddBuildIn("printInt",  "i", types.I32Type{}, nil)
+    identObj.AddBuildIn("printPtr",  "i", types.PtrType{}, nil)
+    identObj.AddBuildIn("printBool", "b", types.BoolType{}, nil)
 
-    identObj.AddBuildIn("exit", "i", types.I32Type{})
+    identObj.AddBuildIn("exit", "i", types.I32Type{}, nil)
 }
 
 func Define(file *os.File) {

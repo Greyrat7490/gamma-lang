@@ -44,6 +44,7 @@ type DefFn struct {
     F *fn.Func
     Pos token.Pos
     Args []DecVar
+    RetType types.Type
     Block Block
 }
 

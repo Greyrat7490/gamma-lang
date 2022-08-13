@@ -13,15 +13,15 @@ var curScope *Scope = &Scope{ identObjs: map[string]IdentObj{} }
 type Scope struct {
     identObjs map[string]IdentObj
     parent *Scope
-    innerSize int
-    frameSize int
+    innerSize uint
+    frameSize uint
 }
 
 func GetCur() *Scope {
     return curScope
 }
 
-func GetFrameSize() int {
+func GetFrameSize() uint {
     return curScope.frameSize + curScope.innerSize
 }
 

@@ -25,16 +25,16 @@ func Geq(file *os.File, lhs string, rhs string) {
 }
 
 
-func Neg(file *os.File, src string, size int) {
+func Neg(file *os.File, src string, size uint) {
     file.WriteString(fmt.Sprintf("neg %s\n", GetReg(RegA, size)))
 }
-func Add(file *os.File, src string, size int) {
+func Add(file *os.File, src string, size uint) {
     file.WriteString(fmt.Sprintf("add %s, %s\n", GetReg(RegA, size), src))
 }
-func Sub(file *os.File, src string, size int) {
+func Sub(file *os.File, src string, size uint) {
     file.WriteString(fmt.Sprintf("sub %s, %s\n", GetReg(RegA, size), src))
 }
-func Mul(file *os.File, src string, size int) {
+func Mul(file *os.File, src string, size uint) {
     Push(file, RegB)
     Push(file, RegD)
 
@@ -44,7 +44,7 @@ func Mul(file *os.File, src string, size int) {
     Pop(file, RegD)
     Pop(file, RegB)
 }
-func Div(file *os.File, src string, size int) {
+func Div(file *os.File, src string, size uint) {
     Push(file, RegD)
     Push(file, RegB)
 
@@ -61,7 +61,7 @@ func Div(file *os.File, src string, size int) {
     Pop(file, RegB)
     Pop(file, RegD)
 }
-func Mod(file *os.File, src string, size int) {
+func Mod(file *os.File, src string, size uint) {
     Push(file, RegB)
     Push(file, RegD)
     file.WriteString(fmt.Sprintf("mov %s, %s\n", GetReg(RegB, size), src))

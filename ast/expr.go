@@ -27,6 +27,7 @@ type Expr interface {
 type BadExpr struct{}
 
 type FnCall struct {
+    F *fn.Func
     Ident Ident
     ParenLPos token.Pos
     Values []Expr

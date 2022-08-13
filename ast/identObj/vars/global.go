@@ -58,7 +58,7 @@ func (v *GlobalVar) Addr(fieldNum int) string {
         if fieldNum == 0 {
             return v.name
         } else {
-            offset := 0
+            var offset uint = 0
             for i := 1; i <= fieldNum; i++ {
                 offset += t.Types[i].Size()
             }

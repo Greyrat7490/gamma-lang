@@ -29,20 +29,12 @@ type Func struct {
     decPos token.Pos
     name string
     args []types.Type
-    frameSize int
+    retType types.Type
+    frameSize uint
 }
 
-func CreateFunc(name token.Token, args []types.Type) Func {
-    return Func{ name: name.Str, decPos: name.Pos, args: args, frameSize: -1 }
-}
-
-func (f *Func) SetArgs(args []types.Type) {
-    if f.args != nil {
-        fmt.Fprintln(os.Stderr, "[ERROR] setting the arguments of a function again is not allowed")
-        os.Exit(1)
-    }
-
-    f.args = args
+func CreateFunc(name token.Token, args []types.Type, retType types.Type, frameSize uint) Func {
+    return Func{ name: name.Str, decPos: name.Pos, args: args, retType: retType, frameSize: frameSize }
 }
 
 func (f *Func) GetArgs() []types.Type {
@@ -58,6 +50,10 @@ func (f *Func) GetType() types.Type {
     return nil
 }
 
+func (f *Func) GetRetType() types.Type {
+    return f.retType
+}
+
 func (f *Func) GetPos() token.Pos {
     return f.decPos
 }
@@ -68,26 +64,12 @@ func (f *Func) Addr(fieldNum int) string {
     return ""
 }
 
-func (f *Func) SetFrameSize(frameSize int) {
-    if f.frameSize != -1 {
-        fmt.Fprintln(os.Stderr, "[ERROR] setting the frameSize of a function again is not allowed")
-        os.Exit(1)
-    }
-
-    f.frameSize = frameSize
-}
-
 func (f *Func) Define(file *os.File) {
     file.WriteString(f.name + ":\n")
     file.WriteString("push rbp\nmov rbp, rsp\n")
-    reserveSpace(file, f.frameSize)
-}
-
-func reserveSpace(file *os.File, size int) {
-    if size > 0 {
+    if f.frameSize > 0 {
         // size has to be the multiple of 16byte
-        size = (size + 15) & ^15
-        file.WriteString(fmt.Sprintf("sub rsp, %d\n", size))
+        file.WriteString(fmt.Sprintf("sub rsp, %d\n", int(f.frameSize + 15) & ^15))
     }
 }
 
@@ -119,7 +101,7 @@ func DefArg(file *os.File, regIdx int, v vars.Var) {
     }
 }
 
-func setArg(file *os.File, addr string, regIdx int, size int) {
+func setArg(file *os.File, addr string, regIdx int, size uint) {
     if regIdx >= len(regs) {
         fmt.Fprintf(os.Stderr, "[ERROR] not enough regs left to set args (max 6) %d more needed\n", regIdx - len(regs) + 1)
         os.Exit(1)

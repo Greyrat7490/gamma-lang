@@ -124,7 +124,7 @@ func VarSetVal(file *os.File, v Var, val token.Token) {
 }
 
 
-func DerefSetVal(file *os.File, val token.Token, size int) {
+func DerefSetVal(file *os.File, val token.Token, size uint) {
     switch val.Type {
     case token.Str:
         strIdx := str.Add(val)
@@ -143,7 +143,7 @@ func DerefSetVal(file *os.File, val token.Token, size int) {
 func DerefSetVar(file *os.File, other Var) {
     if other.GetType().GetKind() == types.Str {
         asm.MovDerefDeref(file, "rax", other.Addr(0), types.Ptr_Size, asm.RegB)
-        asm.MovDerefDeref(file, fmt.Sprintf("rax+%d", types.Ptr_Size), other.Addr(types.Ptr_Size), types.I32_Size, asm.RegB)
+        asm.MovDerefDeref(file, fmt.Sprintf("rax+%d", types.Ptr_Size), other.Addr(1), types.I32_Size, asm.RegB)
     } else {
         asm.MovDerefDeref(file, "rax", other.Addr(0), other.GetType().Size(), asm.RegB)
     }

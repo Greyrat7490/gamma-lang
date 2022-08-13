@@ -64,6 +64,29 @@ fn test6(a1 str, a2 str, a3 str) {
     printStr(a3)
 }
 
+fn add(a1 i32, a2 i32) -> i32 {
+    ret a1 + a2
+}
+
+// TODO: check for missing ret
+// TODO: remove redundant "leave ret"s
+fn abs_(a1 i32) -> i32 {
+    if a1 >= 0 {
+        ret a1
+    }
+
+    ret -a1
+}
+
+fn printAbs(a1 i32) {
+    if a1 >= 0 {
+        printInt(a1)
+        ret
+    }
+
+    printInt(-a1)
+}
+
 fn main() {
     test1(420)
 
@@ -80,4 +103,20 @@ fn main() {
     test4(-69, 86)
     test5("test string arg1\n", 8)
     test6("test string arg1\n", "arg2\n", "string arg3\n")
+
+    printStr("------------\n")
+
+    printStr("69 + -69 = ")
+    printInt(add(69, -69))
+
+    printStr("\n34 + 30 = ")
+    printInt(add(34, 30))
+
+    printStr("\nabs(-69) = ")
+    printInt(abs_(-69))
+    printStr("\nabs(64) = ")
+    printInt(abs_(64))
+    printStr("\nprintAbs(64) = ")
+    printAbs(64)
+    printStr("\n")
 }

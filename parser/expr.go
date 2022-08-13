@@ -5,6 +5,7 @@ import (
     "fmt"
     "gamma/ast"
     "gamma/ast/identObj"
+    "gamma/ast/identObj/func"
     "gamma/ast/identObj/struct"
     "gamma/token"
     "gamma/types"
@@ -35,7 +36,7 @@ func prsExpr() ast.Expr {
     case token.Name:
         switch token.Peek().Type {
         case token.ParenL:
-            return prsCallFn()  // only tmp because binary ops are not supported with func calls yet
+            expr = prsCallFn()
 
         case token.Dot:
             expr = prsField()
@@ -431,7 +432,7 @@ func prsUnaryExpr() *ast.Unary {
         expr.Operand = prsIdentExpr()
     default:
         if token.Next().Type == token.Name {
-            expr.Operand = prsIdentExpr()           
+            expr.Operand = prsIdentExpr()
         } else {
             expr.Operand = prsLitExpr()
         }
@@ -591,13 +592,19 @@ func prsBinary(expr ast.Expr, min_precedence precedence) ast.Expr {
         case isUnaryExpr():
             b.OperandR = prsUnaryExpr()
         case token.Cur().Type == token.Name:
-            if token.Peek().Type == token.Dot {
+            switch token.Peek().Type {
+            case token.Dot:
                 b.OperandR = prsField()
-            } else if token.Peek().Type == token.BrackL {
+
+            case token.BraceL:
                 expr := prsIdentExpr()
                 token.Next()
                 b.OperandR = prsIndexExpr(expr)
-            } else {
+
+            case token.ParenL:
+                b.OperandR = prsCallFn()
+
+            default:
                 b.OperandR = prsIdentExpr()
             }
         default:
@@ -662,7 +669,22 @@ func prsCallFn() *ast.FnCall {
     vals := prsPassArgs()
     posR := token.Cur().Pos
 
-    return &ast.FnCall{ Ident: *ident, Values: vals, ParenLPos: posL, ParenRPos: posR }
+    if obj := identObj.Get(ident.Name); obj != nil {
+        if f,ok := obj.(*fn.Func); ok {
+            return &ast.FnCall{ Ident: *ident, F: f, Values: vals, ParenLPos: posL, ParenRPos: posR }
+
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] you can only call a function (%s is not a function)\n", ident.Name)
+            fmt.Fprintln(os.Stderr, "\t" + ident.At())
+            os.Exit(1)
+        }
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared\n", ident.Name)
+        fmt.Fprintln(os.Stderr, "\t" + ident.At())
+        os.Exit(1)
+    }
+
+    return nil
 }
 
 func prsPassArgs() []ast.Expr {

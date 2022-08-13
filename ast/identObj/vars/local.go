@@ -11,10 +11,10 @@ type LocalVar struct {
     decPos token.Pos
     name string
     typ types.Type
-    offset int
+    offset uint
 }
 
-func CreateLocal(name token.Token, t types.Type, frameSize int) LocalVar {
+func CreateLocal(name token.Token, t types.Type, frameSize uint) LocalVar {
     return LocalVar{ name: name.Str, decPos: name.Pos, typ: t, offset: calcOffset(t, frameSize) }
 }
 
@@ -71,7 +71,7 @@ func (v *LocalVar) DefVal(file *os.File, val token.Token) {
     VarSetVal(file, v, val)
 }
 
-func calcOffset(vartype types.Type, frameSize int) int {
+func calcOffset(vartype types.Type, frameSize uint) uint {
     switch t := vartype.(type) {
     case types.StrType:
         return frameSize + types.I32_Size

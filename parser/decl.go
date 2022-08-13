@@ -292,25 +292,28 @@ func prsDefFn() ast.DefFn {
         isMainDefined = true
     }
 
-    f := identObj.DecFunc(name)
-
     identObj.StartScope()
     token.Next()
     argDecs := prsDecArgs()
+
+    var retType types.Type = nil
+    if token.Peek().Type == token.Arrow {
+        token.Next()
+        token.Next()
+        retType = prsType()
+    }
 
     var args []types.Type
     for _,a := range argDecs {
         args = append(args, a.Type)
     }
-    f.SetArgs(args)
+    f := identObj.DecFunc(name, args, retType)
 
     token.Next()
     block := prsBlock()
     identObj.EndScope()
 
-    f.SetFrameSize(identObj.GetFrameSize())
-
-    return ast.DefFn{ Pos: pos, F: f, Args: argDecs, Block: block }
+    return ast.DefFn{ Pos: pos, F: f, Args: argDecs, RetType: retType, Block: block }
 }
 
 func prsDecFields() (decs []ast.DecVar) {
