@@ -596,7 +596,7 @@ func prsBinary(expr ast.Expr, min_precedence precedence) ast.Expr {
             case token.Dot:
                 b.OperandR = prsField()
 
-            case token.BraceL:
+            case token.BrackL:
                 expr := prsIdentExpr()
                 token.Next()
                 b.OperandR = prsIndexExpr(expr)

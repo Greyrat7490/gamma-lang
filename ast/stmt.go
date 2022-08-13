@@ -393,7 +393,15 @@ func (s *Ret) Compile(file *os.File) {
     s.typecheck()
 
     if s.RetExpr != nil {
-        s.RetExpr.Compile(file)
+        t := s.RetExpr.GetType()
+
+        if t.Size() > 16 {
+            fmt.Fprintf(os.Stderr, "[ERROR] types bigger than 16byte are not supported to return (got %v of size %d)", t, t.Size())
+            fmt.Fprintln(os.Stderr, "\t" + s.At())
+            os.Exit(1)
+        } else {
+            s.RetExpr.Compile(file)
+        }
     }
     fn.End(file)
 }

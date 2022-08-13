@@ -48,7 +48,7 @@ func DecConst(name token.Token, t types.Type) *consts.Const {
 func DecFunc(name token.Token, args []types.Type, retType types.Type) *fn.Func {
     checkName(name)
 
-    f := fn.CreateFunc(name, args, retType, GetFrameSize())
+    f := fn.CreateFunc(name, args, retType)
     curScope.parent.identObjs[name.Str] = &f
     curFunc = &f
     return &f
@@ -77,7 +77,6 @@ func AddBuildIn(name string, argname string, argtype types.Type, retType types.T
         token.Token{ Str: name, Type: token.Name },
         []types.Type{ argtype },
         retType,
-        0,
     )
 
     curScope.identObjs[name] = &f

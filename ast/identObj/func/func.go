@@ -18,7 +18,7 @@ System V AMD64 ABI calling convention
   * float args1-8: xmm0 - xmm7
 
   * push args from right to left for more args
-  * return value in eax/rax
+  * return value in rax,rdx (rest on the stack)
   * caller cleans stack
   * callee reserves space (multiple of 16)
 */
@@ -33,8 +33,9 @@ type Func struct {
     frameSize uint
 }
 
-func CreateFunc(name token.Token, args []types.Type, retType types.Type, frameSize uint) Func {
-    return Func{ name: name.Str, decPos: name.Pos, args: args, retType: retType, frameSize: frameSize }
+func CreateFunc(name token.Token, args []types.Type, retType types.Type) Func {
+    // frameSize = 1 -> invalid value
+    return Func{ name: name.Str, decPos: name.Pos, args: args, retType: retType, frameSize: 1 }
 }
 
 func (f *Func) GetArgs() []types.Type {
@@ -58,6 +59,16 @@ func (f *Func) GetPos() token.Pos {
     return f.decPos
 }
 
+func (f *Func) SetFrameSize(size uint) {
+    if f.frameSize != 1 {
+        fmt.Fprintln(os.Stderr, "[ERROR] setting the frameSize of a function again is not allowed")
+        os.Exit(1)
+    }
+
+    // size has to be the multiple of 16byte
+    f.frameSize = (size + 15) & ^uint(15)
+}
+
 func (f *Func) Addr(fieldNum int) string {
     fmt.Fprintln(os.Stderr, "[ERROR] TODO: func.go Addr()")
     os.Exit(1)
@@ -68,8 +79,7 @@ func (f *Func) Define(file *os.File) {
     file.WriteString(f.name + ":\n")
     file.WriteString("push rbp\nmov rbp, rsp\n")
     if f.frameSize > 0 {
-        // size has to be the multiple of 16byte
-        file.WriteString(fmt.Sprintf("sub rsp, %d\n", int(f.frameSize + 15) & ^15))
+        file.WriteString(fmt.Sprintf("sub rsp, %d\n", f.frameSize))
     }
 }
 

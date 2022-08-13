@@ -311,6 +311,7 @@ func prsDefFn() ast.DefFn {
 
     token.Next()
     block := prsBlock()
+    f.SetFrameSize(identObj.GetFrameSize())
     identObj.EndScope()
 
     return ast.DefFn{ Pos: pos, F: f, Args: argDecs, RetType: retType, Block: block }

@@ -87,6 +87,15 @@ fn printAbs(a1 i32) {
     printInt(-a1)
 }
 
+fn testRetStr(a1 i32) -> str {
+    ret $ a1 == {
+        420: "a1 == 420\n"
+        69: "a1 == 69\n"
+        64: "a1 == 64\n"
+        _: "a1 is somethin else\n"
+    }
+}
+
 fn main() {
     test1(420)
 
@@ -114,9 +123,14 @@ fn main() {
 
     printStr("\nabs(-69) = ")
     printInt(abs_(-69))
+
     printStr("\nabs(64) = ")
     printInt(abs_(64))
+
     printStr("\nprintAbs(64) = ")
-    printAbs(64)
-    printStr("\n")
+    printAbs(64) printStr("\n")
+
+    printStr(testRetStr(420))
+    printStr(testRetStr(64))
+    printStr(testRetStr(-69))
 }
