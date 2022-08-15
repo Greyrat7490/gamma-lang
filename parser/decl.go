@@ -303,13 +303,18 @@ func prsDefFn() ast.DefFn {
         retType = prsType()
     }
 
+    if token.Next().Type != token.BraceL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", token.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        os.Exit(1)
+    }
+
     var args []types.Type
     for _,a := range argDecs {
         args = append(args, a.Type)
     }
     f := identObj.DecFunc(name, args, retType)
 
-    token.Next()
     block := prsBlock()
     f.SetFrameSize(identObj.GetFrameSize())
     identObj.EndScope()

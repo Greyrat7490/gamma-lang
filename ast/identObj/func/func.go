@@ -13,13 +13,14 @@ import (
 )
 
 /*
-System V AMD64 ABI calling convention
+calling convention
   * int   args1-6: rdi, rsi, rdx, rcx, r8, r9
-  * float args1-8: xmm0 - xmm7
+  * float args1-8: xmm0 - xmm7 (TODO)
+  * return: rax, rbx, rcx, rdx, rdi, rsi, r8, r9
 
-  * push args from right to left for more args
-  * return value in rax,rdx (rest on the stack)
-  * caller cleans stack
+  * rest: from right to left on stack (TODO)
+
+  * caller cleans stack (TODO)
   * callee reserves space (multiple of 16)
 */
 
@@ -166,20 +167,17 @@ func PassVal(file *os.File, regIdx int, value token.Token, valtype types.Type) {
 }
 
 func PassVar(file *os.File, regIdx int, otherVar vars.Var) {
-    t := otherVar.GetType()
-
-    switch t.GetKind() {
-    case types.Str:
+    switch t := otherVar.GetType().(type) {
+    case types.StrType:
         asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), types.Ptr_Size)
         asm.MovRegDeref(file, regs[regIdx+1], otherVar.Addr(1), types.I32_Size)
 
-    case types.Struct:
-        t := t.(types.StructType)
+    case types.StructType:
         for i,fieldType := range t.Types {
             asm.MovRegDeref(file, regs[regIdx+i], otherVar.Addr(i), fieldType.Size())
         }
 
-    case types.Bool, types.I32, types.Ptr, types.Arr:
+    case types.BoolType, types.I32Type, types.PtrType, types.ArrType:
         asm.MovRegDeref(file, regs[regIdx], otherVar.Addr(0), t.Size())
 
     default:
@@ -189,10 +187,17 @@ func PassVar(file *os.File, regIdx int, otherVar vars.Var) {
 }
 
 func PassReg(file *os.File, regIdx int, argType types.Type) {
-    if argType.GetKind() == types.Str {
+    switch t := argType.(type) {
+    case types.StrType:
         asm.MovRegReg(file, regs[regIdx],   asm.RegA, types.Ptr_Size)
-        asm.MovRegReg(file, regs[regIdx+1], asm.RegB, types.Ptr_Size)
-    } else {
+        asm.MovRegReg(file, regs[regIdx+1], asm.RegB, types.I32_Size)
+
+    case types.StructType:
+        for i,t := range t.Types {
+            asm.MovRegReg(file, regs[regIdx+i], asm.RegGroup(i), t.Size())
+        }
+
+    default:
         asm.MovRegReg(file, regs[regIdx], asm.RegA, argType.Size())
     }
 }

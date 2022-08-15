@@ -105,44 +105,11 @@ type Ret struct {
 func (s *Assign) Compile(file *os.File) {
     s.typeCheck()
 
-    size := s.Dest.GetType().Size()
+    t := s.Dest.GetType()
 
     switch dest := s.Dest.(type) {
-    case *Unary:
-        dest.Operand.Compile(file)
-
-        // compile time evaluation
-        if val := s.Value.ConstEval(); val.Type != token.Unknown {
-            vars.DerefSetVal(file, val, size)
-            return
-        }
-
-        if e,ok := s.Value.(*Ident); ok {
-            vars.DerefSetVar(file, e.Obj.(vars.Var))
-            return
-        }
-
-        asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
-        s.Value.Compile(file)
-
-        if s.Dest.GetType().GetKind() == types.Str {
-            asm.MovDerefReg(file, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size, asm.RegA)
-            asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegD, types.Ptr_Size, types.Ptr_Size), types.I32_Size, asm.RegB)
-        } else {
-            asm.MovDerefReg(file, asm.GetReg(asm.RegD, types.Ptr_Size), size, asm.RegA)
-        }
-
     case *Indexed:
         dest.AddrToRdx(file)
-
-        s.Value.Compile(file)
-
-        if s.Dest.GetType().GetKind() == types.Str {
-            asm.MovDerefReg(file, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size, asm.RegA)
-            asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegD, types.Ptr_Size, types.Ptr_Size), types.I32_Size, asm.RegB)
-        } else {
-            asm.MovDerefReg(file, asm.GetReg(asm.RegD, types.Ptr_Size), size, asm.RegA)
-        }
 
     case *Field:
         t := dest.Obj.GetType()
@@ -159,13 +126,25 @@ func (s *Assign) Compile(file *os.File) {
             os.Exit(1)
         }
 
-        s.Value.Compile(file)
+    case *Unary:
+        if dest.Operator.Type != token.Mul {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected \"*\" but got \"%v\"\n", dest.Operator)
+            fmt.Fprintln(os.Stderr, "\t" + s.Pos.At())
+            os.Exit(1)
+        }
 
-        if s.Dest.GetType().GetKind() == types.Str {
-            asm.MovDerefReg(file, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size, asm.RegA)
-            asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegD, types.Ptr_Size, types.Ptr_Size), types.I32_Size, asm.RegB)
-        } else {
-            asm.MovDerefReg(file, asm.GetReg(asm.RegD, types.Ptr_Size), size, asm.RegA)
+        dest.Operand.Compile(file)
+        asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
+
+        // compile time evaluation
+        if val := s.Value.ConstEval(); val.Type != token.Unknown {
+            vars.DerefSetVal(file, t, val)
+            return
+        }
+
+        if e,ok := s.Value.(*Ident); ok {
+            vars.DerefSetVar(file, e.Obj.(vars.Var))
+            return
         }
 
     case *Ident:
@@ -182,11 +161,30 @@ func (s *Assign) Compile(file *os.File) {
 
         s.Value.Compile(file)
         vars.VarSetExpr(file, dest.Obj.(vars.Var))
+        return
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] expected a variable or a dereferenced pointer but got \"%t\"\n", dest)
         fmt.Fprintln(os.Stderr, "\t" + s.Pos.At())
         os.Exit(1)
+    }
+
+    s.Value.Compile(file)
+
+    switch t := s.Dest.GetType().(type) {
+    case types.StrType:
+        asm.MovDerefReg(file, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size, asm.RegA)
+        asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegD, types.Ptr_Size, types.Ptr_Size), types.I32_Size, asm.RegB)
+
+    case types.StructType:
+        var offset uint = 0
+        for _,t := range t.Types {
+            asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegD, types.Ptr_Size, offset), t.Size(), asm.RegA)
+            offset += t.Size()
+        }
+
+    default:
+        asm.MovDerefReg(file, asm.GetReg(asm.RegD, types.Ptr_Size), t.Size(), asm.RegA)
     }
 }
 
@@ -393,15 +391,7 @@ func (s *Ret) Compile(file *os.File) {
     s.typecheck()
 
     if s.RetExpr != nil {
-        t := s.RetExpr.GetType()
-
-        if t.Size() > 16 {
-            fmt.Fprintf(os.Stderr, "[ERROR] types bigger than 16byte are not supported to return (got %v of size %d)", t, t.Size())
-            fmt.Fprintln(os.Stderr, "\t" + s.At())
-            os.Exit(1)
-        } else {
-            s.RetExpr.Compile(file)
-        }
+        s.RetExpr.Compile(file)
     }
     fn.End(file)
 }

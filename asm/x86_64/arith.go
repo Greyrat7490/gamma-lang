@@ -78,9 +78,3 @@ func Mod(file *os.File, src string, size uint) {
     Pop(file, RegB)
     Pop(file, RegD)
 }
-func Push(file *os.File, reg RegGroup) {
-    file.WriteString(fmt.Sprintf("push %s\n", GetReg(reg, 8)))
-}
-func Pop(file *os.File, reg RegGroup) {
-    file.WriteString(fmt.Sprintf("pop %s\n", GetReg(reg, 8)))
-}

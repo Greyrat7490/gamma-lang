@@ -111,9 +111,14 @@ func (d *DefFn) Compile(file *os.File) {
     for _,a := range d.Args {
         fn.DefArg(file, regIdx, a.V)
 
-        if a.Type.GetKind() == types.Str {
+        switch t := a.Type.(type) {
+        case types.StrType:
             regIdx += 2
-        } else {
+
+        case types.StructType:
+            regIdx += len(t.Types)
+
+        default:
             regIdx++
         }
     }

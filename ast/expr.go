@@ -132,31 +132,9 @@ func (e *Lit) Compile(file *os.File) {
     }
 }
 
-func (e *StructLit) Compile(file *os.File) {
-    for i := 0; i < len(e.Fields); i++ {
-        l := e.Fields[i].Value
-        switch l.GetType().GetKind() {
-        case types.Str:
-            strIdx := str.Add(l.ConstEval())
-
-            asm.MovRegVal(file, uint8(i), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx))
-            i++
-            asm.MovRegVal(file, uint8(i), types.I32_Size, fmt.Sprintf("%d", str.GetSize(strIdx)))
-
-        case types.Bool:
-            if l.ConstEval().Str == "true" {
-                asm.MovRegVal(file, uint8(i), types.Bool_Size, "1")
-            } else {
-                asm.MovRegVal(file, uint8(i), types.Bool_Size, "0")
-            }
-
-        default:
-            asm.MovRegVal(file, uint8(i), l.GetType().Size(), l.ConstEval().Str)
-        }
-    }
-}
-
+func (e *StructLit) Compile(file *os.File) {}
 func (e *FieldLit) Compile(file *os.File) {}
+func (e *ArrayLit) Compile(file *os.File) {}
 
 func (e *Indexed) flatten() Expr {
     // for dim = 1 (no need to flatten)
@@ -261,8 +239,6 @@ func (e *Field) Compile(file *os.File) {
     }
 }
 
-func (e *ArrayLit) Compile(file *os.File) {}
-
 func (e *Ident) Compile(file *os.File) {
     if c,ok := e.Obj.(*consts.Const); ok {
         l := Lit{ Val: c.GetVal(), Type: c.GetType() }
@@ -271,7 +247,17 @@ func (e *Ident) Compile(file *os.File) {
     }
 
     if v,ok := e.Obj.(vars.Var); ok {
-        asm.MovRegDeref(file, asm.RegA, v.Addr(0), v.GetType().Size())
+        switch t := v.GetType().(type) {
+        case types.StrType:
+            asm.MovRegDeref(file, asm.RegA, v.Addr(0), types.Ptr_Size)
+            asm.MovRegDeref(file, asm.RegB, v.Addr(1), types.I32_Size)
+        case types.StructType:
+            for i,t := range t.Types {
+                asm.MovRegDeref(file, asm.RegGroup(i), v.Addr(i), t.Size())
+            }
+        default:
+            asm.MovRegDeref(file, asm.RegA, v.Addr(0), v.GetType().Size())
+        }
         return
     }
 
@@ -416,14 +402,17 @@ func (e *FnCall) Compile(file *os.File) {
             fn.PassReg(file, regIdx, val.GetType())
         }
 
-        if val.GetType().GetKind() == types.Str {
+        switch t := val.GetType().(type) {
+        case types.StrType:
             regIdx += 2
-        } else {
+        case types.StructType:
+            regIdx += len(t.Types)
+        default:
             regIdx++
         }
     }
 
-    e.Ident.Obj.(*fn.Func).Call(file)
+    e.F.Call(file)
 }
 
 func (e *XCase) Compile(file *os.File, switchCount uint) {

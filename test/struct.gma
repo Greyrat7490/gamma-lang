@@ -20,7 +20,7 @@ fn test_local() {
     printStr("z: ") printInt(c2.z) printStr("\n")
 }
 
-fn assign() {
+fn assignField() {
     c2 := Coord{ x: 64, y: -420, z: 69 }
 
     printStr("c1:\n")
@@ -51,6 +51,28 @@ fn assign() {
     printStr("z: ") printInt(c2.z) printStr("\n")
 }
 
+fn assign() {
+    c2 := Coord{ x: 64, y: -420, z: 69 }
+
+    printStr("c1:\n")
+    printStr("x: ") printInt(c1.x) printStr("\n")
+    printStr("y: ") printInt(c1.y) printStr("\n")
+    printStr("z: ") printInt(c1.z) printStr("\n")
+
+    printStr("c2:\n")
+    printStr("x: ") printInt(c2.x) printStr("\n")
+    printStr("y: ") printInt(c2.y) printStr("\n")
+    printStr("z: ") printInt(c2.z) printStr("\n")
+
+    printStr("c2 = c1\n")
+    c2 = c1
+
+    printStr("c2:\n")
+    printStr("x: ") printInt(c2.x) printStr("\n")
+    printStr("y: ") printInt(c2.y) printStr("\n")
+    printStr("z: ") printInt(c2.z) printStr("\n")
+}
+
 fn const() {
     c2 :: Coord{ x: 64, y: 69, z: -64 }
 
@@ -69,12 +91,51 @@ fn printCoord(c Coord) {
     printStr("z: ") printInt(c.z) printStr("\n")
 }
 
+fn offsetCoord(c Coord, i i32) -> Coord {
+    c.x = c.x + i
+    c.y = c.y + i
+    c.z = c.z + i
+
+    ret c
+}
+
+struct Vec2 { x i32, y i32 }
+
+fn scale(v Vec2, scaler i32) -> Vec2 {
+    v.x = v.x * scaler
+    v.y = v.y * scaler
+
+    ret v
+}
+
+fn printVec2(v Vec2) {
+    printStr("x: ") printInt(v.x) printStr("\n")
+    printStr("y: ") printInt(v.y) printStr("\n")
+}
+
+fn testRet() {
+    v := Vec2{ x: 2, y: 4 }
+    printVec2(v)
+    printVec2(scale(v, 4))
+
+    v2 := scale(v, 2)
+    printVec2(v2)
+
+    printStr("------\n")
+    printCoord(c1)
+    c2 := offsetCoord(c1, 2)
+    printCoord(c2)
+}
+
 fn main() {
     printStr("global ---------\n")
     test_global()
 
     printStr("local ---------\n")
     test_local()
+
+    printStr("assignField ---------\n")
+    assignField()
 
     printStr("assign ---------\n")
     assign()
@@ -87,4 +148,7 @@ fn main() {
     printCoord(c1)
     printStr("struct literal:\n")
     printCoord(Coord{ y: 420, x: 64, z: -64 })
+
+    printStr("return struct -----\n")
+    testRet()
 }
