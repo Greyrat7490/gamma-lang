@@ -127,6 +127,17 @@ fn testRet() {
     printCoord(c2)
 }
 
+fn test2bigStructs(c1 Coord, c2 Coord) {
+    printCoord(c1)
+    printStr("-----\n")
+
+    c1.x = c1.x + c2.x
+    c1.y = c1.y + c2.y
+    c1.z = c1.z + c2.z
+
+    printCoord(c1)
+}
+
 fn main() {
     printStr("global ---------\n")
     test_global()
@@ -151,4 +162,8 @@ fn main() {
 
     printStr("return struct -----\n")
     testRet()
+
+    printStr("test 2 big structs -----\n")
+    c2 := Coord{ y: 2, x: 1, z: 3 }
+    test2bigStructs(c1, c2)
 }

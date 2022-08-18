@@ -118,7 +118,14 @@ func prsArrType() types.ArrType {
 }
 
 func prsDecVar() ast.DecVar {
-    name := token.Cur()
+    name, t := prsNameType()
+    end := token.Cur().Pos
+
+    return ast.DecVar{ V: identObj.DecVar(name, t), Type: t, TypePos: end }
+}
+
+func prsNameType() (name token.Token, typ types.Type) {
+    name = token.Cur()
     if name.Type != token.Name {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", token.Cur())
         fmt.Fprintln(os.Stderr, "\t" + token.Last().At())
@@ -126,17 +133,14 @@ func prsDecVar() ast.DecVar {
     }
 
     token.Next()
-    t := prsType()
-    if t == nil {
+    typ = prsType()
+    if typ == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", token.Last().Str)
         fmt.Fprintln(os.Stderr, "\t" + token.Last().At())
         os.Exit(1)
     }
 
-    end := token.Cur().Pos
-
-    v := identObj.DecVar(name, t)
-    return ast.DecVar{ V: v, Type: t, TypePos: end }
+    return
 }
 
 func isDec() bool {
@@ -294,7 +298,7 @@ func prsDefFn() ast.DefFn {
 
     identObj.StartScope()
     token.Next()
-    argDecs := prsDecArgs()
+    argNames, argTypes := prsDecArgs()
 
     var retType types.Type = nil
     if token.Peek().Type == token.Arrow {
@@ -309,12 +313,28 @@ func prsDefFn() ast.DefFn {
         os.Exit(1)
     }
 
-    var args []types.Type
-    for _,a := range argDecs {
-        args = append(args, a.Type)
+    var argDecs []ast.DecVar
+    offset := uint(0)
+    for i,t := range argTypes {
+        if t,ok := t.(types.StructType); ok {
+            if len(t.Types) > 2 {
+                argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecBigArg(argNames[i], t, offset) })
+                offset += uint(len(t.Types)) * types.Ptr_Size
+            }
+        }
     }
-    f := identObj.DecFunc(name, args, retType)
 
+    for i,t := range argTypes {
+        if t,ok := t.(types.StructType); ok {
+            if len(t.Types) > 2 {
+                continue
+            }
+        }
+
+        argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecArg(argNames[i], t) })
+    }
+
+    f := identObj.DecFunc(name, argTypes, retType)
     block := prsBlock()
     f.SetFrameSize(identObj.GetFrameSize())
     identObj.EndScope()
@@ -330,13 +350,11 @@ func prsDecFields() (decs []ast.DecVar) {
     }
 
     if token.Next().Type != token.BraceR {
-        d := prsDecVar()
-        decs = append(decs, d)
+        decs = append(decs, prsDecVar())
 
         for token.Next().Type == token.Comma {
             token.Next()
-            d := prsDecVar()
-            decs = append(decs, d)
+            decs = append(decs, prsDecVar())
         }
     }
 
@@ -349,9 +367,8 @@ func prsDecFields() (decs []ast.DecVar) {
     return
 }
 
-func prsDecArgs() []ast.DecVar {
-    decs := []ast.DecVar{}
-
+// TODO: ast.DecArg
+func prsDecArgs() (names []token.Token, types []types.Type) {
     if token.Cur().Type != token.ParenL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got %v\n", token.Cur())
         fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
@@ -359,13 +376,15 @@ func prsDecArgs() []ast.DecVar {
     }
 
     if token.Next().Type != token.ParenR {
-        d := prsDecVar()
-        decs = append(decs, d)
+        name,t := prsNameType()
+        names = append(names, name)
+        types = append(types, t)
 
         for token.Next().Type == token.Comma {
             token.Next()
-            d := prsDecVar()
-            decs = append(decs, d)
+            name,t := prsNameType()
+            names = append(names, name)
+            types = append(types, t)
         }
     }
 
@@ -375,5 +394,5 @@ func prsDecArgs() []ast.DecVar {
         os.Exit(1)
     }
 
-    return decs
+    return
 }

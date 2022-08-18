@@ -13,15 +13,23 @@ import (
 )
 
 /*
-calling convention
-  * int   args1-6: rdi, rsi, rdx, rcx, r8, r9
-  * float args1-8: xmm0 - xmm7 (TODO)
-  * return: rax, rbx, rcx, rdx, rdi, rsi, r8, r9
+System V AMD64 ABI calling convention
+  * [x] int:    rdi, rsi, rdx, rcx, r8, r9
+  * [ ] float:  xmm0 - xmm7
+  * [ ] more on stack (right to left)
 
-  * rest: from right to left on stack (TODO)
+  * [x] struct:         use int/float fields
+  * [x] big struct:     on stack (right to left)
+    * for now always if more than 2 fields
+    * [ ] bigger than 16Byte or unaligned fields (more than 2 regs needed)
 
-  * caller cleans stack (TODO)
-  * callee reserves space (multiple of 16)
+  * [ ] return value:
+    * [x] int: rax, rdx
+    * [ ] float: xmm0, xmm1
+    * [ ] stack (addr in rdi) if more/bigger (see big struct)
+  * [x] caller cleans stack
+  * [x] callee reserves space (multiple of 16)
+  * [ ] stack always 16bit aligned
 */
 
 var regs []asm.RegGroup = []asm.RegGroup{ asm.RegDi, asm.RegSi, asm.RegD, asm.RegC, asm.RegR8, asm.RegR9 }
@@ -93,7 +101,7 @@ func (f *Func) Call(file *os.File) {
     file.WriteString("call " + f.name + "\n")
 }
 
-func DefArg(file *os.File, regIdx int, v vars.Var) {
+func DefArg(file *os.File, regIdx int, v vars.Var) bool {
     t := v.GetType()
 
     switch t.GetKind() {
@@ -103,6 +111,11 @@ func DefArg(file *os.File, regIdx int, v vars.Var) {
 
     case types.Struct:
         t := t.(types.StructType)
+
+        if len(t.Types) > 2 { // skip defining big structs
+            return false
+        }
+
         for i,fieldType := range t.Types {
             setArg(file, v.Addr(i), regIdx+i, fieldType.Size())
         }
@@ -110,6 +123,7 @@ func DefArg(file *os.File, regIdx int, v vars.Var) {
     default:
         setArg(file, v.Addr(0), regIdx, t.Size())
     }
+    return true
 }
 
 func setArg(file *os.File, addr string, regIdx int, size uint) {
@@ -122,14 +136,14 @@ func setArg(file *os.File, addr string, regIdx int, size uint) {
 }
 
 func PassVal(file *os.File, regIdx int, value token.Token, valtype types.Type) {
-    switch valtype.GetKind() {
-    case types.Str:
+    switch t := valtype.(type) {
+    case types.StrType:
         strIdx := str.Add(value)
 
         asm.MovRegVal(file, regs[regIdx],   types.Ptr_Size, fmt.Sprintf("_str%d", strIdx))
         asm.MovRegVal(file, regs[regIdx+1], types.I32_Size, fmt.Sprint(str.GetSize(strIdx)))
 
-    case types.Arr:
+    case types.ArrType:
         if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
             asm.MovRegVal(file, regs[regIdx], types.Ptr_Size, fmt.Sprintf("_arr%d", idx))
         } else {
@@ -138,10 +152,8 @@ func PassVal(file *os.File, regIdx int, value token.Token, valtype types.Type) {
             os.Exit(1)
         }
 
-    case types.Struct:
+    case types.StructType:
         if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
-            t := valtype.(types.StructType)
-
             fields := structLit.GetValues(idx)
             for i,fieldType := range t.Types {
                 asm.MovRegVal(file, regs[regIdx+i], fieldType.Size(), fields[i].Str)
@@ -152,11 +164,14 @@ func PassVal(file *os.File, regIdx int, value token.Token, valtype types.Type) {
             os.Exit(1)
         }
 
-    case types.Bool:
-        if value.Str == "true" { value.Str = "1" } else { value.Str = "0" }
-        fallthrough
+    case types.BoolType:
+        if value.Str == "true" {
+            asm.MovRegVal(file, regs[regIdx], valtype.Size(), "1")
+        } else {
+            asm.MovRegVal(file, regs[regIdx], valtype.Size(), "0")
+        }
 
-    case types.I32, types.Ptr:
+    case types.I32Type, types.PtrType:
         asm.MovRegVal(file, regs[regIdx], valtype.Size(), value.Str)
 
     default:
@@ -189,8 +204,8 @@ func PassVar(file *os.File, regIdx int, otherVar vars.Var) {
 func PassReg(file *os.File, regIdx int, argType types.Type) {
     switch t := argType.(type) {
     case types.StrType:
-        asm.MovRegReg(file, regs[regIdx],   asm.RegA, types.Ptr_Size)
-        asm.MovRegReg(file, regs[regIdx+1], asm.RegB, types.I32_Size)
+        asm.MovRegReg(file, regs[regIdx],   asm.RegGroup(0), types.Ptr_Size)
+        asm.MovRegReg(file, regs[regIdx+1], asm.RegGroup(1), types.I32_Size)
 
     case types.StructType:
         for i,t := range t.Types {
@@ -198,6 +213,33 @@ func PassReg(file *os.File, regIdx int, argType types.Type) {
         }
 
     default:
-        asm.MovRegReg(file, regs[regIdx], asm.RegA, argType.Size())
+        asm.MovRegReg(file, regs[regIdx], asm.RegGroup(0), argType.Size())
+    }
+}
+
+func PassBigStructLit(file *os.File, t types.StructType, value token.Token) {
+    if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
+        fields := structLit.GetValues(idx)
+
+        for i := range t.Types {
+            asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, int(types.Ptr_Size)*i), types.Ptr_Size, fields[i].Str)
+        }
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected struct literal converted to a Number but got %v\n", value)
+        fmt.Fprintln(os.Stderr, "\t" + value.At())
+        os.Exit(1)
+    }
+
+}
+
+func PassBigStructVar(file *os.File, t types.StructType, v vars.Var) {
+    for i := range t.Types {
+        asm.MovDerefDeref(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, int(types.Ptr_Size)*i), v.Addr(i), types.Ptr_Size, asm.RegA)
+    }
+}
+
+func PassBigStructReg(file *os.File, t types.StructType) {
+    for i := range t.Types {
+        asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, int(types.Ptr_Size)*i), types.Ptr_Size, asm.RegGroup(i))
     }
 }

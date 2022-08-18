@@ -120,15 +120,15 @@ func (e *Lit) Compile(file *os.File) {
     case token.Str:
         strIdx := str.Add(e.Val)
 
-        asm.MovRegVal(file, asm.RegA, types.Ptr_Size, fmt.Sprintf("_str%d", strIdx))
-        asm.MovRegVal(file, asm.RegB, types.I32_Size, fmt.Sprintf("%d", str.GetSize(strIdx)))
+        asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx))
+        asm.MovRegVal(file, asm.RegGroup(1), types.I32_Size, fmt.Sprintf("%d", str.GetSize(strIdx)))
 
     case token.Boolean:
         if e.Val.Str == "true" { e.Val.Str = "1" } else { e.Val.Str = "0" }
         fallthrough
 
     default:
-        asm.MovRegVal(file, asm.RegA, e.Type.Size(), e.Val.Str)
+        asm.MovRegVal(file, asm.RegGroup(0), e.Type.Size(), e.Val.Str)
     }
 }
 
@@ -171,7 +171,7 @@ func (e *Indexed) flatten() Expr {
     return &res
 }
 
-func (e *Indexed) AddrToRdx(file *os.File) {
+func (e *Indexed) AddrToRcx(file *os.File) {
     e.typeCheck()
 
     e.ArrExpr.Compile(file)
@@ -195,15 +195,15 @@ func (e *Indexed) AddrToRdx(file *os.File) {
         }
 
         idx,_ := strconv.ParseUint(val.Str, 10, 64)
-        file.WriteString(fmt.Sprintf("lea rdx, [rax+%d]\n", idx * baseTypeSize))
+        file.WriteString(fmt.Sprintf("lea rcx, [rax+%d]\n", idx * baseTypeSize))
     } else {
-        asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
+        asm.MovRegReg(file, asm.RegC, asm.RegA, types.Ptr_Size)
         idxExpr.Compile(file)
 
         asm.Mul(file, fmt.Sprint(baseTypeSize), types.Ptr_Size)
-        asm.Add(file, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size)
+        asm.Add(file, asm.GetReg(asm.RegC, types.Ptr_Size), types.Ptr_Size)
 
-        asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
+        asm.MovRegReg(file, asm.RegC, asm.RegA, types.Ptr_Size)
     }
 }
 
@@ -212,13 +212,13 @@ func (e *Indexed) Compile(file *os.File) {
 
     arrType,_ := e.ArrExpr.GetType().(types.ArrType)
 
-    e.AddrToRdx(file)
+    e.AddrToRcx(file)
 
     if arrType.Ptr.BaseType.GetKind() == types.Str {
-        asm.MovRegDeref(file, asm.RegA, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size)
-        asm.MovRegDeref(file, asm.RegB, asm.GetOffsetedReg(asm.RegD, types.Ptr_Size, 8), types.I32_Size)
+        asm.MovRegDeref(file, asm.RegGroup(0), asm.GetReg(asm.RegC, types.Ptr_Size), types.Ptr_Size)
+        asm.MovRegDeref(file, asm.RegGroup(1), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, 8), types.I32_Size)
     } else {
-        asm.MovRegDeref(file, asm.RegA, asm.GetReg(asm.RegD, types.Ptr_Size), arrType.Ptr.BaseType.Size())
+        asm.MovRegDeref(file, asm.RegGroup(0), asm.GetReg(asm.RegC, types.Ptr_Size), arrType.Ptr.BaseType.Size())
     }
 }
 
@@ -249,14 +249,14 @@ func (e *Ident) Compile(file *os.File) {
     if v,ok := e.Obj.(vars.Var); ok {
         switch t := v.GetType().(type) {
         case types.StrType:
-            asm.MovRegDeref(file, asm.RegA, v.Addr(0), types.Ptr_Size)
-            asm.MovRegDeref(file, asm.RegB, v.Addr(1), types.I32_Size)
+            asm.MovRegDeref(file, asm.RegGroup(0), v.Addr(0), types.Ptr_Size)
+            asm.MovRegDeref(file, asm.RegGroup(1), v.Addr(1), types.I32_Size)
         case types.StructType:
             for i,t := range t.Types {
                 asm.MovRegDeref(file, asm.RegGroup(i), v.Addr(i), t.Size())
             }
         default:
-            asm.MovRegDeref(file, asm.RegA, v.Addr(0), v.GetType().Size())
+            asm.MovRegDeref(file, asm.RegGroup(0), v.Addr(0), t.Size())
         }
         return
     }
@@ -345,8 +345,8 @@ func (e *Binary) Compile(file *os.File) {
         if ident,ok := e.OperandR.(*Ident); ok {
             if v,ok := ident.Obj.(vars.Var); ok {
                 if t := v.GetType(); t.Size() < size {
-                    asm.MovRegDeref(file, asm.RegC, v.Addr(0), t.Size())
-                    asm.BinaryOpReg(file, e.Operator.Type, asm.RegC, size)
+                    asm.MovRegDeref(file, asm.RegB, v.Addr(0), t.Size())
+                    asm.BinaryOpReg(file, e.Operator.Type, asm.RegB, size)
                 } else {
                     asm.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), v.Addr(0)), size)
                 }
@@ -388,21 +388,52 @@ func (e *Binary) Compile(file *os.File) {
 func (e *FnCall) Compile(file *os.File) {
     e.typeCheck()
 
-    regIdx := 0
-    for _, val := range e.Values {
-        // compile time evaluation:
-        if v := val.ConstEval(); v.Type != token.Unknown {
-            fn.PassVal(file, regIdx, v, val.GetType())
+    bigArgsSize := uint(0)
+    for i := len(e.F.GetArgs())-1; i >= 0; i-- {
+        if t,ok := e.F.GetArgs()[i].(types.StructType); ok {
+            if len(t.Types) > 2 {
+                size := uint(len(t.Types)) * types.Ptr_Size
+                bigArgsSize += size
 
-        } else if ident,ok := val.(*Ident); ok {
+                file.WriteString(fmt.Sprintf("sub rsp, %d\n", size))
+                file.WriteString("mov rcx, rsp\n")
+
+                // compile time evaluation:
+                if v := e.Values[i].ConstEval(); v.Type != token.Unknown {
+                    fn.PassBigStructLit(file, t, v)
+
+                } else if ident,ok := e.Values[i].(*Ident); ok {
+                    fn.PassBigStructVar(file, t, ident.Obj.(vars.Var))
+
+                } else {
+                    e.Values[i].Compile(file)
+                    fn.PassBigStructReg(file, t)
+                }
+            }
+        }
+    }
+
+    regIdx := 0
+    for i,t := range e.F.GetArgs() {
+        if t,ok := t.(types.StructType); ok {
+            if len(t.Types) > 2 {
+                continue
+            }
+        }
+
+        // compile time evaluation:
+        if v := e.Values[i].ConstEval(); v.Type != token.Unknown {
+            fn.PassVal(file, regIdx, v, t)
+
+        } else if ident,ok := e.Values[i].(*Ident); ok {
             fn.PassVar(file, regIdx, ident.Obj.(vars.Var))
 
         } else {
-            val.Compile(file)
-            fn.PassReg(file, regIdx, val.GetType())
+            e.Values[i].Compile(file)
+            fn.PassReg(file, regIdx, t)
         }
 
-        switch t := val.GetType().(type) {
+        switch t := t.(type) {
         case types.StrType:
             regIdx += 2
         case types.StructType:
@@ -413,6 +444,10 @@ func (e *FnCall) Compile(file *os.File) {
     }
 
     e.F.Call(file)
+
+    if bigArgsSize > 0 {
+        file.WriteString(fmt.Sprintf("add rsp, %d\n", bigArgsSize))
+    }
 }
 
 func (e *XCase) Compile(file *os.File, switchCount uint) {

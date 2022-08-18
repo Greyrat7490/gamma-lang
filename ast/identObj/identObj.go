@@ -30,11 +30,24 @@ func DecVar(name token.Token, t types.Type) vars.Var {
         curScope.identObjs[name.Str] = &v
         return &v
     } else {
-        v := vars.CreateLocal(name, t, curScope.frameSize)
+        v := vars.CreateLocal(name, t, curScope.frameSize, false, false)
         curScope.frameSize += v.GetType().Size()
         curScope.identObjs[name.Str] = &v
         return &v
     }
+}
+
+func DecArg(name token.Token, t types.Type) vars.Var {
+    v := vars.CreateLocal(name, t, curScope.frameSize, true, false)
+    curScope.frameSize += v.GetType().Size()
+    curScope.identObjs[name.Str] = &v
+    return &v
+}
+
+func DecBigArg(name token.Token, t types.Type, offset uint) vars.Var {
+    v := vars.CreateLocal(name, t, offset, true, true)
+    curScope.identObjs[name.Str] = &v
+    return &v
 }
 
 func DecConst(name token.Token, t types.Type) *consts.Const {

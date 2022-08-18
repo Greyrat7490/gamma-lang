@@ -109,7 +109,7 @@ func (s *Assign) Compile(file *os.File) {
 
     switch dest := s.Dest.(type) {
     case *Indexed:
-        dest.AddrToRdx(file)
+        dest.AddrToRcx(file)
 
     case *Field:
         t := dest.Obj.GetType()
@@ -118,7 +118,7 @@ func (s *Assign) Compile(file *os.File) {
             obj := identObj.Get(sType.Name)
             if strct,ok := obj.(*structDec.Struct); ok {
                 i := strct.GetFieldNum(dest.FieldName.Str)
-                file.WriteString(fmt.Sprintf("lea rdx, [%s]\n", dest.Obj.Addr(i)))
+                file.WriteString(fmt.Sprintf("lea rcx, [%s]\n", dest.Obj.Addr(i)))
             }
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] %s is not a struct but a %v\n", dest.Obj.GetName(), t)
@@ -134,7 +134,6 @@ func (s *Assign) Compile(file *os.File) {
         }
 
         dest.Operand.Compile(file)
-        asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
 
         // compile time evaluation
         if val := s.Value.ConstEval(); val.Type != token.Unknown {
@@ -146,6 +145,8 @@ func (s *Assign) Compile(file *os.File) {
             vars.DerefSetVar(file, e.Obj.(vars.Var))
             return
         }
+
+        asm.MovRegReg(file, asm.RegC, asm.RegA, types.Ptr_Size)
 
     case *Ident:
         // compile time evaluation
@@ -173,18 +174,18 @@ func (s *Assign) Compile(file *os.File) {
 
     switch t := s.Dest.GetType().(type) {
     case types.StrType:
-        asm.MovDerefReg(file, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size, asm.RegA)
-        asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegD, types.Ptr_Size, types.Ptr_Size), types.I32_Size, asm.RegB)
+        asm.MovDerefReg(file, asm.GetReg(asm.RegC, types.Ptr_Size), types.Ptr_Size, asm.RegGroup(0))
+        asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, int(types.Ptr_Size)), types.I32_Size, asm.RegGroup(1))
 
     case types.StructType:
         var offset uint = 0
-        for _,t := range t.Types {
-            asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegD, types.Ptr_Size, offset), t.Size(), asm.RegA)
+        for i,t := range t.Types {
+            asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, int(offset)), t.Size(), asm.RegGroup(i))
             offset += t.Size()
         }
 
     default:
-        asm.MovDerefReg(file, asm.GetReg(asm.RegD, types.Ptr_Size), t.Size(), asm.RegA)
+        asm.MovDerefReg(file, asm.GetReg(asm.RegC, types.Ptr_Size), t.Size(), asm.RegGroup(0))
     }
 }
 

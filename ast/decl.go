@@ -21,7 +21,7 @@ type Decl interface {
 type BadDecl struct {}
 
 type DecVar struct {
-    V vars.Var
+    V vars.Var          // TODO remove Var,Const,Func
     Type types.Type
     TypePos token.Pos
 }
@@ -109,17 +109,17 @@ func (d *DefFn) Compile(file *os.File) {
 
     regIdx := 0
     for _,a := range d.Args {
-        fn.DefArg(file, regIdx, a.V)
+        if fn.DefArg(file, regIdx, a.V) {
+            switch t := a.Type.(type) {
+            case types.StrType:
+                regIdx += 2
 
-        switch t := a.Type.(type) {
-        case types.StrType:
-            regIdx += 2
+            case types.StructType:
+                regIdx += len(t.Types)
 
-        case types.StructType:
-            regIdx += len(t.Types)
-
-        default:
-            regIdx++
+            default:
+                regIdx++
+            }
         }
     }
 

@@ -11,11 +11,12 @@ type LocalVar struct {
     decPos token.Pos
     name string
     typ types.Type
-    offset uint
+    isArg bool
+    offset int
 }
 
-func CreateLocal(name token.Token, t types.Type, frameSize uint) LocalVar {
-    return LocalVar{ name: name.Str, decPos: name.Pos, typ: t, offset: calcOffset(t, frameSize) }
+func CreateLocal(name token.Token, t types.Type, frameSize uint, isArg bool, fromStack bool) LocalVar {
+    return LocalVar{ name: name.Str, decPos: name.Pos, typ: t, isArg: isArg, offset: calcOffset(t, frameSize, fromStack) }
 }
 
 func (v *LocalVar) SetType(t types.Type) {
@@ -44,25 +45,32 @@ func (v *LocalVar) GetType() types.Type {
 }
 
 func (v *LocalVar) Addr(fieldNum int) string {
+    offset := v.offset
+
     switch t := v.typ.(type) {
     case types.StrType:
-        offset := v.offset
         if fieldNum == 0 {
-            offset += types.Ptr_Size
+            offset -= int(types.Ptr_Size)
         }
-
-        return fmt.Sprintf("rbp-%d", offset)
 
     case types.StructType:
-        offset := v.offset
-        for i := len(t.Types)-1; i > fieldNum; i-- {
-            offset += t.Types[i].Size()
+        if v.isArg && len(t.Types) > 2 {
+            for i := len(t.Types)-1; i > fieldNum; i-- {
+                offset -= int(types.Ptr_Size)
+            }
+        } else {
+            for i := len(t.Types)-1; i > fieldNum; i-- {
+                offset -= int(t.Types[i].Size())
+            }
         }
+    }
 
-        return fmt.Sprintf("rbp-%d", offset)
-
-    default:
-        return fmt.Sprintf("rbp-%d", v.offset)
+    if offset > 0 {
+        return fmt.Sprintf("rbp+%d", offset)
+    } else if offset < 0 {
+        return fmt.Sprintf("rbp%d", offset)
+    } else {
+        return "rbp"
     }
 }
 
@@ -71,15 +79,27 @@ func (v *LocalVar) DefVal(file *os.File, val token.Token) {
     VarSetVal(file, v, val)
 }
 
-func calcOffset(vartype types.Type, frameSize uint) uint {
-    switch t := vartype.(type) {
-    case types.StrType:
-        return frameSize + types.I32_Size
+func calcOffset(t types.Type, frameSize uint, fromStack bool) int {
+    if fromStack {
+        offset := types.Ptr_Size + frameSize
+        if t,ok := t.(types.StructType); ok {
+            offset += uint(len(t.Types)) * types.Ptr_Size
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a struct but got %v (for calculating offset)", t)
+            os.Exit(1)
+        }
 
-    case types.StructType:
-        return frameSize + t.Types[0].Size()
+        return int(offset)
+    } else {
+        switch t := t.(type) {
+        case types.StrType:
+            return -int(frameSize + types.I32_Size)
 
-    default:
-        return frameSize + vartype.Size()
+        case types.StructType:
+            return -int(frameSize + t.Types[0].Size())
+
+        default:
+            return -int(frameSize + t.Size())
+        }
     }
 }

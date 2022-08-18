@@ -25,8 +25,8 @@ type Var interface {
 func VarSetExpr(file *os.File, v Var) {
     switch t := v.GetType().(type) {
     case types.StrType:
-        asm.MovDerefReg(file, v.Addr(0), types.Ptr_Size, asm.RegA)
-        asm.MovDerefReg(file, v.Addr(1), types.I32_Size, asm.RegB)
+        asm.MovDerefReg(file, v.Addr(0), types.Ptr_Size, asm.RegGroup(0))
+        asm.MovDerefReg(file, v.Addr(1), types.I32_Size, asm.RegGroup(1))
 
     case types.StructType:
         for i,t := range t.Types {
@@ -34,7 +34,7 @@ func VarSetExpr(file *os.File, v Var) {
         }
 
     default:
-        asm.MovDerefReg(file, v.Addr(0), v.GetType().Size(), asm.RegA)
+        asm.MovDerefReg(file, v.Addr(0), v.GetType().Size(), asm.RegGroup(0))
     }
 }
 
@@ -163,7 +163,7 @@ func DerefSetVal(file *os.File, typ types.Type, val token.Token) {
 
         for i,val := range structLit.GetValues(idx) {
             size := t.Types[i].Size()
-            asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegA, types.Ptr_Size, size), size, val.Str)
+            asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegA, types.Ptr_Size, int(size)), size, val.Str)
         }
 
     case types.BoolType:
@@ -184,15 +184,15 @@ func DerefSetVal(file *os.File, typ types.Type, val token.Token) {
 func DerefSetVar(file *os.File, other Var) {
     switch t := other.GetType().(type) {
     case types.StrType:
-        asm.MovDerefDeref(file, asm.GetReg(asm.RegD, types.Ptr_Size), other.Addr(0), types.Ptr_Size, asm.RegA)
-        asm.MovDerefDeref(file, asm.GetOffsetedReg(asm.RegD, types.Ptr_Size, types.Ptr_Size), other.Addr(1), types.I32_Size, asm.RegA)
+        asm.MovDerefDeref(file, asm.GetReg(asm.RegA, types.Ptr_Size), other.Addr(0), types.Ptr_Size, asm.RegB)
+        asm.MovDerefDeref(file, asm.GetOffsetedReg(asm.RegA, types.Ptr_Size, int(types.Ptr_Size)), other.Addr(1), types.I32_Size, asm.RegB)
     case types.StructType:
-        var offset uint = 0
+        var offset int = 0
         for i,t := range t.Types {
-            asm.MovDerefDeref(file, asm.GetOffsetedReg(asm.RegD, types.Ptr_Size, offset), other.Addr(i), t.Size(), asm.RegA)
-            offset += t.Size()
+            asm.MovDerefDeref(file, asm.GetOffsetedReg(asm.RegA, types.Ptr_Size, offset), other.Addr(i), t.Size(), asm.RegB)
+            offset += int(t.Size())
         }
     default:
-        asm.MovDerefDeref(file, asm.GetReg(asm.RegD, types.Ptr_Size), other.Addr(0), other.GetType().Size(), asm.RegA)
+        asm.MovDerefDeref(file, asm.GetReg(asm.RegA, types.Ptr_Size), other.Addr(0), other.GetType().Size(), asm.RegB)
     }
 }

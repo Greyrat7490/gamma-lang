@@ -4,17 +4,17 @@ import "fmt"
 
 var regs [][]string = [][]string{
     { "al", "ax", "eax", "rax" },
+    { "dl", "dx", "edx", "rdx" },
     { "bl", "bx", "ebx", "rbx" },
     { "cl", "cx", "ecx", "rcx" },
-    { "dl", "dx", "edx", "rdx" },
 
     { "di", "edi", "rdi" },
     { "si", "esi", "rsi" },
 
-    { "r8" },
-    { "r9" },
-    { "r10" },
-    { "r11" },
+    { "r8d",  "r8" },
+    { "r9d",  "r9" },
+    { "r10d", "r10" },
+    { "r11d", "r11" },
 }
 
 var words     []string = []string{ "BYTE", "WORD", "DWORD", "QWORD" }
@@ -24,9 +24,9 @@ var bssSizes  []string = []string{ "resb", "resw", "resd", "resq" }
 type RegGroup = uint8
 const (
     RegA   RegGroup = iota
+    RegD   RegGroup = iota
     RegB   RegGroup = iota
     RegC   RegGroup = iota
-    RegD   RegGroup = iota
 
     RegDi  RegGroup = iota
     RegSi  RegGroup = iota
@@ -58,6 +58,9 @@ func GetBssSize(bytes uint) string {
 
 func GetReg(g RegGroup, size uint) string {
     if g >= RegR8 {
+        if size == 8 {
+            return regs[g][1]
+        }
         return regs[g][0]
     }
 
@@ -77,7 +80,7 @@ func GetReg(g RegGroup, size uint) string {
     return regs[g][size / 2]
 }
 
-func GetOffsetedReg(g RegGroup, size uint, offset uint) string {
+func GetOffsetedReg(g RegGroup, size uint, offset int) string {
     reg := GetReg(g, size)
 
     if offset == 0 {
@@ -93,8 +96,8 @@ func GetOffsetedReg(g RegGroup, size uint, offset uint) string {
 
 func GetSize(g RegGroup, size uint) uint {
     switch {
-    case g >= RegR8:
-        return 8
+    case g >= RegR8 && size < 8:
+        return 4
     case g >= RegDi && size < 2:
         return 2
     default:
