@@ -28,7 +28,11 @@ A statically and strongly typed programming language similar to Go, but with mor
   * [x] nasm
   * [ ] fasm (preferable!)
 * [x] variables
-* [x] functions
+* [ ] functions
+  * [x] define/call
+  * [ ] System V AMD64 ABI calling convention
+  * [ ] lambda
+  * [ ] const function
 * [x] io
   * [x] print
 * [x] arithmetics
