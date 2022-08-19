@@ -128,8 +128,21 @@ func setArg(file *os.File, addr string, regIdx int, size uint) {
     asm.MovDerefReg(file, addr, size, regs[regIdx])
 }
 
+func packValues(file *os.File, valtypes []types.Type, values []token.Token) int {
+    offset := uint(0)
+    for i,t := range valtypes {
+        asm.MovDerefVal(file, fmt.Sprintf("rsp+%d", offset), t.Size(), values[i].Str)
+        offset += t.Size()
+        if offset == types.Ptr_Size {
+            return i+1
+        }
+    }
+
+    return len(valtypes)
+}
+
 func PassVal(file *os.File, regIdx int, value token.Token, valtype types.Type) {
-    switch valtype.(type) {
+    switch t := valtype.(type) {
     case types.StrType:
         strIdx := str.Add(value)
 
@@ -146,14 +159,25 @@ func PassVal(file *os.File, regIdx int, value token.Token, valtype types.Type) {
         }
 
     case types.StructType:
-        if _,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
-            // fields := structLit.GetValues(idx)
+        if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
+            fields := structLit.GetValues(idx)
 
-            // TODO: aligned fields
+            if len(t.Types) == 1 {
+                asm.MovRegVal(file, regs[regIdx], t.Size(), fields[0].Str)
+            } else {
+                file.WriteString(fmt.Sprintf("sub rsp, %d\n", types.Ptr_Size))
 
-            fmt.Fprintln(os.Stderr, "[ERROR] passing structLit is not supported yet (in work)")
-            os.Exit(1)
+                if t.Size() > uint(8) {
+                    i := packValues(file, t.Types, fields)
+                    asm.MovRegDeref(file, regs[regIdx], "rsp", types.Ptr_Size)
+                    asm.MovRegVal(file, regs[regIdx+1], t.Types[i].Size(), fields[i].Str)
+                } else {
+                    packValues(file, t.Types, fields)
+                    asm.MovRegDeref(file, regs[regIdx], "rsp", t.Size())
+                }
 
+                file.WriteString(fmt.Sprintf("add rsp, %d\n", types.Ptr_Size))
+            }
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] expected struct literal converted to a Number but got %v\n", value)
             fmt.Fprintln(os.Stderr, "\t" + value.At())

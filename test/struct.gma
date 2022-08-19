@@ -4,6 +4,14 @@ struct Coord {
     z i32
 }
 
+struct BigStruct {
+    a1 i32,
+    a2 i32,
+    a3 i32,
+    a4 i32,
+    a5 i32
+}
+
 c1 Coord := Coord{ y: 69, x: 420, z: -64 }
 
 fn test_global() {
@@ -127,7 +135,7 @@ fn testRet() {
     printCoord(c2)
 }
 
-fn test2bigStructs(c1 Coord, c2 Coord) {
+fn test2Structs(c1 Coord, c2 Coord) {
     printCoord(c1)
     printStr("-----\n")
 
@@ -136,6 +144,14 @@ fn test2bigStructs(c1 Coord, c2 Coord) {
     c1.z = c1.z + c2.z
 
     printCoord(c1)
+}
+
+fn bigStruct(b BigStruct) {
+    printInt(b.a1) printStr(", ")
+    printInt(b.a2) printStr(", ")
+    printInt(b.a3) printStr(", ")
+    printInt(b.a4) printStr(", ")
+    printInt(b.a5) printStr("\n")
 }
 
 fn main() {
@@ -158,14 +174,17 @@ fn main() {
     printStr("c1:\n")
     printCoord(c1)
     printStr("struct literal:\n")
-    // printCoord(Coord{ y: 420, x: 64, z: -64 }) not supported yet
-    c3 := Coord{ y: 420, x: 64, z: -64 }
-    printCoord(c3)
+    printCoord(Coord{ y: 420, x: 64, z: -64 })
 
     printStr("return struct -----\n")
     testRet()
 
-    printStr("test 2 big structs -----\n")
+    printStr("test 2 structs -----\n")
     c2 := Coord{ y: 2, x: 1, z: 3 }
-    test2bigStructs(c1, c2)
+    test2Structs(c1, c2)
+
+    printStr("test big structs -----\n")
+    b := BigStruct{ a1: 1, a2: 2, a3: 3, a4: 4, a5: 5 }
+    bigStruct(b)
+    bigStruct(BigStruct{ a1: 10, a2: 20, a3: 30, a4: 40, a5: 50 })
 }
