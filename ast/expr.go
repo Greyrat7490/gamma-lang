@@ -251,10 +251,15 @@ func (e *Ident) Compile(file *os.File) {
         case types.StrType:
             asm.MovRegDeref(file, asm.RegGroup(0), v.Addr(0), types.Ptr_Size)
             asm.MovRegDeref(file, asm.RegGroup(1), v.Addr(1), types.I32_Size)
+
         case types.StructType:
-            for i,t := range t.Types {
-                asm.MovRegDeref(file, asm.RegGroup(i), v.Addr(i), t.Size())
+            if t.Size() > uint(8) {
+                asm.MovRegDeref(file, asm.RegGroup(0), v.Addr(0), types.Ptr_Size)
+                asm.MovRegDeref(file, asm.RegGroup(1), v.OffsetedAddr(int(types.Ptr_Size)), t.Types[1].Size())
+            } else {
+                asm.MovRegDeref(file, asm.RegGroup(0), v.Addr(0), t.Size())
             }
+
         default:
             asm.MovRegDeref(file, asm.RegGroup(0), v.Addr(0), t.Size())
         }
@@ -391,7 +396,7 @@ func (e *FnCall) Compile(file *os.File) {
     bigArgsSize := uint(0)
     for i := len(e.F.GetArgs())-1; i >= 0; i-- {
         if t,ok := e.F.GetArgs()[i].(types.StructType); ok {
-            if len(t.Types) > 2 {
+            if types.IsBigStruct(t) {
                 size := uint(len(t.Types)) * types.Ptr_Size
                 bigArgsSize += size
 
@@ -415,10 +420,8 @@ func (e *FnCall) Compile(file *os.File) {
 
     regIdx := 0
     for i,t := range e.F.GetArgs() {
-        if t,ok := t.(types.StructType); ok {
-            if len(t.Types) > 2 {
-                continue
-            }
+        if types.IsBigStruct(t) {
+            continue
         }
 
         // compile time evaluation:

@@ -317,7 +317,7 @@ func prsDefFn() ast.DefFn {
     offset := uint(0)
     for i,t := range argTypes {
         if t,ok := t.(types.StructType); ok {
-            if len(t.Types) > 2 {
+            if types.IsBigStruct(t) {
                 argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecBigArg(argNames[i], t, offset) })
                 offset += uint(len(t.Types)) * types.Ptr_Size
             }
@@ -326,7 +326,7 @@ func prsDefFn() ast.DefFn {
 
     for i,t := range argTypes {
         if t,ok := t.(types.StructType); ok {
-            if len(t.Types) > 2 {
+            if types.IsBigStruct(t) {
                 continue
             }
         }

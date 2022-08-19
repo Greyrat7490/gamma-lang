@@ -392,6 +392,11 @@ func (s *Ret) Compile(file *os.File) {
     s.typecheck()
 
     if s.RetExpr != nil {
+        if types.IsBigStruct(s.RetExpr.GetType()) {
+            fmt.Fprintln(os.Stderr, "[ERROR] returing big structs is not supported yet (stmt.go Compile Ret)")
+            os.Exit(1)
+        }
+
         s.RetExpr.Compile(file)
     }
     fn.End(file)

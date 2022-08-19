@@ -1,19 +1,26 @@
 package structDec
 
 import (
-	"gamma/token"
-	"gamma/types"
+    "gamma/token"
+    "gamma/types"
 )
 
 type Struct struct {
     decPos token.Pos
     name string
+    typ types.StructType
     fieldNames []string
     fieldTypes []types.Type
 }
 
 func CreateStruct(name token.Token, fieldNames []string, fieldTypes []types.Type) Struct {
-    return Struct{ decPos: name.Pos, name: name.Str, fieldNames: fieldNames, fieldTypes: fieldTypes }
+    return Struct{
+        decPos: name.Pos,
+        name: name.Str,
+        typ: types.CreateStructType(name.Str, fieldTypes),
+        fieldNames: fieldNames,
+        fieldTypes: fieldTypes,
+    }
 }
 
 func (s *Struct) GetName() string {
@@ -29,7 +36,7 @@ func (s *Struct) Addr(fieldNum int) string {
 }
 
 func (s *Struct) GetType() types.Type {
-    return types.StructType{ Name: s.name, Types: s.fieldTypes }
+    return s.typ
 }
 
 func (s *Struct) GetTypes() []types.Type {

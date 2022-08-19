@@ -158,7 +158,9 @@ fn main() {
     printStr("c1:\n")
     printCoord(c1)
     printStr("struct literal:\n")
-    printCoord(Coord{ y: 420, x: 64, z: -64 })
+    // printCoord(Coord{ y: 420, x: 64, z: -64 }) not supported yet
+    c3 := Coord{ y: 420, x: 64, z: -64 }
+    printCoord(c3)
 
     printStr("return struct -----\n")
     testRet()

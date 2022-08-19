@@ -109,7 +109,9 @@ func (d *DefFn) Compile(file *os.File) {
 
     regIdx := 0
     for _,a := range d.Args {
-        if fn.DefArg(file, regIdx, a.V) {
+        if !types.IsBigStruct(a.V.GetType()) {
+            fn.DefArg(file, regIdx, a.V)
+
             switch t := a.Type.(type) {
             case types.StrType:
                 regIdx += 2

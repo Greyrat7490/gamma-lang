@@ -15,6 +15,7 @@ type Var interface {
     DefVal(file *os.File, val token.Token)
     SetType(t types.Type)
     Addr(fieldNum int) string
+    OffsetedAddr(offset int) string
 
     GetType() types.Type
     GetName() string
@@ -29,8 +30,11 @@ func VarSetExpr(file *os.File, v Var) {
         asm.MovDerefReg(file, v.Addr(1), types.I32_Size, asm.RegGroup(1))
 
     case types.StructType:
-        for i,t := range t.Types {
-            asm.MovDerefReg(file, v.Addr(i), t.Size(), uint8(i))
+        if t.Size() > uint(8) {
+            asm.MovDerefReg(file, v.Addr(0), types.Ptr_Size, asm.RegGroup(0))
+            asm.MovDerefReg(file, v.OffsetedAddr(int(types.Ptr_Size)), t.Types[1].Size(), asm.RegGroup(1))
+        } else {
+            asm.MovDerefReg(file, v.Addr(0), t.Size(), asm.RegGroup(0))
         }
 
     default:

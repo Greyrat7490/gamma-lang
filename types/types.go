@@ -24,9 +24,9 @@ const (
 )
 
 type Type interface {
-    Size()    uint
-    String()  string
-    GetKind() TypeKind
+    Size()        uint
+    String()      string
+    GetKind()     TypeKind
 }
 
 type I32Type  struct {}
@@ -45,6 +45,66 @@ type StrType  struct {
 type StructType struct {
     Name string
     Types []Type
+    isBigStruct bool
+    isAligned bool
+}
+
+func isAligned(types []Type, size uint) (aligned bool, rest uint)  {
+    for _,t := range types {
+        switch t := t.(type) {
+        case StructType:
+            a,r := isAligned(t.Types, size)
+            if !a {
+                return false, 0
+            }
+            size += r
+
+        case StrType:
+            a,r := isAligned([]Type{ PtrType{}, I32Type{} }, size)
+            if !a {
+                return false, 0
+            }
+            size += r
+
+        default:
+            size += t.Size()
+        }
+
+        if size > 8 {
+            return false, 0
+        } else if size == 8 {
+            size = 0
+        }
+    }
+
+    return true, size
+}
+
+func CreateStructType(name string, types []Type) StructType {
+    size := uint(0)
+    for _,t := range types {
+        size += t.Size()
+    }
+
+    isBigStruct := false
+    if size > 16 {
+        isBigStruct = true
+    }
+
+    aligned,_ := isAligned(types, 0)
+    if !aligned {
+        isBigStruct = true
+    }
+
+    return StructType{ Name: name, Types: types, isBigStruct: isBigStruct, isAligned: aligned }
+}
+
+func IsBigStruct(t Type) bool {
+    if t,ok := t.(StructType); ok {
+        return t.isBigStruct
+    }
+
+    return false
 }
 
 func (t I32Type)    GetKind() TypeKind { return I32  }

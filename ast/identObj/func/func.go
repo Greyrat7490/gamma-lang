@@ -20,8 +20,7 @@ System V AMD64 ABI calling convention
 
   * [x] struct:         use int/float fields
   * [x] big struct:     on stack (right to left)
-    * for now always if more than 2 fields
-    * [ ] bigger than 16Byte or unaligned fields (more than 2 regs needed)
+    * [x] bigger than 16Byte or unaligned fields (more than 2 regs needed)
 
   * [ ] return value:
     * [x] int: rax, rdx
@@ -101,29 +100,23 @@ func (f *Func) Call(file *os.File) {
     file.WriteString("call " + f.name + "\n")
 }
 
-func DefArg(file *os.File, regIdx int, v vars.Var) bool {
-    t := v.GetType()
-
-    switch t.GetKind() {
-    case types.Str:
+func DefArg(file *os.File, regIdx int, v vars.Var) {
+    switch t := v.GetType().(type) {
+    case types.StrType:
         setArg(file, v.Addr(0), regIdx, types.Ptr_Size)
         setArg(file, v.Addr(1), regIdx+1, types.I32_Size)
 
-    case types.Struct:
-        t := t.(types.StructType)
-
-        if len(t.Types) > 2 { // skip defining big structs
-            return false
-        }
-
-        for i,fieldType := range t.Types {
-            setArg(file, v.Addr(i), regIdx+i, fieldType.Size())
+    case types.StructType:
+        if t.Size() > uint(8) {
+            setArg(file, v.Addr(0), regIdx, types.Ptr_Size)
+            setArg(file, v.OffsetedAddr(int(types.Ptr_Size)), regIdx+1, t.Types[1].Size())
+        } else {
+            setArg(file, v.Addr(0), regIdx, t.Size())
         }
 
     default:
         setArg(file, v.Addr(0), regIdx, t.Size())
     }
-    return true
 }
 
 func setArg(file *os.File, addr string, regIdx int, size uint) {
@@ -136,7 +129,7 @@ func setArg(file *os.File, addr string, regIdx int, size uint) {
 }
 
 func PassVal(file *os.File, regIdx int, value token.Token, valtype types.Type) {
-    switch t := valtype.(type) {
+    switch valtype.(type) {
     case types.StrType:
         strIdx := str.Add(value)
 
@@ -153,11 +146,14 @@ func PassVal(file *os.File, regIdx int, value token.Token, valtype types.Type) {
         }
 
     case types.StructType:
-        if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
-            fields := structLit.GetValues(idx)
-            for i,fieldType := range t.Types {
-                asm.MovRegVal(file, regs[regIdx+i], fieldType.Size(), fields[i].Str)
-            }
+        if _,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
+            // fields := structLit.GetValues(idx)
+
+            // TODO: aligned fields
+
+            fmt.Fprintln(os.Stderr, "[ERROR] passing structLit is not supported yet (in work)")
+            os.Exit(1)
+
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] expected struct literal converted to a Number but got %v\n", value)
             fmt.Fprintln(os.Stderr, "\t" + value.At())
@@ -188,8 +184,11 @@ func PassVar(file *os.File, regIdx int, otherVar vars.Var) {
         asm.MovRegDeref(file, regs[regIdx+1], otherVar.Addr(1), types.I32_Size)
 
     case types.StructType:
-        for i,fieldType := range t.Types {
-            asm.MovRegDeref(file, regs[regIdx+i], otherVar.Addr(i), fieldType.Size())
+        if t.Size() > uint(8) {
+            asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), types.Ptr_Size)
+            asm.MovRegDeref(file, regs[regIdx+1], otherVar.OffsetedAddr(int(types.Ptr_Size)), t.Types[1].Size())
+        } else {
+            asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), t.Size())
         }
 
     case types.BoolType, types.I32Type, types.PtrType, types.ArrType:
@@ -208,8 +207,11 @@ func PassReg(file *os.File, regIdx int, argType types.Type) {
         asm.MovRegReg(file, regs[regIdx+1], asm.RegGroup(1), types.I32_Size)
 
     case types.StructType:
-        for i,t := range t.Types {
-            asm.MovRegReg(file, regs[regIdx+i], asm.RegGroup(i), t.Size())
+        if t.Size() > uint(8) {
+            asm.MovRegReg(file, regs[regIdx], asm.RegGroup(0), types.Ptr_Size)
+            asm.MovRegReg(file, regs[regIdx+1], asm.RegGroup(1), t.Types[1].Size())
+        } else {
+            asm.MovRegReg(file, regs[regIdx], asm.RegGroup(0), t.Size())
         }
 
     default:

@@ -44,6 +44,33 @@ func (v *LocalVar) GetType() types.Type {
     return v.typ
 }
 
+func (v *LocalVar) OffsetedAddr(offset int) string {
+    offset = v.offset + offset
+    switch t := v.typ.(type) {
+    case types.StrType:
+        offset -= int(types.Ptr_Size)
+
+    case types.StructType:
+        if v.isArg && types.IsBigStruct(v.typ) {
+            for i := len(t.Types)-1; i > 0; i-- {
+                offset -= int(types.Ptr_Size)
+            }
+        } else {
+            for i := len(t.Types)-1; i > 0; i-- {
+                offset -= int(t.Types[i].Size())
+            }
+        }
+    }
+
+    if offset > 0 {
+        return fmt.Sprintf("rbp+%d", offset)
+    } else if offset < 0 {
+        return fmt.Sprintf("rbp%d", offset)
+    } else {
+        return "rbp"
+    }
+}
+
 func (v *LocalVar) Addr(fieldNum int) string {
     offset := v.offset
 
@@ -54,7 +81,7 @@ func (v *LocalVar) Addr(fieldNum int) string {
         }
 
     case types.StructType:
-        if v.isArg && len(t.Types) > 2 {
+        if v.isArg && types.IsBigStruct(v.typ) {
             for i := len(t.Types)-1; i > fieldNum; i-- {
                 offset -= int(types.Ptr_Size)
             }

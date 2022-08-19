@@ -47,6 +47,16 @@ func (v *GlobalVar) GetType() types.Type {
     return v.vartype
 }
 
+func (v *GlobalVar) OffsetedAddr(offset int) string {
+    if offset > 0 {
+        return fmt.Sprintf("%s+%d", v.name, offset)
+    } else if offset < 0 {
+        return fmt.Sprintf("%s%d", v.name, offset)
+    } else {
+        return v.name
+    }
+}
+
 func (v *GlobalVar) Addr(fieldNum int) string {
     switch t := v.vartype.(type) {
     case types.StrType:
