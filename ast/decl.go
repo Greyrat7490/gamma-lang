@@ -5,6 +5,7 @@ import (
     "fmt"
     "gamma/types"
     "gamma/token"
+    "gamma/asm/x86_64"
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
     "gamma/ast/identObj/consts"
@@ -100,14 +101,26 @@ func (d *DefVar) Compile(file *os.File) {
         os.Exit(1)
     }
 
+    if _,ok := d.Value.(*FnCall); ok {
+        file.WriteString(fmt.Sprintf("lea rdi, [%s]\n", d.V.Addr(0)))
+    }
+
     d.Value.Compile(file)
-    vars.VarSetExpr(file, d.V)
+    if !types.IsBigStruct(d.Value.GetType()) {
+        vars.VarSetExpr(file, d.V)
+    }
 }
 
 func (d *DefFn) Compile(file *os.File) {
     d.F.Define(file)
 
     regIdx := 0
+
+    if types.IsBigStruct(d.F.GetRetType()) {
+        asm.MovDerefReg(file, fmt.Sprintf("rbp-%d", types.Ptr_Size), types.Ptr_Size, asm.RegDi)
+        regIdx++
+    }
+
     for _,a := range d.Args {
         if !types.IsBigStruct(a.V.GetType()) {
             fn.DefArg(file, regIdx, a.V)

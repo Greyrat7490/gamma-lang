@@ -47,6 +47,7 @@ type StructType struct {
     Types []Type
     isBigStruct bool
     isAligned bool
+    size uint
 }
 
 func isAligned(types []Type, size uint) (aligned bool, rest uint)  {
@@ -96,7 +97,7 @@ func CreateStructType(name string, types []Type) StructType {
         isBigStruct = true
     }
 
-    return StructType{ Name: name, Types: types, isBigStruct: isBigStruct, isAligned: aligned }
+    return StructType{ Name: name, Types: types, isBigStruct: isBigStruct, isAligned: aligned, size: size }
 }
 
 func IsBigStruct(t Type) bool {
@@ -119,13 +120,7 @@ func (t BoolType)   Size() uint { return Bool_Size }
 func (t StrType)    Size() uint { return t.ptr.Size() + t.size.Size() }
 func (t PtrType)    Size() uint { return Ptr_Size }
 func (t ArrType)    Size() uint { return Arr_Size }
-func (t StructType) Size() uint {
-    var res uint = 0
-    for _,t := range t.Types {
-        res += t.Size()
-    }
-    return res
-}
+func (t StructType) Size() uint { return t.size }
 
 func (t I32Type)  String() string { return "i32"  }
 func (t BoolType) String() string { return "bool" }
@@ -193,7 +188,10 @@ func Check(destType Type, srcType Type) bool {
         if t.BaseType == nil && srcType.GetKind() == Ptr {
             return true
         }
-        return destType == srcType
+
+        if t2,ok := srcType.(PtrType); ok {
+            return Check(t.BaseType, t2.BaseType)
+        }
 
     case StructType:
         if t2,ok := srcType.(StructType); ok {

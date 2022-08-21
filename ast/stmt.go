@@ -393,11 +393,23 @@ func (s *Ret) Compile(file *os.File) {
 
     if s.RetExpr != nil {
         if types.IsBigStruct(s.RetExpr.GetType()) {
-            fmt.Fprintln(os.Stderr, "[ERROR] returing big structs is not supported yet (stmt.go Compile Ret)")
-            os.Exit(1)
-        }
+            asm.MovRegDeref(file, asm.RegC, fmt.Sprintf("rbp-%d", types.Ptr_Size), types.Ptr_Size)
 
-        s.RetExpr.Compile(file)
+            t := s.RetExpr.GetType().(types.StructType)
+
+            if val := s.RetExpr.ConstEval(); val.Type != token.Unknown {
+                fn.RetBigStructLit(file, t, val)
+            } else if ident,ok := s.RetExpr.(*Ident); ok {
+                fn.RetBigStructVar(file, t, ident.Obj.(vars.Var))
+            } else {
+                // TODO: in work
+                fn.RetBigStructExpr(file, t)
+            }
+
+            asm.MovRegReg(file, asm.RegA, asm.RegC, types.Ptr_Size)
+        } else {
+            s.RetExpr.Compile(file)
+        }
     }
     fn.End(file)
 }

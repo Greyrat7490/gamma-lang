@@ -46,21 +46,6 @@ func (v *LocalVar) GetType() types.Type {
 
 func (v *LocalVar) OffsetedAddr(offset int) string {
     offset = v.offset + offset
-    switch t := v.typ.(type) {
-    case types.StrType:
-        offset -= int(types.Ptr_Size)
-
-    case types.StructType:
-        if v.isArg && types.IsBigStruct(v.typ) {
-            for i := len(t.Types)-1; i > 0; i-- {
-                offset -= int(types.Ptr_Size)
-            }
-        } else {
-            for i := len(t.Types)-1; i > 0; i-- {
-                offset -= int(t.Types[i].Size())
-            }
-        }
-    }
 
     if offset > 0 {
         return fmt.Sprintf("rbp+%d", offset)
@@ -76,19 +61,13 @@ func (v *LocalVar) Addr(fieldNum int) string {
 
     switch t := v.typ.(type) {
     case types.StrType:
-        if fieldNum == 0 {
-            offset -= int(types.Ptr_Size)
+        if fieldNum == 1 {
+            offset += int(types.Ptr_Size)
         }
 
     case types.StructType:
-        if v.isArg && types.IsBigStruct(v.typ) {
-            for i := len(t.Types)-1; i > fieldNum; i-- {
-                offset -= int(types.Ptr_Size)
-            }
-        } else {
-            for i := len(t.Types)-1; i > fieldNum; i-- {
-                offset -= int(t.Types[i].Size())
-            }
+        for i := 0; i < fieldNum; i++ {
+            offset += int(t.Types[i].Size())
         }
     }
 
@@ -107,26 +86,9 @@ func (v *LocalVar) DefVal(file *os.File, val token.Token) {
 }
 
 func calcOffset(t types.Type, frameSize uint, fromStack bool) int {
-    if fromStack {
-        offset := types.Ptr_Size + frameSize
-        if t,ok := t.(types.StructType); ok {
-            offset += uint(len(t.Types)) * types.Ptr_Size
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected a struct but got %v (for calculating offset)", t)
-            os.Exit(1)
-        }
-
-        return int(offset)
-    } else {
-        switch t := t.(type) {
-        case types.StrType:
-            return -int(frameSize + types.I32_Size)
-
-        case types.StructType:
-            return -int(frameSize + t.Types[0].Size())
-
-        default:
-            return -int(frameSize + t.Size())
-        }
+    if t.GetKind() == types.Struct && fromStack {
+        return int(types.Ptr_Size + frameSize + 7) & ^7
     }
+
+    return -int(frameSize + t.Size())
 }

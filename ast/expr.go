@@ -394,10 +394,22 @@ func (e *FnCall) Compile(file *os.File) {
     e.typeCheck()
 
     bigArgsSize := uint(0)
+    rest := uint(0)
+    for _,t := range e.F.GetArgs() {
+        if types.IsBigStruct(t) {
+            rest += (t.Size() + 7) & ^uint(7)
+        }
+    }
+    rest %= 16
+    if rest != 0 {
+        file.WriteString(fmt.Sprintf("sub rsp, %d\n", rest))
+        bigArgsSize += rest
+    }
+
     for i := len(e.F.GetArgs())-1; i >= 0; i-- {
         if t,ok := e.F.GetArgs()[i].(types.StructType); ok {
             if types.IsBigStruct(t) {
-                size := uint(len(t.Types)) * types.Ptr_Size
+                size := (t.Size() + 7) & ^uint(7)
                 bigArgsSize += size
 
                 file.WriteString(fmt.Sprintf("sub rsp, %d\n", size))
@@ -419,6 +431,10 @@ func (e *FnCall) Compile(file *os.File) {
     }
 
     regIdx := 0
+    if bigArgsSize > 0 {
+        regIdx++
+    }
+
     for i,t := range e.F.GetArgs() {
         if types.IsBigStruct(t) {
             continue

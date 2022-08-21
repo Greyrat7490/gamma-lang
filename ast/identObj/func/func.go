@@ -22,13 +22,14 @@ System V AMD64 ABI calling convention
   * [x] big struct:     on stack (right to left)
     * [x] bigger than 16Byte or unaligned fields (more than 2 regs needed)
 
-  * [ ] return value:
+  * [x] return value:
     * [x] int: rax, rdx
     * [ ] float: xmm0, xmm1
-    * [ ] stack (addr in rdi) if more/bigger (see big struct)
+    * [x] big struct: stack (addr in rdi)
   * [x] caller cleans stack
-  * [x] callee reserves space (multiple of 16)
-  * [ ] stack always 16bit aligned
+  * [x] callee reserves space
+
+  * [x] stack always 16bit aligned
 */
 
 var regs []asm.RegGroup = []asm.RegGroup{ asm.RegDi, asm.RegSi, asm.RegD, asm.RegC, asm.RegR8, asm.RegR9 }
@@ -165,11 +166,13 @@ func PassVal(file *os.File, regIdx int, value token.Token, valtype types.Type) {
             if len(t.Types) == 1 {
                 asm.MovRegVal(file, regs[regIdx], t.Size(), fields[0].Str)
             } else {
+                // TODO only if necessary
                 file.WriteString(fmt.Sprintf("sub rsp, %d\n", types.Ptr_Size))
 
                 if t.Size() > uint(8) {
                     i := packValues(file, t.Types, fields)
                     asm.MovRegDeref(file, regs[regIdx], "rsp", types.Ptr_Size)
+                    // TODO pack values here too if necessary
                     asm.MovRegVal(file, regs[regIdx+1], t.Types[i].Size(), fields[i].Str)
                 } else {
                     packValues(file, t.Types, fields)
@@ -247,20 +250,27 @@ func PassBigStructLit(file *os.File, t types.StructType, value token.Token) {
     if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
         fields := structLit.GetValues(idx)
 
-        for i := range t.Types {
-            asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, int(types.Ptr_Size)*i), types.Ptr_Size, fields[i].Str)
+        offset := 0
+        for i,t := range t.Types {
+            asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size(), fields[i].Str)
+            offset += int(t.Size())
         }
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] expected struct literal converted to a Number but got %v\n", value)
         fmt.Fprintln(os.Stderr, "\t" + value.At())
         os.Exit(1)
     }
-
 }
 
 func PassBigStructVar(file *os.File, t types.StructType, v vars.Var) {
-    for i := range t.Types {
-        asm.MovDerefDeref(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, int(types.Ptr_Size)*i), v.Addr(i), types.Ptr_Size, asm.RegA)
+    offset := 0
+    for i := 0; i < int(t.Size()/types.Ptr_Size); i++ {
+        asm.MovDerefDeref(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), v.OffsetedAddr(offset), types.Ptr_Size, asm.RegA)
+        offset += int(types.Ptr_Size)
+    }
+
+    if t.Size() % types.Ptr_Size != 0 {
+        asm.MovDerefDeref(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), v.OffsetedAddr(offset), t.Types[len(t.Types)-1].Size(), asm.RegA)
     }
 }
 
@@ -268,4 +278,16 @@ func PassBigStructReg(file *os.File, t types.StructType) {
     for i := range t.Types {
         asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, int(types.Ptr_Size)*i), types.Ptr_Size, asm.RegGroup(i))
     }
+}
+
+func RetBigStructLit(file *os.File, t types.StructType, val token.Token) {
+    PassBigStructLit(file, t, val)
+}
+
+func RetBigStructVar(file *os.File, t types.StructType, v vars.Var) {
+    PassBigStructVar(file, t, v)
+}
+
+func RetBigStructExpr(file *os.File, t types.StructType) {
+    PassBigStructReg(file, t)
 }

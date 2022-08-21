@@ -63,6 +63,9 @@ func DecFunc(name token.Token, args []types.Type, retType types.Type) *fn.Func {
 
     f := fn.CreateFunc(name, args, retType)
     curScope.parent.identObjs[name.Str] = &f
+    if types.IsBigStruct(retType) {
+        curScope.frameSize += types.Ptr_Size
+    }
     curFunc = &f
     return &f
 }

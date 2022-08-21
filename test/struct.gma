@@ -12,6 +12,8 @@ struct BigStruct {
     a5 i32
 }
 
+struct Vec2 { x i32, y i32 }
+
 c1 Coord := Coord{ y: 69, x: 420, z: -64 }
 
 fn test_global() {
@@ -107,8 +109,6 @@ fn offsetCoord(c Coord, i i32) -> Coord {
     ret c
 }
 
-struct Vec2 { x i32, y i32 }
-
 fn scale(v Vec2, scaler i32) -> Vec2 {
     v.x = v.x * scaler
     v.y = v.y * scaler
@@ -119,20 +119,6 @@ fn scale(v Vec2, scaler i32) -> Vec2 {
 fn printVec2(v Vec2) {
     printStr("x: ") printInt(v.x) printStr("\n")
     printStr("y: ") printInt(v.y) printStr("\n")
-}
-
-fn testRet() {
-    v := Vec2{ x: 2, y: 4 }
-    printVec2(v)
-    printVec2(scale(v, 4))
-
-    v2 := scale(v, 2)
-    printVec2(v2)
-
-    printStr("------\n")
-    printCoord(c1)
-    c2 := offsetCoord(c1, 2)
-    printCoord(c2)
 }
 
 fn test2Structs(c1 Coord, c2 Coord) {
@@ -146,7 +132,7 @@ fn test2Structs(c1 Coord, c2 Coord) {
     printCoord(c1)
 }
 
-fn bigStruct(b BigStruct) {
+fn printBigStruct(b BigStruct) {
     printInt(b.a1) printStr(", ")
     printInt(b.a2) printStr(", ")
     printInt(b.a3) printStr(", ")
@@ -154,37 +140,99 @@ fn bigStruct(b BigStruct) {
     printInt(b.a5) printStr("\n")
 }
 
+fn addBigStruct(b BigStruct, i i32) -> BigStruct {
+    printBigStruct(b)
+    printStr("+ ") printInt(i) printStr(" (all)\n")
+
+    b.a1 = b.a1 + i
+    b.a2 = b.a2 + i
+    b.a3 = b.a3 + i
+    b.a4 = b.a4 + i
+    b.a5 = b.a5 + i
+
+    ret b
+}
+
+fn use2BigStruct(b1 BigStruct, i i32, b2 BigStruct) -> BigStruct {
+    printBigStruct(b1)
+    printStr("- ")
+    printBigStruct(b2)
+    printStr("+ ") printInt(i) printStr(" (all)\n")
+
+    b1.a1 = b1.a1 - b2.a1 + i
+    b1.a2 = b1.a2 - b2.a2 + i
+    b1.a3 = b1.a3 - b2.a3 + i
+    b1.a4 = b1.a4 - b2.a4 + i
+    b1.a5 = b1.a5 - b2.a5 + i
+
+    ret b1
+}
+
+fn retStructLit() -> BigStruct {
+    ret BigStruct{ a1: 69, a2: 64, a3: 69, a4: 420, a5: -64 }
+}
+
+fn testRet() {
+    printStr("--- 8Byte struct\n")
+    v := Vec2{ x: 2, y: 4 }
+    printVec2(v)
+    printVec2(scale(v, 4))
+
+    v2 := scale(v, 2)
+    printVec2(v2)
+
+    printStr("--- aligned 12Byte struct\n")
+    printCoord(c1)
+    c2 := offsetCoord(c1, 2)
+    printCoord(c2)
+
+    printStr("--- aligned 20Byte struct\n")
+    b := addBigStruct(BigStruct{ a1: 1, a2: 2, a3: 3, a4: 4, a5: 5 }, 68)
+    printInt(b.a1) printStr(", ")
+    printInt(b.a2) printStr(", ")
+    printInt(b.a3) printStr(", ")
+    printInt(b.a4) printStr(", ")
+    printInt(b.a5) printStr("\n")
+    printBigStruct(b)
+
+    printStr("--- 2x aligned 20Byte struct args\n")
+    b2 := BigStruct{ a1: 1, a2: 2, a3: 3, a4: 4, a5: 5 }
+    b3 := use2BigStruct(b, 1, b2)
+    printBigStruct(b3)
+}
+
 fn main() {
     printStr("global ---------\n")
     test_global()
 
-    printStr("local ---------\n")
+    printStr("\nlocal ---------\n")
     test_local()
 
-    printStr("assignField ---------\n")
+    printStr("\nassignField ---------\n")
     assignField()
 
-    printStr("assign ---------\n")
+    printStr("\nassign ---------\n")
     assign()
 
-    printStr("const ---------\n")
+    printStr("\nconst ---------\n")
     const()
 
-    printStr("pass as arg ---------\n")
+    printStr("\npass as arg ---------\n")
     printStr("c1:\n")
     printCoord(c1)
+
     printStr("struct literal:\n")
     printCoord(Coord{ y: 420, x: 64, z: -64 })
 
-    printStr("return struct -----\n")
-    testRet()
-
-    printStr("test 2 structs -----\n")
+    printStr("2 structs\n")
     c2 := Coord{ y: 2, x: 1, z: 3 }
     test2Structs(c1, c2)
 
-    printStr("test big structs -----\n")
+    printStr("big structs\n")
     b := BigStruct{ a1: 1, a2: 2, a3: 3, a4: 4, a5: 5 }
-    bigStruct(b)
-    bigStruct(BigStruct{ a1: 10, a2: 20, a3: 30, a4: 40, a5: 50 })
+    printBigStruct(b)
+    printBigStruct(BigStruct{ a1: 10, a2: 20, a3: 30, a4: 40, a5: 50 })
+
+    printStr("\nreturn struct -----\n")
+    testRet()
 }

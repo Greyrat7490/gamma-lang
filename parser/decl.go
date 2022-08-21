@@ -313,13 +313,15 @@ func prsDefFn() ast.DefFn {
         os.Exit(1)
     }
 
+    f := identObj.DecFunc(name, argTypes, retType)
+
     var argDecs []ast.DecVar
-    offset := uint(0)
+    offset := uint(8)
     for i,t := range argTypes {
         if t,ok := t.(types.StructType); ok {
             if types.IsBigStruct(t) {
                 argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecBigArg(argNames[i], t, offset) })
-                offset += uint(len(t.Types)) * types.Ptr_Size
+                offset += t.Size()
             }
         }
     }
@@ -334,7 +336,6 @@ func prsDefFn() ast.DefFn {
         argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecArg(argNames[i], t) })
     }
 
-    f := identObj.DecFunc(name, argTypes, retType)
     block := prsBlock()
     f.SetFrameSize(identObj.GetFrameSize())
     identObj.EndScope()
