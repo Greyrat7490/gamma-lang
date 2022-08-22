@@ -16,7 +16,7 @@ import (
 System V AMD64 ABI calling convention
   * [x] int:    rdi, rsi, rdx, rcx, r8, r9
   * [ ] float:  xmm0 - xmm7
-  * [ ] more on stack (right to left)
+  * [x] more on stack (right to left)
 
   * [x] struct:         use int/float fields
   * [x] big struct:     on stack (right to left)
@@ -104,29 +104,20 @@ func (f *Func) Call(file *os.File) {
 func DefArg(file *os.File, regIdx int, v vars.Var) {
     switch t := v.GetType().(type) {
     case types.StrType:
-        setArg(file, v.Addr(0), regIdx, types.Ptr_Size)
-        setArg(file, v.Addr(1), regIdx+1, types.I32_Size)
+        asm.MovDerefReg(file, v.Addr(0), types.Ptr_Size, regs[regIdx])
+        asm.MovDerefReg(file, v.Addr(1), types.I32_Size, regs[regIdx+1])
 
     case types.StructType:
         if t.Size() > uint(8) {
-            setArg(file, v.Addr(0), regIdx, types.Ptr_Size)
-            setArg(file, v.OffsetedAddr(int(types.Ptr_Size)), regIdx+1, t.Types[1].Size())
+            asm.MovDerefReg(file, v.Addr(0), types.Ptr_Size, regs[regIdx])
+            asm.MovDerefReg(file, v.OffsetedAddr(int(types.Ptr_Size)), t.Types[len(t.Types)-1].Size(), regs[regIdx+1])
         } else {
-            setArg(file, v.Addr(0), regIdx, t.Size())
+            asm.MovDerefReg(file, v.Addr(0), t.Size(), regs[regIdx])
         }
 
     default:
-        setArg(file, v.Addr(0), regIdx, t.Size())
+        asm.MovDerefReg(file, v.Addr(0), t.Size(), regs[regIdx])
     }
-}
-
-func setArg(file *os.File, addr string, regIdx int, size uint) {
-    if regIdx >= len(regs) {
-        fmt.Fprintf(os.Stderr, "[ERROR] not enough regs left to set args (max 6) %d more needed\n", regIdx - len(regs) + 1)
-        os.Exit(1)
-    }
-
-    asm.MovDerefReg(file, addr, size, regs[regIdx])
 }
 
 func packValues(file *os.File, valtypes []types.Type, values []token.Token) int {
@@ -243,6 +234,76 @@ func PassReg(file *os.File, regIdx int, argType types.Type) {
 
     default:
         asm.MovRegReg(file, regs[regIdx], asm.RegGroup(0), argType.Size())
+    }
+}
+
+func PassValStack(file *os.File, value token.Token, valtype types.Type) {
+    switch t := valtype.(type) {
+    case types.StrType:
+        strIdx := str.Add(value)
+
+        asm.PushVal(file, fmt.Sprint(str.GetSize(strIdx)))
+        asm.PushVal(file, fmt.Sprintf("_str%d", strIdx))
+
+    case types.StructType:
+        if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
+            fields := structLit.GetValues(idx)
+            if len(t.Types) == 1 {
+                asm.PushVal(file, fields[0].Str)
+            } else {
+                if t.Size() > uint(8) {
+                    asm.PushVal(file, fields[0].Str)
+                    asm.MovDerefVal(file, fmt.Sprintf("rsp+%d", t.Types[0].Size()), t.Types[1].Size(), fields[1].Str)
+                } else {
+                    asm.PushVal(file, fields[0].Str)
+                    asm.MovDerefVal(file, fmt.Sprintf("rsp+%d", t.Types[0].Size()), t.Types[1].Size(), fields[1].Str)
+                }
+            }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected struct literal converted to a Number but got %v\n", value)
+            fmt.Fprintln(os.Stderr, "\t" + value.At())
+            os.Exit(1)
+        }
+    default:
+        asm.PushVal(file, value.Str)
+    }
+}
+
+func PassVarStack(file *os.File, otherVar vars.Var) {
+    switch t := otherVar.GetType().(type) {
+    case types.StrType:
+        asm.PushDeref(file, otherVar.Addr(1))
+        asm.PushDeref(file, otherVar.Addr(0))
+
+    case types.StructType:
+        if t.Size() > uint(8) {
+            asm.PushDeref(file, otherVar.Addr(1))
+        }
+        asm.PushDeref(file, otherVar.Addr(0))
+
+    case types.BoolType, types.I32Type, types.PtrType, types.ArrType:
+        asm.PushDeref(file, otherVar.Addr(0))
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot pass var %s of type %v yet\n", otherVar.GetName(), t)
+        os.Exit(1)
+    }
+}
+
+func PassRegStack(file *os.File, argType types.Type) {
+    switch t := argType.(type) {
+    case types.StrType:
+        asm.PushReg(file, asm.RegGroup(1))
+        asm.PushReg(file, asm.RegGroup(0))
+
+    case types.StructType:
+        if t.Size() > uint(8) {
+            asm.PushReg(file, asm.RegGroup(1))
+        }
+        asm.PushReg(file, asm.RegGroup(0))
+
+    default:
+        asm.PushReg(file, asm.RegGroup(0))
     }
 }
 

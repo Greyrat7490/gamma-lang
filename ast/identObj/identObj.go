@@ -44,7 +44,7 @@ func DecArg(name token.Token, t types.Type) vars.Var {
     return &v
 }
 
-func DecBigArg(name token.Token, t types.Type, offset uint) vars.Var {
+func DecArgFromStack(name token.Token, t types.Type, offset uint) vars.Var {
     v := vars.CreateLocal(name, t, offset, true, true)
     curScope.identObjs[name.Str] = &v
     return &v

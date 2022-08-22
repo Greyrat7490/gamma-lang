@@ -35,18 +35,18 @@ func Sub(file *os.File, src string, size uint) {
     file.WriteString(fmt.Sprintf("sub %s, %s\n", GetReg(RegA, size), src))
 }
 func Mul(file *os.File, src string, size uint) {
-    Push(file, RegB)
-    Push(file, RegD)
+    PushReg(file, RegB)
+    PushReg(file, RegD)
 
     file.WriteString(fmt.Sprintf("mov %s, %s\n", GetReg(RegB, size), src))
     file.WriteString(fmt.Sprintf("imul %s\n", GetReg(RegB, size)))
 
-    Pop(file, RegD)
-    Pop(file, RegB)
+    PopReg(file, RegD)
+    PopReg(file, RegB)
 }
 func Div(file *os.File, src string, size uint) {
-    Push(file, RegD)
-    Push(file, RegB)
+    PushReg(file, RegD)
+    PushReg(file, RegB)
 
     // TODO: check if dest is signed or unsigned (use either idiv or div)
     // for now only signed integers are supported
@@ -58,12 +58,12 @@ func Div(file *os.File, src string, size uint) {
     }
     file.WriteString(fmt.Sprintf("idiv %s\n", GetReg(RegB, size)))
 
-    Pop(file, RegB)
-    Pop(file, RegD)
+    PopReg(file, RegB)
+    PopReg(file, RegD)
 }
 func Mod(file *os.File, src string, size uint) {
-    Push(file, RegB)
-    Push(file, RegD)
+    PushReg(file, RegB)
+    PushReg(file, RegD)
     file.WriteString(fmt.Sprintf("mov %s, %s\n", GetReg(RegB, size), src))
 
     if size == 8 {
@@ -75,6 +75,6 @@ func Mod(file *os.File, src string, size uint) {
     file.WriteString(fmt.Sprintf("idiv %s\n", GetReg(RegB, size)))
 
     file.WriteString(fmt.Sprintf("mov %s, %s\n", GetReg(RegA, size), GetReg(RegD, size)))
-    Pop(file, RegB)
-    Pop(file, RegD)
+    PopReg(file, RegB)
+    PopReg(file, RegD)
 }

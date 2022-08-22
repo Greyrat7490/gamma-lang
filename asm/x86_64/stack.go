@@ -5,11 +5,19 @@ import (
     "fmt"
 )
 
-func Push(file *os.File, reg RegGroup) {
+func PushVal(file *os.File, val string) {
+    file.WriteString(fmt.Sprintf("push %s\n", val))
+}
+
+func PopVal(file *os.File, val string) {
+    file.WriteString(fmt.Sprintf("pop %s\n", val))
+}
+
+func PushReg(file *os.File, reg RegGroup) {
     file.WriteString(fmt.Sprintf("push %s\n", GetReg(reg, 8)))
 }
 
-func Pop(file *os.File, reg RegGroup) {
+func PopReg(file *os.File, reg RegGroup) {
     file.WriteString(fmt.Sprintf("pop %s\n", GetReg(reg, 8)))
 }
 

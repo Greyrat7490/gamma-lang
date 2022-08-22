@@ -122,7 +122,7 @@ func (d *DefFn) Compile(file *os.File) {
     }
 
     for _,a := range d.Args {
-        if !types.IsBigStruct(a.V.GetType()) {
+        if !types.IsBigStruct(a.V.GetType()) && regIdx < 6 {
             fn.DefArg(file, regIdx, a.V)
 
             switch t := a.Type.(type) {

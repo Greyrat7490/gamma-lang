@@ -86,7 +86,7 @@ func (v *LocalVar) DefVal(file *os.File, val token.Token) {
 }
 
 func calcOffset(t types.Type, frameSize uint, fromStack bool) int {
-    if t.GetKind() == types.Struct && fromStack {
+    if fromStack {
         return int(types.Ptr_Size + frameSize + 7) & ^7
     }
 

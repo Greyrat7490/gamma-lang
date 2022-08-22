@@ -357,12 +357,12 @@ func (e *Binary) Compile(file *os.File) {
                 }
             }
         } else {
-            asm.Push(file, asm.RegA)
+            asm.PushReg(file, asm.RegA)
 
             e.OperandR.Compile(file)
             asm.MovRegReg(file, asm.RegB, asm.RegA, size)
 
-            asm.Pop(file, asm.RegA)
+            asm.PopReg(file, asm.RegA)
             asm.BinaryOpReg(file, e.Operator.Type, asm.RegB, size)
         }
 
@@ -393,14 +393,46 @@ func (e *Binary) Compile(file *os.File) {
 func (e *FnCall) Compile(file *os.File) {
     e.typeCheck()
 
-    bigArgsSize := uint(0)
     rest := uint(0)
-    for _,t := range e.F.GetArgs() {
+    count := 0
+    for i,t := range e.F.GetArgs() {
         if types.IsBigStruct(t) {
             rest += (t.Size() + 7) & ^uint(7)
+        } else {
+            if count >= 6 {
+                if rest != 0 {
+                    rest += 8
+                }
+
+                // compile time evaluation:
+                if v := e.Values[i].ConstEval(); v.Type != token.Unknown {
+                    fn.PassValStack(file, v, t)
+
+                } else if ident,ok := e.Values[i].(*Ident); ok {
+                    fn.PassVarStack(file, ident.Obj.(vars.Var))
+
+                } else {
+                    e.Values[count].Compile(file)
+                    fn.PassRegStack(file, t)
+                }
+            } else {
+                switch t.GetKind() {
+                case types.Str:
+                    count += 2
+                case types.Struct:
+                if t.Size() > 8 {
+                    count += 2
+                } else {
+                    count++
+                }
+                default:
+                    count++
+                }
+            }
         }
     }
     rest %= 16
+    bigArgsSize := uint(0)
     if rest != 0 {
         file.WriteString(fmt.Sprintf("sub rsp, %d\n", rest))
         bigArgsSize += rest
@@ -431,11 +463,15 @@ func (e *FnCall) Compile(file *os.File) {
     }
 
     regIdx := 0
-    if bigArgsSize > 0 {
+    if types.IsBigStruct(e.F.GetRetType()) {
         regIdx++
     }
 
     for i,t := range e.F.GetArgs() {
+        if regIdx >= 6 {
+            break
+        }
+
         if types.IsBigStruct(t) {
             continue
         }

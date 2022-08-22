@@ -318,22 +318,36 @@ func prsDefFn() ast.DefFn {
     var argDecs []ast.DecVar
     offset := uint(8)
     for i,t := range argTypes {
-        if t,ok := t.(types.StructType); ok {
-            if types.IsBigStruct(t) {
-                argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecBigArg(argNames[i], t, offset) })
-                offset += t.Size()
-            }
+        if types.IsBigStruct(t) {
+            argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecArgFromStack(argNames[i], t, offset) })
+            offset += t.Size()
         }
     }
 
+    regCount := 0
     for i,t := range argTypes {
-        if t,ok := t.(types.StructType); ok {
-            if types.IsBigStruct(t) {
-                continue
-            }
+        if types.IsBigStruct(t) {
+            continue
         }
 
-        argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecArg(argNames[i], t) })
+        if regCount >= 6 {
+            argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecArgFromStack(argNames[i], t, offset) })
+        } else {
+            argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecArg(argNames[i], t) })
+
+            switch t := t.(type) {
+            case types.StrType:
+                regCount += 2
+            case types.StructType:
+                if t.Size() > 8 {
+                    regCount += 2
+                } else {
+                    regCount++
+                }
+            default:
+                regCount++
+            }
+        }
     }
 
     block := prsBlock()
