@@ -22,7 +22,7 @@ type Decl interface {
 type BadDecl struct {}
 
 type DecVar struct {
-    V vars.Var          // TODO remove Var,Const,Func
+    V vars.Var
     Type types.Type
     TypePos token.Pos
 }
@@ -114,7 +114,7 @@ func (d *DefVar) Compile(file *os.File) {
 func (d *DefFn) Compile(file *os.File) {
     d.F.Define(file)
 
-    regIdx := 0
+    regIdx := uint(0)
 
     if types.IsBigStruct(d.F.GetRetType()) {
         asm.MovDerefReg(file, fmt.Sprintf("rbp-%d", types.Ptr_Size), types.Ptr_Size, asm.RegDi)
@@ -122,18 +122,12 @@ func (d *DefFn) Compile(file *os.File) {
     }
 
     for _,a := range d.Args {
-        if !types.IsBigStruct(a.V.GetType()) && regIdx < 6 {
-            fn.DefArg(file, regIdx, a.V)
+        if !types.IsBigStruct(a.V.GetType()) {
+            i := types.RegCount(a.Type)
 
-            switch t := a.Type.(type) {
-            case types.StrType:
-                regIdx += 2
-
-            case types.StructType:
-                regIdx += len(t.Types)
-
-            default:
-                regIdx++
+            if regIdx+i <= 6 {
+                fn.DefArg(file, regIdx, a.V)
+                regIdx += i
             }
         }
     }

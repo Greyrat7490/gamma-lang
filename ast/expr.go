@@ -393,61 +393,63 @@ func (e *Binary) Compile(file *os.File) {
 func (e *FnCall) Compile(file *os.File) {
     e.typeCheck()
 
+    regIdx := uint(0)
+    if types.IsBigStruct(e.F.GetRetType()) { // rdi contains addr to return big struct to
+        regIdx++
+    }
+
+    // get start of args on stack, calc big args stack size --------
+    bigArgsSize := uint(0)
     rest := uint(0)
-    count := 0
+    stackArgsStart := len(e.F.GetArgs())
     for i,t := range e.F.GetArgs() {
         if types.IsBigStruct(t) {
-            rest += (t.Size() + 7) & ^uint(7)
-        } else {
-            if count >= 6 {
+            s := (t.Size() + 7) & ^uint(7)
+            rest += s
+            bigArgsSize += s
+
+        } else if stackArgsStart == len(e.F.GetArgs()) {
+            needed := types.RegCount(t)
+            if regIdx + needed > 6 {
+                stackArgsStart = i
                 if rest != 0 {
                     rest += 8
                 }
-
-                // compile time evaluation:
-                if v := e.Values[i].ConstEval(); v.Type != token.Unknown {
-                    fn.PassValStack(file, v, t)
-
-                } else if ident,ok := e.Values[i].(*Ident); ok {
-                    fn.PassVarStack(file, ident.Obj.(vars.Var))
-
-                } else {
-                    e.Values[count].Compile(file)
-                    fn.PassRegStack(file, t)
-                }
             } else {
-                switch t.GetKind() {
-                case types.Str:
-                    count += 2
-                case types.Struct:
-                if t.Size() > 8 {
-                    count += 2
-                } else {
-                    count++
-                }
-                default:
-                    count++
-                }
+                regIdx += needed
             }
         }
     }
     rest %= 16
-    bigArgsSize := uint(0)
+
+    // pass args on stack ------------------------------------------
+    for i := len(e.F.GetArgs())-1; i >= stackArgsStart; i-- {
+        if v := e.Values[i].ConstEval(); v.Type != token.Unknown {
+            fn.PassValStack(file, v, e.F.GetArgs()[i])
+
+        } else if ident,ok := e.Values[i].(*Ident); ok {
+            fn.PassVarStack(file, ident.Obj.(vars.Var))
+
+        } else {
+            e.Values[i].Compile(file)
+            fn.PassRegStack(file, e.F.GetArgs()[i])
+        }
+    }
+
+    // align stack (16byte) ----------------------------------------
     if rest != 0 {
         file.WriteString(fmt.Sprintf("sub rsp, %d\n", rest))
         bigArgsSize += rest
     }
 
+    // pass big struct args ----------------------------------------
     for i := len(e.F.GetArgs())-1; i >= 0; i-- {
         if t,ok := e.F.GetArgs()[i].(types.StructType); ok {
             if types.IsBigStruct(t) {
                 size := (t.Size() + 7) & ^uint(7)
-                bigArgsSize += size
-
                 file.WriteString(fmt.Sprintf("sub rsp, %d\n", size))
                 file.WriteString("mov rcx, rsp\n")
 
-                // compile time evaluation:
                 if v := e.Values[i].ConstEval(); v.Type != token.Unknown {
                     fn.PassBigStructLit(file, t, v)
 
@@ -462,21 +464,15 @@ func (e *FnCall) Compile(file *os.File) {
         }
     }
 
-    regIdx := 0
-    if types.IsBigStruct(e.F.GetRetType()) {
-        regIdx++
-    }
-
-    for i,t := range e.F.GetArgs() {
-        if regIdx >= 6 {
-            break
-        }
-
+    // pass args with regs -----------------------------------------
+    for i := stackArgsStart-1; i >= 0; i-- {
+        t := e.F.GetArgs()[i]
         if types.IsBigStruct(t) {
             continue
         }
 
-        // compile time evaluation:
+        regIdx -= types.RegCount(t)
+
         if v := e.Values[i].ConstEval(); v.Type != token.Unknown {
             fn.PassVal(file, regIdx, v, t)
 
@@ -487,19 +483,11 @@ func (e *FnCall) Compile(file *os.File) {
             e.Values[i].Compile(file)
             fn.PassReg(file, regIdx, t)
         }
-
-        switch t := t.(type) {
-        case types.StrType:
-            regIdx += 2
-        case types.StructType:
-            regIdx += len(t.Types)
-        default:
-            regIdx++
-        }
     }
 
     e.F.Call(file)
 
+    // clear stack -------------------------------------------------
     if bigArgsSize > 0 {
         file.WriteString(fmt.Sprintf("add rsp, %d\n", bigArgsSize))
     }

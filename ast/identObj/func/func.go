@@ -101,7 +101,7 @@ func (f *Func) Call(file *os.File) {
     file.WriteString("call " + f.name + "\n")
 }
 
-func DefArg(file *os.File, regIdx int, v vars.Var) {
+func DefArg(file *os.File, regIdx uint, v vars.Var) {
     switch t := v.GetType().(type) {
     case types.StrType:
         asm.MovDerefReg(file, v.Addr(0), types.Ptr_Size, regs[regIdx])
@@ -133,7 +133,7 @@ func packValues(file *os.File, valtypes []types.Type, values []token.Token) int 
     return len(valtypes)
 }
 
-func PassVal(file *os.File, regIdx int, value token.Token, valtype types.Type) {
+func PassVal(file *os.File, regIdx uint, value token.Token, valtype types.Type) {
     switch t := valtype.(type) {
     case types.StrType:
         strIdx := str.Add(value)
@@ -195,7 +195,7 @@ func PassVal(file *os.File, regIdx int, value token.Token, valtype types.Type) {
     }
 }
 
-func PassVar(file *os.File, regIdx int, otherVar vars.Var) {
+func PassVar(file *os.File, regIdx uint, otherVar vars.Var) {
     switch t := otherVar.GetType().(type) {
     case types.StrType:
         asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), types.Ptr_Size)
@@ -218,7 +218,7 @@ func PassVar(file *os.File, regIdx int, otherVar vars.Var) {
     }
 }
 
-func PassReg(file *os.File, regIdx int, argType types.Type) {
+func PassReg(file *os.File, regIdx uint, argType types.Type) {
     switch t := argType.(type) {
     case types.StrType:
         asm.MovRegReg(file, regs[regIdx],   asm.RegGroup(0), types.Ptr_Size)

@@ -108,6 +108,27 @@ func IsBigStruct(t Type) bool {
     return false
 }
 
+func RegCount(t Type) uint {
+    switch t.GetKind() {
+    case Str:
+        return 2
+
+    case Struct:
+        if IsBigStruct(t) {
+            return 0
+        }
+
+        if t.Size() > 8 {
+            return 2
+        } else {
+            return 1
+        }
+
+    default:
+        return 1
+    }
+}
+
 func (t I32Type)    GetKind() TypeKind { return I32  }
 func (t BoolType)   GetKind() TypeKind { return Bool }
 func (t StrType)    GetKind() TypeKind { return Str  }

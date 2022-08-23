@@ -324,29 +324,19 @@ func prsDefFn() ast.DefFn {
         }
     }
 
-    regCount := 0
+    regCount := uint(0)
     for i,t := range argTypes {
         if types.IsBigStruct(t) {
             continue
         }
 
-        if regCount >= 6 {
+        needed := types.RegCount(t)
+        if regCount + needed > 6 {
             argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecArgFromStack(argNames[i], t, offset) })
+            offset += t.Size()
         } else {
             argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecArg(argNames[i], t) })
-
-            switch t := t.(type) {
-            case types.StrType:
-                regCount += 2
-            case types.StructType:
-                if t.Size() > 8 {
-                    regCount += 2
-                } else {
-                    regCount++
-                }
-            default:
-                regCount++
-            }
+            regCount += needed
         }
     }
 
@@ -382,7 +372,6 @@ func prsDecFields() (decs []ast.DecVar) {
     return
 }
 
-// TODO: ast.DecArg
 func prsDecArgs() (names []token.Token, types []types.Type) {
     if token.Cur().Type != token.ParenL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got %v\n", token.Cur())
