@@ -100,6 +100,14 @@ func CreateStructType(name string, types []Type) StructType {
     return StructType{ Name: name, Types: types, isBigStruct: isBigStruct, isAligned: aligned, size: size }
 }
 
+func (t StructType) GetOffset(fieldNum uint) (offset int) {
+    for i := uint(0); i < fieldNum; i++ {
+        offset += int(t.Types[i].Size())
+    }
+
+    return
+}
+
 func IsBigStruct(t Type) bool {
     if t,ok := t.(StructType); ok {
         return t.isBigStruct

@@ -300,7 +300,7 @@ func (o *Field) GetType() types.Type {
             return s.GetTypeOfField(o.FieldName.Str)
         }
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] %s is not a struct but a %v\n", o.Obj.GetName(), t)
+        fmt.Fprintf(os.Stderr, "[ERROR] expected struct but got %v\n", t)
         fmt.Fprintln(os.Stderr, "\t" + o.At())
         os.Exit(1)
     }

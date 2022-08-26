@@ -72,7 +72,7 @@ type Indexed struct {
 
 type Field struct {
     Pos token.Pos
-    Obj identObj.IdentObj
+    Obj Expr
     DotPos token.Pos
     FieldName token.Token
 }
@@ -222,18 +222,105 @@ func (e *Indexed) Compile(file *os.File) {
     }
 }
 
-func (e *Field) Compile(file *os.File) {
-    t := e.Obj.GetType()
+func (e *Field) AddrToRcx(file *os.File) {
+    switch o := e.Obj.(type) {
+    case *Ident:
+        file.WriteString(fmt.Sprintf("lea %s, [%s]\n", asm.GetReg(asm.RegC, types.Ptr_Size), o.Obj.Addr(0)))
 
-    if sType,ok := t.(types.StructType); ok {
-        obj := identObj.Get(sType.Name)
-        if s,ok := obj.(*structDec.Struct); ok {
+    case *Field:
+        o.AddrToRcx(file)
+
+    default:
+        fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
+        fmt.Fprintln(os.Stderr, "\t" + e.At())
+        os.Exit(1)
+    }
+}
+
+func (e *Field) Offset() int {
+    if sType,ok := e.Obj.GetType().(types.StructType); ok {
+        if s,ok := identObj.Get(sType.Name).(*structDec.Struct); ok {
             i := s.GetFieldNum(e.FieldName.Str)
-            s := s.GetTypes()[i].Size()
-            asm.MovRegDeref(file, asm.RegA, e.Obj.Addr(i), s)
+
+            switch o := e.Obj.(type) {
+            case *Ident:
+                return sType.GetOffset(uint(i))
+
+            case *Field:
+                return sType.GetOffset(uint(i)) + o.Offset()
+
+            default:
+                fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
+                fmt.Fprintln(os.Stderr, "\t" + e.At())
+                os.Exit(1)
+            }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not declared\n", sType.Name)
+            fmt.Fprintln(os.Stderr, "\t" + e.At())
+            os.Exit(1)
+        }
+    }
+
+    fmt.Fprintf(os.Stderr, "[ERROR] expected struct but got %v\n", e.Obj.GetType())
+    fmt.Fprintln(os.Stderr, "\t" + e.At())
+    os.Exit(1)
+
+    return 0
+}
+
+func (e *Field) Compile(file *os.File) {
+    if sType,ok := e.Obj.GetType().(types.StructType); ok {
+        if s,ok := identObj.Get(sType.Name).(*structDec.Struct); ok {
+            i := s.GetFieldNum(e.FieldName.Str)
+
+            switch o := e.Obj.(type) {
+            case *Ident:
+                switch t := s.GetTypes()[i].(type) {
+                case types.StrType:
+                    asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), types.Ptr_Size)
+                    asm.MovRegDeref(file, asm.RegGroup(1), fmt.Sprintf("%s+%d", o.Obj.Addr(i), int(types.Ptr_Size)), types.I32_Size)
+
+                case types.StructType:
+                    if t.Size() > uint(8) {
+                        asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), types.Ptr_Size)
+                        asm.MovRegDeref(file, asm.RegGroup(1), fmt.Sprintf("%s+%d", o.Obj.Addr(i), int(types.Ptr_Size)), t.Types[len(t.Types)-1].Size())
+                    } else {
+                        asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), t.Size())
+                    }
+
+                default:
+                    asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), t.Size())
+                }
+
+            case *Field:
+                o.AddrToRcx(file)
+
+                offset := e.Offset()
+                switch t := s.GetTypes()[i].(type) {
+                case types.StrType:
+                    asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Ptr_Size)
+                    asm.MovRegDeref(file, asm.RegGroup(1), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)), types.I32_Size)
+
+                case types.StructType:
+                    if t.Size() > uint(8) {
+                        asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Ptr_Size)
+                        asm.MovRegDeref(file, asm.RegGroup(1), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)), t.Types[len(t.Types)-1].Size())
+                    } else {
+                        asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size())
+                    }
+
+                default:
+                    asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size())
+                }
+
+            default:
+                fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
+                fmt.Fprintln(os.Stderr, "\t" + e.At())
+                os.Exit(1)
+            }
         }
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] %s is not a struct but a %v\n", e.Obj.GetName(), t)
+        fmt.Fprintf(os.Stderr, "[ERROR] expected struct but got %v\n", e.Obj.GetType())
         fmt.Fprintln(os.Stderr, "\t" + e.At())
         os.Exit(1)
     }

@@ -56,25 +56,24 @@ func (e *Indexed) ConstEval() token.Token {
 func (e *Field) ConstEval() token.Token {
     e.typeCheck()
 
-    if c,ok := e.Obj.(*consts.Const); ok {
-        t := c.GetType()
+    if c := e.Obj.ConstEval(); c.Type != token.Unknown {
+        t := e.Obj.GetType()
 
         if sType,ok := t.(types.StructType); ok {
             obj := identObj.Get(sType.Name)
             if s,ok := obj.(*structDec.Struct); ok {
                 i := s.GetFieldNum(e.FieldName.Str)
-                constVal := c.GetVal()
-                if constVal.Type != token.Number {
-                    fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", constVal)
-                    fmt.Fprintln(os.Stderr, "\t" + constVal.At())
+                if c.Type != token.Number {
+                    fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", c)
+                    fmt.Fprintln(os.Stderr, "\t" + c.At())
                     os.Exit(1)
                 }
 
-                idx,_ := strconv.ParseUint(constVal.Str, 10, 64)
+                idx,_ := strconv.ParseUint(c.Str, 10, 64)
                 return structLit.GetValues(idx)[i]
             }
         } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] %s is not a struct but a %v\n", e.Obj.GetName(), t)
+            fmt.Fprintf(os.Stderr, "[ERROR] expected struct but got %v\n", e.Obj.GetType())
             fmt.Fprintln(os.Stderr, "\t" + e.At())
             os.Exit(1)
         }

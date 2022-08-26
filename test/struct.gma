@@ -14,6 +14,18 @@ struct BigStruct {
 
 struct Vec2 { x i32, y i32 }
 
+struct Test {
+    i1 i32,
+    s1 str,
+    i2 i32
+}
+
+struct Test2 {
+    i i32,
+    t Test,
+    b bool
+}
+
 c1 Coord := Coord{ y: 69, x: 420, z: -64 }
 
 fn test_global() {
@@ -28,6 +40,33 @@ fn test_local() {
     printStr("x: ") printInt(c2.x) printStr("\n")
     printStr("y: ") printInt(c2.y) printStr("\n")
     printStr("z: ") printInt(c2.z) printStr("\n")
+}
+
+fn testNested() {
+    t := Test{ i1: 64, s1: "test string", i2: -69 }
+
+    printStr("i1: ")   printInt(t.i1)
+    printStr("\ns1: ") printStr(t.s1)
+    printStr("\ni2: ") printInt(t.i2)
+    printStr("\n-----\n")
+
+    t2 := Test2{ i: -64, t: Test{ i1: 64, s1: "test string", i2: -69 }, b: true }
+
+    printStr("i: ")    printInt(t2.i)
+    printStr("\ni1: ") printInt(t2.t.i1)
+    printStr("\ns1: ") printStr(t2.t.s1)
+    printStr("\ni2: ") printInt(t2.t.i2)
+    printStr("\nb: ") printBool(t2.b)
+    printStr("\n-----\nt2.t.s1 = \"new string\"\n")
+
+    t2.t.s1 = "new string"
+
+    printStr("i: ")    printInt(t2.i)
+    printStr("\ni1: ") printInt(t2.t.i1)
+    printStr("\ns1: ") printStr(t2.t.s1)
+    printStr("\ni2: ") printInt(t2.t.i2)
+    printStr("\nb: ") printBool(t2.b)
+    printStr("\n")
 }
 
 fn assignField() {
@@ -207,6 +246,9 @@ fn main() {
 
     printStr("\nlocal ---------\n")
     test_local()
+
+    printStr("\nnested struct ---------\n")
+    testNested()
 
     printStr("\nassignField ---------\n")
     assignField()

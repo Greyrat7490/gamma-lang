@@ -66,9 +66,7 @@ func (v *LocalVar) Addr(fieldNum int) string {
         }
 
     case types.StructType:
-        for i := 0; i < fieldNum; i++ {
-            offset += int(t.Types[i].Size())
-        }
+        offset += int(t.GetOffset(uint(fieldNum)))
     }
 
     if offset > 0 {

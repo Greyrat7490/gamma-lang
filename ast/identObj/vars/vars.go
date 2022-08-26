@@ -74,56 +74,19 @@ func VarSetVar(file *os.File, v Var, other Var) {
 }
 
 func VarSetVal(file *os.File, v Var, val token.Token) {
-    t := v.GetType()
-    switch t.GetKind() {
-    case types.Str:
-        strIdx := str.Add(val)
-
-        asm.MovDerefVal(file, v.Addr(0), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx))
-        asm.MovDerefVal(file, v.Addr(1), types.I32_Size, fmt.Sprint(str.GetSize(strIdx)))
-
-    case types.Arr:
-        if idx,err := strconv.ParseUint(val.Str, 10, 64); err == nil {
-            asm.MovDerefVal(file, v.Addr(0), types.Ptr_Size, fmt.Sprintf("_arr%d", idx))
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected size of array to be a Number but got %v\n", val)
-            fmt.Fprintln(os.Stderr, "\t" + val.At())
-            os.Exit(1)
-        }
-
-    case types.Struct:
-        if t,ok := t.(types.StructType); ok {
-            if val.Type != token.Number {
-                fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", val)
-                fmt.Fprintln(os.Stderr, "\t" + val.At())
-                os.Exit(1)
-            }
-
-            idx,_ := strconv.ParseUint(val.Str, 10, 64)
-
-            for i,val := range structLit.GetValues(idx) {
-                asm.MovDerefVal(file, v.Addr(i), t.Types[i].Size(), val.Str)
-            }
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) expected StructType but got %v\n", t)
-            os.Exit(1)
-        }
-
-    case types.Ptr:
-        if val.Type == token.Name {
-            file.WriteString(fmt.Sprintf("lea rax, [%s]\n", val.Str))
-            asm.MovDerefReg(file, v.Addr(0), v.GetType().Size(), asm.RegA)
-        } else {
-            asm.MovDerefVal(file, v.Addr(0), t.Size(), val.Str)
-        }
-
-    case types.Bool:
-        if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
-        fallthrough
-
-    case types.I32:
-        asm.MovDerefVal(file, v.Addr(0), t.Size(), val.Str)
-
+    switch t := v.GetType().(type) {
+    case types.StrType:
+        derefSetStrVal(file, v.Addr(0), 0, val)
+    case types.ArrType:
+        derefSetArrVal(file, v.Addr(0), 0, val)
+    case types.StructType:
+        derefSetStructVal(file, t, v.Addr(0), 0, val)
+    case types.PtrType:
+        derefSetPtrVal(file, v.Addr(0), 0, val)
+    case types.BoolType:
+        derefSetBoolVal(file, v.Addr(0), 0, val)
+    case types.I32Type:
+        derefSetIntVal(file, v.Addr(0), 0, val)
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet\n", t)
         os.Exit(1)
@@ -200,3 +163,81 @@ func DerefSetVar(file *os.File, other Var) {
         asm.MovDerefDeref(file, asm.GetReg(asm.RegA, types.Ptr_Size), other.Addr(0), other.GetType().Size(), asm.RegB)
     }
 }
+
+
+func offsetedAddr(addr string, offset int) string {
+    if offset > 0 {
+        return fmt.Sprintf("%s+%d", addr, offset)
+    } else if offset < 0 {
+        return fmt.Sprintf("%s%d", addr, offset)
+    } else {
+        return addr
+    }
+}
+
+
+func derefSetIntVal(file *os.File, addr string, offset int, val token.Token) {
+    asm.MovDerefVal(file, offsetedAddr(addr, offset), types.I32_Size, val.Str)
+}
+
+func derefSetBoolVal(file *os.File, addr string, offset int, val token.Token) {
+    if val.Str == "true" {
+        asm.MovDerefVal(file, offsetedAddr(addr, offset), types.Bool_Size, "1")
+    } else {
+        asm.MovDerefVal(file, offsetedAddr(addr, offset), types.Bool_Size, "0")
+    }
+}
+
+func derefSetPtrVal(file *os.File, addr string, offset int, val token.Token) {
+    if val.Type == token.Name {
+        file.WriteString(fmt.Sprintf("lea rax, [%s]\n", val.Str))
+        asm.MovDerefReg(file, offsetedAddr(addr, offset), types.Ptr_Size, asm.RegA)
+    } else {
+        asm.MovDerefVal(file, offsetedAddr(addr, offset), types.Ptr_Size, val.Str)
+    }
+}
+
+func derefSetStrVal(file *os.File, addr string, offset int, val token.Token) {
+    strIdx := str.Add(val)
+
+    asm.MovDerefVal(file, offsetedAddr(addr, offset), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx))
+    asm.MovDerefVal(file, offsetedAddr(addr, offset + int(types.Ptr_Size)), types.I32_Size, fmt.Sprint(str.GetSize(strIdx)))
+}
+
+func derefSetArrVal(file *os.File, addr string, offset int, val token.Token) {
+    if idx,err := strconv.ParseUint(val.Str, 10, 64); err == nil {
+        asm.MovDerefVal(file, addr, types.Ptr_Size, fmt.Sprintf("_arr%d", idx))
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected size of array to be a Number but got %v\n", val)
+        fmt.Fprintln(os.Stderr, "\t" + val.At())
+        os.Exit(1)
+    }
+}
+
+func derefSetStructVal(file *os.File, t types.StructType, addr string, offset int, val token.Token) {
+    if val.Type != token.Number {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", val)
+        fmt.Fprintln(os.Stderr, "\t" + val.At())
+        os.Exit(1)
+    }
+
+    idx,_ := strconv.ParseUint(val.Str, 10, 64)
+
+    for i,val := range structLit.GetValues(idx) {
+        switch typ := t.Types[i].(type) {
+        case types.StrType:
+            derefSetStrVal(file, addr, offset + t.GetOffset(uint(i)), val)
+        case types.StructType:
+            derefSetStructVal(file, typ, addr, offset + t.GetOffset(uint(i)), val)
+        case types.ArrType:
+            derefSetArrVal(file, addr, offset + t.GetOffset(uint(i)), val)
+        case types.BoolType:
+            derefSetBoolVal(file, addr, offset + t.GetOffset(uint(i)), val)
+        case types.I32Type:
+            derefSetIntVal(file, addr, offset + t.GetOffset(uint(i)), val)
+        case types.PtrType:
+            derefSetPtrVal(file, addr, offset + t.GetOffset(uint(i)), val)
+        }
+    }
+}
+

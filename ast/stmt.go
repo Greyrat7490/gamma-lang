@@ -8,10 +8,8 @@ import (
     "gamma/asm/x86_64"
     "gamma/asm/x86_64/loops"
     "gamma/asm/x86_64/conditions"
-    "gamma/ast/identObj"
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
-    "gamma/ast/identObj/struct"
 )
 
 type Stmt interface {
@@ -112,19 +110,9 @@ func (s *Assign) Compile(file *os.File) {
         dest.AddrToRcx(file)
 
     case *Field:
-        t := dest.Obj.GetType()
-
-        if sType,ok := t.(types.StructType); ok {
-            obj := identObj.Get(sType.Name)
-            if strct,ok := obj.(*structDec.Struct); ok {
-                i := strct.GetFieldNum(dest.FieldName.Str)
-                file.WriteString(fmt.Sprintf("lea rcx, [%s]\n", dest.Obj.Addr(i)))
-            }
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] %s is not a struct but a %v\n", dest.Obj.GetName(), t)
-            fmt.Fprintln(os.Stderr, "\t" + dest.At())
-            os.Exit(1)
-        }
+        dest.AddrToRcx(file)
+        offset := dest.Offset()
+        file.WriteString(fmt.Sprintf("lea rcx, [rcx+%d]\n", offset))
 
     case *Unary:
         if dest.Operator.Type != token.Mul {

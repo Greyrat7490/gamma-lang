@@ -125,11 +125,9 @@ func (o *Indexed) Readable(indent int) string {
 }
 
 func (o *Field) Readable(indent int) string {
-    s := strings.Repeat("   ", indent+1)
-
     return strings.Repeat("   ", indent) + "FIELD:\n" +
-        s + o.Obj.GetName() + "\n" +
-        s + o.FieldName.String() + "\n"
+        o.Obj.Readable(indent+1) +
+        strings.Repeat("   ", indent+1) + o.FieldName.String() + "\n"
 }
 
 func (o *Ident) Readable(indent int) string {

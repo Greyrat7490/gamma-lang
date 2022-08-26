@@ -65,15 +65,8 @@ func (v *GlobalVar) Addr(fieldNum int) string {
         }
 
     case types.StructType:
-        if fieldNum == 0 {
-            return v.name
-        } else {
-            var offset uint = 0
-            for i := 1; i <= fieldNum; i++ {
-                offset += t.Types[i].Size()
-            }
-
-            return fmt.Sprintf("%s+%d", v.name, offset)
+        if fieldNum != 0 {
+            return fmt.Sprintf("%s+%d", v.name, t.GetOffset(uint(fieldNum)))
         }
     }
 
@@ -82,44 +75,82 @@ func (v *GlobalVar) Addr(fieldNum int) string {
 
 
 func (v *GlobalVar) DefVal(file *os.File, val token.Token) {
-    switch v.vartype.GetKind() {
-    case types.Str:
-        strIdx := str.Add(val)
-        nasm.AddData(fmt.Sprintf("%s:\n  %s _str%d\n  %s %d",
-            v.name, asm.GetDataSize(types.Ptr_Size), strIdx, asm.GetDataSize(types.I32_Size), str.GetSize(strIdx)))
+    nasm.AddData(fmt.Sprintf("%s:\n", v.name))
 
-    case types.Arr:
-        nasm.AddData(fmt.Sprintf("%s:\n  %s _arr%s\n", v.name, asm.GetDataSize(types.Ptr_Size), val.Str))
-
-    case types.Struct:
-        if t,ok := v.vartype.(types.StructType); ok {
-            if val.Type != token.Number {
-                fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", val)
-                fmt.Fprintln(os.Stderr, "\t" + val.At())
-                os.Exit(1)
-            }
-
-            idx,_ := strconv.ParseUint(val.Str, 10, 64)
-
-            nasm.AddData(fmt.Sprintf("%s:", v.name))
-            for i,v := range structLit.GetValues(idx) {
-                nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(t.Types[i].Size()), v.Str))
-            }
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) expected StructType but got %v\n", v.vartype)
-            os.Exit(1)
-        }
-
-    case types.Bool:
-        if val.Str == "true" { val.Str = "1" } else { val.Str = "0" }
-        fallthrough
-
-    case types.I32, types.Ptr:
-        nasm.AddData(fmt.Sprintf("%s:\n  %s %s\n", v.name, asm.GetDataSize(v.vartype.Size()), val.Str))
-
+    switch t := v.vartype.(type) {
+    case types.StrType:
+        defStr(val)
+    case types.ArrType:
+        defArr(val.Str)
+    case types.StructType:
+        defStruct(t, val)
+    case types.BoolType:
+        defBool(val.Str)
+    case types.I32Type:
+        defInt(val.Str)
+    case types.PtrType:
+        defPtr(val.Str)
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] (unreachable) the type of \"%s\" is not set correctly\n", v.name)
+        fmt.Fprintf(os.Stderr, "[ERROR] define global var of typ %v is not supported yet\n", v.vartype)
         fmt.Fprintln(os.Stderr, "\t" + v.decPos.At())
         os.Exit(1)
     }
+}
+
+
+func defStruct(t types.StructType, val token.Token) {
+    if val.Type != token.Number {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", val)
+        fmt.Fprintln(os.Stderr, "\t" + val.At())
+        os.Exit(1)
+    }
+
+    idx,_ := strconv.ParseUint(val.Str, 10, 64)
+
+    for i,v := range structLit.GetValues(idx) {
+        switch t := t.Types[i].(type) {
+        case types.StrType:
+            defStr(v)
+        case types.I32Type:
+            defInt(v.Str)
+        case types.BoolType:
+            defBool(v.Str)
+        case types.PtrType:
+            defPtr(v.Str)
+        case types.ArrType:
+            defArr(v.Str)
+        case types.StructType:
+            defStruct(t, v)
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet\n", t)
+            os.Exit(1)
+        }
+    }
+}
+
+func defInt(val string) {
+    nasm.AddData(fmt.Sprintf("  %s %s\n", asm.GetDataSize(types.I32_Size), val))
+}
+
+func defPtr(val string) {
+    nasm.AddData(fmt.Sprintf("  %s %s\n", asm.GetDataSize(types.Ptr_Size), val))
+}
+
+func defBool(val string) {
+    if val == "true" {
+        val = "1"
+    } else {
+        val = "0"
+    }
+
+    nasm.AddData(fmt.Sprintf("  %s %s\n", asm.GetDataSize(types.Bool_Size), val))
+}
+
+func defStr(val token.Token) {
+    strIdx := str.Add(val)
+    nasm.AddData(fmt.Sprintf("  %s _str%d\n  %s %d", asm.GetDataSize(types.Ptr_Size), strIdx, asm.GetDataSize(types.I32_Size), str.GetSize(strIdx)))
+}
+
+func defArr(val string) {
+    nasm.AddData(fmt.Sprintf("  %s _arr%s\n", asm.GetDataSize(types.Ptr_Size), val))
 }

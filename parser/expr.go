@@ -39,7 +39,11 @@ func prsExpr() ast.Expr {
             expr = prsCallFn()
 
         case token.Dot:
-            expr = prsField()
+            ident := prsIdentExpr()
+            expr = prsField(ident)
+            for token.Peek().Type == token.Dot {
+                expr = prsField(expr)
+            }
 
         case token.BraceL:
             if obj := identObj.Get(token.Cur().Str); obj != nil {
@@ -380,9 +384,7 @@ func prsIndexExpr(expr ast.Expr) *ast.Indexed {
     return &res
 }
 
-func prsField() *ast.Field {
-    objName := token.Cur()
-
+func prsField(obj ast.Expr) *ast.Field {
     dot := token.Next()
     if dot.Type != token.Dot {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \".\" but got %v\n", dot)
@@ -397,7 +399,7 @@ func prsField() *ast.Field {
         os.Exit(1)
     }
 
-    return &ast.Field{ Pos: objName.Pos, Obj: identObj.Get(objName.Str), DotPos: dot.Pos, FieldName: fieldName }
+    return &ast.Field{ Obj: obj, DotPos: dot.Pos, FieldName: fieldName }
 }
 
 func prsParenExpr() *ast.Paren {
@@ -594,7 +596,11 @@ func prsBinary(expr ast.Expr, min_precedence precedence) ast.Expr {
         case token.Cur().Type == token.Name:
             switch token.Peek().Type {
             case token.Dot:
-                b.OperandR = prsField()
+                ident := prsIdentExpr()
+                b.OperandR = prsField(ident)
+                for token.Peek().Type == token.Dot {
+                    b.OperandR = prsField(b.OperandR)
+                }
 
             case token.BrackL:
                 expr := prsIdentExpr()
