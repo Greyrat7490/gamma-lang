@@ -30,7 +30,7 @@ A statically and strongly typed programming language similar to Go, but with mor
 * [x] variables
 * [ ] functions
   * [x] define/call
-  * [ ] System V AMD64 ABI calling convention
+  * [x] System V AMD64 ABI calling convention
   * [ ] lambda
   * [ ] const function
 * [x] io
