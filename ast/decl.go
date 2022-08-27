@@ -29,14 +29,14 @@ type DecVar struct {
 
 type DefVar struct {
     V vars.Var
-    Type types.Type     // nil -> infer type
+    Type types.Type
     ColPos token.Pos
     Value Expr
 }
 
 type DefConst struct {
     C *consts.Const
-    Type types.Type     // nil -> infer type
+    Type types.Type
     ColPos token.Pos
     Value Expr
 }
@@ -64,11 +64,6 @@ func (d *DecVar) Compile(file *os.File) {}
 func (d *DefConst) Compile(file *os.File) {
     d.typeCheck()
 
-    if d.C.GetType() == nil {
-        d.Type = d.Value.GetType()
-        d.C.SetType(d.Type)
-    }
-
     val := d.Value.ConstEval()
 
     if val.Type == token.Unknown {
@@ -81,13 +76,7 @@ func (d *DefConst) Compile(file *os.File) {
 }
 
 func (d *DefVar) Compile(file *os.File) {
-    if d.V.GetType() == nil {
-        d.Type = d.Value.GetType()
-        d.V.SetType(d.Type)
-    }
-
     d.typeCheck()
-
 
     // compile time evaluation
     if val := d.Value.ConstEval(); val.Type != token.Unknown {
@@ -101,8 +90,10 @@ func (d *DefVar) Compile(file *os.File) {
         os.Exit(1)
     }
 
-    if _,ok := d.Value.(*FnCall); ok {
-        file.WriteString(fmt.Sprintf("lea rdi, [%s]\n", d.V.Addr(0)))
+    if c,ok := d.Value.(*FnCall); ok {
+        if types.IsBigStruct(c.F.GetRetType()) {
+            file.WriteString(fmt.Sprintf("lea rdi, [%s]\n", d.V.Addr(0)))
+        }
     }
 
     d.Value.Compile(file)

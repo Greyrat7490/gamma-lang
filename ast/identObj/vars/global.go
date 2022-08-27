@@ -15,24 +15,15 @@ import (
 type GlobalVar struct {
     decPos token.Pos
     name string
-    vartype types.Type
+    typ types.Type
 }
 
 func CreateGlobalVar(name token.Token, t types.Type) GlobalVar {
-    return GlobalVar{ name: name.Str, decPos: name.Pos, vartype: t }
-}
-
-func (v *GlobalVar) SetType(t types.Type) {
-    if v.vartype != nil {
-        fmt.Println("[ERROR] setting the type of a var again is not allowed")
-        os.Exit(1)
-    }
-
-    v.vartype = t
+    return GlobalVar{ name: name.Str, decPos: name.Pos, typ: t }
 }
 
 func (v *GlobalVar) String() string {
-    return fmt.Sprintf("{%s %s}", v.name, v.vartype)
+    return fmt.Sprintf("{%s %s}", v.name, v.typ)
 }
 
 func (v *GlobalVar) GetName() string {
@@ -44,7 +35,7 @@ func (v *GlobalVar) GetPos () token.Pos {
 }
 
 func (v *GlobalVar) GetType() types.Type {
-    return v.vartype
+    return v.typ
 }
 
 func (v *GlobalVar) OffsetedAddr(offset int) string {
@@ -57,16 +48,16 @@ func (v *GlobalVar) OffsetedAddr(offset int) string {
     }
 }
 
-func (v *GlobalVar) Addr(fieldNum int) string {
-    switch t := v.vartype.(type) {
+func (v *GlobalVar) Addr(field uint) string {
+    switch t := v.typ.(type) {
     case types.StrType:
-        if fieldNum == 1 {
+        if field == 1 {
             return fmt.Sprintf("%s+%d", v.name, types.Ptr_Size)
         }
 
     case types.StructType:
-        if fieldNum != 0 {
-            return fmt.Sprintf("%s+%d", v.name, t.GetOffset(uint(fieldNum)))
+        if field != 0 {
+            return fmt.Sprintf("%s+%d", v.name, t.GetOffset(field))
         }
     }
 
@@ -77,7 +68,7 @@ func (v *GlobalVar) Addr(fieldNum int) string {
 func (v *GlobalVar) DefVal(file *os.File, val token.Token) {
     nasm.AddData(fmt.Sprintf("%s:\n", v.name))
 
-    switch t := v.vartype.(type) {
+    switch t := v.typ.(type) {
     case types.StrType:
         defStr(val)
     case types.ArrType:
@@ -91,7 +82,7 @@ func (v *GlobalVar) DefVal(file *os.File, val token.Token) {
     case types.PtrType:
         defPtr(val.Str)
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] define global var of typ %v is not supported yet\n", v.vartype)
+        fmt.Fprintf(os.Stderr, "[ERROR] define global var of typ %v is not supported yet\n", v.typ)
         fmt.Fprintln(os.Stderr, "\t" + v.decPos.At())
         os.Exit(1)
     }

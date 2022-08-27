@@ -222,20 +222,21 @@ func (o *Binary) typeCheck() {
 }
 
 func (o *XSwitch) typeCheck() {
-    ts := make(map[types.Type][]int)
+    if len(o.Cases) > 1 {
+        t1 := o.Cases[0].Expr.GetType()
 
-    for i,c := range o.Cases {
-        t2 := c.Expr.GetType()
-        ts[t2] = append(ts[t2], i)
-    }
+        for _,c := range o.Cases[1:] {
+            t2 := c.Expr.GetType()
+            if !types.Check(t1, t2) {
+                fmt.Fprintln(os.Stderr, "[ERROR] expected every case body to return the same type but got:")
+                for i,c := range o.Cases {
+                    fmt.Fprintf(os.Stderr, "\tcase%d: %v\n", i, c.Expr.GetType())
+                }
+                fmt.Fprintln(os.Stderr, "\t" + o.At())
 
-    if len(ts) > 1 {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected every case body to return the same type but got %d differente\n", len(ts))
-        for key,val := range ts {
-            fmt.Fprintf(os.Stderr, "cases %v\n   type: %v\n", val, key)
+                os.Exit(1)
+            }
         }
-
-        os.Exit(1)
     }
 }
 

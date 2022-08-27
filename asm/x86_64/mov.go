@@ -44,3 +44,15 @@ func MovDerefDeref(file *os.File, dest string, src string, size uint, reg RegGro
 func DerefRax(file *os.File, size uint) {
     file.WriteString(fmt.Sprintf("mov %s, %s [rax]\n", GetReg(RegA, size), GetWord(size)))
 }
+
+func OffsetAddr(baseAddr string, offset int) string {
+    if offset == 0 {
+        return baseAddr
+    }
+
+    if offset > 0 {
+        return fmt.Sprintf("%s+%d", baseAddr, offset)
+    }
+
+    return fmt.Sprintf("%s%d", baseAddr, offset)
+}

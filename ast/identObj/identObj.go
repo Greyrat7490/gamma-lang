@@ -15,7 +15,7 @@ type IdentObj interface {
     GetName() string
     GetType() types.Type
     GetPos() token.Pos
-    Addr(fieldNum int) string
+    Addr(field uint) string
 }
 
 var curFunc *fn.Func = nil

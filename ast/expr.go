@@ -19,6 +19,7 @@ import (
 type Expr interface {
     Node
     Compile(file *os.File)
+    // Assign(file *os.File)
     GetType() types.Type
     typeCheck()
     ConstEval() token.Token
@@ -238,24 +239,29 @@ func (e *Field) AddrToRcx(file *os.File) {
 }
 
 func (e *Field) Offset() int {
-    if sType,ok := e.Obj.GetType().(types.StructType); ok {
-        if s,ok := identObj.Get(sType.Name).(*structDec.Struct); ok {
-            i := s.GetFieldNum(e.FieldName.Str)
+    if t,ok := e.Obj.GetType().(types.StructType); ok {
+        if s,ok := identObj.Get(t.Name).(*structDec.Struct); ok {
+            if i,b := s.GetFieldNum(e.FieldName.Str); b {
+                switch o := e.Obj.(type) {
+                case *Ident:
+                    return t.GetOffset(uint(i))
 
-            switch o := e.Obj.(type) {
-            case *Ident:
-                return sType.GetOffset(uint(i))
+                case *Field:
+                    return t.GetOffset(uint(i)) + o.Offset()
 
-            case *Field:
-                return sType.GetOffset(uint(i)) + o.Offset()
-
-            default:
-                fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
+                default:
+                    fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
+                    fmt.Fprintln(os.Stderr, "\t" + e.At())
+                    os.Exit(1)
+                }
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", t.Name, e.FieldName)
                 fmt.Fprintln(os.Stderr, "\t" + e.At())
                 os.Exit(1)
             }
+
         } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not declared\n", sType.Name)
+            fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not declared\n", t.Name)
             fmt.Fprintln(os.Stderr, "\t" + e.At())
             os.Exit(1)
         }
@@ -269,52 +275,56 @@ func (e *Field) Offset() int {
 }
 
 func (e *Field) Compile(file *os.File) {
-    if sType,ok := e.Obj.GetType().(types.StructType); ok {
-        if s,ok := identObj.Get(sType.Name).(*structDec.Struct); ok {
-            i := s.GetFieldNum(e.FieldName.Str)
-
-            switch o := e.Obj.(type) {
-            case *Ident:
-                switch t := s.GetTypes()[i].(type) {
-                case types.StrType:
-                    asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), types.Ptr_Size)
-                    asm.MovRegDeref(file, asm.RegGroup(1), fmt.Sprintf("%s+%d", o.Obj.Addr(i), int(types.Ptr_Size)), types.I32_Size)
-
-                case types.StructType:
-                    if t.Size() > uint(8) {
+    if t,ok := e.Obj.GetType().(types.StructType); ok {
+        if s,ok := identObj.Get(t.Name).(*structDec.Struct); ok {
+            if i,b := s.GetFieldNum(e.FieldName.Str); b {
+                switch o := e.Obj.(type) {
+                case *Ident:
+                    switch t := s.GetTypes()[i].(type) {
+                    case types.StrType:
                         asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), types.Ptr_Size)
-                        asm.MovRegDeref(file, asm.RegGroup(1), fmt.Sprintf("%s+%d", o.Obj.Addr(i), int(types.Ptr_Size)), t.Types[len(t.Types)-1].Size())
-                    } else {
+                        asm.MovRegDeref(file, asm.RegGroup(1), fmt.Sprintf("%s+%d", o.Obj.Addr(i), int(types.Ptr_Size)), types.I32_Size)
+
+                    case types.StructType:
+                        if t.Size() > uint(8) {
+                            asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), types.Ptr_Size)
+                            asm.MovRegDeref(file, asm.RegGroup(1), fmt.Sprintf("%s+%d", o.Obj.Addr(i), int(types.Ptr_Size)), t.Types[len(t.Types)-1].Size())
+                        } else {
+                            asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), t.Size())
+                        }
+
+                    default:
                         asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), t.Size())
                     }
 
-                default:
-                    asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), t.Size())
-                }
+                case *Field:
+                    o.AddrToRcx(file)
 
-            case *Field:
-                o.AddrToRcx(file)
-
-                offset := e.Offset()
-                switch t := s.GetTypes()[i].(type) {
-                case types.StrType:
-                    asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Ptr_Size)
-                    asm.MovRegDeref(file, asm.RegGroup(1), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)), types.I32_Size)
-
-                case types.StructType:
-                    if t.Size() > uint(8) {
+                    offset := e.Offset()
+                    switch t := s.GetTypes()[i].(type) {
+                    case types.StrType:
                         asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Ptr_Size)
-                        asm.MovRegDeref(file, asm.RegGroup(1), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)), t.Types[len(t.Types)-1].Size())
-                    } else {
+                        asm.MovRegDeref(file, asm.RegGroup(1), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)), types.I32_Size)
+
+                    case types.StructType:
+                        if t.Size() > uint(8) {
+                            asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Ptr_Size)
+                            asm.MovRegDeref(file, asm.RegGroup(1), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)), t.Types[len(t.Types)-1].Size())
+                        } else {
+                            asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size())
+                        }
+
+                    default:
                         asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size())
                     }
 
                 default:
-                    asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size())
+                    fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
+                    fmt.Fprintln(os.Stderr, "\t" + e.At())
+                    os.Exit(1)
                 }
-
-            default:
-                fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", t.Name, e.FieldName)
                 fmt.Fprintln(os.Stderr, "\t" + e.At())
                 os.Exit(1)
             }
@@ -485,15 +495,13 @@ func (e *FnCall) Compile(file *os.File) {
         regIdx++
     }
 
-    // get start of args on stack, calc big args stack size --------
-    bigArgsSize := uint(0)
+    // get start of args on stack, calc big args stack size % 16 ----
     rest := uint(0)
     stackArgsStart := len(e.F.GetArgs())
     for i,t := range e.F.GetArgs() {
         if types.IsBigStruct(t) {
             s := (t.Size() + 7) & ^uint(7)
             rest += s
-            bigArgsSize += s
 
         } else if stackArgsStart == len(e.F.GetArgs()) {
             needed := types.RegCount(t)
@@ -509,7 +517,7 @@ func (e *FnCall) Compile(file *os.File) {
     }
     rest %= 16
 
-    // pass args on stack ------------------------------------------
+    // pass args on stack -------------------------------------------
     for i := len(e.F.GetArgs())-1; i >= stackArgsStart; i-- {
         if v := e.Values[i].ConstEval(); v.Type != token.Unknown {
             fn.PassValStack(file, v, e.F.GetArgs()[i])
@@ -523,27 +531,33 @@ func (e *FnCall) Compile(file *os.File) {
         }
     }
 
-    // align stack (16byte) ----------------------------------------
+    // align stack (16byte) -----------------------------------------
+    bigArgsSize := uint(0)
     if rest != 0 {
         file.WriteString(fmt.Sprintf("sub rsp, %d\n", rest))
         bigArgsSize += rest
     }
 
-    // pass big struct args ----------------------------------------
+    // pass big struct args -----------------------------------------
     for i := len(e.F.GetArgs())-1; i >= 0; i-- {
         if t,ok := e.F.GetArgs()[i].(types.StructType); ok {
             if types.IsBigStruct(t) {
                 size := (t.Size() + 7) & ^uint(7)
+                bigArgsSize += size
+
                 file.WriteString(fmt.Sprintf("sub rsp, %d\n", size))
                 file.WriteString("mov rcx, rsp\n")
 
                 if v := e.Values[i].ConstEval(); v.Type != token.Unknown {
-                    fn.PassBigStructLit(file, t, v)
+                    fn.PassBigStructLit(file, t, v, 0)
 
                 } else if ident,ok := e.Values[i].(*Ident); ok {
-                    fn.PassBigStructVar(file, t, ident.Obj.(vars.Var))
+                    fn.PassBigStructVar(file, t, ident.Obj.(vars.Var), 0)
 
                 } else {
+                    if _,ok := e.Values[i].(*FnCall); ok {
+                        file.WriteString(fmt.Sprintf("lea rdi, [rbp-%d]\n", bigArgsSize))
+                    }
                     e.Values[i].Compile(file)
                     fn.PassBigStructReg(file, t)
                 }

@@ -1,0 +1,58 @@
+struct Test {
+    b bool,
+    i i32,
+    s str
+}
+
+struct Test2 {
+    i i32,
+    t Test
+}
+
+struct Simple {
+    s str,
+    i i32
+}
+
+fn printTest(t Test) {
+    printStr("Test:")
+    printStr("\nb: ") printBool(t.b)
+    printStr("\ni: ") printInt(t.i)
+    printStr("\ns: ") printStr(t.s)
+    printStr("\n")
+}
+
+fn test1(i i32) -> Test {
+    ret Test{ b: true,  i:  69, s: "i < 0" }
+
+    /*
+    t := $ {
+        i < 0:                                          // ERROR: two ":" in one line -> two cases in one line
+            Test{ b: true,  i:  69, s: "i < 0" }
+        i > 0:
+            Test{ b: false, i: -69, s: "i > 0" }
+        _:
+            Test{ b: true,  i:  64, s: "i == 0" }
+    }
+
+    ret t
+    */
+}
+
+fn testStr() -> str {
+    ret "returned string\n"
+}
+
+// TODO: in work 
+fn testSimple() -> Simple {
+    ret Simple{ s: "simple string\n", i: 64 }
+}
+
+fn main() {
+    printTest(test1(69))
+    printStr(testStr())
+
+    s := testSimple()
+    printStr(s.s)
+    printInt(s.i) printStr("\n")
+}

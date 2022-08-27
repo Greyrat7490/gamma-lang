@@ -19,15 +19,6 @@ func CreateLocal(name token.Token, t types.Type, frameSize uint, isArg bool, fro
     return LocalVar{ name: name.Str, decPos: name.Pos, typ: t, isArg: isArg, offset: calcOffset(t, frameSize, fromStack) }
 }
 
-func (v *LocalVar) SetType(t types.Type) {
-    if v.typ != nil {
-        fmt.Println("[ERROR] setting the type of a var again is not allowed")
-        os.Exit(1)
-    }
-
-    v.typ = t
-}
-
 func (v *LocalVar) String() string {
     return fmt.Sprintf("{%s %v}", v.name, v.typ)
 }
@@ -56,17 +47,17 @@ func (v *LocalVar) OffsetedAddr(offset int) string {
     }
 }
 
-func (v *LocalVar) Addr(fieldNum int) string {
+func (v *LocalVar) Addr(field uint) string {
     offset := v.offset
 
     switch t := v.typ.(type) {
     case types.StrType:
-        if fieldNum == 1 {
+        if field == 1 {
             offset += int(types.Ptr_Size)
         }
 
     case types.StructType:
-        offset += int(t.GetOffset(uint(fieldNum)))
+        offset += int(t.GetOffset(field))
     }
 
     if offset > 0 {

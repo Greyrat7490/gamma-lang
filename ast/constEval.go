@@ -57,20 +57,23 @@ func (e *Field) ConstEval() token.Token {
     e.typeCheck()
 
     if c := e.Obj.ConstEval(); c.Type != token.Unknown {
-        t := e.Obj.GetType()
-
-        if sType,ok := t.(types.StructType); ok {
-            obj := identObj.Get(sType.Name)
+        if t,ok := e.Obj.GetType().(types.StructType); ok {
+            obj := identObj.Get(t.Name)
             if s,ok := obj.(*structDec.Struct); ok {
-                i := s.GetFieldNum(e.FieldName.Str)
-                if c.Type != token.Number {
-                    fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", c)
-                    fmt.Fprintln(os.Stderr, "\t" + c.At())
+                if i,b := s.GetFieldNum(e.FieldName.Str); b {
+                    if c.Type != token.Number {
+                        fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", c)
+                        fmt.Fprintln(os.Stderr, "\t" + c.At())
+                        os.Exit(1)
+                    }
+
+                    idx,_ := strconv.ParseUint(c.Str, 10, 64)
+                    return structLit.GetValues(idx)[i]
+                } else {
+                    fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", t.Name, e.FieldName)
+                    fmt.Fprintln(os.Stderr, "\t" + e.At())
                     os.Exit(1)
                 }
-
-                idx,_ := strconv.ParseUint(c.Str, 10, 64)
-                return structLit.GetValues(idx)[i]
             }
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] expected struct but got %v\n", e.Obj.GetType())

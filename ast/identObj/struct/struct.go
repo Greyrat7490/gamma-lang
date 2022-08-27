@@ -1,6 +1,8 @@
 package structDec
 
 import (
+    "os"
+    "fmt"
     "gamma/token"
     "gamma/types"
 )
@@ -31,7 +33,9 @@ func (s *Struct) GetPos() token.Pos {
     return s.decPos
 }
 
-func (s *Struct) Addr(fieldNum int) string {
+func (s *Struct) Addr(field uint) string {
+    fmt.Fprintln(os.Stderr, "[ERROR] Cannot get the addr of a struct type definition (not allocated anywhere)")
+    os.Exit(1)
     return ""
 }
 
@@ -57,12 +61,12 @@ func (s *Struct) GetTypeOfField(name string) types.Type {
     return nil
 }
 
-func (s *Struct) GetFieldNum(name string) int {
+func (s *Struct) GetFieldNum(name string) (uint, bool) {
     for i,f := range s.fieldNames {
         if f == name {
-            return i
+            return uint(i), true
         }
     }
 
-    return -1
+    return 0, false
 }

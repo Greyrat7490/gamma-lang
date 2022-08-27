@@ -78,7 +78,7 @@ func (f *Func) SetFrameSize(size uint) {
     f.frameSize = (size + 15) & ^uint(15)
 }
 
-func (f *Func) Addr(fieldNum int) string {
+func (f *Func) Addr(field uint) string {
     fmt.Fprintln(os.Stderr, "[ERROR] TODO: func.go Addr()")
     os.Exit(1)
     return ""
@@ -307,13 +307,37 @@ func PassRegStack(file *os.File, argType types.Type) {
     }
 }
 
-func PassBigStructLit(file *os.File, t types.StructType, value token.Token) {
+func PassBigStructLit(file *os.File, t types.StructType, value token.Token, offset int) {
     if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
         fields := structLit.GetValues(idx)
 
-        offset := 0
         for i,t := range t.Types {
-            asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size(), fields[i].Str)
+            switch t := t.(type) {
+            case types.StrType:
+                strIdx := str.Add(fields[i])
+
+                asm.MovDerefVal(file,
+                    asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
+                    types.Ptr_Size,
+                    fmt.Sprintf("_str%d", strIdx))
+                asm.MovDerefVal(file,
+                    asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)),
+                    types.I32_Size,
+                    fmt.Sprint(str.GetSize(strIdx)))
+
+            case types.StructType:
+                PassBigStructLit(file, t, fields[i], offset)
+
+            case types.BoolType:
+                if fields[i].Str == "true" {
+                    asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Bool_Size, "1")
+                } else {
+                    asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Bool_Size, "0")
+                }
+
+            default:
+                asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size(), fields[i].Str)
+            }
             offset += int(t.Size())
         }
     } else {
@@ -323,30 +347,48 @@ func PassBigStructLit(file *os.File, t types.StructType, value token.Token) {
     }
 }
 
-func PassBigStructVar(file *os.File, t types.StructType, v vars.Var) {
-    offset := 0
+func PassBigStructVar(file *os.File, t types.StructType, v vars.Var, offset int) {
     for i := 0; i < int(t.Size()/types.Ptr_Size); i++ {
         asm.MovDerefDeref(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), v.OffsetedAddr(offset), types.Ptr_Size, asm.RegA)
         offset += int(types.Ptr_Size)
     }
 
-    if t.Size() % types.Ptr_Size != 0 {
-        asm.MovDerefDeref(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), v.OffsetedAddr(offset), t.Types[len(t.Types)-1].Size(), asm.RegA)
+    if size := t.Size() % types.Ptr_Size; size != 0 {
+        asm.MovDerefDeref(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), v.OffsetedAddr(offset), size, asm.RegA)
     }
 }
 
 func PassBigStructReg(file *os.File, t types.StructType) {
-    for i := range t.Types {
-        asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, int(types.Ptr_Size)*i), types.Ptr_Size, asm.RegGroup(i))
+    offset := 0
+    for i := 0; i < int(t.Size()/types.Ptr_Size); i++ {
+        asm.MovDerefDeref(
+            file,
+            asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
+            asm.GetOffsetedReg(asm.RegA, types.Ptr_Size, offset),
+            types.Ptr_Size,
+            asm.RegB,
+        )
+
+        offset += int(types.Ptr_Size)
+    }
+
+    if size := t.Size() % types.Ptr_Size; size != 0 {
+        asm.MovDerefDeref(
+            file,
+            asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
+            asm.GetOffsetedReg(asm.RegA, types.Ptr_Size, offset),
+            size,
+            asm.RegB,
+        )
     }
 }
 
 func RetBigStructLit(file *os.File, t types.StructType, val token.Token) {
-    PassBigStructLit(file, t, val)
+    PassBigStructLit(file, t, val, 0)
 }
 
 func RetBigStructVar(file *os.File, t types.StructType, v vars.Var) {
-    PassBigStructVar(file, t, v)
+    PassBigStructVar(file, t, v, 0)
 }
 
 func RetBigStructExpr(file *os.File, t types.StructType) {
