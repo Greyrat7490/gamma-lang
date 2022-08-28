@@ -4,11 +4,12 @@ import (
     "os"
     "fmt"
     "strconv"
+    "gamma/token"
+    "gamma/types"
+    "gamma/cmpTime"
     "gamma/ast"
     "gamma/ast/identObj"
     "gamma/ast/identObj/struct"
-    "gamma/token"
-    "gamma/types"
 )
 
 func prsDecl() ast.Decl {
@@ -83,8 +84,7 @@ func prsArrType() types.ArrType {
     var lens []uint64
     for token.Cur().Type == token.BrackL {
         token.Next()
-        expr := prsExpr()
-        eval := expr.ConstEval()
+        eval := cmpTime.ConstEval(prsExpr())
         if eval.Type != token.Number {
             if eval.Type == token.Unknown {
                 fmt.Fprintln(os.Stderr, "[ERROR] lenght of an array has to a const/eval at compile time")
@@ -180,7 +180,7 @@ func isNextType() bool {
             return false
         }
 
-        return expr.ConstEval().Type != token.Number
+        return cmpTime.ConstEval(expr).Type != token.Number
 
     case token.Name:
         if obj := identObj.Get(token.Cur().Str); obj != nil {

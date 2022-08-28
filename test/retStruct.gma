@@ -43,7 +43,7 @@ fn testStr() -> str {
     ret "returned string\n"
 }
 
-// TODO: in work 
+// TODO: in work
 fn testSimple() -> Simple {
     ret Simple{ s: "simple string\n", i: 64 }
 }

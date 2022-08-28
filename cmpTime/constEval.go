@@ -1,33 +1,85 @@
-package ast
+package cmpTime
 
 import (
     "os"
     "fmt"
     "strconv"
+    "reflect"
     "gamma/token"
     "gamma/types"
     "gamma/types/array"
     "gamma/types/struct"
     "gamma/asm/x86_64"
+    "gamma/ast"
     "gamma/ast/identObj"
     "gamma/ast/identObj/vars"
     "gamma/ast/identObj/consts"
     "gamma/ast/identObj/struct"
 )
 
-func (e *Lit)      ConstEval() token.Token { return e.Val }
-func (e *FieldLit) ConstEval() token.Token { return e.Value.ConstEval() }
-func (e *StructLit) ConstEval() token.Token {
-    return token.Token{ Type: token.Number, Str: fmt.Sprint(e.Idx) }
-}
-func (e *ArrayLit) ConstEval() token.Token {
-    return token.Token{ Type: token.Number, Str: fmt.Sprint(e.Idx) }
-}
-func (e *Indexed) ConstEval() token.Token {
-    e.typeCheck()
+func ConstEval(e ast.Expr) token.Token {
+    switch e := e.(type) {
+    case *ast.Lit:
+        return ConstEvalLit(e)
+    case *ast.FieldLit:
+        return ConstEvalFieldLit(e)
+    case *ast.ArrayLit:
+        return ConstEvalArrayLit(e)
+    case *ast.StructLit:
+        return ConstEvalStructLit(e)
 
-    idxExpr := e.flatten()
-    val := idxExpr.ConstEval()
+    case *ast.Indexed:
+        return ConstEvalIndexed(e)
+    case *ast.Field:
+        return ConstEvalField(e)
+
+    case *ast.Ident:
+        return ConstEvalIdent(e)
+
+    case *ast.FnCall:
+        return ConstEvalFnCall(e)
+
+    case *ast.Unary:
+        return ConstEvalUnary(e)
+    case *ast.Binary:
+        return ConstEvalBinary(e)
+    case *ast.Paren:
+        return ConstEvalParen(e)
+
+    case *ast.XSwitch:
+        return ConstEvalXSwitch(e)
+
+    case *ast.BadExpr:
+        fmt.Fprintln(os.Stderr, "[ERROR] bad expression")
+        os.Exit(1)
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] ConstEval for %v is not implemente yet\n", reflect.TypeOf(e))
+        os.Exit(1)
+    }
+
+    return token.Token{ Type: token.Unknown }
+}
+
+func ConstEvalLit(e *ast.Lit) token.Token {
+    return e.Val
+}
+
+func ConstEvalFieldLit(e *ast.FieldLit) token.Token {
+    return ConstEval(e.Value)
+}
+
+func ConstEvalStructLit(e *ast.StructLit) token.Token {
+    return token.Token{ Type: token.Number, Str: fmt.Sprint(e.Idx) }
+}
+
+func ConstEvalArrayLit(e *ast.ArrayLit) token.Token {
+    return token.Token{ Type: token.Number, Str: fmt.Sprint(e.Idx) }
+}
+
+func ConstEvalIndexed(e *ast.Indexed) token.Token {
+    idxExpr := e.Flatten()
+    val := ConstEval(idxExpr)
     if val.Type != token.Unknown {
         if val.Type != token.Number {
             fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", val)
@@ -37,7 +89,7 @@ func (e *Indexed) ConstEval() token.Token {
 
         idx,_ := strconv.ParseUint(val.Str, 10, 64)
 
-        arr := e.ArrExpr.ConstEval()
+        arr := ConstEval(e.ArrExpr)
         if arr.Type != token.Unknown {
             if arr.Type != token.Number {
                 fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", val)
@@ -53,10 +105,8 @@ func (e *Indexed) ConstEval() token.Token {
     return token.Token{ Type: token.Unknown }
 }
 
-func (e *Field) ConstEval() token.Token {
-    e.typeCheck()
-
-    if c := e.Obj.ConstEval(); c.Type != token.Unknown {
+func ConstEvalField(e *ast.Field) token.Token {
+    if c := ConstEval(e.Obj); c.Type != token.Unknown {
         if t,ok := e.Obj.GetType().(types.StructType); ok {
             obj := identObj.Get(t.Name)
             if s,ok := obj.(*structDec.Struct); ok {
@@ -85,8 +135,8 @@ func (e *Field) ConstEval() token.Token {
     return token.Token{ Type: token.Unknown }
 }
 
-func (e *Unary) ConstEval() token.Token {
-    val := e.Operand.ConstEval()
+func ConstEvalUnary(e *ast.Unary) token.Token {
+    val := ConstEval(e.Operand)
 
     switch e.Operator.Type {
     case token.Minus:
@@ -96,7 +146,7 @@ func (e *Unary) ConstEval() token.Token {
         return val
 
     case token.Amp:
-        if ident,ok := e.Operand.(*Ident); ok {
+        if ident,ok := e.Operand.(*ast.Ident); ok {
             if v,ok := ident.Obj.(vars.Var); ok {
                 return token.Token{ Str: v.Addr(0), Type: token.Name, Pos: e.Operator.Pos }
             } else {
@@ -109,10 +159,12 @@ func (e *Unary) ConstEval() token.Token {
     return token.Token{ Type: token.Unknown }
 }
 
-func (e *BadExpr) ConstEval() token.Token { return token.Token{ Type: token.Unknown } }
-func (e *FnCall) ConstEval() token.Token { return token.Token{ Type: token.Unknown } }
+func ConstEvalFnCall(e *ast.FnCall) token.Token {
+    // TODO: in work
+    return token.Token{ Type: token.Unknown }
+}
 
-func (e *Ident) ConstEval() token.Token {
+func ConstEvalIdent(e *ast.Ident) token.Token {
     if c,ok := e.Obj.(*consts.Const); ok {
         return c.GetVal()
     }
@@ -120,26 +172,20 @@ func (e *Ident) ConstEval() token.Token {
     return token.Token{ Type: token.Unknown }
 }
 
-func (e *Paren) ConstEval() token.Token { return e.Expr.ConstEval() }
-
-func (e *XCase) ConstEval() token.Token {
-    if e.Cond == nil {
-        return token.Token{ Type: token.Unknown }
-    }
-
-    return e.Cond.ConstEval()
+func ConstEvalParen(e *ast.Paren) token.Token {
+    return ConstEval(e.Expr)
 }
 
-func (e *XSwitch) ConstEval() token.Token {
+func ConstEvalXSwitch(e *ast.XSwitch) token.Token {
     for _,c := range e.Cases {
         if c.Cond == nil {
-            return c.Expr.ConstEval()
+            return ConstEval(c.Expr)
         }
 
-        v := c.ConstEval()
+        v := ConstEval(c.Cond)
 
         if v.Type == token.Boolean && v.Str == "true" {
-            return c.Expr.ConstEval()
+            return ConstEval(c.Expr)
         } else if v.Type == token.Unknown {
             return token.Token{ Type: token.Unknown }
         }
@@ -148,9 +194,9 @@ func (e *XSwitch) ConstEval() token.Token {
     return token.Token{ Type: token.Unknown }
 }
 
-func (e *Binary) ConstEval() token.Token {
-    l := e.OperandL.ConstEval()
-    r := e.OperandR.ConstEval()
+func ConstEvalBinary(e *ast.Binary) token.Token {
+    l := ConstEval(e.OperandL)
+    r := ConstEval(e.OperandR)
 
     if l.Type != token.Unknown && r.Type != token.Unknown {
         if l.Type == token.Name {

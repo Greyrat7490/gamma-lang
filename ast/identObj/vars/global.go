@@ -66,7 +66,7 @@ func (v *GlobalVar) Addr(field uint) string {
 
 
 func (v *GlobalVar) DefVal(file *os.File, val token.Token) {
-    nasm.AddData(fmt.Sprintf("%s:\n", v.name))
+    nasm.AddData(fmt.Sprintf("%s:", v.name))
 
     switch t := v.typ.(type) {
     case types.StrType:
@@ -120,11 +120,11 @@ func defStruct(t types.StructType, val token.Token) {
 }
 
 func defInt(val string) {
-    nasm.AddData(fmt.Sprintf("  %s %s\n", asm.GetDataSize(types.I32_Size), val))
+    nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(types.I32_Size), val))
 }
 
 func defPtr(val string) {
-    nasm.AddData(fmt.Sprintf("  %s %s\n", asm.GetDataSize(types.Ptr_Size), val))
+    nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(types.Ptr_Size), val))
 }
 
 func defBool(val string) {
@@ -134,7 +134,7 @@ func defBool(val string) {
         val = "0"
     }
 
-    nasm.AddData(fmt.Sprintf("  %s %s\n", asm.GetDataSize(types.Bool_Size), val))
+    nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(types.Bool_Size), val))
 }
 
 func defStr(val token.Token) {
@@ -143,5 +143,5 @@ func defStr(val token.Token) {
 }
 
 func defArr(val string) {
-    nasm.AddData(fmt.Sprintf("  %s _arr%s\n", asm.GetDataSize(types.Ptr_Size), val))
+    nasm.AddData(fmt.Sprintf("  %s _arr%s", asm.GetDataSize(types.Ptr_Size), val))
 }

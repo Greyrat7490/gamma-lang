@@ -1,0 +1,48 @@
+package check
+
+import (
+    "os"
+    "fmt"
+    "reflect"
+    "gamma/ast"
+)
+
+func typeCheckDecl(d ast.Decl) {
+    switch d := d.(type) {
+    case *ast.DefVar:
+        typeCheckDefVar(d)
+
+    case *ast.DefConst:
+        typeCheckDefConst(d)
+
+    case *ast.DefFn:
+        // TODO
+
+    case *ast.DefStruct:
+        // nothing to do
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] typeCheckDecl for %v is not implemente yet\n", reflect.TypeOf(d))
+        os.Exit(1)
+    }
+}
+
+func typeCheckDefVar(d *ast.DefVar) {
+    t1 := d.V.GetType()
+    t2 := d.Value.GetType()
+
+    if !CheckTypes(t1, t2) {
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", d.V.GetName(), t1, t2)
+        fmt.Fprintln(os.Stderr, "\t" + d.At())
+        os.Exit(1)
+    }
+}
+
+func typeCheckDefConst(d *ast.DefConst) {
+    t2 := d.Value.GetType()
+    if !CheckTypes(d.Type, t2) {
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", d.C.GetName(), d.Type, t2)
+        fmt.Fprintln(os.Stderr, "\t" + d.At())
+        os.Exit(1)
+    }
+}

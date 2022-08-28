@@ -3,19 +3,14 @@ package ast
 import (
     "os"
     "fmt"
+    "strings"
     "gamma/token"
-    "gamma/types"
-    "gamma/asm/x86_64"
-    "gamma/asm/x86_64/loops"
-    "gamma/asm/x86_64/conditions"
     "gamma/ast/identObj/func"
-    "gamma/ast/identObj/vars"
 )
 
 type Stmt interface {
     Node
-    Compile(file *os.File)
-    stmt()  // to distinguish Stmt from Decl
+    stmt()  // to distinguish Stmt from Decl and Expr
 }
 
 type BadStmt struct {}
@@ -100,319 +95,132 @@ type Ret struct {
     RetExpr Expr    // nil -> return nothing
 }
 
-func (s *Assign) Compile(file *os.File) {
-    s.typeCheck()
-
-    t := s.Dest.GetType()
-
-    switch dest := s.Dest.(type) {
-    case *Indexed:
-        dest.AddrToRcx(file)
-
-    case *Field:
-        dest.AddrToRcx(file)
-        offset := dest.Offset()
-        file.WriteString(fmt.Sprintf("lea rcx, [rcx+%d]\n", offset))
-
-    case *Unary:
-        if dest.Operator.Type != token.Mul {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected \"*\" but got \"%v\"\n", dest.Operator)
-            fmt.Fprintln(os.Stderr, "\t" + s.Pos.At())
-            os.Exit(1)
-        }
-
-        dest.Operand.Compile(file)
-
-        // compile time evaluation
-        if val := s.Value.ConstEval(); val.Type != token.Unknown {
-            vars.DerefSetVal(file, t, val)
-            return
-        }
-
-        if e,ok := s.Value.(*Ident); ok {
-            vars.DerefSetVar(file, e.Obj.(vars.Var))
-            return
-        }
-
-        asm.MovRegReg(file, asm.RegC, asm.RegA, types.Ptr_Size)
-
-    case *Ident:
-        // compile time evaluation
-        if val := s.Value.ConstEval(); val.Type != token.Unknown {
-            vars.VarSetVal(file, dest.Obj.(vars.Var), val)
-            return
-        }
-
-        if e,ok := s.Value.(*Ident); ok {
-            vars.VarSetVar(file, dest.Obj.(vars.Var), e.Obj.(vars.Var))
-            return
-        }
-
-        s.Value.Compile(file)
-        vars.VarSetExpr(file, dest.Obj.(vars.Var))
-        return
-
-    default:
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a variable or a dereferenced pointer but got \"%t\"\n", dest)
-        fmt.Fprintln(os.Stderr, "\t" + s.Pos.At())
-        os.Exit(1)
-    }
-
-    s.Value.Compile(file)
-
-    switch t := s.Dest.GetType().(type) {
-    case types.StrType:
-        asm.MovDerefReg(file, asm.GetReg(asm.RegC, types.Ptr_Size), types.Ptr_Size, asm.RegGroup(0))
-        asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, int(types.Ptr_Size)), types.I32_Size, asm.RegGroup(1))
-
-    case types.StructType:
-        var offset uint = 0
-        for i,t := range t.Types {
-            asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, int(offset)), t.Size(), asm.RegGroup(i))
-            offset += t.Size()
-        }
-
-    default:
-        asm.MovDerefReg(file, asm.GetReg(asm.RegC, types.Ptr_Size), t.Size(), asm.RegGroup(0))
-    }
+func (o *Assign) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "ASSIGN:\n" +
+        o.Dest.Readable(indent+1) +
+        o.Value.Readable(indent+1)
 }
 
-func (s *Block) Compile(file *os.File) {
-    for _, stmt := range s.Stmts {
-        stmt.Compile(file)
+func (o *Block) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) + "BLOCK:\n"
+    for _, op := range o.Stmts {
+        res += op.Readable(indent+1)
     }
+
+    return res
 }
 
-func (s *If) Compile(file *os.File) {
-    s.typeCheck()
+func (o *If) Readable(indent int) string {
+    s := strings.Repeat("   ", indent) + "IF:\n" +
+        o.Cond.Readable(indent+1) +
+        o.Block.Readable(indent+1)
 
-    // compile time evaluation
-    if val := s.Cond.ConstEval(); val.Type != token.Unknown {
-        if val.Str == "true" {
-            s.Block.Compile(file)
-        } else if s.Else != nil {
-            s.Else.Block.Compile(file)
-        }
-
-        return
+    if o.Elif != nil {
+        s += o.Elif.Readable(indent)
+    } else if o.Else != nil {
+        s += o.Else.Readable(indent)
     }
 
-    hasElse := s.Else != nil || s.Elif != nil
+    return s
+}
 
-    var count uint = 0
-    if ident,ok := s.Cond.(*Ident); ok {
-        count = cond.IfVar(file, ident.Obj.Addr(0), hasElse)
+func (o *Elif) Readable(indent int) string {
+    s := strings.Repeat("   ", indent) + "ELIF:\n" +
+        o.Cond.Readable(indent+1) +
+        o.Block.Readable(indent+1)
+
+    if o.Elif != nil {
+        s += o.Elif.Readable(indent)
+    } else if o.Else != nil {
+        s += o.Else.Readable(indent)
+    }
+
+    return s
+}
+
+func (o *Else) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "ELSE:\n" +
+        o.Block.Readable(indent+1)
+}
+
+func (o *Case) Readable(indent int) string {
+    var s string
+    if o.Cond == nil {
+        s = strings.Repeat("   ", indent) + "DEFAULT:\n"
     } else {
-        s.Cond.Compile(file)
-        count = cond.IfExpr(file, hasElse)
+        s = strings.Repeat("   ", indent) + "CASE:\n" +
+            o.Cond.Readable(indent+1)
     }
 
-    s.Block.Compile(file)
-
-    if hasElse {
-        cond.ElseStart(file, count)
-
-        if s.Else != nil {
-            s.Else.Compile(file)
-        } else {
-            s.Elif.Compile(file)
-        }
-
-        cond.ElseEnd(file, count)
+    for _,stmt := range o.Stmts {
+        s += stmt.Readable(indent+1)
     }
 
-    cond.IfEnd(file, count)
+    return s
 }
 
-func (s *Elif) Compile(file *os.File) {
-    (*If)(s).Compile(file)
-}
+func (o *Switch) Readable(indent int) string {
+    s := strings.Repeat("   ", indent) + "SWITCH:\n"
 
-func (s *Case) Compile(file *os.File, switchCount uint) {
-    block := Block{ Stmts: s.Stmts }
-
-    cond.CaseStart(file)
-
-    if s.Cond == nil {
-        cond.CaseBody(file)
-        block.Compile(file)
-        return
+    for _, c := range o.Cases {
+        s += c.Readable(indent+1)
     }
 
-    // compile time evaluation
-    if val := s.Cond.ConstEval(); val.Type != token.Unknown {
-        if val.Str == "true" {
-            cond.CaseBody(file)
-            block.Compile(file)
-            cond.CaseBodyEnd(file, switchCount)
-        }
+    return s
+}
 
-        return
+func (o *Through) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "THROUGH\n"
+}
+
+func (o *While) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) + "WHILE:\n" +
+        o.Cond.Readable(indent+1)
+    if o.Def != nil {
+        res += o.Def.Readable(indent+1)
+    }
+    res += o.Block.Readable(indent+1)
+
+    return res
+}
+
+func (o *For) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) + "FOR:\n" +
+        o.Def.Readable(indent+1)
+    if o.Limit != nil {
+        res += o.Limit.Readable(indent+1)
     }
 
-    if i,ok := s.Cond.(*Ident); ok {
-        cond.CaseVar(file, i.Obj.Addr(0))
-    } else {
-        s.Cond.Compile(file)
-        cond.CaseExpr(file)
-    }
+    res += o.Step.Readable(indent+1) +
+    o.Block.Readable(indent+1)
 
-    cond.CaseBody(file)
-    block.Compile(file)
-    cond.CaseBodyEnd(file, switchCount)
+    return res
 }
 
-func (s *Switch) Compile(file *os.File) {
-    s.typeCheck()
-
-    // compile time evaluation
-    for _,c := range s.Cases {
-        if c.Cond == nil {
-            for _,s := range c.Stmts {
-                s.Compile(file)
-            }
-
-            return
-        }
-
-        cond := c.Cond.ConstEval()
-
-        if cond.Type == token.Boolean && cond.Str == "true" {
-            for _,s := range c.Stmts {
-                s.Compile(file)
-            }
-
-            return
-        } else if cond.Type == token.Unknown {
-            break
-        }
-    }
-
-
-    // TODO: detect unreachable code and throw error
-    // * a1 < but case 420 before 86
-    // * cases with same cond
-    count := cond.StartSwitch()
-
-    for i := 0; i < len(s.Cases)-1; i++ {
-        s.Cases[i].Compile(file, count)
-    }
-    cond.InLastCase()
-    s.Cases[len(s.Cases)-1].Compile(file, count)
-
-    cond.EndSwitch(file)
+func (o *Break) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "BREAK\n"
 }
 
-func (s *Through) Compile(file *os.File) {
-    cond.Through(file, s.Pos)
+func (o *Continue) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "CONTINUE\n"
 }
 
-func (s *Else) Compile(file *os.File) {
-    s.Block.Compile(file)
+func (o *Ret) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "RET\n"
 }
 
-func (s *While) Compile(file *os.File) {
-    if s.Def != nil {
-        s.Def.Compile(file)
-    }
-
-    s.typeCheck()
-
-    // compile time evaluation
-    if c := s.Cond.ConstEval(); c.Type != token.Unknown {
-        if c.Str == "true" {
-            count := loops.WhileStart(file)
-            s.Block.Compile(file)
-            loops.WhileEnd(file, count)
-        }
-
-        return
-    }
-
-    count := loops.WhileStart(file)
-    if e,ok := s.Cond.(*Ident); ok {
-        loops.WhileVar(file, e.Obj.Addr(0))
-    } else {
-        s.Cond.Compile(file)
-        loops.WhileExpr(file)
-    }
-
-    s.Block.Compile(file)
-    loops.WhileEnd(file, count)
+func (o *ExprStmt) Readable(indent int) string {
+    return o.Expr.Readable(indent)
 }
 
-func (s *For) Compile(file *os.File) {
-    s.Def.Compile(file)
-
-    s.typeCheck()
-
-    count := loops.ForStart(file)
-    if s.Limit != nil {
-        cond := Binary{
-            Operator: token.Token{ Type: token.Lss },
-            OperandL: &Ident{ Obj: s.Def.V, Name: s.Def.V.GetName(), Pos: s.Def.V.GetPos() },
-            OperandR: s.Limit,
-        }
-        cond.Compile(file)
-        loops.ForExpr(file)
-    }
-
-    s.Block.Compile(file)
-    loops.ForBlockEnd(file, count)
-
-    step := Assign{
-        Dest: &Ident{ Obj: s.Def.V, Name: s.Def.V.GetName(), Pos: s.Def.V.GetPos() },
-        Value: s.Step,
-    }
-    step.Compile(file)
-    loops.ForEnd(file, count)
+func (o *DeclStmt) Readable(indent int) string {
+    return o.Decl.Readable(indent)
 }
 
-func (s *Break) Compile(file *os.File) {
-    loops.Break(file)
-}
-
-func (s *Continue) Compile(file *os.File) {
-    loops.Continue(file)
-}
-
-func (s *Ret) Compile(file *os.File) {
-    s.typecheck()
-
-    if s.RetExpr != nil {
-        if types.IsBigStruct(s.RetExpr.GetType()) {
-            asm.MovRegDeref(file, asm.RegC, fmt.Sprintf("rbp-%d", types.Ptr_Size), types.Ptr_Size)
-
-            t := s.RetExpr.GetType().(types.StructType)
-
-            if val := s.RetExpr.ConstEval(); val.Type != token.Unknown {
-                fn.RetBigStructLit(file, t, val)
-            } else if ident,ok := s.RetExpr.(*Ident); ok {
-                fn.RetBigStructVar(file, t, ident.Obj.(vars.Var))
-            } else {
-                // TODO: in work
-                fn.RetBigStructExpr(file, t)
-            }
-
-            asm.MovRegReg(file, asm.RegA, asm.RegC, types.Ptr_Size)
-        } else {
-            s.RetExpr.Compile(file)
-        }
-    }
-    fn.End(file)
-}
-
-func (s *ExprStmt) Compile(file *os.File) {
-    s.Expr.Compile(file)
-}
-
-func (s *DeclStmt) Compile(file *os.File) {
-    s.Decl.Compile(file)
-}
-
-func (s *BadStmt) Compile(file *os.File) {
+func (o *BadStmt) Readable(indent int) string {
     fmt.Fprintln(os.Stderr, "[ERROR] bad statement")
     os.Exit(1)
+    return ""
 }
 
 

@@ -1,38 +1,19 @@
 package main
 
 import (
-    "os"
-    "fmt"
-    "flag"
-    "os/exec"
-    "gamma/std"
-    "gamma/ast"
-    "gamma/token"
-    "gamma/parser"
-    "gamma/asm/x86_64/nasm"
+	"flag"
+	"fmt"
+	"gamma/asm/x86_64/nasm"
+	"gamma/check"
+	"gamma/gen"
+	"gamma/parser"
+	"gamma/token"
+	"os"
+	"os/exec"
 )
 
 var run bool
 var showAst bool
-
-func compile() {
-    fmt.Println("[INFO] compiling...")
-
-    asm, err := os.Create("output.asm")
-    if err != nil {
-        fmt.Fprintln(os.Stderr, "[ERROR] could not create \"output.asm\"")
-        os.Exit(1)
-    }
-    defer asm.Close()
-
-    nasm.Header(asm)
-
-    std.Define(asm)
-
-    ast.Compile(asm)
-
-    nasm.Footer(asm)
-}
 
 func runExe() {
     fmt.Printf("[EXEC] ./output\n\n")
@@ -64,11 +45,15 @@ func main() {
     }
 
     token.Tokenize(path)
-    prs.Parse()
-    // TODO: optimization step
-    compile()
-    nasm.GenExe()
 
-    if showAst { ast.ShowAst() }
+    Ast := prs.Parse()
+    if showAst { Ast.ShowAst() }
+
+    check.TypeCheck(Ast)
+
+    // TODO: optimization step
+    gen.GenAsm(Ast)
+
+    nasm.GenExe()
     if run { runExe() }
 }

@@ -3,14 +3,15 @@ package prs
 import (
     "os"
     "fmt"
+    "gamma/token"
+    "gamma/cmpTime"
+    "gamma/types"
+    "gamma/types/array"
+    "gamma/types/struct"
     "gamma/ast"
     "gamma/ast/identObj"
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/struct"
-    "gamma/token"
-    "gamma/types"
-    "gamma/types/array"
-    "gamma/types/struct"
 )
 
 type precedence int
@@ -258,7 +259,7 @@ func prsFieldLit() ast.FieldLit {
 
     token.Next()
     expr := prsExpr()
-    constVal := expr.ConstEval()
+    constVal := cmpTime.ConstEval(expr)
     if constVal.Type == token.Unknown {
         fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
         fmt.Fprintln(os.Stderr, "\t" + expr.At())
@@ -270,7 +271,7 @@ func prsFieldLit() ast.FieldLit {
 
 func constEvalExprs(values []ast.Expr) (res []token.Token) {
     for _,v := range values {
-        constVal := v.ConstEval()
+        constVal := cmpTime.ConstEval(v)
         if constVal.Type == token.Unknown {
             fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
             fmt.Fprintln(os.Stderr, "\t" + v.At())
@@ -288,7 +289,7 @@ func constEvalFields(structName string, fields []ast.FieldLit) (res []token.Toke
     for _,n := range s.GetNames() {
         for _,l := range fields {
             if l.Name.Str == n {
-                constVal := l.ConstEval()
+                constVal := cmpTime.ConstEvalFieldLit(&l)
                 if constVal.Type == token.Unknown {
                     fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
                     fmt.Fprintln(os.Stderr, "\t" + l.At())

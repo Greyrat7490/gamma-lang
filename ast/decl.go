@@ -3,9 +3,9 @@ package ast
 import (
     "os"
     "fmt"
+    "strings"
     "gamma/types"
     "gamma/token"
-    "gamma/asm/x86_64"
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
     "gamma/ast/identObj/consts"
@@ -15,8 +15,7 @@ import (
 
 type Decl interface {
     Node
-    Compile(file *os.File)
-    decl()  // to distinguish Decl from Stmt
+    decl()  // to distinguish Decl from Stmt and Expr
 }
 
 type BadDecl struct {}
@@ -59,80 +58,83 @@ type DefStruct struct {
 }
 
 
-func (d *DecVar) Compile(file *os.File) {}
+func (o *DecVar) Readable(indent int) string {
+    s  := strings.Repeat("   ", indent)
+    s2 := strings.Repeat("   ", indent+1)
 
-func (d *DefConst) Compile(file *os.File) {
-    d.typeCheck()
-
-    val := d.Value.ConstEval()
-
-    if val.Type == token.Unknown {
-        fmt.Fprintln(os.Stderr, "[ERROR] cannot evaluate expr at compile time (not const)")
-        fmt.Fprintln(os.Stderr, "\t" + d.Value.At())
-        os.Exit(1)
-    }
-
-    d.C.Define(val)
+    return s + "DEC_VAR:\n" +
+          s2 + fmt.Sprintf("%s(Name)\n", o.V.GetName()) +
+          s2 + fmt.Sprintf("%v(Typename)\n", o.Type)
 }
 
-func (d *DefVar) Compile(file *os.File) {
-    d.typeCheck()
+func (o *DefVar) Readable(indent int) string {
+    s  := strings.Repeat("   ", indent)
+    s2 := strings.Repeat("   ", indent+1)
 
-    // compile time evaluation
-    if val := d.Value.ConstEval(); val.Type != token.Unknown {
-        d.V.DefVal(file, val)
-        return
+    res := s + "DEF_VAR:\n" +
+        s2 + fmt.Sprintf("%v(Name)\n", o.V.GetName())
+
+    if o.Type == nil {
+        res += s2 + "infer type\n"
+    } else {
+        res += s2 + fmt.Sprintf("%v(Typename)\n", o.Type)
     }
 
-    if _,ok := d.V.(*vars.GlobalVar); ok {
-        fmt.Fprintln(os.Stderr, "[ERROR] defining a global variable with a non const expr is not allowed")
-        fmt.Fprintln(os.Stderr, "\t" + d.Value.At())
-        os.Exit(1)
-    }
-
-    if c,ok := d.Value.(*FnCall); ok {
-        if types.IsBigStruct(c.F.GetRetType()) {
-            file.WriteString(fmt.Sprintf("lea rdi, [%s]\n", d.V.Addr(0)))
-        }
-    }
-
-    d.Value.Compile(file)
-    if !types.IsBigStruct(d.Value.GetType()) {
-        vars.VarSetExpr(file, d.V)
-    }
+    return res + o.Value.Readable(indent+1)
 }
 
-func (d *DefFn) Compile(file *os.File) {
-    d.F.Define(file)
+func (o *DefConst) Readable(indent int) string {
+    s  := strings.Repeat("   ", indent)
+    s2 := strings.Repeat("   ", indent+1)
 
-    regIdx := uint(0)
+    res := s + "DEF_CONST:\n" +
+        s2 + fmt.Sprintf("%s(Name)\n", o.C.GetName())
 
-    if types.IsBigStruct(d.F.GetRetType()) {
-        asm.MovDerefReg(file, fmt.Sprintf("rbp-%d", types.Ptr_Size), types.Ptr_Size, asm.RegDi)
-        regIdx++
+    if o.Type == nil {
+        res += s2 + "infer type\n"
+    } else {
+        res += s2 + fmt.Sprintf("%v(Typename)\n", o.Type)
     }
 
-    for _,a := range d.Args {
-        if !types.IsBigStruct(a.V.GetType()) {
-            i := types.RegCount(a.Type)
-
-            if regIdx+i <= 6 {
-                fn.DefArg(file, regIdx, a.V)
-                regIdx += i
-            }
-        }
-    }
-
-    d.Block.Compile(file)
-
-    fn.End(file);
+    return res + o.Value.Readable(indent+1)
 }
 
-func (d *DefStruct) Compile(file *os.File) {}
+func (o *DefFn) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) + "DEF_FN:\n"
 
-func (d *BadDecl) Compile(file *os.File) {
+    args := ""
+    for _,a := range o.Args {
+        args += fmt.Sprintf("%s(Name) %v(Type), ", a.V.GetName(), a.Type)
+    }
+    if len(args) > 0 { args = args[:len(args)-2] }
+
+    s := strings.Repeat("   ", indent+1)
+
+    res += fmt.Sprintf("%sName: %s\n", s, o.F.GetName()) +
+        fmt.Sprintf("%sArgs: [%s]\n", s, args)
+
+    if o.RetType != nil {
+        res += fmt.Sprintf("%sRet: %v\n", s, o.RetType)
+    }
+
+    return res + o.Block.Readable(indent+2)
+}
+
+func (o *DefStruct) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) + "DEF_STRUCT:\n" +
+        strings.Repeat("   ", indent+1) + o.Name.String() + "\n"
+
+    for _,f := range o.Fields {
+        res += f.Readable(indent+1)
+    }
+
+    return res
+}
+
+func (o *BadDecl) Readable(indent int) string {
     fmt.Fprintln(os.Stderr, "[ERROR] bad declaration")
     os.Exit(1)
+    return ""
 }
 
 
