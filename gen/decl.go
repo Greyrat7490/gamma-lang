@@ -10,7 +10,7 @@ import (
     "gamma/ast"
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
-    "gamma/asm/x86_64"
+    "gamma/gen/asm/x86_64"
 )
 
 func GenDecl(file *os.File, d ast.Decl) {

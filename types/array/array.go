@@ -6,8 +6,8 @@ import (
     "gamma/token"
     "gamma/types"
     "gamma/types/str"
-    "gamma/asm/x86_64"
-    "gamma/asm/x86_64/nasm"
+    "gamma/gen/asm/x86_64"
+    "gamma/gen/asm/x86_64/nasm"
 )
 
 var arrLits []arrLit

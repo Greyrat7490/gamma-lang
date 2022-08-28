@@ -9,7 +9,7 @@ import (
     "gamma/types"
     "gamma/types/array"
     "gamma/types/struct"
-    "gamma/asm/x86_64"
+    "gamma/gen/asm/x86_64"
     "gamma/ast"
     "gamma/ast/identObj"
     "gamma/ast/identObj/vars"

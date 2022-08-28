@@ -5,7 +5,7 @@ import (
     "fmt"
     "gamma/ast"
     "gamma/std"
-    "gamma/asm/x86_64/nasm"
+    "gamma/gen/asm/x86_64/nasm"
 )
 
 func GenAsm(Ast ast.Ast) {

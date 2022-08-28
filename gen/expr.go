@@ -15,8 +15,8 @@ import (
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/struct"
     "gamma/ast/identObj/vars"
-    "gamma/asm/x86_64"
-    "gamma/asm/x86_64/conditions"
+    "gamma/gen/asm/x86_64"
+    "gamma/gen/asm/x86_64/conditions"
 )
 
 func GenExpr(file *os.File, e ast.Expr) {

@@ -1,15 +1,15 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"gamma/asm/x86_64/nasm"
-	"gamma/check"
-	"gamma/gen"
-	"gamma/parser"
-	"gamma/token"
-	"os"
-	"os/exec"
+    "os"
+    "os/exec"
+    "fmt"
+    "flag"
+    "gamma/token"
+    "gamma/check"
+    "gamma/parser"
+    "gamma/gen"
+    "gamma/gen/asm/x86_64/nasm"
 )
 
 var run bool

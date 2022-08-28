@@ -4,8 +4,6 @@ import (
     "os"
     "fmt"
     "gamma/token"
-    "gamma/asm/x86_64/loops"
-    "gamma/asm/x86_64/conditions"
 )
 
 var curScope *Scope = &Scope{ identObjs: map[string]IdentObj{} }
@@ -44,8 +42,6 @@ func EndScope() {
 
         if InGlobalScope() {
             curScope.frameSize = 0
-            cond.ResetCount()
-            loops.ResetCount()
         }
     }
 }

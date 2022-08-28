@@ -5,7 +5,7 @@ import (
     "fmt"
     "strings"
     "gamma/token"
-    "gamma/asm/x86_64/nasm"
+    "gamma/gen/asm/x86_64/nasm"
 )
 
 type strLit struct {

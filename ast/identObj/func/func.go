@@ -8,8 +8,10 @@ import (
     "gamma/types"
     "gamma/types/str"
     "gamma/types/struct"
-    "gamma/asm/x86_64"
+    "gamma/gen/asm/x86_64"
     "gamma/ast/identObj/vars"
+    "gamma/gen/asm/x86_64/loops"
+    "gamma/gen/asm/x86_64/conditions"
 )
 
 /*
@@ -93,6 +95,9 @@ func (f *Func) Define(file *os.File) {
 }
 
 func End(file *os.File) {
+    cond.ResetCount()
+    loops.ResetCount()
+    
     file.WriteString("leave\n")
     file.WriteString("ret\n\n")
 }

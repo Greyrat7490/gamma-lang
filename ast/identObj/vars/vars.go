@@ -8,7 +8,7 @@ import (
     "gamma/types"
     "gamma/types/str"
     "gamma/types/struct"
-    "gamma/asm/x86_64"
+    "gamma/gen/asm/x86_64"
 )
 
 type Var interface {
