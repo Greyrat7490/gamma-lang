@@ -1,7 +1,6 @@
 package vars
 
 import (
-    "os"
     "fmt"
     "gamma/token"
     "gamma/types"
@@ -67,11 +66,6 @@ func (v *LocalVar) Addr(field uint) string {
     } else {
         return "rbp"
     }
-}
-
-
-func (v *LocalVar) DefVal(file *os.File, val token.Token) {
-    VarSetVal(file, v, val)
 }
 
 func calcOffset(t types.Type, frameSize uint, fromStack bool) int {

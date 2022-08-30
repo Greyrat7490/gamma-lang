@@ -9,7 +9,6 @@ import (
     "gamma/cmpTime"
     "gamma/ast"
     "gamma/ast/identObj/func"
-    "gamma/ast/identObj/vars"
     "gamma/gen/asm/x86_64"
 )
 
@@ -38,25 +37,9 @@ func GenDecl(file *os.File, d ast.Decl) {
 
 func GenDefVar(file *os.File, d *ast.DefVar) {
     if val := cmpTime.ConstEval(d.Value); val.Type != token.Unknown {
-        d.V.DefVal(file, val)
-        return
-    }
-
-    if _,ok := d.V.(*vars.GlobalVar); ok {
-        fmt.Fprintln(os.Stderr, "[ERROR] defining a global variable with a non const expr is not allowed")
-        fmt.Fprintln(os.Stderr, "\t" + d.Value.At())
-        os.Exit(1)
-    }
-
-    if c,ok := d.Value.(*ast.FnCall); ok {
-        if types.IsBigStruct(c.F.GetRetType()) {
-            file.WriteString(fmt.Sprintf("lea rdi, [%s]\n", d.V.Addr(0)))
-        }
-    }
-
-    GenExpr(file, d.Value)
-    if !types.IsBigStruct(d.Value.GetType()) {
-        vars.VarSetExpr(file, d.V)
+        VarDefVal(file, d.V, val)
+    } else {
+        VarDefExpr(file, d.V, d.Value)
     }
 }
 

@@ -97,7 +97,7 @@ func (f *Func) Define(file *os.File) {
 func End(file *os.File) {
     cond.ResetCount()
     loops.ResetCount()
-    
+
     file.WriteString("leave\n")
     file.WriteString("ret\n\n")
 }

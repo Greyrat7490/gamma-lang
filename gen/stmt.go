@@ -72,72 +72,27 @@ func GenAssign(file *os.File, s *ast.Assign) {
 
     switch dest := s.Dest.(type) {
     case *ast.Indexed:
-        IndexedAddrToRcx(file, dest)
+        AssignIndexed(file, t, dest, s.Value)
 
     case *ast.Field:
-        FieldAddrToRcx(file, dest)
-        offset := FieldToOffset(dest)
-        file.WriteString(fmt.Sprintf("lea rcx, [rcx+%d]\n", offset))
+        AssignField(file, t, dest, s.Value)
 
     case *ast.Unary:
-        if dest.Operator.Type != token.Mul {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected \"*\" but got \"%v\"\n", dest.Operator)
-            fmt.Fprintln(os.Stderr, "\t" + s.Pos.At())
+        AssignDeref(file, t, dest, s.Value)
+
+    case *ast.Ident:
+        if v,ok := dest.Obj.(vars.Var); ok {
+            AssignVar(file, v, s.Value)
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected identifier %s to be a variable but got %v\n", dest.Name, reflect.TypeOf(dest.Obj))
+            fmt.Fprintln(os.Stderr, "\t" + dest.At())
             os.Exit(1)
         }
 
-        GenExpr(file, dest.Operand)
-
-        // compile time evaluation
-        if val := cmpTime.ConstEval(s.Value); val.Type != token.Unknown {
-            vars.DerefSetVal(file, t, val)
-            return
-        }
-
-        if e,ok := s.Value.(*ast.Ident); ok {
-            vars.DerefSetVar(file, e.Obj.(vars.Var))
-            return
-        }
-
-        asm.MovRegReg(file, asm.RegC, asm.RegA, types.Ptr_Size)
-
-    case *ast.Ident:
-        if val := cmpTime.ConstEval(s.Value); val.Type != token.Unknown {
-            vars.VarSetVal(file, dest.Obj.(vars.Var), val)
-            return
-        }
-
-        if e,ok := s.Value.(*ast.Ident); ok {
-            vars.VarSetVar(file, dest.Obj.(vars.Var), e.Obj.(vars.Var))
-            return
-        }
-
-        GenExpr(file, s.Value)
-        vars.VarSetExpr(file, dest.Obj.(vars.Var))
-        return
-
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a variable or a dereferenced pointer but got \"%t\"\n", dest)
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a variable or a dereferenced pointer but got %v\n", reflect.TypeOf(dest))
         fmt.Fprintln(os.Stderr, "\t" + s.Pos.At())
         os.Exit(1)
-    }
-
-    GenExpr(file, s.Value)
-
-    switch t := s.Dest.GetType().(type) {
-    case types.StrType:
-        asm.MovDerefReg(file, asm.GetReg(asm.RegC, types.Ptr_Size), types.Ptr_Size, asm.RegGroup(0))
-        asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, int(types.Ptr_Size)), types.I32_Size, asm.RegGroup(1))
-
-    case types.StructType:
-        var offset uint = 0
-        for i,t := range t.Types {
-            asm.MovDerefReg(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, int(offset)), t.Size(), asm.RegGroup(i))
-            offset += t.Size()
-        }
-
-    default:
-        asm.MovDerefReg(file, asm.GetReg(asm.RegC, types.Ptr_Size), t.Size(), asm.RegGroup(0))
     }
 }
 
