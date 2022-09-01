@@ -4,11 +4,10 @@ import (
     "os"
     "fmt"
     "reflect"
+    "gamma/ast"
     "gamma/token"
     "gamma/types"
     "gamma/cmpTime"
-    "gamma/ast"
-    "gamma/ast/identObj/func"
     "gamma/gen/asm/x86_64"
 )
 
@@ -56,7 +55,7 @@ func GenDefConst(file *os.File, d *ast.DefConst) {
 }
 
 func GenDefFn(file *os.File, d *ast.DefFn) {
-    d.F.Define(file)
+    Define(file, d.F)
 
     regIdx := uint(0)
 
@@ -70,7 +69,7 @@ func GenDefFn(file *os.File, d *ast.DefFn) {
             i := types.RegCount(a.Type)
 
             if regIdx+i <= 6 {
-                fn.DefArg(file, regIdx, a.V)
+                DefArg(file, regIdx, a.V)
                 regIdx += i
             }
         }
@@ -78,5 +77,5 @@ func GenDefFn(file *os.File, d *ast.DefFn) {
 
     GenBlock(file, &d.Block)
 
-    fn.End(file);
+    FnEnd(file);
 }

@@ -181,7 +181,7 @@ func AssignDeref(file *os.File, t types.Type, dest *ast.Unary, val ast.Expr) {
 }
 
 func AssignField(file *os.File, t types.Type, dest *ast.Field, val ast.Expr) {
-    FieldAddrToRcx(file, dest)
+    FieldAddrToReg(file, dest, asm.RegC)
     offset := FieldToOffset(dest)
     file.WriteString(fmt.Sprintf("lea rcx, [rcx+%d]\n", offset))
 
@@ -194,23 +194,41 @@ func AssignIndexed(file *os.File, t types.Type, dest *ast.Indexed, val ast.Expr)
     DerefSetExpr(file, asm.GetReg(asm.RegC, types.Ptr_Size), t, val)
 }
 
-
-
 func DerefSetVar(file *os.File, addr string, other vars.Var) {
-    switch t := other.GetType().(type) {
+    DerefSetDeref(file, addr, other.GetType(), other.Addr(0))
+}
+
+func DerefSetDeref(file *os.File, addr string, t types.Type, otherAddr string) {
+    switch t := t.(type) {
     case types.StrType:
-        asm.MovDerefDeref(file, addr, other.Addr(0), types.Ptr_Size, asm.RegB)
-        asm.MovDerefDeref(file, asm.OffsetAddr(addr, int(types.Ptr_Size)), other.Addr(1), types.I32_Size, asm.RegB)
+        asm.MovDerefDeref(file, addr, otherAddr, types.Ptr_Size, asm.RegB)
+        asm.MovDerefDeref(file, asm.OffsetAddr(addr, int(types.Ptr_Size)), asm.OffsetAddr(otherAddr, int(types.Ptr_Size)), types.I32_Size, asm.RegB)
 
     case types.StructType:
         var offset int = 0
-        for i,t := range t.Types {
-            asm.MovDerefDeref(file, asm.OffsetAddr(addr, offset), other.Addr(uint(i)), t.Size(), asm.RegB)
-            offset += int(t.Size())
+        for i := 0; i < int(t.Size()/types.Ptr_Size); i++ {
+            asm.MovDerefDeref(
+                file,
+                asm.OffsetAddr(addr, offset),
+                asm.OffsetAddr(otherAddr, offset),
+                types.Ptr_Size,
+                asm.RegB,
+            )
+            offset += int(types.Ptr_Size)
+        }
+
+        if size := t.Size() % types.Ptr_Size; size != 0 {
+            asm.MovDerefDeref(
+                file,
+                asm.OffsetAddr(addr, offset),
+                asm.OffsetAddr(otherAddr, offset),
+                size,
+                asm.RegB,
+            )
         }
 
     case types.I32Type, types.BoolType, types.PtrType, types.ArrType:
-        asm.MovDerefDeref(file, asm.GetReg(asm.RegA, types.Ptr_Size), other.Addr(0), other.GetType().Size(), asm.RegB)
+        asm.MovDerefDeref(file, asm.GetReg(asm.RegA, types.Ptr_Size), otherAddr, t.Size(), asm.RegB)
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (DerefSetVar)\n", t)
@@ -227,13 +245,7 @@ func DerefSetExpr(file *os.File, addr string, t types.Type, val ast.Expr) {
 
     case types.StructType:
         if types.IsBigStruct(t) {
-            if _,ok := val.(*ast.FnCall); ok {
-                file.WriteString(fmt.Sprintf("lea rdi, [%s]\n", addr))
-                GenExpr(file, val)
-            } else {
-                fmt.Fprintln(os.Stderr, "[ERROR] TODO: DerefSetExpr BigStruct expr not FnCall")
-                os.Exit(1)
-            }
+            DerefSetBigStruct(file, addr, val)
         } else {
             GenExpr(file, val)
             if t.Size() > uint(8) {
@@ -250,6 +262,46 @@ func DerefSetExpr(file *os.File, addr string, t types.Type, val ast.Expr) {
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (DerefSetExpr)\n", t)
+        os.Exit(1)
+    }
+}
+
+func derefSetBigStructLit(file *os.File, t types.StructType, val token.Token, offset int) {
+    if idx,err := strconv.ParseUint(val.Str, 10, 64); err == nil {
+        fields := structLit.GetValues(idx)
+
+        for i,t := range t.Types {
+            switch t := t.(type) {
+            case types.StrType:
+                strIdx := str.Add(fields[i])
+
+                asm.MovDerefVal(file,
+                    asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
+                    types.Ptr_Size,
+                    fmt.Sprintf("_str%d", strIdx))
+                asm.MovDerefVal(file,
+                    asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)),
+                    types.I32_Size,
+                    fmt.Sprint(str.GetSize(strIdx)))
+
+            case types.StructType:
+                derefSetBigStructLit(file, t, fields[i], offset)
+
+            case types.BoolType:
+                if fields[i].Str == "true" {
+                    asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Bool_Size, "1")
+                } else {
+                    asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Bool_Size, "0")
+                }
+
+            default:
+                asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size(), fields[i].Str)
+            }
+            offset += int(t.Size())
+        }
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected struct literal converted to a Number but got %v\n", val)
+        fmt.Fprintln(os.Stderr, "\t" + val.At())
         os.Exit(1)
     }
 }

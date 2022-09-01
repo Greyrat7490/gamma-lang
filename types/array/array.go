@@ -56,6 +56,8 @@ func Add(typ types.ArrType, values []token.Token) (i int) {
             }
             nasm.AddData(res)
 
+        // TODO: struct support
+
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (in work)\n", typ)
             os.Exit(1)

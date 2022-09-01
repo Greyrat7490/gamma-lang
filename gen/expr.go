@@ -82,7 +82,7 @@ func GenLit(file *os.File, e *ast.Lit) {
 func GenStructLit(file *os.File, e *ast.StructLit) {
     values := structLit.GetValues(uint64(e.Idx))
 
-    vs := fn.PackValues(e.StructType.Types, values)
+    vs := PackValues(e.StructType.Types, values)
     asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, vs[0])
     if len(vs) == 2 {
         asm.MovRegVal(file, asm.RegGroup(1), types.Ptr_Size, vs[1])
@@ -140,13 +140,13 @@ func GenIndexed(file *os.File, e *ast.Indexed) {
     }
 }
 
-func FieldAddrToRcx(file *os.File, e *ast.Field) {
+func FieldAddrToReg(file *os.File, e *ast.Field, r asm.RegGroup) {
     switch o := e.Obj.(type) {
     case *ast.Ident:
-        file.WriteString(fmt.Sprintf("lea %s, [%s]\n", asm.GetReg(asm.RegC, types.Ptr_Size), o.Obj.Addr(0)))
+        file.WriteString(fmt.Sprintf("lea %s, [%s]\n", asm.GetReg(r, types.Ptr_Size), o.Obj.Addr(0)))
 
     case *ast.Field:
-        FieldAddrToRcx(file, o)
+        FieldAddrToReg(file, o, r)
 
     default:
         fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
@@ -225,7 +225,7 @@ func GenField(file *os.File, e *ast.Field) {
                     }
 
                 case *ast.Field:
-                    FieldAddrToRcx(file, o)
+                    FieldAddrToReg(file, o, asm.RegC)
 
                     offset := FieldToOffset(e)
                     switch t := s.GetTypes()[i].(type) {
@@ -465,14 +465,14 @@ func GenFnCall(file *os.File, e *ast.FnCall) {
     // pass args on stack -------------------------------------------
     for i := len(e.F.GetArgs())-1; i >= stackArgsStart; i-- {
         if v := cmpTime.ConstEval(e.Values[i]); v.Type != token.Unknown {
-            fn.PassValStack(file, v, e.F.GetArgs()[i])
+            PassValStack(file, v, e.F.GetArgs()[i])
 
         } else if ident,ok := e.Values[i].(*ast.Ident); ok {
-            fn.PassVarStack(file, ident.Obj.(vars.Var))
+            PassVarStack(file, ident.Obj.(vars.Var))
 
         } else {
             GenExpr(file, e.Values[i])
-            fn.PassRegStack(file, e.F.GetArgs()[i])
+            PassRegStack(file, e.F.GetArgs()[i])
         }
     }
 
@@ -494,21 +494,15 @@ func GenFnCall(file *os.File, e *ast.FnCall) {
 
                 if v := cmpTime.ConstEval(e.Values[i]); v.Type != token.Unknown {
                     file.WriteString("mov rcx, rsp\n")
-                    fn.PassBigStructLit(file, t, v, 0)
+                    PassBigStructLit(file, t, v, 0)
 
                 } else if ident,ok := e.Values[i].(*ast.Ident); ok {
                     file.WriteString("mov rcx, rsp\n")
-                    fn.PassBigStructVar(file, t, ident.Obj.(vars.Var), 0)
+                    PassBigStructVar(file, t, ident.Obj.(vars.Var), 0)
 
                 } else {
-                    if _,ok := e.Values[i].(*ast.FnCall); ok {
-                        file.WriteString(fmt.Sprintf("lea rdi, [rbp-%d]\n", bigArgsSize))
-                    }
-
-                    GenExpr(file, e.Values[i])
-
                     file.WriteString("mov rcx, rsp\n")
-                    fn.PassBigStructReg(file, t)
+                    PassBigStructReg(file, "rcx", e.Values[i])
                 }
             }
         }
@@ -524,18 +518,18 @@ func GenFnCall(file *os.File, e *ast.FnCall) {
         regIdx -= types.RegCount(t)
 
         if v := cmpTime.ConstEval(e.Values[i]); v.Type != token.Unknown {
-            fn.PassVal(file, regIdx, v, t)
+            PassVal(file, regIdx, v, t)
 
         } else if ident,ok := e.Values[i].(*ast.Ident); ok {
-            fn.PassVar(file, regIdx, ident.Obj.(vars.Var))
+            PassVar(file, regIdx, ident.Obj.(vars.Var))
 
         } else {
             GenExpr(file, e.Values[i])
-            fn.PassReg(file, regIdx, t)
+            PassReg(file, regIdx, t)
         }
     }
 
-    e.F.Call(file)
+    CallFn(file, e.F)
 
     // clear stack -------------------------------------------------
     if bigArgsSize > 0 {
@@ -589,4 +583,107 @@ func GenXSwitch(file *os.File, e *ast.XSwitch) {
     GenXCase(file, &e.Cases[len(e.Cases)-1], count)
 
     cond.EndSwitch(file)
+}
+
+
+
+func DerefSetBigStruct(file *os.File, addr string, e ast.Expr) {
+    if !types.IsBigStruct(e.GetType()) {
+        fmt.Fprintln(os.Stderr, "[ERROR] TODO: error msg")
+        os.Exit(1)
+    }
+
+    switch e := e.(type) {
+    case *ast.StructLit:
+        DerefSetVal(file, addr, e.StructType, token.Token{ Str: fmt.Sprint(e.Idx), Type: token.Number })
+
+    case *ast.Indexed:
+        // TODO: rax instead of rcx
+        IndexedAddrToRcx(file, e)
+        DerefSetDeref(file, addr, e.GetType(), "rax")
+
+    case *ast.Field:
+        FieldAddrToReg(file, e, asm.RegA)
+        offset := FieldToOffset(e)
+        file.WriteString(fmt.Sprintf("lea rax, [rax+%d]\n", offset))
+        DerefSetDeref(file, addr, e.GetType(), "rax")
+
+    case *ast.Ident:
+        if v,ok := e.Obj.(vars.Var); ok {
+            DerefSetVar(file, addr, v)
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected identifier %s to be a variable but got %v\n", e.Name, reflect.TypeOf(e.Obj))
+            fmt.Fprintln(os.Stderr, "\t" + e.At())
+            os.Exit(1)
+        }
+
+    case *ast.Unary:
+        GenExpr(file, e.Operand)
+        DerefSetDeref(file, addr, e.GetType(), "rax")
+
+    case *ast.FnCall:
+        file.WriteString(fmt.Sprintf("lea rdi, [%s]\n", addr))
+        GenExpr(file, e)
+
+    case *ast.Paren:
+        DerefSetBigStruct(file, addr, e.Expr)
+
+    case *ast.XSwitch:
+        bigStructXSwitchToStack(file, addr, e)
+
+    case *ast.BadExpr:
+        fmt.Fprintln(os.Stderr, "[ERROR] bad expression")
+        os.Exit(1)
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] DerefSetBigStruct for %v is not implemente yet\n", reflect.TypeOf(e))
+        os.Exit(1)
+    }
+}
+
+func bigStructXSwitchToStack(file *os.File, addr string, e *ast.XSwitch) {
+    if c := cmpTime.ConstEval(e); c.Type != token.Unknown {
+        asm.MovRegVal(file, asm.RegA, types.TypeOfVal(c.Str).Size(), c.Str)
+        return
+    }
+
+    count := cond.StartSwitch()
+
+    for i := 0; i < len(e.Cases)-1; i++ {
+        bigStructXCaseToStack(file, addr, &e.Cases[i], count)
+    }
+    cond.InLastCase()
+    bigStructXCaseToStack(file, addr, &e.Cases[len(e.Cases)-1], count)
+
+    cond.EndSwitch(file)
+}
+
+func bigStructXCaseToStack(file *os.File, addr string, e *ast.XCase, switchCount uint) {
+    cond.CaseStart(file)
+
+    if e.Cond == nil {
+        cond.CaseBody(file)
+        DerefSetBigStruct(file, addr, e.Expr)
+        return
+    }
+
+    if val := cmpTime.ConstEval(e.Cond); val.Type != token.Unknown {
+        if val.Str == "true" {
+            cond.CaseBody(file)
+            DerefSetBigStruct(file, addr, e.Expr)
+            cond.CaseBodyEnd(file, switchCount)
+        }
+
+        return
+    }
+
+    if i,ok := e.Cond.(*ast.Ident); ok {
+        cond.CaseVar(file, i.Obj.Addr(0))
+    } else {
+        GenExpr(file, e.Cond)
+        cond.CaseExpr(file)
+    }
+
+    cond.CaseBody(file)
+    DerefSetBigStruct(file, addr, e.Expr)
+    cond.CaseBodyEnd(file, switchCount)
 }

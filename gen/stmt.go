@@ -8,7 +8,6 @@ import (
     "gamma/types"
     "gamma/cmpTime"
     "gamma/ast"
-    "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
     "gamma/gen/asm/x86_64"
     "gamma/gen/asm/x86_64/loops"
@@ -295,12 +294,11 @@ func GenRet(file *os.File, s *ast.Ret) {
             t := s.RetExpr.GetType().(types.StructType)
 
             if val := cmpTime.ConstEval(s.RetExpr); val.Type != token.Unknown {
-                fn.RetBigStructLit(file, t, val)
+                RetBigStructLit(file, t, val)
             } else if ident,ok := s.RetExpr.(*ast.Ident); ok {
-                fn.RetBigStructVar(file, t, ident.Obj.(vars.Var))
+                RetBigStructVar(file, t, ident.Obj.(vars.Var))
             } else {
-                // TODO: in work
-                fn.RetBigStructExpr(file, t)
+                RetBigStructExpr(file, "rcx", s.RetExpr)
             }
 
             asm.MovRegReg(file, asm.RegA, asm.RegC, types.Ptr_Size)
@@ -308,5 +306,5 @@ func GenRet(file *os.File, s *ast.Ret) {
             GenExpr(file, s.RetExpr)
         }
     }
-    fn.End(file)
+    FnEnd(file)
 }

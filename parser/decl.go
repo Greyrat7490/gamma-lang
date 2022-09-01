@@ -107,14 +107,7 @@ func prsArrType() types.ArrType {
         token.Next()
     }
 
-    typename := token.Cur()
-    if typename.Type != token.Typename {
-        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", typename.Str)
-        fmt.Fprintln(os.Stderr, "\t" + typename.At())
-        os.Exit(1)
-    }
-
-    return types.ArrType{ Ptr: types.PtrType{ BaseType: types.ToBaseType(typename.Str) }, Lens: lens }
+    return types.ArrType{ Ptr: types.PtrType{ BaseType: prsType() }, Lens: lens }
 }
 
 func prsDecVar() ast.DecVar {

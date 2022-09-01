@@ -23,20 +23,48 @@ fn printTest(t Test) {
 }
 
 fn test1(i i32) -> Test {
-    ret Test{ b: true,  i:  69, s: "i < 0" }
+    t := Test{ b: false, i: -69, s: "i > 0" }
 
-    /*
-    t := $ {
+    ret $ {
         i < 0:                                          // ERROR: two ":" in one line -> two cases in one line
             Test{ b: true,  i:  69, s: "i < 0" }
         i > 0:
-            Test{ b: false, i: -69, s: "i > 0" }
+            t
         _:
             Test{ b: true,  i:  64, s: "i == 0" }
     }
+}
 
-    ret t
-    */
+fn test2() -> Test {
+    t := Test{ b: true, i: 69, s: "some string" }
+    p := &t
+
+    ret *p
+}
+
+struct Test2 {
+    i i32,
+    t Test
+}
+
+fn test3(t Test2) -> Test {
+    ret t.t
+}
+
+/*  TODO: struct arrays still in work
+fn test4() -> Test {
+    arr := [2]Test {
+        Test{ b: true, i: 69, s: "some string" },
+        Test{ b: false, i: 420, s: "string1" },
+    }
+
+    ret arr[1]
+}
+*/
+
+fn test5() -> Test {
+    t := Test2{ i: -69, t: Test{ b: false, i: 64, s: "string" } }
+    ret test3(t)
 }
 
 fn testStr() -> str {
@@ -48,10 +76,27 @@ fn testSimple() -> Simple {
 }
 
 fn main() {
-    printTest(test1(69))
-    printStr(testStr())
-
+    printStr("ret simple ------\n")
     s := testSimple()
     printStr(s.s)
     printInt(s.i) printStr("\n")
+    printStr(testStr())
+
+    printStr("\nret xswitch ------\n")
+    printTest(test1(69))
+    printTest(test1(-69))
+
+    printStr("\nret deref ------\n")
+    printTest(test2())
+
+    printStr("\nret field ------\n")
+    printTest(test3(Test2{ i: 420, t: Test{ b: true, i: -69, s: "another string" } }))
+
+/*
+    printStr("\nret indexed ------\n")
+    printTest(test4())
+*/
+
+    printStr("\nret fnCall ------\n")
+    printTest(test5())
 }
