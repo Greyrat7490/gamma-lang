@@ -238,7 +238,7 @@ func DerefSetExpr(file *os.File, addr string, t types.Type, val ast.Expr) {
             GenExpr(file, val)
             if t.Size() > uint(8) {
                 asm.MovDerefReg(file, addr, types.Ptr_Size, asm.RegGroup(0))
-                asm.MovDerefReg(file, asm.OffsetAddr(addr, int(types.Ptr_Size)), t.Types[len(t.Types)-1].Size(), asm.RegGroup(1))
+                asm.MovDerefReg(file, asm.OffsetAddr(addr, int(types.Ptr_Size)), t.Size() - 8, asm.RegGroup(1))
             } else {
                 asm.MovDerefReg(file, addr, t.Size(), asm.RegGroup(0))
             }

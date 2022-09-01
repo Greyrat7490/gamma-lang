@@ -3,13 +3,14 @@ package fn
 import (
     "os"
     "fmt"
+    "reflect"
     "strconv"
     "gamma/token"
     "gamma/types"
     "gamma/types/str"
     "gamma/types/struct"
-    "gamma/gen/asm/x86_64"
     "gamma/ast/identObj/vars"
+    "gamma/gen/asm/x86_64"
     "gamma/gen/asm/x86_64/loops"
     "gamma/gen/asm/x86_64/conditions"
 )
@@ -115,7 +116,7 @@ func DefArg(file *os.File, regIdx uint, v vars.Var) {
     case types.StructType:
         if t.Size() > uint(8) {
             asm.MovDerefReg(file, v.Addr(0), types.Ptr_Size, regs[regIdx])
-            asm.MovDerefReg(file, v.OffsetedAddr(int(types.Ptr_Size)), t.Types[len(t.Types)-1].Size(), regs[regIdx+1])
+            asm.MovDerefReg(file, v.OffsetedAddr(int(types.Ptr_Size)), t.Size() - 8, regs[regIdx+1])
         } else {
             asm.MovDerefReg(file, v.Addr(0), t.Size(), regs[regIdx])
         }
@@ -125,18 +126,6 @@ func DefArg(file *os.File, regIdx uint, v vars.Var) {
     }
 }
 
-func packValues(file *os.File, valtypes []types.Type, values []token.Token) int {
-    offset := uint(0)
-    for i,t := range valtypes {
-        asm.MovDerefVal(file, fmt.Sprintf("rsp+%d", offset), t.Size(), values[i].Str)
-        offset += t.Size()
-        if offset == types.Ptr_Size {
-            return i+1
-        }
-    }
-
-    return len(valtypes)
-}
 
 func PassVal(file *os.File, regIdx uint, value token.Token, valtype types.Type) {
     switch t := valtype.(type) {
@@ -162,20 +151,11 @@ func PassVal(file *os.File, regIdx uint, value token.Token, valtype types.Type) 
             if len(t.Types) == 1 {
                 asm.MovRegVal(file, regs[regIdx], t.Size(), fields[0].Str)
             } else {
-                // TODO only if necessary
-                file.WriteString(fmt.Sprintf("sub rsp, %d\n", types.Ptr_Size))
-
-                if t.Size() > uint(8) {
-                    i := packValues(file, t.Types, fields)
-                    asm.MovRegDeref(file, regs[regIdx], "rsp", types.Ptr_Size)
-                    // TODO pack values here too if necessary
-                    asm.MovRegVal(file, regs[regIdx+1], t.Types[i].Size(), fields[i].Str)
-                } else {
-                    packValues(file, t.Types, fields)
-                    asm.MovRegDeref(file, regs[regIdx], "rsp", t.Size())
+                vs := PackValues(t.Types, fields)
+                asm.MovRegVal(file, regs[regIdx], types.Ptr_Size, vs[0])
+                if len(vs) == 2 {
+                    asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vs[1])
                 }
-
-                file.WriteString(fmt.Sprintf("add rsp, %d\n", types.Ptr_Size))
             }
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] expected struct literal converted to a Number but got %v\n", value)
@@ -209,7 +189,7 @@ func PassVar(file *os.File, regIdx uint, otherVar vars.Var) {
     case types.StructType:
         if t.Size() > uint(8) {
             asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), types.Ptr_Size)
-            asm.MovRegDeref(file, regs[regIdx+1], otherVar.OffsetedAddr(int(types.Ptr_Size)), t.Types[1].Size())
+            asm.MovRegDeref(file, regs[regIdx+1], otherVar.OffsetedAddr(int(types.Ptr_Size)), t.Size() - 8)
         } else {
             asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), t.Size())
         }
@@ -232,7 +212,7 @@ func PassReg(file *os.File, regIdx uint, argType types.Type) {
     case types.StructType:
         if t.Size() > uint(8) {
             asm.MovRegReg(file, regs[regIdx], asm.RegGroup(0), types.Ptr_Size)
-            asm.MovRegReg(file, regs[regIdx+1], asm.RegGroup(1), t.Types[1].Size())
+            asm.MovRegReg(file, regs[regIdx+1], asm.RegGroup(1), t.Size() - 8)
         } else {
             asm.MovRegReg(file, regs[regIdx], asm.RegGroup(0), t.Size())
         }
@@ -256,12 +236,10 @@ func PassValStack(file *os.File, value token.Token, valtype types.Type) {
             if len(t.Types) == 1 {
                 asm.PushVal(file, fields[0].Str)
             } else {
-                if t.Size() > uint(8) {
-                    asm.PushVal(file, fields[0].Str)
-                    asm.MovDerefVal(file, fmt.Sprintf("rsp+%d", t.Types[0].Size()), t.Types[1].Size(), fields[1].Str)
-                } else {
-                    asm.PushVal(file, fields[0].Str)
-                    asm.MovDerefVal(file, fmt.Sprintf("rsp+%d", t.Types[0].Size()), t.Types[1].Size(), fields[1].Str)
+                vs := PackValues(t.Types, fields)
+                asm.PushVal(file, vs[0])
+                if len(vs) == 2 {
+                    asm.PushVal(file, vs[1])
                 }
             }
         } else {
@@ -269,6 +247,7 @@ func PassValStack(file *os.File, value token.Token, valtype types.Type) {
             fmt.Fprintln(os.Stderr, "\t" + value.At())
             os.Exit(1)
         }
+
     default:
         asm.PushVal(file, value.Str)
     }
@@ -354,12 +333,24 @@ func PassBigStructLit(file *os.File, t types.StructType, value token.Token, offs
 
 func PassBigStructVar(file *os.File, t types.StructType, v vars.Var, offset int) {
     for i := 0; i < int(t.Size()/types.Ptr_Size); i++ {
-        asm.MovDerefDeref(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), v.OffsetedAddr(offset), types.Ptr_Size, asm.RegA)
+        asm.MovDerefDeref(
+            file,
+            asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
+            v.OffsetedAddr(offset),
+            types.Ptr_Size,
+            asm.RegA,
+        )
         offset += int(types.Ptr_Size)
     }
 
     if size := t.Size() % types.Ptr_Size; size != 0 {
-        asm.MovDerefDeref(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), v.OffsetedAddr(offset), size, asm.RegA)
+        asm.MovDerefDeref(
+            file,
+            asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
+            v.OffsetedAddr(offset),
+            size,
+            asm.RegA,
+        )
     }
 }
 
@@ -398,4 +389,78 @@ func RetBigStructVar(file *os.File, t types.StructType, v vars.Var) {
 
 func RetBigStructExpr(file *os.File, t types.StructType) {
     PassBigStructReg(file, t)
+}
+
+
+
+func PackValues(valtypes []types.Type, values []token.Token) []string {
+    return packValues(valtypes, values, nil, 0)
+}
+
+func packValues(valtypes []types.Type, values []token.Token, packed []string, offset uint) []string {
+    for i,t := range valtypes {
+        switch t := t.(type) {
+        case types.StrType:
+            strIdx := str.Add(values[i])
+            packed = append(packed, fmt.Sprintf("_str%d", strIdx))
+            packed = append(packed, fmt.Sprint(str.GetSize(strIdx)))
+            offset += types.I32_Size
+
+        case types.ArrType:
+            if idx,err := strconv.ParseUint(values[i].Str, 10, 64); err == nil {
+                packed = append(packed, fmt.Sprintf("_arr%d", idx))
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected array literal converted to a Number but got %v\n", values[i])
+                fmt.Fprintln(os.Stderr, "\t" + values[i].At())
+                os.Exit(1)
+            }
+
+        case types.StructType:
+            if idx,err := strconv.ParseUint(values[i].Str, 10, 64); err == nil {
+                fields := structLit.GetValues(idx)
+
+                packed = packValues(t.Types, fields, packed, offset)
+
+                offset += t.Size() % 8
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected struct literal converted to a Number but got %v\n", values[i])
+                fmt.Fprintln(os.Stderr, "\t" + values[i].At())
+                os.Exit(1)
+            }
+
+
+        case types.BoolType:
+            var val string
+            if values[i].Str == "true" { val = "1" } else { val = "0" }
+            packed = pack(packed, val, offset, t)
+            offset += types.Bool_Size
+
+        case types.PtrType:
+            packed = append(packed, values[i].Str)
+
+        case types.I32Type:
+            packed = pack(packed, values[i].Str, offset, t)
+            offset += types.I32_Size
+
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] cannot pack value of type %v yet\n", reflect.TypeOf(t))
+            fmt.Fprintln(os.Stderr, "\t" + values[i].At())
+            os.Exit(1)
+        }
+
+        if offset > 8 {
+            offset -= 8
+        }
+    }
+
+    return packed
+}
+
+func pack(packed []string, newVal string, offset uint, t types.Type) []string {
+    if packed == nil || t.Size() + offset > 8 {
+        return append(packed, newVal)
+    }
+
+    packed[len(packed)-1] = fmt.Sprintf("(%s<<%d)+%s", newVal, offset*8, packed[len(packed)-1])
+    return packed
 }
