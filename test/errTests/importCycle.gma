@@ -1,0 +1,10 @@
+import "test/header/header3.gma"
+
+fn testFunc() {
+    printStr("importCycle\n")
+    func3()
+}
+
+fn main() {
+    testFunc()
+}

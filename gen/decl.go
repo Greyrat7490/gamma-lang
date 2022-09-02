@@ -15,7 +15,7 @@ func GenDecl(file *os.File, d ast.Decl) {
     switch d := d.(type) {
     case *ast.Import:
         GenImport(file, d)
-        
+
     case *ast.DefVar:
         GenDefVar(file, d)
 

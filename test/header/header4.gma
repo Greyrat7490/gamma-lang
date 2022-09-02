@@ -1,0 +1,6 @@
+import "test/errTests/importCycle.gma"
+
+fn func4() {
+    printStr("func4\n")
+    testFunc()
+}

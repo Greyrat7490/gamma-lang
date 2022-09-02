@@ -6,6 +6,7 @@ import (
     "gamma/ast"
     "gamma/std"
     "gamma/token"
+    "gamma/import"
 )
 
 var isMainDefined bool = false
@@ -15,7 +16,7 @@ func Parse(path string) (ast ast.Ast) {
 
     std.Declare()
 
-    tokens := token.Tokenize(path)
+    tokens := imprt.ImportMain(path)
 
     for tokens.Peek().Type != token.EOF {
         ast.Decls = append(ast.Decls, prsDecl(&tokens))

@@ -17,10 +17,10 @@ func typeCheckDecl(d ast.Decl) {
 
     case *ast.Import:
         typeCheckImport(d)
-        
+
     case *ast.DefFn:
         typeCheckDefFn(d)
-        
+
     case *ast.DefStruct:
         // nothing to do
 

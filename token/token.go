@@ -6,7 +6,6 @@ import (
     "bufio"
     "strconv"
     "gamma/types"
-    "path/filepath"
 )
 
 type TokenType uint
@@ -338,7 +337,7 @@ type Tokens struct {
     tokens []Token
     idx int
     savedIdx int
-    basePath string
+    path string
 }
 
 func (t *Tokens) split(s string, start int, end int, line int) {
@@ -350,52 +349,15 @@ func (t *Tokens) split(s string, start int, end int, line int) {
     }
 }
 
-func importFile(basePath string, path string) (file *os.File, err error) {
-    // absolute path
-    if filepath.IsAbs(path) {
-        return os.Open(path)
-
-    } else {
-        // relative path to main file (file passed as arg to compiler)
-        // std path (std/<path>)
-        // relative path
-        basePaths := []string{ basePath, "std", "./" }
- 
-        for _,basePath := range basePaths {
-            if file, err = os.Open(filepath.Join(basePath, path)); !os.IsNotExist(err) {
-                return
-            }
-        }
-
-        return
-    }
+func (t *Tokens) GetPath() string {
+    return t.path
 }
 
-func (t *Tokens) Import(path string) Tokens {
-    file, err := importFile(t.basePath, path)
-    if err != nil {
-        fmt.Fprintln(os.Stderr, "[ERROR]", err)
-        os.Exit(1)
-    }
+func Tokenize(path string, src *os.File) (tokens Tokens) {
+    tokens.idx = -1
+    tokens.savedIdx = -1
+    tokens.path = path
 
-    return tokenize(t.basePath, file)
-}
-
-func Tokenize(path string) Tokens {
-    file, err := os.Open(path)
-    if err != nil {
-        fmt.Fprintln(os.Stderr, "[ERROR]", err)
-        os.Exit(1)
-    }
-
-    return tokenize(filepath.Dir(path), file)
-}
-
-func tokenize(basePath string, src *os.File) (tokenizer Tokens) {
-    tokenizer.idx = -1
-    tokenizer.savedIdx = -1
-    tokenizer.basePath = basePath
-    
     scanner := bufio.NewScanner(src)
 
     comment := false
@@ -447,7 +409,7 @@ func tokenize(basePath string, src *os.File) (tokenizer Tokens) {
 
             // split at space
             case ' ', '\t':
-                tokenizer.split(line, start, i, lineNum)
+                tokens.split(line, start, i, lineNum)
                 start = i+1
 
             // split at //, /*, :=, ::, <=, >=, ==, !=, &&, ->
@@ -457,21 +419,21 @@ func tokenize(basePath string, src *os.File) (tokenizer Tokens) {
                     switch s {
                     // start single line comment
                     case "//":
-                        tokenizer.split(line, start, i, lineNum)
+                        tokens.split(line, start, i, lineNum)
                         comment = true
                         i++
                         continue
                     // start multiline comment
                     case "/*":
-                        tokenizer.split(line, start, i, lineNum)
+                        tokens.split(line, start, i, lineNum)
                         mlComment = true
                         start = i+1
                         i++
                         continue
 
                     case "&&", ":=", "::", "!=", "==", "<=", ">=", "->":
-                        tokenizer.split(line, start, i, lineNum)
-                        tokenizer.tokens = append(tokenizer.tokens, Token{ ToTokenType(s), s, Pos{lineNum, i+1} })
+                        tokens.split(line, start, i, lineNum)
+                        tokens.tokens = append(tokens.tokens, Token{ ToTokenType(s), s, Pos{lineNum, i+1} })
                         start = i+3
                         i += 2
                         continue
@@ -482,21 +444,21 @@ func tokenize(basePath string, src *os.File) (tokenizer Tokens) {
 
             // split at non space char (and keep char)
             case '(', ')', '{', '}', '[', ']', '+', '*', '%', '.', ',', ';', '$':
-                tokenizer.split(line, start, i, lineNum)
+                tokens.split(line, start, i, lineNum)
 
-                tokenizer.tokens = append(tokenizer.tokens, Token{ ToTokenType(string(line[i])), string(line[i]), Pos{lineNum, i+1} })
+                tokens.tokens = append(tokens.tokens, Token{ ToTokenType(string(line[i])), string(line[i]), Pos{lineNum, i+1} })
                 start = i+1
             }
         }
 
         if !comment && !mlComment && len(line) > start {
-            tokenizer.split(line, start, len(line), lineNum)
+            tokens.split(line, start, len(line), lineNum)
         }
     }
 
-    pos := tokenizer.tokens[len(tokenizer.tokens)-1].Pos
-    pos.Col += len(tokenizer.tokens[len(tokenizer.tokens)-1].Str)
-    tokenizer.tokens = append(tokenizer.tokens, Token{EOF, "EOF", pos})
+    pos := tokens.tokens[len(tokens.tokens)-1].Pos
+    pos.Col += len(tokens.tokens[len(tokens.tokens)-1].Str)
+    tokens.tokens = append(tokens.tokens, Token{EOF, "EOF", pos})
 
     if strLit {
         fmt.Fprintln(os.Stderr, "string literal not terminated (missing '\"')")

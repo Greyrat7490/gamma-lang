@@ -1,4 +1,4 @@
-/*  
+/*
  * four possible ways to import:
   * #1 import "/<absolutePath>/<name>.gma"  // absolute path + file
   * #2 import "header/<name>.gma"           // relative to main file (file passed as arg to compiler)
@@ -8,6 +8,7 @@
 
 import "std.gma"
 import "header/header.gma"
+import "header/header2.gma"
 
 fn main() {
     printStr("imported const: ")
@@ -22,11 +23,7 @@ fn main() {
     printStr("\nimported func:\n")
     exported()
 
-    arr := [2][2][2]i32{
-        { { 0, 1 }, { 2, 3 } },
-        { { 4, 5 }, { 6, 7 } }
-    }
-    printArr(arr)
+    testPrintArr()
 
     printStr("\nSOMENUM: ") printInt(SOMENUM) printStr("\n")
 }

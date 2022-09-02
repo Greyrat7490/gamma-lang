@@ -6,6 +6,7 @@ import (
     "strconv"
     "gamma/token"
     "gamma/types"
+    "gamma/import"
     "gamma/cmpTime"
     "gamma/ast"
     "gamma/ast/identObj"
@@ -17,7 +18,7 @@ func prsDecl(tokens *token.Tokens) ast.Decl {
     case token.Import:
         d := prsImport(tokens)
         return &d
-        
+
     case token.Fn:
         d := prsDefFn(tokens)
         return &d
@@ -407,13 +408,15 @@ func prsImport(tokens *token.Tokens) ast.Import {
         fmt.Fprintln(os.Stderr, "\t" + path.At())
         os.Exit(1)
     }
-    path.Str = path.Str[1:len(path.Str)-1]
-
-    t := tokens.Import(path.Str)
 
     d := ast.Import{ Pos: pos, Path: path }
-    for t.Peek().Type != token.EOF {
-        d.Decls = append(d.Decls, prsDecl(&t))
+
+    if tokens, isNew := imprt.Import(path); isNew {
+        for tokens.Peek().Type != token.EOF {
+            d.Decls = append(d.Decls, prsDecl(tokens))
+        }
+
+        imprt.EndImport(tokens.GetPath())
     }
 
     return d
