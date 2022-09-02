@@ -15,9 +15,12 @@ func typeCheckDecl(d ast.Decl) {
     case *ast.DefConst:
         typeCheckDefConst(d)
 
+    case *ast.Import:
+        typeCheckImport(d)
+        
     case *ast.DefFn:
-        // TODO
-
+        typeCheckDefFn(d)
+        
     case *ast.DefStruct:
         // nothing to do
 
@@ -44,5 +47,19 @@ func typeCheckDefConst(d *ast.DefConst) {
         fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", d.C.GetName(), d.Type, t2)
         fmt.Fprintln(os.Stderr, "\t" + d.At())
         os.Exit(1)
+    }
+}
+
+func typeCheckDefFn(d *ast.DefFn) {
+    // TODO: check missing ret
+
+    for _,s := range d.Block.Stmts {
+        typeCheckStmt(s)
+    }
+}
+
+func typeCheckImport(d *ast.Import) {
+    for _,d := range d.Decls {
+        typeCheckDecl(d)
     }
 }

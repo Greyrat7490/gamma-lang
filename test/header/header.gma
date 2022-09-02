@@ -1,0 +1,6 @@
+c :: 69
+v := -420
+
+fn exported() {
+    printStr("this function got imported\n")
+}

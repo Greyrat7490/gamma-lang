@@ -9,48 +9,48 @@ import (
     "gamma/ast/identObj"
 )
 
-func prsStmt(ignoreUnusedExpr bool) ast.Stmt {
-    switch t := token.Next(); t.Type {
+func prsStmt(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
+    switch t := tokens.Next(); t.Type {
     case token.BraceL:
-        b := prsBlock()
+        b := prsBlock(tokens)
         return &b
 
     case token.If:
-        ifStmt := prsIfStmt()
+        ifStmt := prsIfStmt(tokens)
 
-        if token.Cur().Str == "{" {
-            switchStmt := prsSwitch(ifStmt.Pos, ifStmt.Cond)
+        if tokens.Cur().Str == "{" {
+            switchStmt := prsSwitch(tokens, ifStmt.Pos, ifStmt.Cond)
             return &switchStmt
         }
 
         return &ifStmt
 
     case token.Through:
-        t := prsThrough()
+        t := prsThrough(tokens)
         return &t
 
     case token.While:
-        w := prsWhileStmt()
+        w := prsWhileStmt(tokens)
         return &w
 
     case token.For:
-        f := prsForStmt()
+        f := prsForStmt(tokens)
         return &f
 
     case token.Break:
-        b := prsBreak()
+        b := prsBreak(tokens)
         return &b
 
     case token.Continue:
-        c := prsContinue()
+        c := prsContinue(tokens)
         return &c
 
     case token.Ret:
-        r := prsRet()
+        r := prsRet(tokens)
         return &r
 
     case token.Number, token.Str, token.Boolean, token.ParenL:
-        expr := prsExpr()
+        expr := prsExpr(tokens)
         if !ignoreUnusedExpr && expr.GetType() != nil {
             fmt.Fprintln(os.Stderr, "[ERROR] unused expr")
             fmt.Fprintln(os.Stderr, "\t" + expr.At())
@@ -59,16 +59,16 @@ func prsStmt(ignoreUnusedExpr bool) ast.Stmt {
         return &ast.ExprStmt{ Expr: expr }
 
     case token.Name:
-        if isDec() || isDefInfer() {
-            return &ast.DeclStmt{ Decl: prsDefine() }
+        if isDec(tokens) || isDefInfer(tokens) {
+            return &ast.DeclStmt{ Decl: prsDefine(tokens) }
         }
         fallthrough
 
     case token.UndScr, token.XSwitch, token.Plus, token.Minus, token.Mul, token.Amp:
-        expr := prsExpr()
+        expr := prsExpr(tokens)
 
-        if token.Peek().Type == token.Assign {
-            a := prsAssignVar(expr)
+        if tokens.Peek().Type == token.Assign {
+            a := prsAssignVar(tokens, expr)
             return &a
         } else {
             if !ignoreUnusedExpr && expr.GetType() != nil {
@@ -81,153 +81,153 @@ func prsStmt(ignoreUnusedExpr bool) ast.Stmt {
 
     case token.Elif:
         fmt.Fprintf(os.Stderr, "[ERROR] missing if (elif without an if before)\n")
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
         return &ast.BadStmt{}
 
     case token.Else:
         fmt.Fprintf(os.Stderr, "[ERROR] missing if (else without an if before)\n")
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
         return &ast.BadStmt{}
 
     case token.Assign:
         fmt.Fprintf(os.Stderr, "[ERROR] no destination for assignment\n")
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
         return &ast.BadStmt{}
 
     case token.Fn:
         fmt.Fprintln(os.Stderr, "[ERROR] you are not allowed to define functions inside a function")
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
         return &ast.BadStmt{}
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] unexpected token %v\n", token.Cur())
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        fmt.Fprintf(os.Stderr, "[ERROR] unexpected token %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
         return &ast.BadStmt{}
     }
 }
 
-func prsBlock() ast.Block {
-    block := ast.Block{ BraceLPos: token.Cur().Pos }
+func prsBlock(tokens *token.Tokens) ast.Block {
+    block := ast.Block{ BraceLPos: tokens.Cur().Pos }
 
-    for token.Peek().Type != token.BraceR {
-        block.Stmts = append(block.Stmts, prsStmt(false))
+    for tokens.Peek().Type != token.BraceR {
+        block.Stmts = append(block.Stmts, prsStmt(tokens, false))
     }
 
-    block.BraceRPos = token.Next().Pos
+    block.BraceRPos = tokens.Next().Pos
 
     return block
 }
 
-func prsAssignVar(dest ast.Expr) ast.Assign {
-    pos := token.Next().Pos
-    token.Next()
-    val := prsExpr()
+func prsAssignVar(tokens *token.Tokens, dest ast.Expr) ast.Assign {
+    pos := tokens.Next().Pos
+    tokens.Next()
+    val := prsExpr(tokens)
 
     return ast.Assign{ Pos: pos, Dest: dest, Value: val }
 }
 
-func prsIfStmt() ast.If {
+func prsIfStmt(tokens *token.Tokens) ast.If {
     identObj.StartScope()
     defer identObj.EndScope()
 
-    pos := token.Cur().Pos
+    pos := tokens.Cur().Pos
 
     // cond-switch without condBase
-    if token.Next().Str == "{" {
+    if tokens.Next().Str == "{" {
         return ast.If{ Pos: pos }
     }
 
-    cond := prsExpr()
+    cond := prsExpr(tokens)
 
     // cond-switch with condBase
-    if token.Cur().Str == "{" {
+    if tokens.Cur().Str == "{" {
         return ast.If{ Pos: pos, Cond: cond }
     }
 
     // normal if
-    token.Next()
-    block := prsBlock()
+    tokens.Next()
+    block := prsBlock(tokens)
 
     ifStmt := ast.If{ Pos: pos, Cond: cond, Block: block }
 
-    if token.Peek().Type == token.Else {
-        token.Next()
-        elseStmt := prsElse()
+    if tokens.Peek().Type == token.Else {
+        tokens.Next()
+        elseStmt := prsElse(tokens)
         ifStmt.Else = &elseStmt
-    } else if token.Peek().Type == token.Elif {
-        token.Next()
-        elifStmt := prsElif()
+    } else if tokens.Peek().Type == token.Elif {
+        tokens.Next()
+        elifStmt := prsElif(tokens)
         ifStmt.Elif = &elifStmt
     }
 
     return ifStmt
 }
 
-func prsElif() ast.Elif {
-    return ast.Elif(prsIfStmt())
+func prsElif(tokens *token.Tokens) ast.Elif {
+    return ast.Elif(prsIfStmt(tokens))
 }
 
-func prsElse() ast.Else {
+func prsElse(tokens *token.Tokens) ast.Else {
     identObj.StartScope()
     defer identObj.EndScope()
 
-    pos := token.Cur().Pos
-    token.Next()
-    block := prsBlock()
+    pos := tokens.Cur().Pos
+    tokens.Next()
+    block := prsBlock(tokens)
 
     return ast.Else{ ElsePos: pos, Block: block }
 }
 
-func prsWhileStmt() ast.While {
+func prsWhileStmt(tokens *token.Tokens) ast.While {
     identObj.StartScope()
     defer identObj.EndScope()
 
-    var op ast.While = ast.While{ WhilePos: token.Cur().Pos, Def: nil }
+    var op ast.While = ast.While{ WhilePos: tokens.Cur().Pos, Def: nil }
 
-    token.Next()
-    if isDec() {
-        dec := prsDecVar()
+    tokens.Next()
+    if isDec(tokens) {
+        dec := prsDecVar(tokens)
         op.Def = &ast.DefVar{ V: dec.V, Type: dec.Type }
 
-        if token.Next().Type != token.Comma {
+        if tokens.Next().Type != token.Comma {
             fmt.Fprintln(os.Stderr, "[ERROR] missing \",\"")
-            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
             os.Exit(1)
         }
 
-        token.Next()
-        expr := prsExpr()
+        tokens.Next()
+        expr := prsExpr(tokens)
 
-        if token.Next().Type == token.Comma {
-            token.Next()
-            op.Cond = prsExpr()
+        if tokens.Next().Type == token.Comma {
+            tokens.Next()
+            op.Cond = prsExpr(tokens)
             op.Def.Value = expr
-            token.Next()
+            tokens.Next()
         } else {
             op.Def.Value = &ast.Lit{ Val: token.Token{ Type: token.Number, Str: "0" }, Type: types.I32Type{} }
             op.Cond = expr
         }
     } else {
-        op.Cond = prsExpr()
-        token.Next()
+        op.Cond = prsExpr(tokens)
+        tokens.Next()
     }
 
-    op.Block = prsBlock()
+    op.Block = prsBlock(tokens)
 
     return op
 }
 
-func prsForStmt() ast.For {
+func prsForStmt(tokens *token.Tokens) ast.For {
     identObj.StartScope()
     defer identObj.EndScope()
 
     var op ast.For = ast.For{
-        ForPos: token.Cur().Pos,
+        ForPos: tokens.Cur().Pos,
         Limit: nil,
         Def: ast.DefVar{
             Value: &ast.Lit{
@@ -237,8 +237,8 @@ func prsForStmt() ast.For {
         },
     }
 
-    token.Next()
-    dec := prsDecVar()
+    tokens.Next()
+    dec := prsDecVar(tokens)
     op.Def.V = dec.V
     op.Def.Type = dec.Type
 
@@ -251,41 +251,41 @@ func prsForStmt() ast.For {
         },
     }
 
-    if token.Next().Type == token.Comma {
-        token.Next()
-        op.Limit = prsExpr()
+    if tokens.Next().Type == token.Comma {
+        tokens.Next()
+        op.Limit = prsExpr(tokens)
 
-        if token.Next().Type == token.Comma {
-            token.Next()
-            op.Def.Value = prsExpr()
+        if tokens.Next().Type == token.Comma {
+            tokens.Next()
+            op.Def.Value = prsExpr(tokens)
 
-            if token.Next().Type == token.Comma {
-                token.Next()
-                op.Step = prsExpr()
-                token.Next()
+            if tokens.Next().Type == token.Comma {
+                tokens.Next()
+                op.Step = prsExpr(tokens)
+                tokens.Next()
             }
         }
     }
 
-    op.Block = prsBlock()
+    op.Block = prsBlock(tokens)
 
     return op
 }
 
-func prsBreak() ast.Break {
-    return ast.Break{ Pos: token.Cur().Pos }
+func prsBreak(tokens *token.Tokens) ast.Break {
+    return ast.Break{ Pos: tokens.Cur().Pos }
 }
 
-func prsContinue() ast.Continue {
-    return ast.Continue{ Pos: token.Cur().Pos }
+func prsContinue(tokens *token.Tokens) ast.Continue {
+    return ast.Continue{ Pos: tokens.Cur().Pos }
 }
 
-func prsRet() ast.Ret {
-    r := ast.Ret{ Pos: token.Cur().Pos, F: identObj.GetCurFunc() }
+func prsRet(tokens *token.Tokens) ast.Ret {
+    r := ast.Ret{ Pos: tokens.Cur().Pos, F: identObj.GetCurFunc() }
 
     if r.F.GetRetType() != nil {
-        token.Next()
-        r.RetExpr = prsExpr()
+        tokens.Next()
+        r.RetExpr = prsExpr(tokens)
     }
 
     return r
@@ -299,7 +299,7 @@ func getPlaceholder(cond ast.Expr) (expr *ast.Expr) {
     for {
         if b, ok := cond.(*ast.Binary); !ok {
             fmt.Fprintln(os.Stderr, "[ERROR] expected condition to be a BinaryExpr")
-            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+            fmt.Fprintln(os.Stderr, "\t" + cond.At())
             os.Exit(1)
             return nil
         } else {
@@ -343,13 +343,13 @@ func completeCond(placeholder *ast.Expr, condBase ast.Expr, expr1 ast.Expr, expr
         }
     } else {
         fmt.Fprintln(os.Stderr, "[ERROR] expected condition to be a BinaryExpr")
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        fmt.Fprintln(os.Stderr, "\t" + condBase.At())
         os.Exit(1)
         return nil
     }
 }
 
-func prsCases(condBase ast.Expr) (cases []ast.Case) {
+func prsCases(tokens *token.Tokens, condBase ast.Expr) (cases []ast.Case) {
     placeholder := getPlaceholder(condBase)
     var conds ast.Expr = nil
     cur := -1
@@ -357,43 +357,43 @@ func prsCases(condBase ast.Expr) (cases []ast.Case) {
     expectColon := false
     lastStmtLine := 0
 
-    for token.Peek().Type != token.BraceR {
-        stmt := prsStmt(true)
+    for tokens.Peek().Type != token.BraceR {
+        stmt := prsStmt(tokens, true)
 
         // comma-separated condition ----------
-        for token.Peek().Type == token.Comma {
-            token.Next()
+        for tokens.Peek().Type == token.Comma {
+            tokens.Next()
 
             if cond, ok := stmt.(*ast.ExprStmt); ok {
                 conds = completeCond(placeholder, condBase, cond.Expr, conds)
 
-                token.Next()
-                stmt = &ast.ExprStmt{ Expr: prsExpr() }
+                tokens.Next()
+                stmt = &ast.ExprStmt{ Expr: prsExpr(tokens) }
                 expectColon = true
             } else {
                 fmt.Fprintln(os.Stderr, "[ERROR] invalid case condition: expected an expr before \",\"")
-                fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
                 os.Exit(1)
             }
         }
 
-        if expectColon && token.Peek().Type != token.Colon {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected end of case condition(\":\") but got %v\n", token.Peek())
-            fmt.Fprintln(os.Stderr, "\t" + token.Peek().At())
+        if expectColon && tokens.Peek().Type != token.Colon {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected end of case condition(\":\") but got %v\n", tokens.Peek())
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Peek().At())
             os.Exit(1)
         }
 
         // case end without ";" before --------
-        if token.Peek().Type == token.Colon {
-            if token.Cur().Pos.Line == lastStmtLine {
+        if tokens.Peek().Type == token.Colon {
+            if tokens.Cur().Pos.Line == lastStmtLine {
                 fmt.Fprintln(os.Stderr, "[ERROR] cases should always start in a new line or after a \";\"")
-                fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
                 os.Exit(1)
             }
 
-            token.Next()
-            if nextColon := token.FindNext(token.Colon); token.Cur().Pos.Line == nextColon.Line {
-                nextSemiCol := token.FindNext(token.SemiCol)
+            tokens.Next()
+            if nextColon := tokens.FindNext(token.Colon); tokens.Cur().Pos.Line == nextColon.Line {
+                nextSemiCol := tokens.FindNext(token.SemiCol)
 
                 if nextSemiCol.Line == -1 || (nextSemiCol.Line == nextColon.Line && nextSemiCol.Col > nextColon.Col) {
                     fmt.Fprintln(os.Stderr, "[ERROR] multiple cases in a line should be separated with a \";\"")
@@ -402,19 +402,19 @@ func prsCases(condBase ast.Expr) (cases []ast.Case) {
                 }
             }
 
-            if token.Last().Pos.Line < token.Cur().Pos.Line {
+            if tokens.Last().Pos.Line < tokens.Cur().Pos.Line {
                 fmt.Fprintln(os.Stderr, "[ERROR] invalid case condition: nothing before \":\"")
-                fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
                 os.Exit(1)
             }
 
             if cond, ok := stmt.(*ast.ExprStmt); ok {
                 cond.Expr = completeCond(placeholder, condBase, cond.Expr, conds)
-                cases = append(cases, ast.Case{ Cond: cond.Expr, ColonPos: token.Cur().Pos })
+                cases = append(cases, ast.Case{ Cond: cond.Expr, ColonPos: tokens.Cur().Pos })
                 cur++
             } else {
                 fmt.Fprintln(os.Stderr, "[ERROR] invalid case condition: expected an expr before \":\"")
-                fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
                 os.Exit(1)
             }
 
@@ -424,26 +424,26 @@ func prsCases(condBase ast.Expr) (cases []ast.Case) {
         } else {
             if cur == -1 {
                 fmt.Fprintln(os.Stderr, "[ERROR] missing case at the beginning of the cond-switch(or missing \":\")")
-                fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
                 os.Exit(1)
             }
 
-            lastStmtLine = token.Cur().Pos.Line
+            lastStmtLine = tokens.Cur().Pos.Line
             cases[cur].Stmts = append(cases[cur].Stmts, stmt)
 
             // case end with before ";" -------
-            if token.Peek().Type == token.SemiCol {
-                pos := token.Next().Pos
+            if tokens.Peek().Type == token.SemiCol {
+                pos := tokens.Next().Pos
 
-                if token.Peek().Type == token.Colon {
+                if tokens.Peek().Type == token.Colon {
                     fmt.Fprintln(os.Stderr, "[ERROR] invalid case condition: nothing before \":\"")
-                    fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+                    fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
                     os.Exit(1)
                 }
 
-                stmt := prsStmt(true)
+                stmt := prsStmt(tokens, true)
 
-                if token.Next().Type != token.Colon {
+                if tokens.Next().Type != token.Colon {
                     fmt.Fprintln(os.Stderr, "[ERROR] \";\" should be at the end of the case")
                     fmt.Fprintln(os.Stderr, "\t" + pos.At())
                     os.Exit(1)
@@ -451,11 +451,11 @@ func prsCases(condBase ast.Expr) (cases []ast.Case) {
 
                 if cond, ok := stmt.(*ast.ExprStmt); ok {
                     cond.Expr = completeCond(placeholder, condBase, cond.Expr, conds)
-                    cases = append(cases, ast.Case{ Cond: cond.Expr, ColonPos: token.Cur().Pos })
+                    cases = append(cases, ast.Case{ Cond: cond.Expr, ColonPos: tokens.Cur().Pos })
                     cur++
                 } else {
                     fmt.Fprintln(os.Stderr, "[ERROR] invalid case condition: expected an expr before \":\"")
-                    fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+                    fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
                     os.Exit(1)
                 }
 
@@ -465,30 +465,30 @@ func prsCases(condBase ast.Expr) (cases []ast.Case) {
         }
     }
 
-    if token.Next().Type != token.BraceR {
+    if tokens.Next().Type != token.BraceR {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"}\" at the end of the cond-switch " +
-            "but got \"%s\"(%v)\n", token.Cur().Str, token.Cur().Type)
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+            "but got \"%s\"(%v)\n", tokens.Cur().Str, tokens.Cur().Type)
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
 
     return
 }
 
-func prsSwitch(pos token.Pos, condBase ast.Expr) ast.Switch {
+func prsSwitch(tokens *token.Tokens, pos token.Pos, condBase ast.Expr) ast.Switch {
     switchStmt := ast.Switch{ BraceLPos: pos }
 
-    if token.Peek().Type == token.BraceR {
+    if tokens.Peek().Type == token.BraceR {
         fmt.Fprintln(os.Stderr, "[ERROR] empty cond-switch")
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
 
     identObj.StartScope()
-    switchStmt.Cases = prsCases(condBase)
+    switchStmt.Cases = prsCases(tokens, condBase)
     identObj.EndScope()
 
-    switchStmt.BraceRPos = token.Cur().Pos
+    switchStmt.BraceRPos = tokens.Cur().Pos
 
     for i,c := range switchStmt.Cases {
         if len(c.Stmts) == 0 {
@@ -513,6 +513,6 @@ func prsSwitch(pos token.Pos, condBase ast.Expr) ast.Switch {
     return switchStmt
 }
 
-func prsThrough() ast.Through {
-    return ast.Through{ Pos: token.Cur().Pos }
+func prsThrough(tokens *token.Tokens) ast.Through {
+    return ast.Through{ Pos: tokens.Cur().Pos }
 }

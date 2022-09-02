@@ -6,11 +6,8 @@ import (
     "bufio"
     "strconv"
     "gamma/types"
+    "path/filepath"
 )
-
-var tokens []Token
-var idx int = -1
-var savedIdx int = -1
 
 type TokenType uint
 const (
@@ -74,6 +71,7 @@ const (
     Continue        // continue
     Through         // through
     Struct          // struct
+    Import          // import
     XSwitch         // $
 
     TokenTypeCount uint = iota
@@ -176,6 +174,8 @@ func ToTokenType(s string) TokenType {
         return Through
     case "struct":
         return Struct
+    case "import":
+        return Import
     case "$":
         return XSwitch
 
@@ -289,6 +289,8 @@ func (t TokenType) String() string {
         return "Through"
     case Struct:
         return "Struct"
+    case Import:
+        return "Import"
     case XSwitch:
         return "XSwitch"
 
@@ -332,23 +334,68 @@ func (t Token) At() string {
     return t.Pos.At()
 }
 
-func split(s string, start int, end int, line int) {
+type Tokens struct {
+    tokens []Token
+    idx int
+    savedIdx int
+    basePath string
+}
+
+func (t *Tokens) split(s string, start int, end int, line int) {
     if start != end {
         s := s[start:end]
-        t := ToTokenType(s)
+        typ := ToTokenType(s)
 
-        tokens = append(tokens, Token{t, s, Pos{line, start+1} })
+        t.tokens = append(t.tokens, Token{typ, s, Pos{line, start+1} })
     }
 }
 
-func Tokenize(path string) {
-    fmt.Println("[INFO] tokenizing...")
+func importFile(basePath string, path string) (file *os.File, err error) {
+    // absolute path
+    if filepath.IsAbs(path) {
+        return os.Open(path)
 
-    src, err := os.Open(path)
+    } else {
+        // relative path to main file (file passed as arg to compiler)
+        // std path (std/<path>)
+        // relative path
+        basePaths := []string{ basePath, "std", "./" }
+ 
+        for _,basePath := range basePaths {
+            if file, err = os.Open(filepath.Join(basePath, path)); !os.IsNotExist(err) {
+                return
+            }
+        }
+
+        return
+    }
+}
+
+func (t *Tokens) Import(path string) Tokens {
+    file, err := importFile(t.basePath, path)
     if err != nil {
         fmt.Fprintln(os.Stderr, "[ERROR]", err)
         os.Exit(1)
     }
+
+    return tokenize(t.basePath, file)
+}
+
+func Tokenize(path string) Tokens {
+    file, err := os.Open(path)
+    if err != nil {
+        fmt.Fprintln(os.Stderr, "[ERROR]", err)
+        os.Exit(1)
+    }
+
+    return tokenize(filepath.Dir(path), file)
+}
+
+func tokenize(basePath string, src *os.File) (tokenizer Tokens) {
+    tokenizer.idx = -1
+    tokenizer.savedIdx = -1
+    tokenizer.basePath = basePath
+    
     scanner := bufio.NewScanner(src)
 
     comment := false
@@ -400,7 +447,7 @@ func Tokenize(path string) {
 
             // split at space
             case ' ', '\t':
-                split(line, start, i, lineNum)
+                tokenizer.split(line, start, i, lineNum)
                 start = i+1
 
             // split at //, /*, :=, ::, <=, >=, ==, !=, &&, ->
@@ -410,21 +457,21 @@ func Tokenize(path string) {
                     switch s {
                     // start single line comment
                     case "//":
-                        split(line, start, i, lineNum)
+                        tokenizer.split(line, start, i, lineNum)
                         comment = true
                         i++
                         continue
                     // start multiline comment
                     case "/*":
-                        split(line, start, i, lineNum)
+                        tokenizer.split(line, start, i, lineNum)
                         mlComment = true
                         start = i+1
                         i++
                         continue
 
                     case "&&", ":=", "::", "!=", "==", "<=", ">=", "->":
-                        split(line, start, i, lineNum)
-                        tokens = append(tokens, Token{ ToTokenType(s), s, Pos{lineNum, i+1} })
+                        tokenizer.split(line, start, i, lineNum)
+                        tokenizer.tokens = append(tokenizer.tokens, Token{ ToTokenType(s), s, Pos{lineNum, i+1} })
                         start = i+3
                         i += 2
                         continue
@@ -435,21 +482,21 @@ func Tokenize(path string) {
 
             // split at non space char (and keep char)
             case '(', ')', '{', '}', '[', ']', '+', '*', '%', '.', ',', ';', '$':
-                split(line, start, i, lineNum)
+                tokenizer.split(line, start, i, lineNum)
 
-                tokens = append(tokens, Token{ ToTokenType(string(line[i])), string(line[i]), Pos{lineNum, i+1} })
+                tokenizer.tokens = append(tokenizer.tokens, Token{ ToTokenType(string(line[i])), string(line[i]), Pos{lineNum, i+1} })
                 start = i+1
             }
         }
 
         if !comment && !mlComment && len(line) > start {
-            split(line, start, len(line), lineNum)
+            tokenizer.split(line, start, len(line), lineNum)
         }
     }
 
-    pos := tokens[len(tokens)-1].Pos
-    pos.Col += len(tokens[len(tokens)-1].Str)
-    tokens = append(tokens, Token{EOF, "EOF", pos})
+    pos := tokenizer.tokens[len(tokenizer.tokens)-1].Pos
+    pos.Col += len(tokenizer.tokens[len(tokenizer.tokens)-1].Str)
+    tokenizer.tokens = append(tokenizer.tokens, Token{EOF, "EOF", pos})
 
     if strLit {
         fmt.Fprintln(os.Stderr, "string literal not terminated (missing '\"')")
@@ -459,80 +506,82 @@ func Tokenize(path string) {
         fmt.Fprintln(os.Stderr, "comment not terminated (missing \"*/\")")
         os.Exit(1)
     }
+
+    return
 }
 
-func Cur() Token {
-    return tokens[idx]
+func (t *Tokens) Cur() Token {
+    return t.tokens[t.idx]
 }
 
-func Next() Token {
-    idx++
+func (t *Tokens) Next() Token {
+    t.idx++
 
-    if idx >= len(tokens) {
+    if t.idx >= len(t.tokens) {
         fmt.Fprintln(os.Stderr, "[ERROR] unexpected end of file")
         os.Exit(1)
     }
 
-    return tokens[idx]
+    return t.tokens[t.idx]
 }
 
-func Peek() Token {
-    if idx+1 >= len(tokens) {
+func (t *Tokens) Peek() Token {
+    if t.idx+1 >= len(t.tokens) {
         fmt.Fprintln(os.Stderr, "[ERROR] unexpected end of file")
         os.Exit(1)
     }
 
-    return tokens[idx+1]
+    return t.tokens[t.idx+1]
 }
 
-func Peek2() Token {
-    if idx+2 >= len(tokens) {
+func (t *Tokens) Peek2() Token {
+    if t.idx+2 >= len(t.tokens) {
         fmt.Fprintln(os.Stderr, "[ERROR] unexpected end of file")
         os.Exit(1)
     }
 
-    return tokens[idx+2]
+    return t.tokens[t.idx+2]
 }
 
-func Last() Token {
-    if idx < 1 {
+func (t *Tokens) Last() Token {
+    if t.idx < 1 {
         fmt.Fprintln(os.Stderr, "[ERROR] unexpected beginning of file (expected 1 word more at the start of the file)")
         os.Exit(1)
     }
 
-    return tokens[idx-1]
+    return t.tokens[t.idx-1]
 }
 
-func Last2() Token {
-    if idx < 2 {
-        fmt.Fprintf(os.Stderr, "[ERROR] unexpected beginning of file (expected %d words more at the start of the file)\n", 2-idx)
+func (t *Tokens) Last2() Token {
+    if t.idx < 2 {
+        fmt.Fprintf(os.Stderr, "[ERROR] unexpected beginning of file (expected %d words more at the start of the file)\n", 2-t.idx)
         os.Exit(1)
     }
 
-    return tokens[idx-2]
+    return t.tokens[t.idx-2]
 }
 
 // returns Pos{ -1, -1 } if not found
-func FindNext (t TokenType) Pos {
-    for i := idx+1; i < len(tokens); i++ {
-        if tokens[i].Type == t {
-            return tokens[i].Pos
+func (t *Tokens) FindNext (typ TokenType) Pos {
+    for i := t.idx+1; i < len(t.tokens); i++ {
+        if t.tokens[i].Type == typ {
+            return t.tokens[i].Pos
         }
     }
 
     return Pos{ -1, -1 }
 }
 
-func SaveIdx() {
-    savedIdx = idx
+func (t *Tokens) SaveIdx() {
+    t.savedIdx = t.idx
 }
 
-func ResetIdx() {
-    if savedIdx == -1 {
+func (t *Tokens) ResetIdx() {
+    if t.savedIdx == -1 {
         fmt.Fprintln(os.Stderr, "[ERROR] no saved idx")
         os.Exit(1)
     }
 
-    idx = savedIdx
-    savedIdx = -1
+    t.idx = t.savedIdx
+    t.savedIdx = -1
 }

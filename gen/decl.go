@@ -13,6 +13,9 @@ import (
 
 func GenDecl(file *os.File, d ast.Decl) {
     switch d := d.(type) {
+    case *ast.Import:
+        GenImport(file, d)
+        
     case *ast.DefVar:
         GenDefVar(file, d)
 
@@ -31,6 +34,12 @@ func GenDecl(file *os.File, d ast.Decl) {
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] GenDecl for %v is not implemente yet\n", reflect.TypeOf(d))
         os.Exit(1)
+    }
+}
+
+func GenImport(file *os.File, d *ast.Import) {
+    for _, d := range d.Decls {
+        GenDecl(file, d)
     }
 }
 

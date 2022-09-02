@@ -40,6 +40,9 @@ func typeCheckStmt(s ast.Stmt) {
     case *ast.ExprStmt:
         typeCheckExpr(s.Expr)
 
+    case *ast.Through, *ast.Break, *ast.Continue:
+        // nothing to check
+
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] typeCheckStmt for %v is not implemente yet\n", reflect.TypeOf(s))
         os.Exit(1)

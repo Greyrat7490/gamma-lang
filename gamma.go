@@ -5,7 +5,6 @@ import (
     "os/exec"
     "fmt"
     "flag"
-    "gamma/token"
     "gamma/check"
     "gamma/parser"
     "gamma/gen"
@@ -44,9 +43,7 @@ func main() {
         os.Exit(1)
     }
 
-    token.Tokenize(path)
-
-    Ast := prs.Parse()
+    Ast := prs.Parse(path)
     if showAst { Ast.ShowAst() }
 
     check.TypeCheck(Ast)

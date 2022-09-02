@@ -10,13 +10,15 @@ import (
 
 var isMainDefined bool = false
 
-func Parse() (ast ast.Ast) {
+func Parse(path string) (ast ast.Ast) {
     fmt.Println("[INFO] parsing...")
 
     std.Declare()
 
-    for token.Peek().Type != token.EOF {
-        ast.Decls = append(ast.Decls, prsDecl())
+    tokens := token.Tokenize(path)
+
+    for tokens.Peek().Type != token.EOF {
+        ast.Decls = append(ast.Decls, prsDecl(&tokens))
     }
 
     if !isMainDefined {

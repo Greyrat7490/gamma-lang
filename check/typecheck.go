@@ -22,7 +22,7 @@ func CheckTypes(destType types.Type, srcType types.Type) bool {
     switch t := destType.(type) {
     case types.ArrType:
         if t2,ok := srcType.(types.ArrType); ok {
-            if t.Ptr.BaseType == t2.Ptr.BaseType {
+            if CheckTypes(t.Ptr.BaseType, t2.Ptr.BaseType) {
                 if len(t.Lens) == len(t2.Lens) {
                     for i,l := range t.Lens {
                         if l != t2.Lens[i] {

@@ -12,18 +12,22 @@ import (
     "gamma/ast/identObj/struct"
 )
 
-func prsDecl() ast.Decl {
-    switch t := token.Next(); t.Type {
+func prsDecl(tokens *token.Tokens) ast.Decl {
+    switch t := tokens.Next(); t.Type {
+    case token.Import:
+        d := prsImport(tokens)
+        return &d
+        
     case token.Fn:
-        d := prsDefFn()
+        d := prsDefFn(tokens)
         return &d
 
     case token.Struct:
-        d := prsStruct()
+        d := prsStruct(tokens)
         return &d
 
     case token.Name:
-        d := prsDefine()
+        d := prsDefine(tokens)
         if _,ok := d.(*ast.BadDecl); ok {
             fmt.Fprintln(os.Stderr, "[ERROR] declaring without initializing is not allowed")
             fmt.Fprintln(os.Stderr, "\t" + d.At())
@@ -40,12 +44,12 @@ func prsDecl() ast.Decl {
     }
 }
 
-func prsType() types.Type {
-    typename := token.Cur()
+func prsType(tokens *token.Tokens) types.Type {
+    typename := tokens.Cur()
 
     switch typename.Type {
     case token.Mul:
-        typename = token.Next()
+        typename = tokens.Next()
 
         if typename.Type != token.Typename {
             fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", typename.Str)
@@ -58,7 +62,7 @@ func prsType() types.Type {
         }
 
     case token.BrackL:
-        return prsArrType()
+        return prsArrType(tokens)
 
     case token.Name:
         if obj := identObj.Get(typename.Str); obj != nil {
@@ -74,17 +78,17 @@ func prsType() types.Type {
     return nil
 }
 
-func prsArrType() types.ArrType {
-    if token.Cur().Type != token.BrackL {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected %v but got %v\n", token.BrackL, token.Cur())
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+func prsArrType(tokens *token.Tokens) types.ArrType {
+    if tokens.Cur().Type != token.BrackL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected %v but got %v\n", token.BrackL, tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
 
     var lens []uint64
-    for token.Cur().Type == token.BrackL {
-        token.Next()
-        eval := cmpTime.ConstEval(prsExpr())
+    for tokens.Cur().Type == token.BrackL {
+        tokens.Next()
+        eval := cmpTime.ConstEval(prsExpr(tokens))
         if eval.Type != token.Number {
             if eval.Type == token.Unknown {
                 fmt.Fprintln(os.Stderr, "[ERROR] lenght of an array has to a const/eval at compile time")
@@ -98,61 +102,61 @@ func prsArrType() types.ArrType {
         lenght,_ := strconv.ParseUint(eval.Str, 10, 64)
         lens = append(lens, lenght)
 
-        if token.Next().Type != token.BrackR {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected %v but got %v\n", token.BrackR, token.Cur())
-            fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+        if tokens.Next().Type != token.BrackR {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected %v but got %v\n", token.BrackR, tokens.Cur())
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
             os.Exit(1)
         }
 
-        token.Next()
+        tokens.Next()
     }
 
-    return types.ArrType{ Ptr: types.PtrType{ BaseType: prsType() }, Lens: lens }
+    return types.ArrType{ Ptr: types.PtrType{ BaseType: prsType(tokens) }, Lens: lens }
 }
 
-func prsDecVar() ast.DecVar {
-    name, t := prsNameType()
-    end := token.Cur().Pos
+func prsDecVar(tokens *token.Tokens) ast.DecVar {
+    name, t := prsNameType(tokens)
+    end := tokens.Cur().Pos
 
     return ast.DecVar{ V: identObj.DecVar(name, t), Type: t, TypePos: end }
 }
 
-func prsNameType() (name token.Token, typ types.Type) {
-    name = token.Cur()
+func prsNameType(tokens *token.Tokens) (name token.Token, typ types.Type) {
+    name = tokens.Cur()
     if name.Type != token.Name {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", token.Cur())
-        fmt.Fprintln(os.Stderr, "\t" + token.Last().At())
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Last().At())
         os.Exit(1)
     }
 
-    token.Next()
-    typ = prsType()
+    tokens.Next()
+    typ = prsType(tokens)
     if typ == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", token.Last().Str)
-        fmt.Fprintln(os.Stderr, "\t" + token.Last().At())
+        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", tokens.Last().Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Last().At())
         os.Exit(1)
     }
 
     return
 }
 
-func isDec() bool {
-    if token.Cur().Type != token.Name {
+func isDec(tokens *token.Tokens) bool {
+    if tokens.Cur().Type != token.Name {
         return false
     }
 
-    return isNextType()
+    return isNextType(tokens)
 }
-func isDefInfer() bool {
-    return token.Cur().Type == token.Name && (token.Peek().Type == token.DefVar || token.Peek().Type == token.DefConst)
+func isDefInfer(tokens *token.Tokens) bool {
+    return tokens.Cur().Type == token.Name && (tokens.Peek().Type == token.DefVar || tokens.Peek().Type == token.DefConst)
 }
-func isNextType() bool {
-    token.SaveIdx()
-    defer token.ResetIdx()
+func isNextType(tokens *token.Tokens) bool {
+    tokens.SaveIdx()
+    defer tokens.ResetIdx()
 
-    switch token.Next().Type {
+    switch tokens.Next().Type {
     case token.Mul:
-        typename := token.Next()
+        typename := tokens.Next()
 
         if typename.Type != token.Typename {
             return false
@@ -161,14 +165,14 @@ func isNextType() bool {
         return types.ToBaseType(typename.Str) != nil
 
     case token.BrackL:
-        token.Next()
-        expr := prsExpr()
+        tokens.Next()
+        expr := prsExpr(tokens)
 
-        if token.Next().Type != token.BrackR {
+        if tokens.Next().Type != token.BrackR {
             return false
         }
 
-        typename := token.Next()
+        typename := tokens.Next()
         if typename.Type != token.Typename {
             return false
         }
@@ -176,74 +180,74 @@ func isNextType() bool {
         return cmpTime.ConstEval(expr).Type != token.Number
 
     case token.Name:
-        if obj := identObj.Get(token.Cur().Str); obj != nil {
+        if obj := identObj.Get(tokens.Cur().Str); obj != nil {
             _,ok := obj.(*structDec.Struct)
             return ok
         }
         return false
 
     default:
-        return types.ToBaseType(token.Cur().Str) != nil
+        return types.ToBaseType(tokens.Cur().Str) != nil
     }
 }
 
-func prsDefVar(name token.Token, t types.Type) ast.DefVar {
+func prsDefVar(tokens *token.Tokens, name token.Token, t types.Type) ast.DefVar {
     v := identObj.DecVar(name, t)
 
-    pos := token.Cur().Pos
-    token.Next()
-    return ast.DefVar{ V: v, Type: t, ColPos: pos, Value: prsExpr() }
+    pos := tokens.Cur().Pos
+    tokens.Next()
+    return ast.DefVar{ V: v, Type: t, ColPos: pos, Value: prsExpr(tokens) }
 }
 
-func prsDefConst(name token.Token, t types.Type) ast.DefConst {
+func prsDefConst(tokens *token.Tokens, name token.Token, t types.Type) ast.DefConst {
     c := identObj.DecConst(name, t)
 
-    pos := token.Cur().Pos
-    token.Next()
-    return ast.DefConst{ C: c, Type: t, ColPos: pos, Value: prsExpr() }
+    pos := tokens.Cur().Pos
+    tokens.Next()
+    return ast.DefConst{ C: c, Type: t, ColPos: pos, Value: prsExpr(tokens) }
 }
 
-func prsDefVarInfer(name token.Token) ast.DefVar {
-    pos := token.Cur().Pos
-    token.Next()
-    val := prsExpr()
+func prsDefVarInfer(tokens *token.Tokens, name token.Token) ast.DefVar {
+    pos := tokens.Cur().Pos
+    tokens.Next()
+    val := prsExpr(tokens)
 
     t := val.GetType()
     v := identObj.DecVar(name, t)
     return ast.DefVar{ V: v, Type: t, ColPos: pos, Value: val }
 }
 
-func prsDefConstInfer(name token.Token) ast.DefConst {
-    pos := token.Cur().Pos
-    token.Next()
-    val := prsExpr()
+func prsDefConstInfer(tokens *token.Tokens, name token.Token) ast.DefConst {
+    pos := tokens.Cur().Pos
+    tokens.Next()
+    val := prsExpr(tokens)
 
     t := val.GetType()
     c := identObj.DecConst(name, t)
     return ast.DefConst{ C: c, Type: t, ColPos: pos, Value: val }
 }
 
-func prsDefine() ast.Decl {
-    name := token.Cur()
-    token.Next()
-    t := prsType()
+func prsDefine(tokens *token.Tokens) ast.Decl {
+    name := tokens.Cur()
+    tokens.Next()
+    t := prsType(tokens)
 
     if t == nil {       // infer the type with the value
-        if token.Cur().Type == token.DefVar {
-            d := prsDefVarInfer(name)
+        if tokens.Cur().Type == token.DefVar {
+            d := prsDefVarInfer(tokens, name)
             return &d
         }
-        if token.Cur().Type == token.DefConst {
-            d := prsDefConstInfer(name)
+        if tokens.Cur().Type == token.DefConst {
+            d := prsDefConstInfer(tokens, name)
             return &d
         }
     } else {            // type is given
-        if token.Next().Type == token.DefVar {
-            d := prsDefVar(name, t)
+        if tokens.Next().Type == token.DefVar {
+            d := prsDefVar(tokens, name, t)
             return &d
         }
-        if token.Cur().Type == token.DefConst {
-            d := prsDefConst(name, t)
+        if tokens.Cur().Type == token.DefConst {
+            d := prsDefConst(tokens, name, t)
             return &d
         }
     }
@@ -251,19 +255,19 @@ func prsDefine() ast.Decl {
     return &ast.BadDecl{}
 }
 
-func prsStruct() ast.DefStruct {
-    pos := token.Cur().Pos
+func prsStruct(tokens *token.Tokens) ast.DefStruct {
+    pos := tokens.Cur().Pos
 
-    name := token.Next()
+    name := tokens.Next()
     if name.Type != token.Name {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
 
-    braceLPos := token.Next().Pos
-    fields := prsDecFields()
-    braceRPos := token.Cur().Pos
+    braceLPos := tokens.Next().Pos
+    fields := prsDecFields(tokens)
+    braceRPos := tokens.Cur().Pos
 
     var types []types.Type
     var names []string
@@ -276,9 +280,9 @@ func prsStruct() ast.DefStruct {
     return ast.DefStruct{ S: s, Pos: pos, Name: name, Fields: fields, BraceLPos: braceLPos, BraceRPos: braceRPos }
 }
 
-func prsDefFn() ast.DefFn {
-    pos := token.Cur().Pos
-    name := token.Next()
+func prsDefFn(tokens *token.Tokens) ast.DefFn {
+    pos := tokens.Cur().Pos
+    name := tokens.Next()
 
     if name.Type != token.Name {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
@@ -290,19 +294,19 @@ func prsDefFn() ast.DefFn {
     }
 
     identObj.StartScope()
-    token.Next()
-    argNames, argTypes := prsDecArgs()
+    tokens.Next()
+    argNames, argTypes := prsDecArgs(tokens)
 
     var retType types.Type = nil
-    if token.Peek().Type == token.Arrow {
-        token.Next()
-        token.Next()
-        retType = prsType()
+    if tokens.Peek().Type == token.Arrow {
+        tokens.Next()
+        tokens.Next()
+        retType = prsType(tokens)
     }
 
-    if token.Next().Type != token.BraceL {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", token.Cur())
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+    if tokens.Next().Type != token.BraceL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
 
@@ -333,63 +337,84 @@ func prsDefFn() ast.DefFn {
         }
     }
 
-    block := prsBlock()
+    block := prsBlock(tokens)
     f.SetFrameSize(identObj.GetFrameSize())
     identObj.EndScope()
 
     return ast.DefFn{ Pos: pos, F: f, Args: argDecs, RetType: retType, Block: block }
 }
 
-func prsDecFields() (decs []ast.DecVar) {
-    if token.Cur().Type != token.BraceL {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", token.Cur())
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+func prsDecFields(tokens *token.Tokens) (decs []ast.DecVar) {
+    if tokens.Cur().Type != token.BraceL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
 
-    if token.Next().Type != token.BraceR {
-        decs = append(decs, prsDecVar())
+    if tokens.Next().Type != token.BraceR {
+        decs = append(decs, prsDecVar(tokens))
 
-        for token.Next().Type == token.Comma {
-            token.Next()
-            decs = append(decs, prsDecVar())
+        for tokens.Next().Type == token.Comma {
+            tokens.Next()
+            decs = append(decs, prsDecVar(tokens))
         }
     }
 
-    if token.Cur().Type != token.BraceR {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"}\" but got %v\n", token.Cur())
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+    if tokens.Cur().Type != token.BraceR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"}\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
 
     return
 }
 
-func prsDecArgs() (names []token.Token, types []types.Type) {
-    if token.Cur().Type != token.ParenL {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got %v\n", token.Cur())
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+func prsDecArgs(tokens *token.Tokens) (names []token.Token, types []types.Type) {
+    if tokens.Cur().Type != token.ParenL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
 
-    if token.Next().Type != token.ParenR {
-        name,t := prsNameType()
+    if tokens.Next().Type != token.ParenR {
+        name,t := prsNameType(tokens)
         names = append(names, name)
         types = append(types, t)
 
-        for token.Next().Type == token.Comma {
-            token.Next()
-            name,t := prsNameType()
+        for tokens.Next().Type == token.Comma {
+            tokens.Next()
+            name,t := prsNameType(tokens)
             names = append(names, name)
             types = append(types, t)
         }
     }
 
-    if token.Cur().Type != token.ParenR {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got %v\n", token.Cur())
-        fmt.Fprintln(os.Stderr, "\t" + token.Cur().At())
+    if tokens.Cur().Type != token.ParenR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
 
     return
+}
+
+func prsImport(tokens *token.Tokens) ast.Import {
+    pos := tokens.Cur().Pos
+    path := tokens.Next()
+
+    if path.Type != token.Str {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a path as string but got %v\n", path)
+        fmt.Fprintln(os.Stderr, "\t" + path.At())
+        os.Exit(1)
+    }
+    path.Str = path.Str[1:len(path.Str)-1]
+
+    t := tokens.Import(path.Str)
+
+    d := ast.Import{ Pos: pos, Path: path }
+    for t.Peek().Type != token.EOF {
+        d.Decls = append(d.Decls, prsDecl(&t))
+    }
+
+    return d
 }

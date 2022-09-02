@@ -1,0 +1,32 @@
+/*  
+ * four possible ways to import:
+  * #1 import "/<absolutePath>/<name>.gma"  // absolute path + file
+  * #2 import "header/<name>.gma"           // relative to main file (file passed as arg to compiler)
+  * #3 import "std.gma"                     // use std folder (<compilerPath>/std)
+  * #4 import "test/header/<name>.gma"      // relative to compiler path
+*/
+
+import "std.gma"
+import "header/header.gma"
+
+fn main() {
+    printStr("imported const: ")
+    printInt(c) printStr("\n")
+
+    printStr("\nimported var:\n")
+    printInt(v)
+    printStr("\nv = 64\n")
+    v = 64
+    printInt(v) printStr("\n")
+
+    printStr("\nimported func:\n")
+    exported()
+
+    arr := [2][2][2]i32{
+        { { 0, 1 }, { 2, 3 } },
+        { { 4, 5 }, { 6, 7 } }
+    }
+    printArr(arr)
+
+    printStr("\nSOMENUM: ") printInt(SOMENUM) printStr("\n")
+}

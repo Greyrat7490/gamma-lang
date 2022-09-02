@@ -57,6 +57,12 @@ type DefStruct struct {
     BraceRPos token.Pos
 }
 
+type Import struct {
+    Pos token.Pos
+    Path token.Token
+    Decls []Decl
+}
+
 
 func (o *DecVar) Readable(indent int) string {
     s  := strings.Repeat("   ", indent)
@@ -131,6 +137,16 @@ func (o *DefStruct) Readable(indent int) string {
     return res
 }
 
+func (d *Import) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) + "IMPORT:\n" +
+        strings.Repeat("   ", indent+1) + d.Path.Str + "\n"
+    for _,d := range d.Decls {
+        res += d.Readable(indent+1)
+    }
+
+    return res
+}
+
 func (o *BadDecl) Readable(indent int) string {
     fmt.Fprintln(os.Stderr, "[ERROR] bad declaration")
     os.Exit(1)
@@ -144,6 +160,7 @@ func (d *DefVar)    decl() {}
 func (d *DefConst)  decl() {}
 func (d *DefFn)     decl() {}
 func (d *DefStruct) decl() {}
+func (d *Import)    decl() {}
 
 func (d *BadDecl)   At() string { return "" }
 func (d *DecVar)    At() string { return d.V.GetPos().At() }
@@ -151,6 +168,7 @@ func (d *DefVar)    At() string { return d.ColPos.At() }
 func (d *DefConst)  At() string { return d.ColPos.At() }
 func (d *DefFn)     At() string { return d.Pos.At() }
 func (d *DefStruct) At() string { return d.Pos.At() }
+func (d *Import)    At() string { return d.Pos.At() }
 
 func (d *BadDecl)   End() string { return "" }
 func (d *DecVar)    End() string { return d.TypePos.At() }
@@ -158,3 +176,4 @@ func (d *DefVar)    End() string { return d.Value.End() }
 func (d *DefConst)  End() string { return d.Value.End() }
 func (d *DefFn)     End() string { return d.Block.End() }
 func (d *DefStruct) End() string { return d.BraceRPos.At() }
+func (d *Import)    End() string { return d.Path.At() }
