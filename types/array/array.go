@@ -3,9 +3,11 @@ package array
 import (
     "os"
     "fmt"
+    "strconv"
     "gamma/token"
     "gamma/types"
     "gamma/types/str"
+    "gamma/types/struct"
     "gamma/gen/asm/x86_64"
     "gamma/gen/asm/x86_64/nasm"
 )
@@ -33,30 +35,28 @@ func Add(typ types.ArrType, values []token.Token) (i int) {
         }
         nasm.AddBss(fmt.Sprintf("_arr%d: %s %d", i, asm.GetBssSize(arr.baseType.Size()), total))
     } else {
-        switch typ.Ptr.BaseType.GetKind() {
-        case types.Str:
-            d1size := asm.GetDataSize(types.Ptr_Size)
-            d2size := asm.GetDataSize(types.I32_Size)
+        nasm.AddData(fmt.Sprintf("_arr%d:", i))
 
-            res := fmt.Sprintf("_arr%d:", i)
-            for _, v := range arr.values {
-                strIdx := str.Add(v)
-
-                res += fmt.Sprintf("\n  %s _str%d", d1size, strIdx)
-                res += fmt.Sprintf("\n  %s %d", d2size, str.GetSize(strIdx))
+        switch t := typ.Ptr.BaseType.(type) {
+        case types.StrType:
+            for _, v := range values {
+                addStr(v)
             }
-            nasm.AddData(res)
 
-        case types.Bool, types.I32, types.Ptr, types.Arr:
-            dsize := asm.GetDataSize(typ.Ptr.BaseType.Size())
-
-            res := fmt.Sprintf("_arr%d:", i)
-            for _, v := range arr.values {
-                res += fmt.Sprintf("\n  %s %s", dsize, v.Str)
+        case types.StructType:
+            for _, v := range values {
+                addStruct(t, v)
             }
-            nasm.AddData(res)
 
-        // TODO: struct support
+        case types.BoolType:
+            for _, v := range values {
+                addBool(v)
+            }
+
+        case types.I32Type, types.PtrType, types.ArrType:
+            for _, v := range values {
+                addBasic(t.Size(), v)
+            }
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (in work)\n", typ)
@@ -66,3 +66,54 @@ func Add(typ types.ArrType, values []token.Token) (i int) {
 
     return
 }
+
+func addBasic(size uint, val token.Token) {
+    nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(size), val.Str))
+}
+
+func addBool(val token.Token) {
+    if val.Str == "true" {
+        nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(types.Bool_Size), "1"))
+    } else {
+        nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(types.Bool_Size), "0"))
+    }
+}
+
+func addStr(val token.Token) {
+    strIdx := str.Add(val)
+
+    nasm.AddData(fmt.Sprintf("  %s _str%d", asm.GetDataSize(types.Ptr_Size), strIdx))
+    nasm.AddData(fmt.Sprintf("  %s %d", asm.GetDataSize(types.I32_Size), str.GetSize(strIdx)))
+}
+
+func addStruct(t types.StructType, val token.Token) {
+    if val.Type != token.Number {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", val)
+        fmt.Fprintln(os.Stderr, "\t" + val.At())
+        os.Exit(1)
+    }
+
+    idx,_ := strconv.ParseUint(val.Str, 10, 64)
+    values := structLit.GetValues(idx)
+
+    for i, v := range values {
+        switch t := t.Types[i].(type) {
+        case types.StrType:
+            addStr(v)
+
+        case types.StructType:
+            addStruct(t, v)
+
+        case types.BoolType:
+            addBool(v)
+
+        case types.I32Type, types.PtrType, types.ArrType:
+            addBasic(t.Size(), v)
+
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (in work)\n", t)
+            os.Exit(1)
+        }
+    }
+}
+

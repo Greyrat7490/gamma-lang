@@ -93,7 +93,7 @@ func GenArrayLit(file *os.File, e *ast.ArrayLit) {
     asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprintf("_arr%d", e.Idx))
 }
 
-func IndexedAddrToRcx(file *os.File, e *ast.Indexed) {
+func IndexedAddrToReg(file *os.File, e *ast.Indexed, r asm.RegGroup) {
     GenExpr(file, e.ArrExpr)
 
     arrType,_ := e.ArrExpr.GetType().(types.ArrType)
@@ -115,7 +115,7 @@ func IndexedAddrToRcx(file *os.File, e *ast.Indexed) {
         }
 
         idx,_ := strconv.ParseUint(val.Str, 10, 64)
-        file.WriteString(fmt.Sprintf("lea rcx, [rax+%d]\n", idx * baseTypeSize))
+        file.WriteString(fmt.Sprintf("lea %s, [rax+%d]\n", asm.GetReg(r, types.Ptr_Size), idx * baseTypeSize))
     } else {
         asm.MovRegReg(file, asm.RegC, asm.RegA, types.Ptr_Size)
         GenExpr(file, idxExpr)
@@ -123,14 +123,16 @@ func IndexedAddrToRcx(file *os.File, e *ast.Indexed) {
         asm.Mul(file, fmt.Sprint(baseTypeSize), types.Ptr_Size)
         asm.Add(file, asm.GetReg(asm.RegC, types.Ptr_Size), types.Ptr_Size)
 
-        asm.MovRegReg(file, asm.RegC, asm.RegA, types.Ptr_Size)
+        if r != asm.RegA {
+            asm.MovRegReg(file, r, asm.RegA, types.Ptr_Size)
+        }
     }
 }
 
 func GenIndexed(file *os.File, e *ast.Indexed) {
     arrType,_ := e.ArrExpr.GetType().(types.ArrType)
 
-    IndexedAddrToRcx(file, e)
+    IndexedAddrToReg(file, e, asm.RegC)
 
     if arrType.Ptr.BaseType.GetKind() == types.Str {
         asm.MovRegDeref(file, asm.RegGroup(0), asm.GetReg(asm.RegC, types.Ptr_Size), types.Ptr_Size)
@@ -598,8 +600,7 @@ func DerefSetBigStruct(file *os.File, addr string, e ast.Expr) {
         DerefSetVal(file, addr, e.StructType, token.Token{ Str: fmt.Sprint(e.Idx), Type: token.Number })
 
     case *ast.Indexed:
-        // TODO: rax instead of rcx
-        IndexedAddrToRcx(file, e)
+        IndexedAddrToReg(file, e, asm.RegA)
         DerefSetDeref(file, addr, e.GetType(), "rax")
 
     case *ast.Field:

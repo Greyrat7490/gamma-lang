@@ -189,7 +189,7 @@ func AssignField(file *os.File, t types.Type, dest *ast.Field, val ast.Expr) {
 }
 
 func AssignIndexed(file *os.File, t types.Type, dest *ast.Indexed, val ast.Expr) {
-    IndexedAddrToRcx(file, dest)
+    IndexedAddrToReg(file, dest, asm.RegC)
 
     DerefSetExpr(file, asm.GetReg(asm.RegC, types.Ptr_Size), t, val)
 }
