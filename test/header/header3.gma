@@ -1,6 +1,0 @@
-import "test/header/header4.gma"
-
-fn func3() {
-    printStr("func3\n")
-    func4()
-}

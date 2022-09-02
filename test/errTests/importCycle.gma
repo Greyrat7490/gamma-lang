@@ -1,8 +1,8 @@
-import "test/header/header3.gma"
+import "header/header1.gma"
 
 fn testFunc() {
     printStr("importCycle\n")
-    func3()
+    func1()
 }
 
 fn main() {

@@ -35,6 +35,10 @@ func typeCheckExpr(e ast.Expr) {
 
     case *ast.FnCall:
         typeCheckFnCall(e)
+
+    case *ast.Lit, *ast.Ident:
+        // nothing to check
+        
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] typeCheckExpr for %v is not implemente yet\n", reflect.TypeOf(e))
         os.Exit(1)
@@ -107,7 +111,7 @@ func typeCheckStructLit(o *ast.StructLit) {
     t := o.StructType
 
     for i,f := range o.Fields {
-        if CheckTypes(t.Types[i], f.GetType()) {
+        if !CheckTypes(t.Types[i], f.GetType()) {
             fmt.Fprintf(os.Stderr, "[ERROR] expected a %v as field %d of struct %s but got %v\n",
                 t.Types[i], i, o.StructType.Name, f.GetType())
             fmt.Fprintln(os.Stderr, "\t" + f.At())
@@ -167,6 +171,10 @@ func typeCheckXSwitch(o *ast.XSwitch) {
 }
 
 func typeCheckFnCall(o *ast.FnCall) {
+    for _,a := range o.Values {
+        typeCheckExpr(a)
+    }
+
     if f,ok := o.Ident.Obj.(*fn.Func); ok {
         args := f.GetArgs()
 
