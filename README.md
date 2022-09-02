@@ -33,8 +33,17 @@ A statically and strongly typed programming language similar to Go, but with mor
   * [x] System V AMD64 ABI calling convention
   * [ ] lambda
   * [ ] const function
-* [x] io
-  * [x] print
+* [ ] packages
+  * [x] import
+  * [ ] import only once
+  * [ ] detected import cycles
+  * [ ] pub keyword
+  * [ ] access by package name
+* [ ] stdlib
+  * [ ] sockets
+  * [ ] io
+    * [x] print
+    * [ ] read/write files
 * [x] arithmetics
   * [x] unary ops
   * [x] binary ops
