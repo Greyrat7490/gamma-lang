@@ -35,8 +35,8 @@ A statically and strongly typed programming language similar to Go, but with mor
   * [ ] const function
 * [ ] packages
   * [x] import
-  * [ ] import only once
-  * [ ] detected import cycles
+  * [x] import only once
+  * [x] detected import cycles
   * [ ] pub keyword
   * [ ] access by package name
 * [ ] stdlib
