@@ -16,6 +16,12 @@ import (
 func prsDecl(tokens *token.Tokens) ast.Decl {
     switch t := tokens.Next(); t.Type {
     case token.Import:
+        if !tokens.IsFileStart() {
+            fmt.Fprintln(os.Stderr, "[ERROR] importing is only allowed at the beginning of a file")
+            fmt.Fprintln(os.Stderr, "\t" + t.At())
+            os.Exit(1)
+        }
+
         d := prsImport(tokens)
         return &d
 
@@ -413,6 +419,7 @@ func prsImport(tokens *token.Tokens) ast.Import {
 
     if tokens, isNew := imprt.Import(path); isNew {
         for tokens.Peek().Type != token.EOF {
+            tokens.SetLastImport()
             d.Decls = append(d.Decls, prsDecl(tokens))
         }
 

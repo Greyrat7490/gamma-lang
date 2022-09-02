@@ -338,6 +338,7 @@ type Tokens struct {
     idx int
     savedIdx int
     path string
+    lastImport bool
 }
 
 func (t *Tokens) split(s string, start int, end int, line int) {
@@ -353,10 +354,21 @@ func (t *Tokens) GetPath() string {
     return t.path
 }
 
+func (t *Tokens) IsFileStart() bool {
+    return t.lastImport
+}
+
+func (t *Tokens) SetLastImport() {
+    if t.Peek().Type != Import {
+        t.lastImport = false
+    }
+}
+
 func Tokenize(path string, src *os.File) (tokens Tokens) {
     tokens.idx = -1
     tokens.savedIdx = -1
     tokens.path = path
+    tokens.lastImport = true
 
     scanner := bufio.NewScanner(src)
 

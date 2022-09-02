@@ -103,6 +103,12 @@ func prsStmt(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
         os.Exit(1)
         return &ast.BadStmt{}
 
+    case token.Import:
+        fmt.Fprintln(os.Stderr, "[ERROR] importing is only allowed at the beginning of a file")
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+        return &ast.BadStmt{}
+
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] unexpected token %v\n", tokens.Cur())
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())

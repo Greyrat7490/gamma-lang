@@ -19,6 +19,7 @@ func Parse(path string) (ast ast.Ast) {
     tokens := imprt.ImportMain(path)
 
     for tokens.Peek().Type != token.EOF {
+        tokens.SetLastImport()
         ast.Decls = append(ast.Decls, prsDecl(&tokens))
     }
 
