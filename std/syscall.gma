@@ -341,3 +341,11 @@ fn write(fd i32, s str) {
 fn socket(domain i32, type i32, protocol i32) -> i32 {
     _syscall(SYS_SOCKET)
 }
+
+fn shutdown(sockfd i32, how i32) -> i32 {
+    _syscall(SYS_SHUTDOWN)
+}
+                                                // TODO: *void/*generic
+fn setsockopt(sockfd i32, level i32, optname i32, optval *i32, optlen i32) -> i32 {
+    _syscall(SYS_SETSOCKOPT)
+}
