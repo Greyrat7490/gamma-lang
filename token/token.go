@@ -26,6 +26,12 @@ const (
     Div             // /
     Mod             // %
 
+    Shl             // <<
+    Shr             // >>
+    Xor             // ^
+    BitOr           // |
+    BitNot          // ~
+
     And             // &&
     Or              // ||
 
@@ -91,6 +97,17 @@ func ToTokenType(s string) TokenType {
         return Div
     case "%":
         return Mod
+
+    case "<<":
+        return Shl
+    case ">>":
+        return Shr
+    case "|":
+        return BitOr
+    case "^":
+        return Xor
+    case "~":
+        return BitNot
 
     case "&&":
         return And
@@ -206,6 +223,17 @@ func (t TokenType) String() string {
         return "Div"
     case Mod:
         return "Mod"
+
+    case Shl:
+        return "Shl"
+    case Shr:
+        return "Shr"
+    case BitOr:
+        return "BitOr"
+    case Xor:
+        return "Xor"
+    case BitNot:
+        return "BitNot"
 
     case And:
         return "And"
@@ -424,8 +452,8 @@ func Tokenize(path string, src *os.File) (tokens Tokens) {
                 tokens.split(line, start, i, lineNum)
                 start = i+1
 
-            // split at //, /*, :=, ::, <=, >=, ==, !=, &&, ->
-            case '/', ':', '<', '>', '=', '-', '!', '&':
+            // split at //, /*, :=, ::, <=, >=, ==, !=, &&, ->, <<, >>
+            case '/', ':', '<', '>', '=', '-', '!', '&', '|':
                 if i+2 <= len(line) {
                     s := line[i:i+2]
                     switch s {
@@ -443,7 +471,7 @@ func Tokenize(path string, src *os.File) (tokens Tokens) {
                         i++
                         continue
 
-                    case "&&", ":=", "::", "!=", "==", "<=", ">=", "->":
+                    case "&&", "||", ":=", "::", "!=", "==", "<=", ">=", "->", "<<", ">>":
                         tokens.split(line, start, i, lineNum)
                         tokens.tokens = append(tokens.tokens, Token{ ToTokenType(s), s, Pos{lineNum, i+1} })
                         start = i+3
@@ -455,7 +483,7 @@ func Tokenize(path string, src *os.File) (tokens Tokens) {
                 fallthrough
 
             // split at non space char (and keep char)
-            case '(', ')', '{', '}', '[', ']', '+', '*', '%', '.', ',', ';', '$':
+            case '(', ')', '{', '}', '[', ']', '+', '*', '%', '.', ',', ';', '$', '^', '~':
                 tokens.split(line, start, i, lineNum)
 
                 tokens.tokens = append(tokens.tokens, Token{ ToTokenType(string(line[i])), string(line[i]), Pos{lineNum, i+1} })

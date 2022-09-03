@@ -142,6 +142,9 @@ func ConstEvalUnary(e *ast.Unary) token.Token {
     case token.Minus:
         return token.Token{ Str: e.Operator.Str + val.Str, Type: val.Type, Pos: e.Operator.Pos }
 
+    case token.BitNot:
+        return token.Token{ Str: e.Operator.Str + val.Str, Type: val.Type, Pos: e.Operator.Pos }
+
     case token.Plus:
         return val
 

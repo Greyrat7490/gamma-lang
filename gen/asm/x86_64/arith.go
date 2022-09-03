@@ -25,7 +25,7 @@ func Geq(file *os.File, lhs string, rhs string) {
 }
 
 
-func Neg(file *os.File, src string, size uint) {
+func Neg(file *os.File, size uint) {
     file.WriteString(fmt.Sprintf("neg %s\n", GetReg(RegA, size)))
 }
 func Add(file *os.File, src string, size uint) {
@@ -77,4 +77,23 @@ func Mod(file *os.File, src string, size uint) {
     file.WriteString(fmt.Sprintf("mov %s, %s\n", GetReg(RegA, size), GetReg(RegD, size)))
     PopReg(file, RegB)
     PopReg(file, RegD)
+}
+
+func Not(file *os.File, size uint) {
+    file.WriteString(fmt.Sprintf("not %s\n", GetReg(RegA, size)))
+}
+func And(file *os.File, src string, size uint) {
+    file.WriteString(fmt.Sprintf("and %s, %s\n", GetReg(RegA, size), src))
+}
+func Or(file *os.File, src string, size uint) {
+    file.WriteString(fmt.Sprintf("or %s, %s\n", GetReg(RegA, size), src))
+}
+func Xor(file *os.File, src string, size uint) {
+    file.WriteString(fmt.Sprintf("xor %s, %s\n", GetReg(RegA, size), src))
+}
+func Shl(file *os.File, src string, size uint) {
+    file.WriteString(fmt.Sprintf("shl %s, %s\n", GetReg(RegA, size), src))
+}
+func Shr(file *os.File, src string, size uint) {
+    file.WriteString(fmt.Sprintf("shr %s, %s\n", GetReg(RegA, size), src))
 }

@@ -34,6 +34,17 @@ func BinaryOp(file *os.File, opType token.TokenType, src string, size uint) {
     case token.Mod:
         Mod(file, src, size)
 
+    case token.Shl:
+        Shl(file, src, size)
+    case token.Shr:
+        Shr(file, src, size)
+    case token.Amp:
+        And(file, src, size)
+    case token.BitOr:
+        Or(file, src, size)
+    case token.Xor:
+        Xor(file, src, size)
+
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] unknown binary operator %v\n", opType)
         os.Exit(1)
@@ -115,6 +126,23 @@ func BinaryOpVals(op token.Token, lhs token.Token, rhs token.Token) token.Token 
     case token.Mod:
         i1, i2 := toInts(lhs, rhs)
         return token.Token{ Str: fmt.Sprint(i1 % i2), Type: token.Number, Pos: op.Pos }
+
+
+    case token.Shl:
+        i1, i2 := toInts(lhs, rhs)
+        return token.Token{ Str: fmt.Sprint(i1 << i2), Type: token.Number, Pos: op.Pos }
+    case token.Shr:
+        i1, i2 := toInts(lhs, rhs)
+        return token.Token{ Str: fmt.Sprint(i1 >> i2), Type: token.Number, Pos: op.Pos }
+    case token.Amp:
+        i1, i2 := toInts(lhs, rhs)
+        return token.Token{ Str: fmt.Sprint(i1 & i2), Type: token.Number, Pos: op.Pos }
+    case token.BitOr:
+        i1, i2 := toInts(lhs, rhs)
+        return token.Token{ Str: fmt.Sprint(i1 | i2), Type: token.Number, Pos: op.Pos }
+    case token.Xor:
+        i1, i2 := toInts(lhs, rhs)
+        return token.Token{ Str: fmt.Sprint(i1 ^ i2), Type: token.Number, Pos: op.Pos }
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] unknown binary operator %v\n", op)

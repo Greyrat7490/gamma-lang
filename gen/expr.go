@@ -337,8 +337,10 @@ func GenUnary(file *os.File, e *ast.Unary) {
 
     switch e.Operator.Type {
     case token.Minus:
-        size := e.Operand.GetType().Size()
-        asm.Neg(file, asm.GetReg(asm.RegA, size), size)
+        asm.Neg(file, e.Operand.GetType().Size())
+
+    case token.BitNot:
+        asm.Not(file, e.Operand.GetType().Size())
 
     case token.Mul:
         if _,ok := e.Operand.(*ast.Ident); !ok {

@@ -18,6 +18,7 @@ type precedence int
 const (
     LOGICAL_PRECEDENCE precedence = iota // &&, ||
     COMPARE_PRECEDENCE            = iota // ==, !=, <, <=, >, >=
+    BITWISE_PRECEDENCE            = iota // <<, >>, &, |, ^, ~
     XSWITCH_PRECEDENCE            = iota // $ ... { ... }
     ADD_SUB_PRECEDENCE            = iota // +, -
     MUL_DIV_PRECEDENCE            = iota // *, /, %
@@ -67,7 +68,7 @@ func prsExpr(tokens *token.Tokens) ast.Expr {
     case token.ParenL:
         expr = prsParenExpr(tokens)
 
-    case token.Plus, token.Minus, token.Mul, token.Amp:
+    case token.Plus, token.Minus, token.Mul, token.Amp, token.BitNot:
         expr = prsUnaryExpr(tokens)
 
     default:
@@ -92,7 +93,8 @@ func prsExpr(tokens *token.Tokens) ast.Expr {
 
 func isUnaryExpr(tokens *token.Tokens) bool {
     return  tokens.Cur().Type == token.Plus || tokens.Cur().Type == token.Minus ||
-            tokens.Cur().Type == token.Mul  || tokens.Cur().Type == token.Amp
+            tokens.Cur().Type == token.Mul  || tokens.Cur().Type == token.Amp   ||
+            tokens.Cur().Type == token.BitNot
 }
 
 func isParenExpr(tokens *token.Tokens) bool {
@@ -104,11 +106,18 @@ func isBinaryExpr(tokens *token.Tokens) bool {
         return false
     }
 
-    return  tokens.Peek().Type == token.Plus || tokens.Peek().Type == token.Minus ||
-            tokens.Peek().Type == token.Mul  || tokens.Peek().Type == token.Div   ||
+    return  tokens.Peek().Type == token.Plus || tokens.Peek().Type == token.Minus  ||
+            tokens.Peek().Type == token.Mul  || tokens.Peek().Type == token.Div    ||
             tokens.Peek().Type == token.Mod  ||
-            tokens.Peek().Type == token.And  || tokens.Peek().Type == token.Or    ||
+            tokens.Peek().Type == token.And  || tokens.Peek().Type == token.Or     ||
+            isBitwise(tokens)                ||
             isComparison(tokens)
+}
+
+func isBitwise(tokens *token.Tokens) bool {
+    return tokens.Peek().Type == token.Amp  || tokens.Peek().Type == token.BitOr  ||
+           tokens.Peek().Type == token.Xor  || tokens.Peek().Type == token.BitNot ||
+           tokens.Peek().Type == token.Shl  || tokens.Peek().Type == token.Shr
 }
 
 func isComparison(tokens *token.Tokens) bool {
@@ -127,6 +136,8 @@ func getPrecedence(tokens *token.Tokens) precedence {
         return ADD_SUB_PRECEDENCE
     case tokens.Peek().Type == token.Mul || tokens.Peek().Type == token.Div || tokens.Peek().Type == token.Mod:
         return MUL_DIV_PRECEDENCE
+    case isBitwise(tokens):
+        return BITWISE_PRECEDENCE
     case isParenExpr(tokens):
         return PAREN_PRECEDENCE
     default:
@@ -433,6 +444,9 @@ func prsUnaryExpr(tokens *token.Tokens) *ast.Unary {
     case token.Amp:
         tokens.Next()
         expr.Operand = prsIdentExpr(tokens)
+    case token.BitNot:
+        tokens.Next()
+        expr.Operand = prsExpr(tokens)
     default:
         if tokens.Next().Type == token.Name {
             expr.Operand = prsIdentExpr(tokens)

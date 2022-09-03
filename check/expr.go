@@ -38,7 +38,7 @@ func typeCheckExpr(e ast.Expr) {
 
     case *ast.Lit, *ast.Ident:
         // nothing to check
-        
+
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] typeCheckExpr for %v is not implemente yet\n", reflect.TypeOf(e))
         os.Exit(1)
@@ -76,9 +76,9 @@ func typeCheckUnary(e *ast.Unary) {
             os.Exit(1)
         }
 
-    case token.Plus, token.Minus:
+    case token.Plus, token.Minus, token.BitNot:
         if t := e.Operand.GetType(); t.GetKind() != types.I32 {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected i32 after +/- unary op but got %v\n", t)
+            fmt.Fprintf(os.Stderr, "[ERROR] expected i32 after +,-,~ unary op but got %v\n", t)
             fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
             os.Exit(1)
         }
