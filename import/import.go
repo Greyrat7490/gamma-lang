@@ -7,7 +7,8 @@ import (
     "path/filepath"
 )
 
-var basePath string
+var projectDir string
+var importDir string
 
 var imported map[string]bool = make(map[string]bool)
 // true: fully imported
@@ -20,8 +21,6 @@ func ImportMain(path string) token.Tokens {
         fmt.Fprintln(os.Stderr, "[ERROR]", err)
         os.Exit(1)
     }
-
-    basePath = filepath.Dir(path)
 
     addImport(path)
 
@@ -49,6 +48,11 @@ func EndImport(path string) {
     imported[path] = true
 }
 
+func SetImportDirs(filePath string, path string) {
+    importDir = path
+    projectDir = filepath.Dir(filePath)
+}
+
 func addImport(path string) (newImport bool) {
     if importable, notNew := imported[path]; !notNew {
         imported[path] = false
@@ -72,17 +76,16 @@ func addImport(path string) (newImport bool) {
 func preparePath(path token.Token) string {
     path.Str = path.Str[1:len(path.Str)-1]
 
+    // relative path
     if !filepath.IsAbs(path.Str) {
-        // relative path to main file (file passed as arg to compiler)
-        // std path (std/<path>)
-        // relative path
-        basePaths := []string{ basePath, "std", "./" }
+        // project path (main file dir (file passed as arg to compiler)) 
+        // import path (default ./std)
+        std := filepath.Join(filepath.Join(importDir, path.Str))
 
-        for _,basePath := range basePaths {
-            path := filepath.Join(basePath, path.Str)
-            if _, err := os.Stat(path); !os.IsNotExist(err) {
-                return path
-            }
+        if _, err := os.Stat(std); os.IsNotExist(err) {
+            return filepath.Join(projectDir, path.Str)
+        } else {
+            return std
         }
     }
     // absolute path

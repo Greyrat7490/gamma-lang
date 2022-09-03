@@ -1,9 +1,8 @@
 /*
- * four possible ways to import:
+ * three possible ways to import:
   * #1 import "/<absolutePath>/<name>.gma"  // absolute path + file
   * #2 import "header/<name>.gma"           // relative to main file (file passed as arg to compiler)
-  * #3 import "std.gma"                     // use std folder (<compilerPath>/std)
-  * #4 import "test/header/<name>.gma"      // relative to compiler path
+  * #3 import "std.gma"                     // use import dir (set with -I default: ./std)
 */
 
 import "std.gma"
