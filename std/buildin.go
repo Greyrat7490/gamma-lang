@@ -16,13 +16,14 @@ const SYS_EXIT = 60
 func Declare() {
     // build-in funcs
     identObj.AddBuildIn("printStr",  types.StrType{}, nil)
-    identObj.AddBuildIn("printInt",  types.I32Type{}, nil)
+    identObj.AddBuildIn("printInt",  types.CreateInt(types.I64_Size), nil)
     identObj.AddBuildIn("printPtr",  types.PtrType{}, nil)
     identObj.AddBuildIn("printBool", types.BoolType{}, nil)
-    identObj.AddBuildIn("exit",      types.I32Type{}, nil)
+    identObj.AddBuildIn("printChar", types.CharType{}, nil)
+    identObj.AddBuildIn("exit",      types.CreateInt(types.I32_Size), nil)
 
     // "inline assembly"
-    identObj.AddBuildIn("_syscall", types.I32Type{}, nil)
+    identObj.AddBuildIn("_syscall", types.CreateInt(types.I64_Size), nil)
 }
 
 func Define(file *os.File) {
@@ -30,6 +31,7 @@ func Define(file *os.File) {
     defineBtoS(file)
 
     definePrintStr(file)
+    definePrintChar(file)
     definePrintInt(file)
     definePrintPtr(file)
     definePrintBool(file)
@@ -49,6 +51,18 @@ func definePrintStr(asm *os.File) {
 
     asm.WriteString("mov rdx, rsi\n")
     asm.WriteString("mov esi, edi\n")
+    asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
+    syscall(asm, SYS_WRITE)
+
+    asm.WriteString("ret\n\n")
+}
+
+func definePrintChar(asm *os.File) {
+    asm.WriteString("printChar:\n")
+    asm.WriteString("mov ax, di\n")
+    asm.WriteString("mov byte [_intBuf], al\n")
+    asm.WriteString("mov rdx, 1\n")
+    asm.WriteString("mov rsi, _intBuf\n")
     asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
     syscall(asm, SYS_WRITE)
 

@@ -203,7 +203,8 @@ func prsDefVar(tokens *token.Tokens, name token.Token, t types.Type) ast.DefVar 
 
     pos := tokens.Cur().Pos
     tokens.Next()
-    return ast.DefVar{ V: v, Type: t, ColPos: pos, Value: prsExpr(tokens) }
+    val := prsExpr(tokens)
+    return ast.DefVar{ V: v, Type: t, ColPos: pos, Value: val }
 }
 
 func prsDefConst(tokens *token.Tokens, name token.Token, t types.Type) ast.DefConst {
@@ -211,7 +212,8 @@ func prsDefConst(tokens *token.Tokens, name token.Token, t types.Type) ast.DefCo
 
     pos := tokens.Cur().Pos
     tokens.Next()
-    return ast.DefConst{ C: c, Type: t, ColPos: pos, Value: prsExpr(tokens) }
+    val := prsExpr(tokens)
+    return ast.DefConst{ C: c, Type: t, ColPos: pos, Value: val }
 }
 
 func prsDefVarInfer(tokens *token.Tokens, name token.Token) ast.DefVar {

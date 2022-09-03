@@ -17,6 +17,7 @@ const (
     Name            // var/func name
     Typename        // i32, str, bool
     Str             // "string"
+    Char            // 'a'
     Number          // 1234
     Boolean         // true/false
 
@@ -200,6 +201,8 @@ func ToTokenType(s string) TokenType {
             return Typename
         } else if s[0] == '"' && s[len(s) - 1] == '"' {
             return Str
+        } else if s[0] == '\'' && s[len(s) - 1] == '\'' {
+            return Char
         } else if _, err := strconv.Atoi(s); err == nil {
             return Number
         }
@@ -325,6 +328,8 @@ func (t TokenType) String() string {
         return "Typename"
     case Str:
         return "Str"
+    case Char:
+        return "Char"
     case Number:
         return "Number"
     case Boolean:
@@ -340,7 +345,7 @@ func (t TokenType) String() string {
 type Pos struct {
     Line int
     Col int
-    // later filename
+    // TODO later filename
 }
 
 func (p Pos) At() string {
@@ -446,6 +451,13 @@ func Tokenize(path string, src *os.File) (tokens Tokens) {
             // start string literal
             case '"':
                 strLit = true
+
+            // char literal
+            case '\'':
+                // TODO: escape
+                tokens.split(line, start, i+3, lineNum)
+                start = i+3
+                i += 2
 
             // split at space
             case ' ', '\t':

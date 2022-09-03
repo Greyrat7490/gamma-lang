@@ -326,13 +326,13 @@ func (e *Binary) GetType() types.Type {
 
     if other := e.OperandR.GetType(); other.GetKind() == types.Ptr {
         // check for cases like 420 + &v1
-        if t.GetKind() == types.I32 {
+        if t.GetKind() == types.Int {
             return other
         }
 
         // check for cases like ptr1 - ptr2
         if t.GetKind() == types.Ptr {
-            return types.I32Type{}
+            return types.CreateInt(types.Ptr_Size)
         }
     }
 
@@ -369,7 +369,7 @@ func (e *Indexed) Flatten() Expr {
             Operator: token.Token{ Str: "+", Type: token.Plus }, OperandR: &Binary{
                 Operator: token.Token{ Str: "*", Type: token.Mul },
                 OperandL: e.Indices[len(e.Indices)-1-i],
-                OperandR: &Lit{ Val: token.Token{ Str: fmt.Sprint(innerLen), Type: token.Number }, Type: types.I32Type{} },
+                OperandR: &Lit{ Val: token.Token{ Str: fmt.Sprint(innerLen), Type: token.Number }, Type: types.CreateInt(types.I32_Size) },
         } }
 
         *expr = &b
@@ -381,7 +381,7 @@ func (e *Indexed) Flatten() Expr {
     *expr = &Binary{
         Operator: token.Token{ Str: "*", Type: token.Mul },
         OperandL: e.Indices[0],
-        OperandR: &Lit{ Val: token.Token{ Str: fmt.Sprint(innerLen), Type: token.Number }, Type: types.I32Type{} },
+        OperandR: &Lit{ Val: token.Token{ Str: fmt.Sprint(innerLen), Type: token.Number }, Type: types.CreateInt(types.I32_Size) },
     }
 
     return &res

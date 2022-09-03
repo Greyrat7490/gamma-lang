@@ -53,7 +53,12 @@ func Add(typ types.ArrType, values []token.Token) (i int) {
                 addBool(v)
             }
 
-        case types.I32Type, types.PtrType, types.ArrType:
+        case types.CharType:
+            for _, v := range values {
+                addChar(v)
+            }
+
+        case types.IntType, types.PtrType, types.ArrType:
             for _, v := range values {
                 addBasic(t.Size(), v)
             }
@@ -77,6 +82,10 @@ func addBool(val token.Token) {
     } else {
         nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(types.Bool_Size), "0"))
     }
+}
+
+func addChar(val token.Token) {
+    nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(types.Bool_Size), fmt.Sprint(int(val.Str[1]))))
 }
 
 func addStr(val token.Token) {
@@ -107,7 +116,10 @@ func addStruct(t types.StructType, val token.Token) {
         case types.BoolType:
             addBool(v)
 
-        case types.I32Type, types.PtrType, types.ArrType:
+        case types.CharType:
+            addChar(v)
+
+        case types.IntType, types.PtrType, types.ArrType:
             addBasic(t.Size(), v)
 
         default:

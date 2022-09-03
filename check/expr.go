@@ -77,8 +77,8 @@ func typeCheckUnary(e *ast.Unary) {
         }
 
     case token.Plus, token.Minus, token.BitNot:
-        if t := e.Operand.GetType(); t.GetKind() != types.I32 {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected i32 after +,-,~ unary op but got %v\n", t)
+        if t := e.Operand.GetType(); t.GetKind() != types.Int {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected int after +,-,~ unary op but got %v\n", t)
             fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
             os.Exit(1)
         }
@@ -132,8 +132,8 @@ func typeCheckBinary(o *ast.Binary) {
         }
     } else {
         if !CheckTypes(t1, t2) {
-            if (t1.GetKind() == types.Ptr && t2.GetKind() == types.I32) ||
-               (t2.GetKind() == types.Ptr && t1.GetKind() == types.I32) {
+            if (t1.GetKind() == types.Ptr && t2.GetKind() == types.Int) ||
+               (t2.GetKind() == types.Ptr && t1.GetKind() == types.Int) {
                 if o.Operator.Type == token.Plus || o.Operator.Type == token.Minus {
                     return
                 }
@@ -144,7 +144,7 @@ func typeCheckBinary(o *ast.Binary) {
             }
 
             fmt.Fprintf(os.Stderr, "[ERROR] binary operation has two differente types (left: %v right: %v)\n", t1, t2)
-            fmt.Fprintln(os.Stderr, "\t(ptr +/- i32 is allowed)")
+            fmt.Fprintln(os.Stderr, "\t(ptr +/- int is allowed)")
             fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
             os.Exit(1)
         }

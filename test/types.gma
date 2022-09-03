@@ -1,0 +1,7 @@
+fn main() {
+    i i8 := 69
+    c char := 'a'
+
+    printChar(c) printStr("\n")
+    printInt(i)  printStr("\n")
+}

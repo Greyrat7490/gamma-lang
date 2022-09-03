@@ -122,7 +122,10 @@ func PassVal(file *os.File, regIdx uint, value token.Token, valtype types.Type) 
             asm.MovRegVal(file, regs[regIdx], valtype.Size(), "0")
         }
 
-    case types.I32Type:
+    case types.CharType:
+        asm.MovRegVal(file, regs[regIdx], types.Char_Size, fmt.Sprint(int(value.Str[1])))
+
+    case types.IntType:
         asm.MovRegVal(file, regs[regIdx], valtype.Size(), value.Str)
 
     case types.PtrType:
@@ -153,12 +156,8 @@ func PassVar(file *os.File, regIdx uint, otherVar vars.Var) {
             asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), t.Size())
         }
 
-    case types.BoolType, types.I32Type, types.PtrType, types.ArrType:
-        asm.MovRegDeref(file, regs[regIdx], otherVar.Addr(0), t.Size())
-
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] cannot pass var %s of type %v yet\n", otherVar.GetName(), t)
-        os.Exit(1)
+        asm.MovRegDeref(file, regs[regIdx], otherVar.Addr(0), t.Size())
     }
 }
 
@@ -224,12 +223,8 @@ func PassVarStack(file *os.File, otherVar vars.Var) {
         }
         asm.PushDeref(file, otherVar.Addr(0))
 
-    case types.BoolType, types.I32Type, types.PtrType, types.ArrType:
-        asm.PushDeref(file, otherVar.Addr(0))
-
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] cannot pass var %s of type %v yet\n", otherVar.GetName(), t)
-        os.Exit(1)
+        asm.PushDeref(file, otherVar.Addr(0))
     }
 }
 
@@ -277,6 +272,9 @@ func PassBigStructLit(file *os.File, t types.StructType, value token.Token, offs
                 } else {
                     asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Bool_Size, "0")
                 }
+
+            case types.CharType:
+                asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Char_Size, fmt.Sprint(int(value.Str[1])))
 
             default:
                 asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size(), fields[i].Str)
@@ -373,12 +371,16 @@ func packValues(valtypes []types.Type, values []token.Token, packed []string, of
             packed = pack(packed, val, offset, t)
             offset += types.Bool_Size
 
+        case types.CharType:
+            packed = pack(packed, fmt.Sprint(int(values[i].Str[1])), offset, t)
+            offset += types.Char_Size
+
         case types.PtrType:
             packed = append(packed, values[i].Str)
 
-        case types.I32Type:
+        case types.IntType:
             packed = pack(packed, values[i].Str, offset, t)
-            offset += types.I32_Size
+            offset += t.Size()
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] cannot pack value of type %v yet\n", reflect.TypeOf(t))

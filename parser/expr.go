@@ -29,7 +29,7 @@ const (
 func prsExpr(tokens *token.Tokens) ast.Expr {
     var expr ast.Expr
     switch tokens.Cur().Type {
-    case token.Number, token.Str, token.Boolean:
+    case token.Number, token.Str, token.Boolean, token.Char:
         expr = prsLitExpr(tokens)
 
     case token.BrackL:

@@ -215,7 +215,7 @@ func prsWhileStmt(tokens *token.Tokens) ast.While {
             op.Def.Value = expr
             tokens.Next()
         } else {
-            op.Def.Value = &ast.Lit{ Val: token.Token{ Type: token.Number, Str: "0" }, Type: types.I32Type{} }
+            op.Def.Value = &ast.Lit{ Val: token.Token{ Type: token.Number, Str: "0" }, Type: types.CreateInt(types.I32_Size) }
             op.Cond = expr
         }
     } else {
@@ -238,7 +238,7 @@ func prsForStmt(tokens *token.Tokens) ast.For {
         Def: ast.DefVar{
             Value: &ast.Lit{
                 Val: token.Token{ Str: "0", Type: token.Number },
-                Type: types.I32Type{},
+                Type: types.CreateInt(types.I32_Size),
             },
         },
     }
@@ -253,7 +253,7 @@ func prsForStmt(tokens *token.Tokens) ast.For {
         OperandL: &ast.Ident{ Obj: op.Def.V, Name: op.Def.V.GetName(), Pos: op.Def.V.GetPos() },
         OperandR: &ast.Lit{
             Val: token.Token{ Str: "1", Type: token.Number },
-            Type: types.I32Type{},
+            Type: types.CreateInt(types.I32_Size),
         },
     }
 

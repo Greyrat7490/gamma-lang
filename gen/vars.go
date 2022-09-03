@@ -54,8 +54,8 @@ func globalVarDefVal(file *os.File, v *vars.GlobalVar, val token.Token) {
         defStruct(t, val)
     case types.BoolType:
         defBool(val.Str)
-    case types.I32Type:
-        defInt(val.Str)
+    case types.IntType:
+        defInt(val.Str, t.Size())
     case types.PtrType:
         defPtr(val.Str)
     default:
@@ -78,8 +78,8 @@ func defStruct(t types.StructType, val token.Token) {
         switch t := t.Types[i].(type) {
         case types.StrType:
             defStr(v)
-        case types.I32Type:
-            defInt(v.Str)
+        case types.IntType:
+            defInt(v.Str, t.Size())
         case types.BoolType:
             defBool(v.Str)
         case types.PtrType:
@@ -95,8 +95,8 @@ func defStruct(t types.StructType, val token.Token) {
     }
 }
 
-func defInt(val string) {
-    nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(types.I32_Size), val))
+func defInt(val string, size uint) {
+    nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(size), val))
 }
 
 func defPtr(val string) {
@@ -227,7 +227,7 @@ func DerefSetDeref(file *os.File, addr string, t types.Type, otherAddr string) {
             )
         }
 
-    case types.I32Type, types.BoolType, types.PtrType, types.ArrType:
+    case types.IntType, types.BoolType, types.PtrType, types.ArrType, types.CharType:
         asm.MovDerefDeref(file, asm.GetReg(asm.RegA, types.Ptr_Size), otherAddr, t.Size(), asm.RegB)
 
     default:
@@ -256,7 +256,7 @@ func DerefSetExpr(file *os.File, addr string, t types.Type, val ast.Expr) {
             }
         }
 
-    case types.I32Type, types.BoolType, types.PtrType, types.ArrType:
+    case types.IntType, types.BoolType, types.PtrType, types.ArrType, types.CharType:
         GenExpr(file, val)
         asm.MovDerefReg(file, addr, t.Size(), asm.RegGroup(0))
 
@@ -294,6 +294,9 @@ func derefSetBigStructLit(file *os.File, t types.StructType, val token.Token, of
                     asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Bool_Size, "0")
                 }
 
+            case types.CharType:
+                asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Char_Size, fmt.Sprint(int(val.Str[1])))
+
             default:
                 asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size(), fields[i].Str)
             }
@@ -318,16 +321,18 @@ func DerefSetVal(file *os.File, addr string, typ types.Type, val token.Token) {
         derefSetPtrVal(file, addr, 0, val)
     case types.BoolType:
         derefSetBoolVal(file, addr, 0, val)
-    case types.I32Type:
-        derefSetIntVal(file, addr, 0, val)
+    case types.IntType:
+        derefSetIntVal(file, addr, 0, t.Size(), val)
+    case types.CharType:
+        derefSetCharVal(file, addr, 0, val)
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (DerefSetVal)\n", t)
         os.Exit(1)
     }
 }
 
-func derefSetIntVal(file *os.File, addr string, offset int, val token.Token) {
-    asm.MovDerefVal(file, asm.OffsetAddr(addr, offset), types.I32_Size, val.Str)
+func derefSetIntVal(file *os.File, addr string, offset int, size uint, val token.Token) {
+    asm.MovDerefVal(file, asm.OffsetAddr(addr, offset), size, val.Str)
 }
 
 func derefSetBoolVal(file *os.File, addr string, offset int, val token.Token) {
@@ -345,6 +350,10 @@ func derefSetPtrVal(file *os.File, addr string, offset int, val token.Token) {
     } else {
         asm.MovDerefVal(file, asm.OffsetAddr(addr, offset), types.Ptr_Size, val.Str)
     }
+}
+
+func derefSetCharVal(file *os.File, addr string, offset int, val token.Token) {
+    asm.MovDerefVal(file, asm.OffsetAddr(addr, offset), types.Char_Size, fmt.Sprint(int(val.Str[1])))
 }
 
 func derefSetStrVal(file *os.File, addr string, offset int, val token.Token) {
@@ -383,8 +392,8 @@ func derefSetStructVal(file *os.File, t types.StructType, addr string, offset in
             derefSetArrVal(file, addr, offset + t.GetOffset(uint(i)), val)
         case types.BoolType:
             derefSetBoolVal(file, addr, offset + t.GetOffset(uint(i)), val)
-        case types.I32Type:
-            derefSetIntVal(file, addr, offset + t.GetOffset(uint(i)), val)
+        case types.IntType:
+            derefSetIntVal(file, addr, offset + t.GetOffset(uint(i)), t.Size(), val)
         case types.PtrType:
             derefSetPtrVal(file, addr, offset + t.GetOffset(uint(i)), val)
         default:

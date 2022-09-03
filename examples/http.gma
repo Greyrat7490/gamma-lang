@@ -11,6 +11,12 @@ fn main() {
         printStr("created socket file descriptor: ") printInt(fd) printStr("\n")
     }
 
+    printStr("fd ") printInt(fd)
+    printStr("\nSOL_SOCKET ") printInt(SOL_SOCKET)
+    printStr("\nSO_REUSEADDR | SO_REUSEPORT ") printInt(SO_REUSEADDR | SO_REUSEPORT)
+    printStr("\nI32SIZE ") printInt(I32SIZE)
+    printStr("\n")
+
     opt := 1
     err := setsockopt(fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, I32SIZE)
     if err != 0 {
