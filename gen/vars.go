@@ -339,7 +339,7 @@ func derefSetBoolVal(file *os.File, addr string, offset int, val token.Token) {
 }
 
 func derefSetPtrVal(file *os.File, addr string, offset int, val token.Token) {
-    if val.Type == token.Name {
+    if val.Type == token.Str {
         file.WriteString(fmt.Sprintf("lea rax, [%s]\n", val.Str))
         asm.MovDerefReg(file, asm.OffsetAddr(addr, offset), types.Ptr_Size, asm.RegA)
     } else {

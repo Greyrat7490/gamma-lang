@@ -1,6 +1,7 @@
 import "std.gma"
 
 PORT :: 6969
+I32SIZE :: 4
 
 fn main() {
     fd := socket(AF_INET, SOCK_STREAM, 0)
@@ -8,5 +9,18 @@ fn main() {
         printStr("error: could not create socket file descriptor\n")
     } else {
         printStr("created socket file descriptor: ") printInt(fd) printStr("\n")
+    }
+
+    opt := 1
+    err := setsockopt(fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, I32SIZE)
+    if err != 0 {
+        printInt(err)
+        printStr(" setsockopt error\n")
+    }
+
+    err := shutdown(fd, SHUT_RDWR)
+    if err != 0 {
+        printInt(err)
+        printStr(" socket shutdown error\n")
     }
 }

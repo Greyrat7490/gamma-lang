@@ -122,8 +122,15 @@ func PassVal(file *os.File, regIdx uint, value token.Token, valtype types.Type) 
             asm.MovRegVal(file, regs[regIdx], valtype.Size(), "0")
         }
 
-    case types.I32Type, types.PtrType:
+    case types.I32Type:
         asm.MovRegVal(file, regs[regIdx], valtype.Size(), value.Str)
+
+    case types.PtrType:
+        if value.Type == token.Str {
+            file.WriteString(fmt.Sprintf("lea %s, [%s]\n", asm.GetReg(regs[regIdx], types.Ptr_Size), value.Str))
+        } else {
+            asm.MovRegVal(file, regs[regIdx], valtype.Size(), value.Str)
+        }
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] cannot pass value of type %v yet\n", valtype)

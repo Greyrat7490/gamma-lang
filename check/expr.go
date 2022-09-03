@@ -93,7 +93,7 @@ func typeCheckUnary(e *ast.Unary) {
 func typeCheckArrayLit(o *ast.ArrayLit) {
     for _,v := range o.Values {
         t := v.GetType()
-        if t != o.Type.Ptr.BaseType {
+        if !CheckTypes(t, o.Type.Ptr.BaseType) {
             fmt.Fprintf(os.Stderr, "[ERROR] all values in the ArrayLit should be of type %v but got a value of %v\n", o.Type.Ptr.BaseType, t)
             fmt.Fprintln(os.Stderr, "\t" + v.At())
             os.Exit(1)

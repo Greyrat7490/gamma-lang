@@ -31,6 +31,8 @@ func typeCheckDecl(d ast.Decl) {
 }
 
 func typeCheckDefVar(d *ast.DefVar) {
+    typeCheckExpr(d.Value)
+
     t1 := d.V.GetType()
     t2 := d.Value.GetType()
 
@@ -42,6 +44,8 @@ func typeCheckDefVar(d *ast.DefVar) {
 }
 
 func typeCheckDefConst(d *ast.DefConst) {
+    typeCheckExpr(d.Value)
+
     t2 := d.Value.GetType()
     if !CheckTypes(d.Type, t2) {
         fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", d.C.GetName(), d.Type, t2)

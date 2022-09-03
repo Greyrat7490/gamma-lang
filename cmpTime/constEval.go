@@ -151,7 +151,14 @@ func ConstEvalUnary(e *ast.Unary) token.Token {
     case token.Amp:
         if ident,ok := e.Operand.(*ast.Ident); ok {
             if v,ok := ident.Obj.(vars.Var); ok {
-                return token.Token{ Str: v.Addr(0), Type: token.Name, Pos: e.Operator.Pos }
+                // global vars are lables with optional offset -> constEval for assembler
+                if _,ok := v.(*vars.GlobalVar); ok {
+                    return token.Token{ Str: v.Addr(0), Type: token.Name, Pos: e.Operator.Pos }
+                // local vars are addr with optional offset -> not constEval for assembler
+                // TokenType = Str to indicate
+                } else {
+                    return token.Token{ Str: v.Addr(0), Type: token.Str, Pos: e.Operator.Pos }
+                }
             } else {
                 fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a var (in constEval.go Unary)")
                 os.Exit(1)
