@@ -3,9 +3,46 @@ package std
 import (
     "os"
     "fmt"
+    "gamma/types"
+    "gamma/ast/identObj"
 )
 
 const STDOUT = 1
+
+const SYS_WRITE = 1
+const SYS_EXIT = 60
+
+
+func Declare() {
+    // build-in funcs
+    identObj.AddBuildIn("printStr",  types.StrType{}, nil)
+    identObj.AddBuildIn("printInt",  types.I32Type{}, nil)
+    identObj.AddBuildIn("printPtr",  types.PtrType{}, nil)
+    identObj.AddBuildIn("printBool", types.BoolType{}, nil)
+    identObj.AddBuildIn("exit",      types.I32Type{}, nil)
+
+    // "inline assembly"
+    identObj.AddBuildIn("_syscall", types.I32Type{}, nil)
+}
+
+func Define(file *os.File) {
+    defineItoS(file)
+    defineBtoS(file)
+
+    definePrintStr(file)
+    definePrintInt(file)
+    definePrintPtr(file)
+    definePrintBool(file)
+
+    defineExit(file)
+}
+
+
+// linux syscall calling convention like System V AMD64 ABI
+func syscall(file *os.File, syscallNum uint) {
+    file.WriteString(fmt.Sprintf("mov rax, %d\n", syscallNum))
+    file.WriteString("syscall\n")
+}
 
 func definePrintStr(asm *os.File) {
     asm.WriteString("printStr:\n")
@@ -141,4 +178,10 @@ _int_to_str:
         ret
 
 `)
+}
+
+func defineExit(file *os.File) {
+    file.WriteString("exit:\n")
+    syscall(file, SYS_EXIT)
+    file.WriteString("\n")
 }

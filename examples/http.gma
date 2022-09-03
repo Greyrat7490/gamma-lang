@@ -1,0 +1,12 @@
+import "std.gma"
+
+PORT :: 6969
+
+fn main() {
+    fd := socket(AF_INET, SOCK_STREAM, 0)
+    if fd == -1 {
+        printStr("error: could not create socket file descriptor\n")
+    } else {
+        printStr("created socket file descriptor: ") printInt(fd) printStr("\n") 
+    }
+}

@@ -38,7 +38,11 @@ func GenExpr(file *os.File, e ast.Expr) {
         GenIdent(file, e)
 
     case *ast.FnCall:
-        GenFnCall(file, e)
+        if e.Ident.Name == "_syscall" {
+            GenSyscall(file, e.Values[0])
+        } else {
+            GenFnCall(file, e)
+        }
 
     case *ast.Unary:
         GenUnary(file, e)
@@ -687,4 +691,16 @@ func bigStructXCaseToStack(file *os.File, addr string, e *ast.XCase, switchCount
     cond.CaseBody(file)
     DerefSetBigStruct(file, addr, e.Expr)
     cond.CaseBodyEnd(file, switchCount)
+}
+
+func GenSyscall(file *os.File, val ast.Expr) {
+    if v := cmpTime.ConstEval(val); v.Type != token.Unknown {
+        asm.MovRegVal(file, asm.RegA, types.Ptr_Size, v.Str)
+    } else {
+        fmt.Fprintln(os.Stderr, "[ERROR] _syscall takes only const")
+        fmt.Fprintln(os.Stderr, "\t" + val.At())
+        os.Exit(1)
+    }
+
+    file.WriteString("syscall\n")
 }

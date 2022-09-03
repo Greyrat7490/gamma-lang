@@ -1,5 +1,7 @@
 import "std.gma"
 
+SOMENUM :: 6969
+
 fn testPrintArr() {
     arr := [2][2][2]i32{
         { { 0, 1 }, { 2, 3 } },

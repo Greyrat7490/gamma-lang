@@ -1,7 +1,9 @@
-// TODO: stdlib
+import "syscall.gma"
+import "io.gma"
+import "socket.gma"
 
-SOMENUM :: 6969
 
+// tmp only for testing
 fn printArr(arr [2][2][2]i32) {
     for i i32, 2 {
         printStr("{ ")
