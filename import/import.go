@@ -78,7 +78,7 @@ func preparePath(path token.Token) string {
 
     // relative path
     if !filepath.IsAbs(path.Str) {
-        // project path (main file dir (file passed as arg to compiler)) 
+        // project path (main file dir (file passed as arg to compiler))
         // import path (default ./std)
         std := filepath.Join(filepath.Join(importDir, path.Str))
 

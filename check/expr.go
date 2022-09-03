@@ -38,7 +38,7 @@ func typeCheckExpr(e ast.Expr) {
 
     case *ast.Lit, *ast.Ident:
         // nothing to check
-        
+
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] typeCheckExpr for %v is not implemente yet\n", reflect.TypeOf(e))
         os.Exit(1)

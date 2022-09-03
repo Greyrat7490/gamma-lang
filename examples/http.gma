@@ -7,6 +7,6 @@ fn main() {
     if fd == -1 {
         printStr("error: could not create socket file descriptor\n")
     } else {
-        printStr("created socket file descriptor: ") printInt(fd) printStr("\n") 
+        printStr("created socket file descriptor: ") printInt(fd) printStr("\n")
     }
 }

@@ -96,7 +96,8 @@ func definePrintBool(asm *os.File) {
 }
 
 func defineBtoS(asm *os.File) {
-    asm.WriteString(`; rax = input int
+    asm.WriteString(
+`; rax = input int
 ; rbx = output string pointer
 ; rax = output string length
 _bool_to_str:
@@ -114,7 +115,8 @@ _bool_to_str:
 }
 
 func defineItoS(asm *os.File) {
-    asm.WriteString(`; rax = input int
+    asm.WriteString(
+`; rax = input int
 ; rbx = output string pointer
 ; rax = output string length
 _uint_to_str:
@@ -123,7 +125,7 @@ _uint_to_str:
 
     mov ecx, 10
 
-    mov rbx, _intBuf + 20
+    lea rbx, [_intBuf+20]
     .l1:
         xor edx, edx
         div ecx
@@ -133,9 +135,8 @@ _uint_to_str:
         cmp eax, 0
         jne .l1
 
-    mov rax, rbx
-    sub rax, _intBuf
-    inc rax
+    lea rax, [_intBuf+20]
+    sub rax, rbx
     pop rdx
     pop rcx
     ret
@@ -146,7 +147,7 @@ _int_to_str:
     push rax
 
     mov ecx, 10
-    mov rbx, _intBuf + 20
+    lea rbx, [_intBuf+20]
 
     cmp rax, 0
     jge .l1
@@ -170,9 +171,8 @@ _int_to_str:
     mov byte [rbx], 0x2d
 
     .end:
-        mov rax, rbx
-        sub rax, _intBuf
-        inc rax
+        lea rax, [_intBuf+20]
+        sub rax, rbx
         pop rdx
         pop rcx
         ret

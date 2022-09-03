@@ -19,10 +19,9 @@ fn main() {
     v = 64
     printInt(v) printStr("\n")
 
-    printStr("\nimported func:\n")
+    printStr("\nimported funcs:\n")
     exported()
-
-    testPrintArr()
+    testPrintErr()
 
     printStr("\nSOMENUM: ") printInt(SOMENUM) printStr("\n")
 }
