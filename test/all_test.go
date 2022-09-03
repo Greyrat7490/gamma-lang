@@ -124,7 +124,7 @@ func init() {
     flag.BoolVar(&keepAsm, "asm", false, "keep the assembly files generated")
 }
 
-func test(t *testing.T, flagStr string, recDir string, path string) {
+func test(t *testing.T, flagStr string, importDir string, recDir string, path string) {
     flag.Parse()
 
     files, err := ioutil.ReadDir(path)
@@ -135,7 +135,7 @@ func test(t *testing.T, flagStr string, recDir string, path string) {
     for _, f := range files {
         if filepath.Ext(f.Name()) == ".gma" {
             fmt.Print(f.Name())
-            cmd := exec.Command("go", "run", "gamma", flagStr, filepath.Join(path, f.Name()))
+            cmd := exec.Command("go", "run", "gamma", "-I", importDir, flagStr, filepath.Join(path, f.Name()))
 
             var stdout, stderr strings.Builder
             cmd.Stdout = &stdout
@@ -162,17 +162,15 @@ func test(t *testing.T, flagStr string, recDir string, path string) {
 }
 
 func TestError(t *testing.T) {
-    test(t, "-r", "recs/err", "errTests/")
-
-    if failed { os.Exit(1) }
+    test(t, "-r", "../std", "recs/err", "errTests/")
 }
 
 func TestAst(t *testing.T) {
-    test(t, "-ast", "recs/ast", "./")
+    test(t, "-ast", "../std", "recs/ast", "./")
 }
 
 func TestRun(t *testing.T) {
-    test(t, "-r", "recs/run", "./")
+    test(t, "-r", "../std", "recs/run", "./")
 
     if failed { os.Exit(1) }
 }

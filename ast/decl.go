@@ -140,8 +140,11 @@ func (o *DefStruct) Readable(indent int) string {
 func (d *Import) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "IMPORT:\n" +
         strings.Repeat("   ", indent+1) + d.Path.Str + "\n"
-    for _,d := range d.Decls {
-        res += d.Readable(indent+1)
+
+    if d.Path.Str != "\"std.gma\"" {
+        for _,d := range d.Decls {
+            res += d.Readable(indent+1)
+        }
     }
 
     return res

@@ -3,9 +3,46 @@ package std
 import (
     "os"
     "fmt"
+    "gamma/types"
+    "gamma/ast/identObj"
 )
 
 const STDOUT = 1
+
+const SYS_WRITE = 1
+const SYS_EXIT = 60
+
+
+func Declare() {
+    // build-in funcs
+    identObj.AddBuildIn("printStr",  types.StrType{}, nil)
+    identObj.AddBuildIn("printInt",  types.I32Type{}, nil)
+    identObj.AddBuildIn("printPtr",  types.PtrType{}, nil)
+    identObj.AddBuildIn("printBool", types.BoolType{}, nil)
+    identObj.AddBuildIn("exit",      types.I32Type{}, nil)
+
+    // "inline assembly"
+    identObj.AddBuildIn("_syscall", types.I32Type{}, nil)
+}
+
+func Define(file *os.File) {
+    defineItoS(file)
+    defineBtoS(file)
+
+    definePrintStr(file)
+    definePrintInt(file)
+    definePrintPtr(file)
+    definePrintBool(file)
+
+    defineExit(file)
+}
+
+
+// linux syscall calling convention like System V AMD64 ABI
+func syscall(file *os.File, syscallNum uint) {
+    file.WriteString(fmt.Sprintf("mov rax, %d\n", syscallNum))
+    file.WriteString("syscall\n")
+}
 
 func definePrintStr(asm *os.File) {
     asm.WriteString("printStr:\n")
@@ -59,7 +96,8 @@ func definePrintBool(asm *os.File) {
 }
 
 func defineBtoS(asm *os.File) {
-    asm.WriteString(`; rax = input int
+    asm.WriteString(
+`; rax = input int
 ; rbx = output string pointer
 ; rax = output string length
 _bool_to_str:
@@ -77,7 +115,8 @@ _bool_to_str:
 }
 
 func defineItoS(asm *os.File) {
-    asm.WriteString(`; rax = input int
+    asm.WriteString(
+`; rax = input int
 ; rbx = output string pointer
 ; rax = output string length
 _uint_to_str:
@@ -86,7 +125,7 @@ _uint_to_str:
 
     mov ecx, 10
 
-    mov rbx, _intBuf + 20
+    lea rbx, [_intBuf+20]
     .l1:
         xor edx, edx
         div ecx
@@ -96,9 +135,8 @@ _uint_to_str:
         cmp eax, 0
         jne .l1
 
-    mov rax, rbx
-    sub rax, _intBuf
-    inc rax
+    lea rax, [_intBuf+20]
+    sub rax, rbx
     pop rdx
     pop rcx
     ret
@@ -109,7 +147,7 @@ _int_to_str:
     push rax
 
     mov ecx, 10
-    mov rbx, _intBuf + 20
+    lea rbx, [_intBuf+20]
 
     cmp rax, 0
     jge .l1
@@ -133,12 +171,17 @@ _int_to_str:
     mov byte [rbx], 0x2d
 
     .end:
-        mov rax, rbx
-        sub rax, _intBuf
-        inc rax
+        lea rax, [_intBuf+20]
+        sub rax, rbx
         pop rdx
         pop rcx
         ret
 
 `)
+}
+
+func defineExit(file *os.File) {
+    file.WriteString("exit:\n")
+    syscall(file, SYS_EXIT)
+    file.WriteString("\n")
 }

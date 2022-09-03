@@ -1,17 +1,3 @@
-// TODO: stdlib
-
-SOMENUM :: 6969
-
-fn printArr(arr [2][2][2]i32) {
-    for i i32, 2 {
-        printStr("{ ")
-        for j i32, 2 {
-            printStr("{ ")
-            for k i32, 2 {
-                printInt(arr[i][j][k]) printStr(" ")
-            }
-            printStr("} ")
-        }
-        printStr("}\n")
-    }
-}
+import "syscall.gma"
+import "io.gma"
+import "socket.gma"

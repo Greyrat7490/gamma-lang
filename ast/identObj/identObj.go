@@ -83,7 +83,7 @@ func DecStruct(name token.Token, names []string, types []types.Type) *structDec.
     }
 }
 
-func AddBuildIn(name string, argname string, argtype types.Type, retType types.Type) {
+func AddBuildIn(name string, argtype types.Type, retType types.Type) {
     if !InGlobalScope() {
         fmt.Fprintln(os.Stderr, "[ERROR] AddBuildIn has to be called in the global scope")
         os.Exit(1)
