@@ -50,10 +50,10 @@ func DecArgFromStack(name token.Token, t types.Type, offset uint) vars.Var {
     return &v
 }
 
-func DecConst(name token.Token, t types.Type) *consts.Const {
+func DecConst(name token.Token, t types.Type, val token.Token) *consts.Const {
     checkName(name)
 
-    c := consts.CreateConst(name, t)
+    c := consts.CreateConst(name, t, val)
     curScope.identObjs[name.Str] = &c
     return &c
 }

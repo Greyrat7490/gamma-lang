@@ -14,12 +14,8 @@ type Const struct {
     val token.Token
 }
 
-func CreateConst(name token.Token, t types.Type) Const {
-    return Const{ name: name.Str, decPos: name.Pos, typ: t }
-}
-
-func (c *Const) Define(val token.Token) {
-    c.val = val
+func CreateConst(name token.Token, t types.Type, val token.Token) Const {
+    return Const{ name: name.Str, decPos: name.Pos, typ: t, val: val }
 }
 
 func (c *Const) GetName() string {

@@ -19,13 +19,10 @@ func GenDecl(file *os.File, d ast.Decl) {
     case *ast.DefVar:
         GenDefVar(file, d)
 
-    case *ast.DefConst:
-        GenDefConst(file, d)
-
     case *ast.DefFn:
         GenDefFn(file, d)
 
-    case *ast.DefStruct, *ast.DecVar:
+    case *ast.DefStruct, *ast.DecVar, *ast.DefConst:
         // nothing to generate
 
     case *ast.BadDecl:
@@ -49,18 +46,6 @@ func GenDefVar(file *os.File, d *ast.DefVar) {
     } else {
         VarDefExpr(file, d.V, d.Value)
     }
-}
-
-func GenDefConst(file *os.File, d *ast.DefConst) {
-    val := cmpTime.ConstEval(d.Value)
-
-    if val.Type == token.Unknown {
-        fmt.Fprintln(os.Stderr, "[ERROR] cannot evaluate expr at compile time (not const)")
-        fmt.Fprintln(os.Stderr, "\t" + d.Value.At())
-        os.Exit(1)
-    }
-
-    d.C.Define(val)
 }
 
 func GenDefFn(file *os.File, d *ast.DefFn) {

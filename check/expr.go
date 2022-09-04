@@ -47,6 +47,11 @@ func typeCheckExpr(e ast.Expr) {
 }
 
 func checkInt(destType types.Type, val ast.Expr) bool {
+    t := val.GetType()
+    if t.GetKind() != types.Uint && t.GetKind() != types.Int {
+        return false
+    }
+
     if v := cmpTime.ConstEval(val); v.Type == token.Number {
         _,err := strconv.ParseInt(v.Str, 0, int(destType.Size()*8))
         if err != nil {
@@ -63,12 +68,16 @@ func checkInt(destType types.Type, val ast.Expr) bool {
         return true
 
     } else {
-        t := val.GetType()
         return t.GetKind() == types.Int && t.Size() <= destType.Size()
     }
 }
 
 func checkUint(destType types.Type, val ast.Expr) bool {
+    t := val.GetType()
+    if t.GetKind() != types.Uint && t.GetKind() != types.Int {
+        return false
+    }
+
     if v := cmpTime.ConstEval(val); v.Type == token.Number {
         _,err := strconv.ParseUint(v.Str, 0, int(destType.Size()*8))
         if err != nil {
@@ -85,12 +94,13 @@ func checkUint(destType types.Type, val ast.Expr) bool {
         return true
 
     } else {
-        t := val.GetType()
         return t.GetKind() == types.Uint && t.Size() <= destType.Size()
     }
 }
 
 func checkTypeExpr(destType types.Type, e ast.Expr) bool {
+    typeCheckExpr(e)
+
     switch destType.GetKind() {
     case types.Int:
         return checkInt(destType, e)

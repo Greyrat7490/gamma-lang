@@ -208,12 +208,18 @@ func prsDefVar(tokens *token.Tokens, name token.Token, t types.Type) ast.DefVar 
 }
 
 func prsDefConst(tokens *token.Tokens, name token.Token, t types.Type) ast.DefConst {
-    c := identObj.DecConst(name, t)
-
     pos := tokens.Cur().Pos
     tokens.Next()
     val := prsExpr(tokens)
-    return ast.DefConst{ C: c, Type: t, ColPos: pos, Value: val }
+
+    v := cmpTime.ConstEval(val)
+    if v.Type == token.Unknown {
+        fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
+        fmt.Fprintln(os.Stderr, "\t" + val.At())
+        os.Exit(1)
+    }
+
+    return ast.DefConst{ C: identObj.DecConst(name, t, v), Type: t, ColPos: pos, Value: val }
 }
 
 func prsDefVarInfer(tokens *token.Tokens, name token.Token) ast.DefVar {
@@ -232,8 +238,14 @@ func prsDefConstInfer(tokens *token.Tokens, name token.Token) ast.DefConst {
     val := prsExpr(tokens)
 
     t := val.GetType()
-    c := identObj.DecConst(name, t)
-    return ast.DefConst{ C: c, Type: t, ColPos: pos, Value: val }
+    v := cmpTime.ConstEval(val)
+    if v.Type == token.Unknown {
+        fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
+        fmt.Fprintln(os.Stderr, "\t" + val.At())
+        os.Exit(1)
+    }
+
+    return ast.DefConst{ C: identObj.DecConst(name, t, v), Type: t, ColPos: pos, Value: val }
 }
 
 func prsDefine(tokens *token.Tokens) ast.Decl {
