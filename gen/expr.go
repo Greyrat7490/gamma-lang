@@ -138,11 +138,31 @@ func GenIndexed(file *os.File, e *ast.Indexed) {
 
     IndexedAddrToReg(file, e, asm.RegC)
 
-    if arrType.Ptr.BaseType.GetKind() == types.Str {
+    switch t := arrType.Ptr.BaseType.(type) {
+    case types.StrType:
         asm.MovRegDeref(file, asm.RegGroup(0), asm.GetReg(asm.RegC, types.Ptr_Size), types.Ptr_Size)
         asm.MovRegDeref(file, asm.RegGroup(1), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, 8), types.I32_Size)
-    } else {
-        asm.MovRegDeref(file, asm.RegGroup(0), asm.GetReg(asm.RegC, types.Ptr_Size), arrType.Ptr.BaseType.Size())
+
+    case types.StructType:
+        if t.Size() > uint(8) {
+            asm.MovRegDeref(file, asm.RegGroup(0), asm.GetReg(asm.RegC, types.Ptr_Size), types.Ptr_Size)
+            asm.MovRegDeref(
+                file,
+                asm.RegGroup(1),
+                asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, int(t.Size() - 8)),
+                t.Size() - 8,
+            )
+        } else {
+            asm.MovRegDeref(file, asm.RegGroup(0), asm.GetReg(asm.RegC, types.Ptr_Size), t.Size())
+        }
+
+    default:
+        asm.MovRegDeref(
+            file,
+            asm.RegGroup(0),
+            asm.GetReg(asm.RegC, types.Ptr_Size),
+            arrType.Ptr.BaseType.Size(),
+        )
     }
 }
 
@@ -529,11 +549,11 @@ func GenFnCall(file *os.File, e *ast.FnCall) {
             PassVal(file, regIdx, v, t)
 
         } else if ident,ok := e.Values[i].(*ast.Ident); ok {
-            PassVar(file, regIdx, ident.Obj.(vars.Var))
+            PassVar(file, regIdx, t, ident.Obj.(vars.Var))
 
         } else {
             GenExpr(file, e.Values[i])
-            PassReg(file, regIdx, t)
+            PassReg(file, regIdx, t, e.Values[i].GetType().Size())
         }
     }
 

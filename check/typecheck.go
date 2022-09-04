@@ -1,11 +1,8 @@
 package check
 
 import (
-    "strconv"
     "gamma/ast"
     "gamma/types"
-    "gamma/token"
-    "gamma/cmpTime"
 )
 
 func TypeCheckNode(n ast.Node) {
@@ -21,22 +18,6 @@ func TypeCheckNode(n ast.Node) {
     }
 }
 
-func CheckIntLit(destType types.Type, srcType types.Type, val ast.Expr) bool {
-    if srcType.GetKind() == types.Int {
-        if val := cmpTime.ConstEval(val); val.Type == token.Number {
-            i,_ := strconv.ParseInt(val.Str, 10, 64)
-
-            max := int64(1) << (int64(destType.Size()*8)-1)-1
-            min := -(int64(1) << (int64(destType.Size()*8)-1))
-
-            return i <= max && i >= min
-        }
-
-        return srcType.Size() <= destType.Size()
-    }
-
-    return false
-}
 
 func CheckTypes(destType types.Type, srcType types.Type) bool {
     switch t := destType.(type) {

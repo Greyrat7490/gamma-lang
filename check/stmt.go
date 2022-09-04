@@ -53,7 +53,7 @@ func typeCheckAssign(s *ast.Assign) {
     t1 := s.Dest.GetType()
     t2 := s.Value.GetType()
 
-    if !CheckTypes(t1, t2) {
+    if !checkTypeExpr(t1, s.Value) {
         fmt.Fprintf(os.Stderr, "[ERROR] cannot assign a type: %v with type: %v\n", t1, t2)
         fmt.Fprintln(os.Stderr, "\t" + s.Pos.At())
         os.Exit(1)
@@ -92,15 +92,15 @@ func typeCheckFor(s *ast.For) {
     t := s.Def.Type
 
     if s.Limit != nil {
-        if t2 := s.Limit.GetType(); !CheckTypes(t, t2) {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected %v as for iterator limit type but got %v\n", t, t2)
+        if !checkTypeExpr(t, s.Limit) {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected %v as for iterator limit type but got %v\n", t, s.Limit.GetType())
             fmt.Fprintln(os.Stderr, "\t" + s.ForPos.At())
             os.Exit(1)
         }
     }
 
-    if t2 := s.Step.GetType(); !CheckTypes(t, t2) {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected %v as for iterator step type but got %v\n", t, t2)
+    if !checkTypeExpr(t, s.Step) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected %v as for iterator step type but got %v\n", t, s.Step.GetType())
         fmt.Fprintln(os.Stderr, "\t" + s.ForPos.At())
         os.Exit(1)
     }
@@ -115,17 +115,17 @@ func typeCheckWhile(s *ast.While) {
 }
 
 func typeCheckRet(s *ast.Ret) {
-    t1 := s.F.GetRetType()
+    t := s.F.GetRetType()
 
-    if t1 == nil {
+    if t == nil {
         if s.RetExpr != nil {
             fmt.Fprintf(os.Stderr, "[ERROR] expected nothing to return but got %v\n", s.RetExpr.GetType())
             fmt.Fprintln(os.Stderr, "\t" + s.At())
             os.Exit(1)
         }
     } else {
-        if !CheckTypes(s.RetExpr.GetType(), t1) {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected to return %v but got %v\n", t1, s.RetExpr.GetType())
+        if !checkTypeExpr(t, s.RetExpr) {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected to return %v but got %v\n", t, s.RetExpr.GetType())
             fmt.Fprintln(os.Stderr, "\t" + s.At())
             os.Exit(1)
         }

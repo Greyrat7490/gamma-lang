@@ -5,7 +5,7 @@ fn main() {
     local i32 := 0
     pLocal *i32 := &local
 
-    diff i32 := pLocal - pGlobal
+    diff i64 := pLocal - pGlobal
 
     printPtr(pGlobal)
     printStr("\n")

@@ -125,7 +125,7 @@ func PassVal(file *os.File, regIdx uint, value token.Token, valtype types.Type) 
     case types.CharType:
         asm.MovRegVal(file, regs[regIdx], types.Char_Size, fmt.Sprint(int(value.Str[1])))
 
-    case types.IntType:
+    case types.IntType, types.UintType:
         asm.MovRegVal(file, regs[regIdx], valtype.Size(), value.Str)
 
     case types.PtrType:
@@ -142,8 +142,8 @@ func PassVal(file *os.File, regIdx uint, value token.Token, valtype types.Type) 
     }
 }
 
-func PassVar(file *os.File, regIdx uint, otherVar vars.Var) {
-    switch t := otherVar.GetType().(type) {
+func PassVar(file *os.File, regIdx uint, t types.Type, otherVar vars.Var) {
+    switch t := t.(type) {
     case types.StrType:
         asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), types.Ptr_Size)
         asm.MovRegDeref(file, regs[regIdx+1], otherVar.Addr(1), types.I32_Size)
@@ -156,12 +156,15 @@ func PassVar(file *os.File, regIdx uint, otherVar vars.Var) {
             asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), t.Size())
         }
 
+    case types.IntType:
+        asm.MovRegDerefExtend(file, regs[regIdx], t.Size(), otherVar.Addr(0), otherVar.GetType().Size(), true)
+
     default:
-        asm.MovRegDeref(file, regs[regIdx], otherVar.Addr(0), t.Size())
+        asm.MovRegDerefExtend(file, regs[regIdx], t.Size(), otherVar.Addr(0), otherVar.GetType().Size(), false)
     }
 }
 
-func PassReg(file *os.File, regIdx uint, argType types.Type) {
+func PassReg(file *os.File, regIdx uint, argType types.Type, regSize uint) {
     switch t := argType.(type) {
     case types.StrType:
         asm.MovRegReg(file, regs[regIdx],   asm.RegGroup(0), types.Ptr_Size)
@@ -175,8 +178,11 @@ func PassReg(file *os.File, regIdx uint, argType types.Type) {
             asm.MovRegReg(file, regs[regIdx], asm.RegGroup(0), t.Size())
         }
 
+    case types.IntType:
+        asm.MovRegRegExtend(file, regs[regIdx], t.Size(), asm.RegGroup(0), regSize, true)
+
     default:
-        asm.MovRegReg(file, regs[regIdx], asm.RegGroup(0), argType.Size())
+        asm.MovRegRegExtend(file, regs[regIdx], t.Size(), asm.RegGroup(0), regSize, false)
     }
 }
 
@@ -378,7 +384,7 @@ func packValues(valtypes []types.Type, values []token.Token, packed []string, of
         case types.PtrType:
             packed = append(packed, values[i].Str)
 
-        case types.IntType:
+        case types.IntType, types.UintType:
             packed = pack(packed, values[i].Str, offset, t)
             offset += t.Size()
 

@@ -1,14 +1,15 @@
 package types
 
 import (
-    "fmt"
     "os"
+    "fmt"
     "strconv"
 )
 
 type TypeKind int
 const (
     Int    TypeKind = iota
+    Uint   TypeKind = iota
     Char   TypeKind = iota
     Bool   TypeKind = iota
     Ptr    TypeKind = iota
@@ -22,11 +23,17 @@ const (
     I16_Size  uint = 2
     I32_Size  uint = 4
     I64_Size  uint = 8
+
+    U8_Size   uint = 1
+    U16_Size  uint = 2
+    U32_Size  uint = 4
+    U64_Size  uint = 8
+
     Char_Size uint = 1
     Bool_Size uint = 1
     Ptr_Size  uint = 8
     Arr_Size  uint = 8
-    Str_Size  uint = Ptr_Size + I32_Size
+    Str_Size  uint = Ptr_Size + U32_Size
 )
 
 type Type interface {
@@ -37,6 +44,9 @@ type Type interface {
 
 type CharType struct {}
 type BoolType struct {}
+type UintType struct {
+    size uint
+}
 type IntType struct {
     size uint
 }
@@ -49,7 +59,7 @@ type ArrType  struct {
 }
 type StrType  struct {
     ptr  PtrType
-    size IntType
+    size UintType
 }
 type StructType struct {
     Name string
@@ -70,7 +80,7 @@ func isAligned(types []Type, size uint) (aligned bool, rest uint)  {
             size += r
 
         case StrType:
-            a,r := isAligned([]Type{ PtrType{}, IntType{ size: I32_Size } }, size)
+            a,r := isAligned([]Type{ PtrType{}, UintType{ size: U32_Size } }, size)
             if !a {
                 return false, 0
             }
@@ -94,8 +104,12 @@ func CreateInt(intSize uint) IntType {
     return IntType{ size: intSize }
 }
 
+func CreateUint(uintSize uint) UintType {
+    return UintType{ size: uintSize }
+}
+
 func CreateStr() StrType {
-    return StrType{ ptr: PtrType{ BaseType: CharType{} }, size: IntType{ size: 4 } }
+    return StrType{ ptr: PtrType{ BaseType: CharType{} }, size: UintType{ size: 4 } }
 }
 
 func CreateStructType(name string, types []Type) StructType {
@@ -155,6 +169,7 @@ func RegCount(t Type) uint {
 }
 
 func (t IntType)    GetKind() TypeKind { return Int }
+func (t UintType)   GetKind() TypeKind { return Uint }
 func (t CharType)   GetKind() TypeKind { return Char }
 func (t BoolType)   GetKind() TypeKind { return Bool }
 func (t StrType)    GetKind() TypeKind { return Str  }
@@ -163,6 +178,7 @@ func (t ArrType)    GetKind() TypeKind { return Arr  }
 func (t StructType) GetKind() TypeKind { return Struct }
 
 func (t IntType)    Size() uint { return t.size }
+func (t UintType)   Size() uint { return t.size }
 func (t CharType)   Size() uint { return Char_Size }
 func (t BoolType)   Size() uint { return Bool_Size }
 func (t StrType)    Size() uint { return t.ptr.Size() + t.size.Size() }
@@ -182,6 +198,22 @@ func (t IntType)  String() string {
         return "i64"
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] unexpected int size %d", t.size)
+        os.Exit(1)
+        return ""
+    }
+}
+func (t UintType)  String() string {
+    switch t.size {
+    case U8_Size:
+        return "u8"
+    case U16_Size:
+        return "u16"
+    case U32_Size:
+        return "u32"
+    case U64_Size:
+        return "u64"
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] unexpected uint size %d", t.size)
         os.Exit(1)
         return ""
     }
@@ -215,6 +247,14 @@ func ToBaseType(s string) Type {
         return IntType{ size: I32_Size }
     case "i64":
         return IntType{ size: I64_Size }
+    case "u8":
+        return UintType{ size: U8_Size }
+    case "u16":
+        return UintType{ size: U16_Size }
+    case "u32":
+        return UintType{ size: U32_Size }
+    case "u64":
+        return UintType{ size: U64_Size }
     case "char":
         return CharType{}
     case "bool":
@@ -229,14 +269,14 @@ func ToBaseType(s string) Type {
 func TypeOfVal(val string) Type {
     switch {
     case val[0] == '"' && val[len(val) - 1] == '"':
-        return StrType{ ptr: PtrType{ BaseType: CharType{} }, size: IntType{ size: 4 } }
+        return StrType{ ptr: PtrType{ BaseType: CharType{} }, size: UintType{ size: 4 } }
     case val[0] == '\'' && val[len(val) - 1] == '\'':
         return CharType{}
     case val == "true" || val == "false":
         return BoolType{}
     case len(val) > 2 && val[0:2] == "0x":
         if _, err := strconv.ParseUint(val, 0, 64); err == nil {
-            return IntType{ size: I64_Size } // TODO u64
+            return UintType{ size: U64_Size }
         }
     default:
         if _, err := strconv.ParseInt(val, 10, 32); err == nil {
@@ -244,6 +284,9 @@ func TypeOfVal(val string) Type {
         }
         if _, err := strconv.ParseInt(val, 10, 64); err == nil {
             return IntType{ size: I64_Size }
+        }
+        if _, err := strconv.ParseUint(val, 0, 64); err == nil {
+            return UintType{ size: U64_Size }
         }
     }
 

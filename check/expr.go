@@ -4,6 +4,7 @@ import (
     "os"
     "fmt"
     "reflect"
+    "strconv"
     "gamma/token"
     "gamma/types"
     "gamma/cmpTime"
@@ -45,6 +46,63 @@ func typeCheckExpr(e ast.Expr) {
     }
 }
 
+func checkInt(destType types.Type, val ast.Expr) bool {
+    if v := cmpTime.ConstEval(val); v.Type == token.Number {
+        _,err := strconv.ParseInt(v.Str, 0, int(destType.Size()*8))
+        if err != nil {
+            if e,ok := err.(*strconv.NumError); ok && e.Err == strconv.ErrRange {
+                fmt.Fprintf(os.Stderr, "[ERROR] %s does not fit into %v\n", v.Str, destType)
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] %s is not a valid %v\n", v.Str, destType)
+            }
+
+            fmt.Fprintln(os.Stderr, "\t" + val.At())
+            os.Exit(1)
+        }
+
+        return true
+
+    } else {
+        t := val.GetType()
+        return t.GetKind() == types.Int && t.Size() <= destType.Size()
+    }
+}
+
+func checkUint(destType types.Type, val ast.Expr) bool {
+    if v := cmpTime.ConstEval(val); v.Type == token.Number {
+        _,err := strconv.ParseUint(v.Str, 0, int(destType.Size()*8))
+        if err != nil {
+            if e,ok := err.(*strconv.NumError); ok && e.Err == strconv.ErrRange {
+                fmt.Fprintf(os.Stderr, "[ERROR] %s does not fit into %v\n", v.Str, destType)
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] %s is not a valid %v\n", v.Str, destType)
+            }
+
+            fmt.Fprintln(os.Stderr, "\t" + val.At())
+            os.Exit(1)
+        }
+
+        return true
+
+    } else {
+        t := val.GetType()
+        return t.GetKind() == types.Uint && t.Size() <= destType.Size()
+    }
+}
+
+func checkTypeExpr(destType types.Type, e ast.Expr) bool {
+    switch destType.GetKind() {
+    case types.Int:
+        return checkInt(destType, e)
+
+    case types.Uint:
+        return checkUint(destType, e)
+
+    default:
+        return CheckTypes(destType, e.GetType())
+    }
+}
+
 func typeCheckIndexed(e *ast.Indexed) {
     if t,ok := e.ArrExpr.GetType().(types.ArrType); !ok {
         fmt.Fprintf(os.Stderr, "[ERROR] you can only index an array but got %v\n", t)
@@ -77,8 +135,8 @@ func typeCheckUnary(e *ast.Unary) {
         }
 
     case token.Plus, token.Minus, token.BitNot:
-        if t := e.Operand.GetType(); t.GetKind() != types.Int {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected int after +,-,~ unary op but got %v\n", t)
+        if t := e.Operand.GetType(); t.GetKind() != types.Int && t.GetKind() != types.Uint {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected int/uint after +,-,~ unary op but got %v\n", t)
             fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
             os.Exit(1)
         }
@@ -93,11 +151,7 @@ func typeCheckUnary(e *ast.Unary) {
 func typeCheckArrayLit(o *ast.ArrayLit) {
     for _,v := range o.Values {
         t := v.GetType()
-        if !CheckTypes(t, o.Type.Ptr.BaseType) {
-            if t.GetKind() == types.Int && CheckIntLit(t, o.Type.Ptr.BaseType, v) {
-                return
-            }
-
+        if !checkTypeExpr(t, v) {
             fmt.Fprintf(os.Stderr, "[ERROR] all values in the ArrayLit should be of type %v but got a value of %v\n", o.Type.Ptr.BaseType, t)
             fmt.Fprintln(os.Stderr, "\t" + v.At())
             os.Exit(1)
@@ -115,12 +169,7 @@ func typeCheckStructLit(o *ast.StructLit) {
     t := o.StructType
 
     for i,f := range o.Fields {
-        t2 := f.GetType()
-        if !CheckTypes(t.Types[i], t2) {
-            if t.Types[i].GetKind() == types.Int && CheckIntLit(t, t2, f.Value) {
-                return
-            }
-
+        if !checkTypeExpr(t.Types[i], f.Value) {
             fmt.Fprintf(os.Stderr, "[ERROR] expected a %v as field %d of struct %s but got %v\n",
                 t.Types[i], i, o.StructType.Name, f.GetType())
             fmt.Fprintln(os.Stderr, "\t" + f.At())
@@ -140,22 +189,30 @@ func typeCheckBinary(o *ast.Binary) {
             os.Exit(1)
         }
     } else {
-        if !CheckTypes(t1, t2) {
-            if (t1.GetKind() == types.Ptr && t2.GetKind() == types.Int) ||
-               (t2.GetKind() == types.Ptr && t1.GetKind() == types.Int) {
-                if o.Operator.Type == token.Plus || o.Operator.Type == token.Minus {
-                    return
-                }
+                                                    // TODO only Uint
+        if (t1.GetKind() == types.Ptr && t2.GetKind() == types.Int) ||
+           (t2.GetKind() == types.Ptr && t1.GetKind() == types.Int) {
+            if o.Operator.Type == token.Plus || o.Operator.Type == token.Minus {
+                return
+            }
 
-                fmt.Fprintf(os.Stderr, "[ERROR] only +/- operators are allowed for binary ops with %v and %v\n", t1, t2)
+            fmt.Fprintf(os.Stderr, "[ERROR] only +/- operators are allowed for binary ops with %v and %v\n", t1, t2)
+            fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+            os.Exit(1)
+        } else {
+            b := false
+            if t2.Size() > t1.Size() {
+                b = checkTypeExpr(t2, o.OperandL)
+            } else {
+                b = checkTypeExpr(t1, o.OperandR)
+            }
+
+            if !b {
+                fmt.Fprintf(os.Stderr, "[ERROR] binary operation has two differente types (left: %v right: %v)\n", t1, t2)
+                fmt.Fprintln(os.Stderr, "\t(ptr +/- int is allowed)")
                 fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
                 os.Exit(1)
             }
-
-            fmt.Fprintf(os.Stderr, "[ERROR] binary operation has two differente types (left: %v right: %v)\n", t1, t2)
-            fmt.Fprintln(os.Stderr, "\t(ptr +/- int is allowed)")
-            fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
-            os.Exit(1)
         }
     }
 }
@@ -198,7 +255,7 @@ func typeCheckFnCall(o *ast.FnCall) {
         for i, t1 := range args {
             t2 := o.Values[i].GetType()
 
-            if !CheckTypes(t1, t2) {
+            if !checkTypeExpr(t1, o.Values[i]) {
                 fmt.Fprintf(os.Stderr, "[ERROR] expected %v as arg %d but got %v for function \"%s\"\n", t1, i, t2, f.GetName())
                 fmt.Fprintf(os.Stderr, "\texpected: %v\n", args)
                 fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))

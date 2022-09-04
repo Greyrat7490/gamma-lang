@@ -5,7 +5,6 @@ import (
     "fmt"
     "reflect"
     "gamma/ast"
-    "gamma/types"
 )
 
 func typeCheckDecl(d ast.Decl) {
@@ -37,11 +36,7 @@ func typeCheckDefVar(d *ast.DefVar) {
     t1 := d.V.GetType()
     t2 := d.Value.GetType()
 
-    if !CheckTypes(t1, t2) {
-        if t1.GetKind() == types.Int && CheckIntLit(t1, t2, d.Value) {
-            return
-        }
-
+    if !checkTypeExpr(t1, d.Value) {
         fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", d.V.GetName(), t1, t2)
         fmt.Fprintln(os.Stderr, "\t" + d.At())
         os.Exit(1)
@@ -52,7 +47,7 @@ func typeCheckDefConst(d *ast.DefConst) {
     typeCheckExpr(d.Value)
 
     t2 := d.Value.GetType()
-    if !CheckTypes(d.Type, t2) {
+    if !checkTypeExpr(d.Type, d.Value) {
         fmt.Fprintf(os.Stderr, "[ERROR] cannot define \"%s\" (type: %v) with type %v\n", d.C.GetName(), d.Type, t2)
         fmt.Fprintln(os.Stderr, "\t" + d.At())
         os.Exit(1)

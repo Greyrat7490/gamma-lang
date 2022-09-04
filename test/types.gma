@@ -1,7 +1,44 @@
-fn main() {
-    i i8 := 69
-    c char := 'a'
-
+fn testChar(c char) {
     printChar(c) printStr("\n")
-    printInt(i)  printStr("\n")
+
+    c2 char := 'a'
+    printChar(c2) printStr("\n")
+}
+
+fn testIntSizes(i i8) {
+    printInt(i) printStr("\n")
+
+    i2 i8 := 69
+    printInt(i2) printStr("\n")
+}
+
+fn testUnsigned(u u8) {
+    printUint(u) printStr("\n")
+
+    u2 u8 := 0x10
+    printUint(u2) printStr("\n")
+
+    printUint(0x8 + 0x8) printStr("\n")
+
+    u1 u32 := 0x10
+    u2 u32 := 0x10
+    printUint(u1 * u2) printStr("\n")
+}
+
+fn testConstEval() {
+    printInt(-10 * -10) printStr("\n")
+}
+
+fn main() {
+    printStr("test char -----\n")
+    testChar('x')
+
+    printStr("\ntest int size -----\n")
+    testIntSizes(-128)
+
+    printStr("\ntest unsigned -----\n")
+    testUnsigned(255)
+
+    printStr("\ntest ConstEval -----\n")
+    testConstEval()
 }

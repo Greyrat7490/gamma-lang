@@ -54,7 +54,7 @@ func globalVarDefVal(file *os.File, v *vars.GlobalVar, val token.Token) {
         defStruct(t, val)
     case types.BoolType:
         defBool(val.Str)
-    case types.IntType:
+    case types.IntType, types.UintType:
         defInt(val.Str, t.Size())
     case types.PtrType:
         defPtr(val.Str)
@@ -78,7 +78,7 @@ func defStruct(t types.StructType, val token.Token) {
         switch t := t.Types[i].(type) {
         case types.StrType:
             defStr(v)
-        case types.IntType:
+        case types.IntType, types.UintType:
             defInt(v.Str, t.Size())
         case types.BoolType:
             defBool(v.Str)
@@ -227,7 +227,7 @@ func DerefSetDeref(file *os.File, addr string, t types.Type, otherAddr string) {
             )
         }
 
-    case types.IntType, types.BoolType, types.PtrType, types.ArrType, types.CharType:
+    case types.IntType, types.UintType, types.BoolType, types.PtrType, types.ArrType, types.CharType:
         asm.MovDerefDeref(file, asm.GetReg(asm.RegA, types.Ptr_Size), otherAddr, t.Size(), asm.RegB)
 
     default:
@@ -256,7 +256,7 @@ func DerefSetExpr(file *os.File, addr string, t types.Type, val ast.Expr) {
             }
         }
 
-    case types.IntType, types.BoolType, types.PtrType, types.ArrType, types.CharType:
+    case types.IntType, types.UintType, types.BoolType, types.PtrType, types.ArrType, types.CharType:
         GenExpr(file, val)
         asm.MovDerefReg(file, addr, t.Size(), asm.RegGroup(0))
 
@@ -321,7 +321,7 @@ func DerefSetVal(file *os.File, addr string, typ types.Type, val token.Token) {
         derefSetPtrVal(file, addr, 0, val)
     case types.BoolType:
         derefSetBoolVal(file, addr, 0, val)
-    case types.IntType:
+    case types.IntType, types.UintType:
         derefSetIntVal(file, addr, 0, t.Size(), val)
     case types.CharType:
         derefSetCharVal(file, addr, 0, val)
@@ -392,8 +392,8 @@ func derefSetStructVal(file *os.File, t types.StructType, addr string, offset in
             derefSetArrVal(file, addr, offset + t.GetOffset(uint(i)), val)
         case types.BoolType:
             derefSetBoolVal(file, addr, offset + t.GetOffset(uint(i)), val)
-        case types.IntType:
-            derefSetIntVal(file, addr, offset + t.GetOffset(uint(i)), t.Size(), val)
+        case types.IntType, types.UintType:
+            derefSetIntVal(file, addr, offset + t.GetOffset(uint(i)), typ.Size(), val)
         case types.PtrType:
             derefSetPtrVal(file, addr, offset + t.GetOffset(uint(i)), val)
         default:

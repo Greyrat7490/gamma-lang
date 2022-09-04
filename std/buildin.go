@@ -17,6 +17,7 @@ func Declare() {
     // build-in funcs
     identObj.AddBuildIn("printStr",  types.CreateStr(), nil)
     identObj.AddBuildIn("printInt",  types.CreateInt(types.I64_Size), nil)
+    identObj.AddBuildIn("printUint", types.CreateUint(types.U64_Size), nil)
     identObj.AddBuildIn("printPtr",  types.PtrType{}, nil)
     identObj.AddBuildIn("printBool", types.BoolType{}, nil)
     identObj.AddBuildIn("printChar", types.CharType{}, nil)
@@ -33,6 +34,7 @@ func Define(file *os.File) {
     definePrintStr(file)
     definePrintChar(file)
     definePrintInt(file)
+    definePrintUint(file)
     definePrintPtr(file)
     definePrintBool(file)
 
@@ -71,8 +73,21 @@ func definePrintChar(asm *os.File) {
 
 func definePrintInt(asm *os.File) {
     asm.WriteString("printInt:\n")
-    asm.WriteString("movsxd rax, edi\n")   // mov edi into eax and sign extends upper half of rax
+    asm.WriteString("mov rax, rdi\n")
     asm.WriteString("call _int_to_str\n")
+
+    asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
+    asm.WriteString("mov rdx, rax\n")
+    asm.WriteString("mov rsi, rbx\n")
+    syscall(asm, SYS_WRITE)
+
+    asm.WriteString("ret\n\n")
+}
+
+func definePrintUint(asm *os.File) {
+    asm.WriteString("printUint:\n")
+    asm.WriteString("mov rax, rdi\n")
+    asm.WriteString("call _uint_to_str\n")
 
     asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
     asm.WriteString("mov rdx, rax\n")
@@ -98,7 +113,7 @@ func definePrintPtr(asm *os.File) {
 func definePrintBool(asm *os.File) {
     asm.WriteString("printBool:\n")
 
-    asm.WriteString("mov rax, rdi\n")
+    asm.WriteString("mov ax, di\n")
     asm.WriteString("call _bool_to_str\n")
 
     asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
@@ -115,7 +130,7 @@ func defineBtoS(asm *os.File) {
 ; rbx = output string pointer
 ; rax = output string length
 _bool_to_str:
-    cmp rax, 0
+    cmp ax, 0
     jne .c1
     mov rbx, _false
     mov rax, 5
