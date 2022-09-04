@@ -15,7 +15,7 @@ const SYS_EXIT = 60
 
 func Declare() {
     // build-in funcs
-    identObj.AddBuildIn("printStr",  types.StrType{}, nil)
+    identObj.AddBuildIn("printStr",  types.CreateStr(), nil)
     identObj.AddBuildIn("printInt",  types.CreateInt(types.I64_Size), nil)
     identObj.AddBuildIn("printPtr",  types.PtrType{}, nil)
     identObj.AddBuildIn("printBool", types.BoolType{}, nil)

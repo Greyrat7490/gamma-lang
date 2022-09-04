@@ -18,7 +18,7 @@ const (
     Typename        // i32, str, bool
     Str             // "string"
     Char            // 'a'
-    Number          // 1234
+    Number          // 1234, 0xffff
     Boolean         // true/false
 
     Plus            // +
@@ -199,12 +199,17 @@ func ToTokenType(s string) TokenType {
     default:
         if types.ToBaseType(s) != nil {
             return Typename
-        } else if s[0] == '"' && s[len(s) - 1] == '"' {
-            return Str
-        } else if s[0] == '\'' && s[len(s) - 1] == '\'' {
-            return Char
-        } else if _, err := strconv.Atoi(s); err == nil {
-            return Number
+        } else {
+            switch {
+            case s[0] == '"' && s[len(s) - 1] == '"':
+                return Str
+            case s[0] == '\'' && s[len(s) - 1] == '\'':
+                return Char
+            default:
+                if _, err := strconv.ParseUint(s, 0, 64); err == nil {
+                    return Number
+                }
+            }
         }
 
         return Name

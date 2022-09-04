@@ -81,6 +81,9 @@ func CheckTypes(destType types.Type, srcType types.Type) bool {
             return t2.Size() <= destType.Size()
         }
 
+    case types.StrType:
+        return destType.GetKind() == srcType.GetKind()
+
     default:
         return destType == srcType
     }

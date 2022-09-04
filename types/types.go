@@ -94,6 +94,10 @@ func CreateInt(intSize uint) IntType {
     return IntType{ size: intSize }
 }
 
+func CreateStr() StrType {
+    return StrType{ ptr: PtrType{ BaseType: CharType{} }, size: IntType{ size: 4 } }
+}
+
 func CreateStructType(name string, types []Type) StructType {
     size := uint(0)
     for _,t := range types {
@@ -216,22 +220,32 @@ func ToBaseType(s string) Type {
     case "bool":
         return BoolType{}
     case "str":
-        return StrType{ ptr: PtrType{ BaseType: CharType{} } }
+        return CreateStr()
     default:
         return nil
     }
 }
 
 func TypeOfVal(val string) Type {
-    if val[0] == '"' && val[len(val) - 1] == '"' {
-        return StrType{}
-    } else if val[0] == '\'' && val[len(val) - 1] == '\'' {
+    switch {
+    case val[0] == '"' && val[len(val) - 1] == '"':
+        return StrType{ ptr: PtrType{ BaseType: CharType{} }, size: IntType{ size: 4 } }
+    case val[0] == '\'' && val[len(val) - 1] == '\'':
         return CharType{}
-    } else if _, err := strconv.Atoi(val); err == nil {
-        return IntType{ size: I32_Size }
-    } else if val == "true" || val == "false" {
+    case val == "true" || val == "false":
         return BoolType{}
-    } else {
-        return nil
+    case len(val) > 2 && val[0:2] == "0x":
+        if _, err := strconv.ParseUint(val, 0, 64); err == nil {
+            return IntType{ size: I64_Size } // TODO u64
+        }
+    default:
+        if _, err := strconv.ParseInt(val, 10, 32); err == nil {
+            return IntType{ size: I32_Size }
+        }
+        if _, err := strconv.ParseInt(val, 10, 64); err == nil {
+            return IntType{ size: I64_Size }
+        }
     }
+
+    return nil
 }

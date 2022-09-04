@@ -94,6 +94,10 @@ func typeCheckArrayLit(o *ast.ArrayLit) {
     for _,v := range o.Values {
         t := v.GetType()
         if !CheckTypes(t, o.Type.Ptr.BaseType) {
+            if t.GetKind() == types.Int && CheckIntLit(t, o.Type.Ptr.BaseType, v) {
+                return
+            }
+
             fmt.Fprintf(os.Stderr, "[ERROR] all values in the ArrayLit should be of type %v but got a value of %v\n", o.Type.Ptr.BaseType, t)
             fmt.Fprintln(os.Stderr, "\t" + v.At())
             os.Exit(1)
@@ -111,7 +115,12 @@ func typeCheckStructLit(o *ast.StructLit) {
     t := o.StructType
 
     for i,f := range o.Fields {
-        if !CheckTypes(t.Types[i], f.GetType()) {
+        t2 := f.GetType()
+        if !CheckTypes(t.Types[i], t2) {
+            if t.Types[i].GetKind() == types.Int && CheckIntLit(t, t2, f.Value) {
+                return
+            }
+
             fmt.Fprintf(os.Stderr, "[ERROR] expected a %v as field %d of struct %s but got %v\n",
                 t.Types[i], i, o.StructType.Name, f.GetType())
             fmt.Fprintln(os.Stderr, "\t" + f.At())
