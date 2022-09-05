@@ -29,6 +29,36 @@ fn testConstEval() {
     printInt(-10 * -10) printStr("\n")
 }
 
+fn testManyInts(a1 i64, a2 i64, a3 i64, a4 i64, a5 i64, a6 i64, i i8) {
+    printInt(a1) printStr("\n")
+    printInt(a2) printStr("\n")
+    printInt(a3) printStr("\n")
+    printInt(a4) printStr("\n")
+    printInt(a5) printStr("\n")
+    printInt(a6) printStr("\n")
+    printInt(i) printStr("\n")
+}
+
+fn testManyInts2(a1 i64, a2 i64, a3 i64, a4 i64, a5 i64, a6 i64, i i16) {
+    printInt(a1) printStr("\n")
+    printInt(a2) printStr("\n")
+    printInt(a3) printStr("\n")
+    printInt(a4) printStr("\n")
+    printInt(a5) printStr("\n")
+    printInt(a6) printStr("\n")
+    printInt(i) printStr("\n")
+}
+
+fn testManyUints(a1 u64, a2 u64, a3 u64, a4 u64, a5 u64, a6 u64, u u8) {
+    printUint(a1) printStr("\n")
+    printUint(a2) printStr("\n")
+    printUint(a3) printStr("\n")
+    printUint(a4) printStr("\n")
+    printUint(a5) printStr("\n")
+    printUint(a6) printStr("\n")
+    printUint(u) printStr("\n")
+}
+
 fn main() {
     printStr("test char -----\n")
     testChar('x')
@@ -41,4 +71,15 @@ fn main() {
 
     printStr("\ntest ConstEval -----\n")
     testConstEval()
+
+    printStr("\ntest many args -----\n")
+    testManyInts(-1, -2, -3, -4, -5, -6, -7)
+    printStr("-----\n")
+    testManyInts(0x7fffffffffffffff, 0x7fffffffffffffff, 0x7fffffffffffffff, 0x7fffffffffffffff, 0x7fffffffffffffff, 0x7fffffffffffffff, 0x7f)
+    printStr("-----\n")
+    testManyInts(-0x8000000000000000, -0x8000000000000000, -0x8000000000000000, -0x8000000000000000, -0x8000000000000000, -0x8000000000000000, -0x80)
+    printStr("-----\n")
+    testManyUints(0xffffffffffffffff, 0xfffffffffffffffe, 0xfffffffffffffffd, 0xfffffffffffffffc, 0xfffffffffffffffb, 0xfffffffffffffffa, 0xff)
+    printStr("-----\n")
+    testManyInts2(0xfffffffa, 0xfffffffb, 0xfffffffc, 0xfffffffd, 0xfffffffe, 0xffffffff, 0xfff)
 }

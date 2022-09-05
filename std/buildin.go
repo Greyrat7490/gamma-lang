@@ -39,6 +39,7 @@ func Define(file *os.File) {
     definePrintBool(file)
 
     defineExit(file)
+    file.WriteString("\n")
 }
 
 
@@ -56,7 +57,7 @@ func definePrintStr(asm *os.File) {
     asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
     syscall(asm, SYS_WRITE)
 
-    asm.WriteString("ret\n\n")
+    asm.WriteString("ret\n")
 }
 
 func definePrintChar(asm *os.File) {
@@ -68,7 +69,7 @@ func definePrintChar(asm *os.File) {
     asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
     syscall(asm, SYS_WRITE)
 
-    asm.WriteString("ret\n\n")
+    asm.WriteString("ret\n")
 }
 
 func definePrintInt(asm *os.File) {
@@ -81,7 +82,7 @@ func definePrintInt(asm *os.File) {
     asm.WriteString("mov rsi, rbx\n")
     syscall(asm, SYS_WRITE)
 
-    asm.WriteString("ret\n\n")
+    asm.WriteString("ret\n")
 }
 
 func definePrintUint(asm *os.File) {
@@ -94,7 +95,7 @@ func definePrintUint(asm *os.File) {
     asm.WriteString("mov rsi, rbx\n")
     syscall(asm, SYS_WRITE)
 
-    asm.WriteString("ret\n\n")
+    asm.WriteString("ret\n")
 }
 
 func definePrintPtr(asm *os.File) {
@@ -107,7 +108,7 @@ func definePrintPtr(asm *os.File) {
     asm.WriteString("mov rsi, rbx\n")
     syscall(asm, SYS_WRITE)
 
-    asm.WriteString("ret\n\n")
+    asm.WriteString("ret\n")
 }
 
 func definePrintBool(asm *os.File) {
@@ -121,15 +122,12 @@ func definePrintBool(asm *os.File) {
     asm.WriteString("mov rsi, rbx\n")
     syscall(asm, SYS_WRITE)
 
-    asm.WriteString("ret\n\n")
+    asm.WriteString("ret\n")
 }
 
 func defineBtoS(asm *os.File) {
     asm.WriteString(
-`; rax = input int
-; rbx = output string pointer
-; rax = output string length
-_bool_to_str:
+`_bool_to_str:
     cmp ax, 0
     jne .c1
     mov rbx, _false
@@ -139,7 +137,6 @@ _bool_to_str:
         mov rbx, _true
         mov rax, 4
         ret
-
 `)
 }
 
@@ -149,68 +146,42 @@ func defineItoS(asm *os.File) {
 ; rbx = output string pointer
 ; rax = output string length
 _uint_to_str:
-    push rcx
-    push rdx
-
-    mov ecx, 10
-
-    lea rbx, [_intBuf+20]
+    mov rcx, 10
+    lea rbx, [_intBuf+21]
     .l1:
-        xor edx, edx
-        div ecx
+        xor rdx, rdx
+        div rcx
         add dl, 48
         dec rbx
         mov byte [rbx], dl
-        cmp eax, 0
+        cmp rax, 0
         jne .l1
-
-    lea rax, [_intBuf+20]
+    lea rax, [_intBuf+21]
     sub rax, rbx
-    pop rdx
-    pop rcx
     ret
-
 _int_to_str:
-    push rcx
-    push rdx
-    push rax
-
-    mov ecx, 10
-    lea rbx, [_intBuf+20]
-
     cmp rax, 0
-    jge .l1
-
+    jge _uint_to_str
     neg rax
-
+    mov rcx, 10
+    lea rbx, [_intBuf+21]
     .l1:
-        xor edx, edx
-        div ecx
+        xor rdx, rdx
+        div rcx
         add dl, 48
         dec rbx
         mov byte [rbx], dl
-        cmp eax, 0
+        cmp rax, 0
         jne .l1
-
-    pop rax
-    cmp rax, 0
-    jge .end
-
     dec rbx
     mov byte [rbx], 0x2d
-
-    .end:
-        lea rax, [_intBuf+20]
-        sub rax, rbx
-        pop rdx
-        pop rcx
-        ret
-
+    lea rax, [_intBuf+21]
+    sub rax, rbx
+    ret
 `)
 }
 
 func defineExit(file *os.File) {
     file.WriteString("exit:\n")
     syscall(file, SYS_EXIT)
-    file.WriteString("\n")
 }
