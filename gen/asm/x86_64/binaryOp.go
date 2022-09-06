@@ -8,7 +8,7 @@ import (
 )
 
 // results in A-register
-func BinaryOp(file *os.File, opType token.TokenType, src string, size uint) {
+func BinaryOp(file *os.File, opType token.TokenType, src string, size uint, signed bool) {
     switch opType {
     case token.Eql:
         Eql(file, GetReg(RegA, size), src)
@@ -28,11 +28,11 @@ func BinaryOp(file *os.File, opType token.TokenType, src string, size uint) {
     case token.Minus:
         Sub(file, src, size)
     case token.Mul:
-        Mul(file, src, size)
+        Mul(file, src, size, signed)
     case token.Div:
-        Div(file, src, size)
+        Div(file, src, size, signed)
     case token.Mod:
-        Mod(file, src, size)
+        Mod(file, src, size, signed)
 
     case token.Shl:
         Shl(file, src, size)
@@ -51,8 +51,8 @@ func BinaryOp(file *os.File, opType token.TokenType, src string, size uint) {
     }
 }
 
-func BinaryOpReg(file *os.File, opType token.TokenType, reg RegGroup, size uint) {
-    BinaryOp(file, opType, GetReg(reg, size), size)
+func BinaryOpReg(file *os.File, opType token.TokenType, reg RegGroup, size uint, signed bool) {
+    BinaryOp(file, opType, GetReg(reg, size), size, signed)
 }
 
 func BinaryOpVals(op token.Token, lhs token.Token, rhs token.Token) token.Token {

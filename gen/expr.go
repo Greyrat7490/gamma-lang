@@ -124,7 +124,7 @@ func IndexedAddrToReg(file *os.File, e *ast.Indexed, r asm.RegGroup) {
         asm.MovRegReg(file, asm.RegC, asm.RegA, types.Ptr_Size)
         GenExpr(file, idxExpr)
 
-        asm.Mul(file, fmt.Sprint(baseTypeSize), types.Ptr_Size)
+        asm.Mul(file, fmt.Sprint(baseTypeSize), types.Ptr_Size, false)
         asm.Add(file, asm.GetReg(asm.RegC, types.Ptr_Size), types.Ptr_Size)
 
         if r != asm.RegA {
@@ -414,7 +414,7 @@ func GenBinary(file *os.File, e *ast.Binary) {
                     if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
                 }
 
-                asm.BinaryOp(file, e.Operator.Type, c.Str, size)
+                asm.BinaryOp(file, e.Operator.Type, c.Str, size, e.GetType().GetKind() == types.Int)
                 return
             }
         }
@@ -423,9 +423,9 @@ func GenBinary(file *os.File, e *ast.Binary) {
             if v,ok := ident.Obj.(vars.Var); ok {
                 if t := v.GetType(); t.Size() < size {
                     asm.MovRegDeref(file, asm.RegB, v.Addr(0), t.Size())
-                    asm.BinaryOpReg(file, e.Operator.Type, asm.RegB, size)
+                    asm.BinaryOpReg(file, e.Operator.Type, asm.RegB, size, t.GetKind() == types.Int)
                 } else {
-                    asm.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), v.Addr(0)), size)
+                    asm.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), v.Addr(0)), size, t.GetKind() == types.Int)
                 }
             }
         } else {
@@ -435,7 +435,7 @@ func GenBinary(file *os.File, e *ast.Binary) {
             asm.MovRegReg(file, asm.RegB, asm.RegA, size)
 
             asm.PopReg(file, asm.RegA)
-            asm.BinaryOpReg(file, e.Operator.Type, asm.RegB, size)
+            asm.BinaryOpReg(file, e.Operator.Type, asm.RegB, size, e.GetType().GetKind() == types.Int)
         }
 
     // &&, ||

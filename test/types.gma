@@ -59,6 +59,18 @@ fn testManyUints(a1 u64, a2 u64, a3 u64, a4 u64, a5 u64, a6 u64, u u8) {
     printUint(u) printStr("\n")
 }
 
+fn testMul(a1 u64, a2 u64) {
+    printUint(a1) printStr(" * ") printUint(a2) printStr(" = ")
+    printUint(a1 * a2)
+    printStr("\n")
+}
+
+fn testDiv(a1 u64, a2 u64) {
+    printUint(a1) printStr(" / ") printUint(a2) printStr(" = ")
+    printUint(a1 / a2)
+    printStr("\n")
+}
+
 fn main() {
     printStr("test char -----\n")
     testChar('x')
@@ -82,4 +94,16 @@ fn main() {
     testManyUints(0xffffffffffffffff, 0xfffffffffffffffe, 0xfffffffffffffffd, 0xfffffffffffffffc, 0xfffffffffffffffb, 0xfffffffffffffffa, 0xff)
     printStr("-----\n")
     testManyInts2(0xfffffffa, 0xfffffffb, 0xfffffffc, 0xfffffffd, 0xfffffffe, 0xffffffff, 0xfff)
+
+    printStr("\ntest unsigned mul -----\n")
+    testMul(0x10, 0x10)
+    testMul(0x0fffffffffffffff, 0xf)
+    testMul(0x0fffffffffffffff, 0x10)
+    testMul(0x1111111111111111, 0xf)
+
+    printStr("\ntest unsigned div -----\n")
+    testDiv(0x100, 0x10)
+    testDiv(0xeffffffffffffff1, 0xf)
+    testDiv(0xfffffffffffffff0, 0x10)
+    testDiv(0xffffffffffffffff, 0xf)
 }
