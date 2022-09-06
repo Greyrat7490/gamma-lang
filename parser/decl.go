@@ -52,37 +52,29 @@ func prsDecl(tokens *token.Tokens) ast.Decl {
 }
 
 func prsType(tokens *token.Tokens) types.Type {
-    typename := tokens.Cur()
-
-    switch typename.Type {
+    switch tokens.Cur().Type {
     case token.Mul:
-        typename = tokens.Next()
-
-        if typename.Type != token.Typename {
-            fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", typename.Str)
-            fmt.Fprintln(os.Stderr, "\t" + typename.At())
-            os.Exit(1)
-        }
-
-        if baseType := types.ToBaseType(typename.Str); baseType != nil {
-            return types.PtrType{ BaseType: baseType }
-        }
+        tokens.Next()
+        return types.PtrType{ BaseType: prsType(tokens) }
 
     case token.BrackL:
         return prsArrType(tokens)
 
     case token.Name:
-        if obj := identObj.Get(typename.Str); obj != nil {
+        if obj := identObj.Get(tokens.Cur().Str); obj != nil {
             if strct,ok := obj.(*structDec.Struct); ok {
                 return strct.GetType()
             }
         }
 
-    default:
-        return types.ToBaseType(typename.Str)
-    }
+        fmt.Fprintf(os.Stderr, "[ERROR] unknown struct type \"%s\"\n", tokens.Cur().Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+        return nil
 
-    return nil
+    default:
+        return types.ToBaseType(tokens.Cur().Str)
+    }
 }
 
 func prsArrType(tokens *token.Tokens) types.ArrType {
