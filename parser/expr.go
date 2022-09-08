@@ -3,9 +3,9 @@ package prs
 import (
     "os"
     "fmt"
+    "gamma/types"
     "gamma/token"
     "gamma/cmpTime"
-    "gamma/types"
     "gamma/types/array"
     "gamma/types/struct"
     "gamma/ast"
@@ -367,8 +367,9 @@ func prsArrayLitExprs(tokens *token.Tokens, lenghts []uint64) (exprs []ast.Expr)
     return
 }
 
-func prsIndexExpr(tokens *token.Tokens, expr ast.Expr) *ast.Indexed {
-    res := ast.Indexed{ ArrExpr: expr, BrackLPos: tokens.Cur().Pos }
+func prsIndexExpr(tokens *token.Tokens, e ast.Expr) *ast.Indexed {
+    res := ast.Indexed{ ArrExpr: e, BrackLPos: tokens.Cur().Pos }
+    res.ArrType = GetTypeIndexed(&res)
 
     tokens.Next()
     res.Indices = append(res.Indices, prsExpr(tokens))
@@ -411,7 +412,9 @@ func prsField(tokens *token.Tokens, obj ast.Expr) *ast.Field {
         os.Exit(1)
     }
 
-    return &ast.Field{ Obj: obj, DotPos: dot.Pos, FieldName: fieldName }
+    field := ast.Field{ Obj: obj, DotPos: dot.Pos, FieldName: fieldName }
+    field.StructType, field.Type = GetTypesField(&field)
+    return &field
 }
 
 func prsParenExpr(tokens *token.Tokens) *ast.Paren {
@@ -455,6 +458,7 @@ func prsUnaryExpr(tokens *token.Tokens) *ast.Unary {
         }
     }
 
+    expr.Type = GetTypeUnary(&expr)
     return &expr
 }
 
@@ -584,6 +588,7 @@ func prsXSwitch(tokens *token.Tokens) *ast.XSwitch {
         os.Exit(1)
     }
 
+    switchExpr.Type = switchExpr.Cases[0].GetType()
     return &switchExpr
 }
 
@@ -600,6 +605,7 @@ func prsBinary(tokens *token.Tokens, expr ast.Expr, min_precedence precedence) a
 
         // switch/xswitch
         if tokens.Cur().Type == token.BraceL {
+            b.Type = types.BoolType{}
             return &b
         }
 
@@ -632,8 +638,11 @@ func prsBinary(tokens *token.Tokens, expr ast.Expr, min_precedence precedence) a
             b.OperandR = prsLitExpr(tokens)
         }
 
+        b.Type = GetTypeBinary(&b)
+
         if isBinaryExpr(tokens) {
             b.OperandR = prsBinary(tokens, b.OperandR, precedenceL+1)
+            b.Type = GetTypeBinary(&b)
         }
 
         // left to right as correct order of operations
@@ -654,7 +663,7 @@ func swap(expr *ast.Binary) {
         expr.Operator.Str = "+"
 
         t := token.Token{ Type: token.Minus, Str: "-" }
-        expr.OperandR = &ast.Unary{ Operator: t, Operand: expr.OperandR }
+        expr.OperandR = &ast.Unary{ Operator: t, Operand: expr.OperandR, Type: expr.Type }
 
     // TODO: proper fix
     // only tmp

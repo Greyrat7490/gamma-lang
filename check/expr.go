@@ -5,9 +5,9 @@ import (
     "fmt"
     "reflect"
     "strconv"
+    "gamma/cmpTime"
     "gamma/token"
     "gamma/types"
-    "gamma/cmpTime"
     "gamma/ast"
     "gamma/ast/identObj/func"
 )
@@ -114,15 +114,10 @@ func checkTypeExpr(destType types.Type, e ast.Expr) bool {
 }
 
 func typeCheckIndexed(e *ast.Indexed) {
-    if t,ok := e.ArrExpr.GetType().(types.ArrType); !ok {
-        fmt.Fprintf(os.Stderr, "[ERROR] you can only index an array but got %v\n", t)
+    if len(e.ArrType.Lens) < len(e.Indices){
+        fmt.Fprintf(os.Stderr, "[ERROR] dimension of the array is %d but got %d\n", len(e.ArrType.Lens), len(e.Indices))
+        fmt.Fprintln(os.Stderr, "\t" + e.At())
         os.Exit(1)
-    } else {
-        if len(t.Lens) < len(e.Indices){
-            fmt.Fprintf(os.Stderr, "[ERROR] dimension of the array is %d but got %d\n", len(t.Lens), len(e.Indices))
-            fmt.Fprintln(os.Stderr, "\t" + e.At())
-            os.Exit(1)
-        }
     }
 }
 
@@ -176,12 +171,10 @@ func typeCheckArrayLit(o *ast.ArrayLit) {
 }
 
 func typeCheckStructLit(o *ast.StructLit) {
-    t := o.StructType
-
     for i,f := range o.Fields {
-        if !checkTypeExpr(t.Types[i], f.Value) {
+        if !checkTypeExpr(o.StructType.Types[i], f.Value) {
             fmt.Fprintf(os.Stderr, "[ERROR] expected a %v as field %d of struct %s but got %v\n",
-                t.Types[i], i, o.StructType.Name, f.GetType())
+                o.StructType.Types[i], i, o.StructType.Name, f.GetType())
             fmt.Fprintln(os.Stderr, "\t" + f.At())
             os.Exit(1)
         }
@@ -192,39 +185,23 @@ func typeCheckBinary(o *ast.Binary) {
     t1 := o.OperandL.GetType()
     t2 := o.OperandR.GetType()
 
-    if o.Operator.Type == token.And || o.Operator.Type == token.Or {
-        if t1.GetKind() != types.Bool || t2.GetKind() != types.Bool {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected 2 bools for logic op \"%s\" but got %v and %v\n", o.Operator.Str, t1, t2)
-            fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
-            os.Exit(1)
-        }
-    } else {
-                                                    // TODO only Uint
-        if (t1.GetKind() == types.Ptr && t2.GetKind() == types.Int) ||
-           (t2.GetKind() == types.Ptr && t1.GetKind() == types.Int) {
-            if o.Operator.Type == token.Plus || o.Operator.Type == token.Minus {
-                return
-            }
-
-            fmt.Fprintf(os.Stderr, "[ERROR] only +/- operators are allowed for binary ops with %v and %v\n", t1, t2)
-            fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
-            os.Exit(1)
-        } else {
-            b := false
-            if t2.Size() > t1.Size() {
-                b = checkTypeExpr(t2, o.OperandL)
-            } else {
-                b = checkTypeExpr(t1, o.OperandR)
-            }
-
-            if !b {
-                fmt.Fprintf(os.Stderr, "[ERROR] binary operation has two differente types (left: %v right: %v)\n", t1, t2)
-                fmt.Fprintln(os.Stderr, "\t(ptr +/- int is allowed)")
+    // most typechecking is already done in GetTypeBinary
+    if o.Type != nil {
+        if o.Operator.Type == token.And || o.Operator.Type == token.Or {
+            if t1.GetKind() != types.Bool || t2.GetKind() != types.Bool {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected 2 bools for logic op \"%s\" but got %v and %v\n", o.Operator.Str, t1, t2)
                 fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
                 os.Exit(1)
             }
         }
+
+        return
     }
+
+    fmt.Fprintf(os.Stderr, "[ERROR] binary operation (%s) has two incompatible types (left: %v right: %v)\n",
+        o.Operator.Str, t1, t2)
+    fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+    os.Exit(1)
 }
 
 func typeCheckXSwitch(o *ast.XSwitch) {

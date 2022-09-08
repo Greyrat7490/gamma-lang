@@ -6,14 +6,14 @@ prev :: &dummy
 cur  :: prev + LEN          // size of prev is LEN*BOOL_SIZE
 
 
-fn memcpy(dest *bool, src *bool, size i32) {
-    for i i32, size {
+fn memcpy(dest *bool, src *bool, size u64) {
+    for i u64, size {
         *(dest+i) = *(src+i)
     }
 }
 
 fn printRow() {
-    for i i32, LEN {
+    for i u64, LEN {
         if *(cur+i) {
             printStr("o")
         } else {
@@ -24,10 +24,10 @@ fn printRow() {
     printStr("\n")
 }
 
-fn setNextRow(round i32) {
+fn setNextRow(round u64) {
     *(cur+LEN-round-1) = true
 
-    for i i32, LEN-1, 1 {
+    for i u64, LEN-1, 1 {
         if *(prev+i-1) == false {
             if *(prev+i) == false {
                 if *(prev+i+1) == false {       // 000 -> 0
@@ -59,7 +59,7 @@ fn setNextRow(round i32) {
 }
 
 fn main() {
-    for i i32, LEN {
+    for i u64, LEN {
         setNextRow(i)
         printRow()
     }

@@ -3,9 +3,9 @@ package prs
 import (
     "os"
     "fmt"
-    "gamma/ast"
     "gamma/token"
     "gamma/types"
+    "gamma/ast"
     "gamma/ast/identObj"
 )
 
@@ -50,13 +50,13 @@ func prsStmt(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
         return &r
 
     case token.Number, token.Str, token.Boolean, token.ParenL:
-        expr := prsExpr(tokens)
-        if !ignoreUnusedExpr && expr.GetType() != nil {
+        e := prsExpr(tokens)
+        if !ignoreUnusedExpr && e.GetType() != nil {
             fmt.Fprintln(os.Stderr, "[ERROR] unused expr")
-            fmt.Fprintln(os.Stderr, "\t" + expr.At())
+            fmt.Fprintln(os.Stderr, "\t" + e.At())
             os.Exit(1)
         }
-        return &ast.ExprStmt{ Expr: expr }
+        return &ast.ExprStmt{ Expr: e }
 
     case token.Name:
         if isDec(tokens) || isDefInfer(tokens) {
@@ -65,18 +65,18 @@ func prsStmt(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
         fallthrough
 
     case token.UndScr, token.XSwitch, token.Plus, token.Minus, token.Mul, token.Amp:
-        expr := prsExpr(tokens)
+        e := prsExpr(tokens)
 
         if tokens.Peek().Type == token.Assign {
-            a := prsAssignVar(tokens, expr)
+            a := prsAssignVar(tokens, e)
             return &a
         } else {
-            if !ignoreUnusedExpr && expr.GetType() != nil {
+            if !ignoreUnusedExpr && e.GetType() != nil {
                 fmt.Fprintln(os.Stderr, "[ERROR] unused expr")
-                fmt.Fprintln(os.Stderr, "\t" + expr.At())
+                fmt.Fprintln(os.Stderr, "\t" + e.At())
                 os.Exit(1)
             }
-            return &ast.ExprStmt{ Expr: expr }
+            return &ast.ExprStmt{ Expr: e }
         }
 
     case token.Elif:
@@ -215,7 +215,7 @@ func prsWhileStmt(tokens *token.Tokens) ast.While {
             op.Def.Value = expr
             tokens.Next()
         } else {
-            op.Def.Value = &ast.Lit{ Val: token.Token{ Type: token.Number, Str: "0" }, Type: types.CreateInt(types.I32_Size) }
+            op.Def.Value = &ast.Lit{ Val: token.Token{ Type: token.Number, Str: "0" }, Type: dec.Type }
             op.Cond = expr
         }
     } else {
@@ -232,29 +232,27 @@ func prsForStmt(tokens *token.Tokens) ast.For {
     identObj.StartScope()
     defer identObj.EndScope()
 
-    var op ast.For = ast.For{
-        ForPos: tokens.Cur().Pos,
-        Limit: nil,
-        Def: ast.DefVar{
-            Value: &ast.Lit{
-                Val: token.Token{ Str: "0", Type: token.Number },
-                Type: types.CreateInt(types.I32_Size),
-            },
-        },
-    }
+    var op ast.For = ast.For{ ForPos: tokens.Cur().Pos, Limit: nil }
 
     tokens.Next()
     dec := prsDecVar(tokens)
-    op.Def.V = dec.V
-    op.Def.Type = dec.Type
+    op.Def = ast.DefVar{
+        Value: &ast.Lit{
+            Val: token.Token{ Str: "0", Type: token.Number },
+            Type: dec.Type,
+        },
+        V: dec.V,
+        Type: dec.Type,
+    }
 
     op.Step = &ast.Binary{
         Operator: token.Token{ Type: token.Plus },
         OperandL: &ast.Ident{ Obj: op.Def.V, Name: op.Def.V.GetName(), Pos: op.Def.V.GetPos() },
         OperandR: &ast.Lit{
             Val: token.Token{ Str: "1", Type: token.Number },
-            Type: types.CreateInt(types.I32_Size),
+            Type: dec.Type,
         },
+        Type: dec.Type,
     }
 
     if tokens.Next().Type == token.Comma {
@@ -331,7 +329,12 @@ func completeCond(placeholder *ast.Expr, condBase ast.Expr, expr1 ast.Expr, expr
 
     if condBase == nil {
         if expr2 != nil {
-            return &ast.Binary{ OperandL: expr2, OperandR: expr1, Operator: token.Token{ Str: "||", Type: token.Or } }
+            return &ast.Binary{
+                OperandL: expr2,
+                OperandR: expr1,
+                Operator: token.Token{ Str: "||", Type: token.Or },
+                Type: types.BoolType{},
+            }
         }
 
         return expr1
@@ -341,7 +344,12 @@ func completeCond(placeholder *ast.Expr, condBase ast.Expr, expr1 ast.Expr, expr
         if expr2 != nil {
             *placeholder = expr1
             condCopy := *b
-            return &ast.Binary{ OperandL: expr2, OperandR: &condCopy, Operator: token.Token{ Str: "||", Type: token.Or } }
+            return &ast.Binary{
+                OperandL: expr2,
+                OperandR: &condCopy,
+                Operator: token.Token{ Str: "||", Type: token.Or },
+                Type: types.BoolType{},
+            }
         } else {
             *placeholder = expr1
             condCopy := *b

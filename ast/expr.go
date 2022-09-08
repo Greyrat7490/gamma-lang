@@ -8,9 +8,6 @@ import (
     "gamma/types"
     "gamma/ast/identObj"
     "gamma/ast/identObj/func"
-    "gamma/ast/identObj/vars"
-    "gamma/ast/identObj/consts"
-    "gamma/ast/identObj/struct"
 )
 
 type Expr interface {
@@ -59,6 +56,7 @@ type FieldLit struct {
 }
 
 type Indexed struct {
+    ArrType types.ArrType
     ArrExpr Expr
     BrackLPos token.Pos
     Indices []Expr
@@ -66,7 +64,8 @@ type Indexed struct {
 }
 
 type Field struct {
-    Pos token.Pos
+    StructType types.StructType
+    Type types.Type
     Obj Expr
     DotPos token.Pos
     FieldName token.Token
@@ -79,12 +78,14 @@ type Ident struct {
 }
 
 type Unary struct {
+    Type types.Type
     Operator token.Token
     Operand Expr
 }
 
 type Binary struct {
     Pos token.Pos
+    Type types.Type
     OperandL Expr
     Operator token.Token
     OperandR Expr
@@ -98,6 +99,7 @@ type Paren struct {
 
 type XSwitch struct {
     Pos token.Pos
+    Type types.Type
     BraceLPos token.Pos
     Cases []XCase
     BraceRPos token.Pos
@@ -221,171 +223,69 @@ func (o *BadExpr) Readable(indent int) string {
     return ""
 }
 
-
-
-func (e *FnCall) GetType() types.Type {
-    return e.F.GetRetType()
-}
-
-func (e *Lit) GetType() types.Type {
-    return e.Type
-}
-
-func (e *FieldLit) GetType() types.Type {
-    return e.Value.GetType()
-}
-
-func (e *StructLit) GetType() types.Type {
-    return e.StructType
-}
-
-func (e *ArrayLit) GetType() types.Type {
-    return e.Type
-}
-
-func (e *Indexed) GetType() types.Type {
-    if t,ok := e.ArrExpr.GetType().(types.ArrType); ok {
-        return t.Ptr.BaseType
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] you can only index an array but got %v\n", t)
-        os.Exit(1)
-        return nil
-    }
-}
-
-func (e *Field) GetType() types.Type {
-    t := e.Obj.GetType()
-
-    if sType,ok := t.(types.StructType); ok {
-        obj := identObj.Get(sType.Name)
-        if s,ok := obj.(*structDec.Struct); ok {
-            return s.GetTypeOfField(e.FieldName.Str)
-        }
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected struct but got %v\n", t)
-        fmt.Fprintln(os.Stderr, "\t" + e.At())
-        os.Exit(1)
-    }
-
-    return nil
-}
-
-func (e *Paren) GetType() types.Type {
-    return e.Expr.GetType()
-}
-
-func (e *Ident) GetType() types.Type {
-    if c,ok := e.Obj.(*consts.Const); ok {
-        return c.GetType()
-    }
-
-    if v,ok := e.Obj.(vars.Var); ok {
-        return v.GetType()
-    }
-
-    if s,ok := e.Obj.(*structDec.Struct); ok {
-        return s.GetType()
-    }
-
-    // TODO: function
-
-    fmt.Fprintf(os.Stderr, "[ERROR] could not get type of %s\n", e.Name)
-    os.Exit(1)
-    return nil
-}
-
-func (e *Unary) GetType() types.Type {
-    if e.Operator.Type == token.Amp {
-        return types.PtrType{ BaseType: e.Operand.GetType() }
-    }
-
-    if e.Operator.Type == token.Mul {
-        if ptr, ok := e.Operand.GetType().(types.PtrType); ok {
-            return ptr.BaseType
-        } else {
-            fmt.Fprintln(os.Stderr, "[ERROR] you cannot deref this expre (expected a pointer/address)")
-            fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
-            os.Exit(1)
-        }
-    }
-
-    return e.Operand.GetType()
-}
-
-func (e *Binary) GetType() types.Type {
-    if  e.Operator.Type == token.Eql || e.Operator.Type == token.Neq ||
-        e.Operator.Type == token.Grt || e.Operator.Type == token.Lss ||
-        e.Operator.Type == token.Geq || e.Operator.Type == token.Leq {
-        return types.BoolType{}
-    }
-
-    t := e.OperandL.GetType()
-    if t == nil {
-        return e.OperandR.GetType()
-    }
-
-    if other := e.OperandR.GetType(); other.GetKind() == types.Ptr {
-        // check for cases like 420 + &v1
-        if t.GetKind() == types.Int {
-            return other
-        }
-
-        // check for cases like ptr1 - ptr2
-        if t.GetKind() == types.Ptr {
-            return types.CreateInt(types.Ptr_Size)
-        }
-    }
-
-    return t
-}
-
-func (e *XSwitch) GetType() types.Type {
-    return e.Cases[0].Expr.GetType()
-}
-
-func (e *XCase) GetType() types.Type {
-    return e.Expr.GetType()
-}
-
-func (e *BadExpr) GetType() types.Type {
-    return nil
-}
-
-
 func (e *Indexed) Flatten() Expr {
     // for dim = 1 (no need to flatten)
     if len(e.Indices) == 1 {
         return e.Indices[0]
     }
 
-    res := Binary{ Operator: token.Token{ Str: "+", Type: token.Plus }, OperandR: e.Indices[len(e.Indices)-1] }
+    res := Binary{
+        Operator: token.Token{ Str: "+", Type: token.Plus },
+        OperandR: e.Indices[len(e.Indices)-1],
+        Type: types.CreateUint(types.Ptr_Size),
+    }
     expr := &res.OperandL
 
     // for dim > 3
-    arrType,_ := e.ArrExpr.GetType().(types.ArrType)
-    var innerLen uint64 = arrType.Lens[0]
+    var innerLen uint64 = e.ArrType.Lens[0]
     for i := 1; i < len(e.Indices)-1; i++ {
         b := Binary{
             Operator: token.Token{ Str: "+", Type: token.Plus }, OperandR: &Binary{
                 Operator: token.Token{ Str: "*", Type: token.Mul },
                 OperandL: e.Indices[len(e.Indices)-1-i],
-                OperandR: &Lit{ Val: token.Token{ Str: fmt.Sprint(innerLen), Type: token.Number }, Type: types.CreateInt(types.I32_Size) },
-        } }
+                OperandR: &Lit{
+                    Val: token.Token{ Str: fmt.Sprint(innerLen), Type: token.Number },
+                    Type: types.CreateUint(types.Ptr_Size),
+                },
+                Type: types.CreateUint(types.Ptr_Size),
+            },
+            Type: types.CreateUint(types.Ptr_Size),
+        }
 
         *expr = &b
         expr = &b.OperandL
 
-        innerLen *= arrType.Lens[i]
+        innerLen *= e.ArrType.Lens[i]
     }
 
     *expr = &Binary{
         Operator: token.Token{ Str: "*", Type: token.Mul },
         OperandL: e.Indices[0],
-        OperandR: &Lit{ Val: token.Token{ Str: fmt.Sprint(innerLen), Type: token.Number }, Type: types.CreateInt(types.I32_Size) },
+        OperandR: &Lit{
+            Val: token.Token{ Str: fmt.Sprint(innerLen), Type: token.Number },
+            Type: types.CreateInt(types.I32_Size),
+        },
+        Type: types.CreateUint(types.Ptr_Size),
     }
 
     return &res
 }
+
+
+func (e *BadExpr)   GetType() types.Type { return nil }
+func (e *FnCall)    GetType() types.Type { return e.F.GetRetType() }
+func (e *Lit)       GetType() types.Type { return e.Type }
+func (e *FieldLit)  GetType() types.Type { return e.Value.GetType() }
+func (e *StructLit) GetType() types.Type { return e.StructType }
+func (e *ArrayLit)  GetType() types.Type { return e.Type }
+func (e *Indexed)   GetType() types.Type { return e.ArrType.Ptr.BaseType }
+func (e *Field)     GetType() types.Type { return e.Type }
+func (e *Ident)     GetType() types.Type { return e.Obj.GetType() }
+func (e *Unary)     GetType() types.Type { return e.Type }
+func (e *Binary)    GetType() types.Type { return e.Type }
+func (e *Paren)     GetType() types.Type { return e.Expr.GetType() }
+func (e *XSwitch)   GetType() types.Type { return e.Type }
+func (e *XCase)     GetType() types.Type { return e.Expr.GetType() }
 
 
 func (e *BadExpr)   expr() {}
@@ -410,7 +310,7 @@ func (e *FieldLit)  At() string { return e.Name.At() }
 func (e *StructLit) At() string { return e.Pos.At() }
 func (e *ArrayLit)  At() string { return e.Pos.At() }
 func (e *Indexed)   At() string { return e.ArrExpr.At() }
-func (e *Field)     At() string { return e.Pos.At() }
+func (e *Field)     At() string { return e.Obj.At() }
 func (e *Ident)     At() string { return e.Pos.At() }
 func (e *Unary)     At() string { return e.Operator.At() }
 func (e *Binary)    At() string { return e.OperandL.At() }    // TODO: At() of Operand with higher precedence

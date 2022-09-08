@@ -262,6 +262,7 @@ func GenFor(file *os.File, s *ast.For) {
             Operator: token.Token{ Type: token.Lss },
             OperandL: &ast.Ident{ Obj: s.Def.V, Name: s.Def.V.GetName(), Pos: s.Def.V.GetPos() },
             OperandR: s.Limit,
+            Type: types.BoolType{},
         }
         GenBinary(file, &cond)
         loops.ForExpr(file)

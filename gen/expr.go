@@ -7,17 +7,17 @@ import (
     "strconv"
     "gamma/token"
     "gamma/types"
+    "gamma/cmpTime"
     "gamma/types/str"
     "gamma/types/struct"
-    "gamma/cmpTime"
-    "gamma/gen/asm/x86_64"
-    "gamma/gen/asm/x86_64/conditions"
     "gamma/ast"
     "gamma/ast/identObj"
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
-    "gamma/ast/identObj/consts"
     "gamma/ast/identObj/struct"
+    "gamma/ast/identObj/consts"
+    "gamma/gen/asm/x86_64"
+    "gamma/gen/asm/x86_64/conditions"
 )
 
 func GenExpr(file *os.File, e ast.Expr) {
@@ -100,11 +100,10 @@ func GenArrayLit(file *os.File, e *ast.ArrayLit) {
 func IndexedAddrToReg(file *os.File, e *ast.Indexed, r asm.RegGroup) {
     GenExpr(file, e.ArrExpr)
 
-    arrType,_ := e.ArrExpr.GetType().(types.ArrType)
-    baseTypeSize := uint64(arrType.Ptr.BaseType.Size())
+    baseTypeSize := uint64(e.ArrType.Ptr.BaseType.Size())
 
-    if len(arrType.Lens) < len(e.Indices) {
-        fmt.Fprintf(os.Stderr, "[ERROR] dimension of the array is %d but got %d\n", len(arrType.Lens), len(e.Indices))
+    if len(e.ArrType.Lens) < len(e.Indices) {
+        fmt.Fprintf(os.Stderr, "[ERROR] dimension of the array is %d but got %d\n", len(e.ArrType.Lens), len(e.Indices))
         fmt.Fprintln(os.Stderr, "\t" + e.At())
         os.Exit(1)
     }
@@ -134,11 +133,9 @@ func IndexedAddrToReg(file *os.File, e *ast.Indexed, r asm.RegGroup) {
 }
 
 func GenIndexed(file *os.File, e *ast.Indexed) {
-    arrType,_ := e.ArrExpr.GetType().(types.ArrType)
-
     IndexedAddrToReg(file, e, asm.RegC)
 
-    switch t := arrType.Ptr.BaseType.(type) {
+    switch t := e.ArrType.Ptr.BaseType.(type) {
     case types.StrType:
         asm.MovRegDeref(file, asm.RegGroup(0), asm.GetReg(asm.RegC, types.Ptr_Size), types.Ptr_Size)
         asm.MovRegDeref(file, asm.RegGroup(1), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, 8), types.I32_Size)
@@ -161,7 +158,7 @@ func GenIndexed(file *os.File, e *ast.Indexed) {
             file,
             asm.RegGroup(0),
             asm.GetReg(asm.RegC, types.Ptr_Size),
-            arrType.Ptr.BaseType.Size(),
+            e.ArrType.Ptr.BaseType.Size(),
         )
     }
 }
@@ -182,80 +179,88 @@ func FieldAddrToReg(file *os.File, e *ast.Field, r asm.RegGroup) {
 }
 
 func FieldToOffset(e *ast.Field) int {
-    if t,ok := e.Obj.GetType().(types.StructType); ok {
-        if s,ok := identObj.Get(t.Name).(*structDec.Struct); ok {
-            if i,b := s.GetFieldNum(e.FieldName.Str); b {
-                switch o := e.Obj.(type) {
-                case *ast.Ident:
-                    return t.GetOffset(uint(i))
+    if s,ok := identObj.Get(e.StructType.Name).(*structDec.Struct); ok {
+        if i,b := s.GetFieldNum(e.FieldName.Str); b {
+            switch o := e.Obj.(type) {
+            case *ast.Ident:
+                return e.StructType.GetOffset(uint(i))
 
-                case *ast.Field:
-                    return t.GetOffset(uint(i)) + FieldToOffset(o)
+            case *ast.Field:
+                return e.StructType.GetOffset(uint(i)) + FieldToOffset(o)
 
-                default:
-                    fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
-                    fmt.Fprintln(os.Stderr, "\t" + e.At())
-                    os.Exit(1)
-                }
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", t.Name, e.FieldName)
+            default:
+                fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
                 fmt.Fprintln(os.Stderr, "\t" + e.At())
                 os.Exit(1)
             }
-
         } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not declared\n", t.Name)
+            fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName)
             fmt.Fprintln(os.Stderr, "\t" + e.At())
             os.Exit(1)
         }
-    }
 
-    fmt.Fprintf(os.Stderr, "[ERROR] expected struct but got %v\n", e.Obj.GetType())
-    fmt.Fprintln(os.Stderr, "\t" + e.At())
-    os.Exit(1)
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not declared\n", e.StructType.Name)
+        fmt.Fprintln(os.Stderr, "\t" + e.At())
+        os.Exit(1)
+    }
 
     return 0
 }
 
 func GenField(file *os.File, e *ast.Field) {
-    if t,ok := e.Obj.GetType().(types.StructType); ok {
-        if s,ok := identObj.Get(t.Name).(*structDec.Struct); ok {
-            if i,b := s.GetFieldNum(e.FieldName.Str); b {
-                switch o := e.Obj.(type) {
-                case *ast.Ident:
-                    switch t := s.GetTypes()[i].(type) {
-                    case types.StrType:
+    if s,ok := identObj.Get(e.StructType.Name).(*structDec.Struct); ok {
+        if i,b := s.GetFieldNum(e.FieldName.Str); b {
+            switch o := e.Obj.(type) {
+            case *ast.Ident:
+                switch t := s.GetTypes()[i].(type) {
+                case types.StrType:
+                    asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), types.Ptr_Size)
+                    asm.MovRegDeref(
+                        file,
+                        asm.RegGroup(1),
+                        fmt.Sprintf("%s+%d", o.Obj.Addr(i), int(types.Ptr_Size)),
+                        types.I32_Size,
+                    )
+
+                case types.StructType:
+                    if t.Size() > uint(8) {
                         asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), types.Ptr_Size)
                         asm.MovRegDeref(
                             file,
                             asm.RegGroup(1),
                             fmt.Sprintf("%s+%d", o.Obj.Addr(i), int(types.Ptr_Size)),
-                            types.I32_Size,
+                            t.Size() - 8,
                         )
-
-                    case types.StructType:
-                        if t.Size() > uint(8) {
-                            asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), types.Ptr_Size)
-                            asm.MovRegDeref(
-                                file,
-                                asm.RegGroup(1),
-                                fmt.Sprintf("%s+%d", o.Obj.Addr(i), int(types.Ptr_Size)),
-                                t.Size() - 8,
-                            )
-                        } else {
-                            asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), t.Size())
-                        }
-
-                    default:
+                    } else {
                         asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), t.Size())
                     }
 
-                case *ast.Field:
-                    FieldAddrToReg(file, o, asm.RegC)
+                default:
+                    asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), t.Size())
+                }
 
-                    offset := FieldToOffset(e)
-                    switch t := s.GetTypes()[i].(type) {
-                    case types.StrType:
+            case *ast.Field:
+                FieldAddrToReg(file, o, asm.RegC)
+
+                offset := FieldToOffset(e)
+                switch t := s.GetTypes()[i].(type) {
+                case types.StrType:
+                    asm.MovRegDeref(
+                        file,
+                        asm.RegGroup(0),
+                        asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
+                        types.Ptr_Size,
+                    )
+                    asm.MovRegDeref(
+                        file,
+                        asm.RegGroup(1),
+                        asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)),
+                        types.I32_Size,
+                    )
+
+                case types.StructType:
+                    if t.Size() > uint(8) {
                         asm.MovRegDeref(
                             file,
                             asm.RegGroup(0),
@@ -266,46 +271,26 @@ func GenField(file *os.File, e *ast.Field) {
                             file,
                             asm.RegGroup(1),
                             asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)),
-                            types.I32_Size,
+                            t.Size() - 8,
                         )
-
-                    case types.StructType:
-                        if t.Size() > uint(8) {
-                            asm.MovRegDeref(
-                                file,
-                                asm.RegGroup(0),
-                                asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
-                                types.Ptr_Size,
-                            )
-                            asm.MovRegDeref(
-                                file,
-                                asm.RegGroup(1),
-                                asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)),
-                                t.Size() - 8,
-                            )
-                        } else {
-                            asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size())
-                        }
-
-                    default:
+                    } else {
                         asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size())
                     }
 
                 default:
-                    fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
-                    fmt.Fprintln(os.Stderr, "\t" + e.At())
-                    os.Exit(1)
+                    asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size())
                 }
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", t.Name, e.FieldName)
+
+            default:
+                fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
                 fmt.Fprintln(os.Stderr, "\t" + e.At())
                 os.Exit(1)
             }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName)
+            fmt.Fprintln(os.Stderr, "\t" + e.At())
+            os.Exit(1)
         }
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected struct but got %v\n", e.Obj.GetType())
-        fmt.Fprintln(os.Stderr, "\t" + e.At())
-        os.Exit(1)
     }
 }
 
@@ -380,18 +365,13 @@ func GenUnary(file *os.File, e *ast.Unary) {
 }
 
 func GenBinary(file *os.File, e *ast.Binary) {
-    size := e.OperandL.GetType().Size()
-    if sizeR := e.OperandR.GetType().Size(); sizeR > size {
-        size = sizeR
-    }
-
     // compile time evaluation (constEval whole expr)
     if c := cmpTime.ConstEval(e); c.Type != token.Unknown {
         if c.Type == token.Boolean {
             if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
         }
 
-        asm.MovRegVal(file, asm.RegA, size, c.Str)
+        asm.MovRegVal(file, asm.RegA, e.GetType().Size(), c.Str)
         return
     }
 
@@ -404,7 +384,7 @@ func GenBinary(file *os.File, e *ast.Binary) {
                 if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
             }
 
-            asm.MovRegVal(file, asm.RegA, size, c.Str)
+            asm.MovRegVal(file, asm.RegA, e.OperandL.GetType().Size(), c.Str)
         } else {
             GenExpr(file, e.OperandL)
 
@@ -414,28 +394,29 @@ func GenBinary(file *os.File, e *ast.Binary) {
                     if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
                 }
 
-                asm.BinaryOp(file, e.Operator.Type, c.Str, size, e.GetType().GetKind() == types.Int)
+                asm.BinaryOp(file, e.Operator.Type, c.Str, e.OperandR.GetType().Size(), e.GetType().GetKind() == types.Int)
                 return
             }
         }
 
         if ident,ok := e.OperandR.(*ast.Ident); ok {
             if v,ok := ident.Obj.(vars.Var); ok {
-                if t := v.GetType(); t.Size() < size {
-                    asm.MovRegDeref(file, asm.RegB, v.Addr(0), t.Size())
-                    asm.BinaryOpReg(file, e.Operator.Type, asm.RegB, size, t.GetKind() == types.Int)
-                } else {
-                    asm.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), v.Addr(0)), size, t.GetKind() == types.Int)
-                }
+                t := v.GetType()
+
+                asm.BinaryOp(file,
+                    e.Operator.Type,
+                    fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), v.Addr(0)),
+                    t.Size(),
+                    t.GetKind() == types.Int)
             }
         } else {
             asm.PushReg(file, asm.RegA)
 
             GenExpr(file, e.OperandR)
-            asm.MovRegReg(file, asm.RegB, asm.RegA, size)
+            asm.MovRegReg(file, asm.RegB, asm.RegA, e.OperandR.GetType().Size())
 
             asm.PopReg(file, asm.RegA)
-            asm.BinaryOpReg(file, e.Operator.Type, asm.RegB, size, e.GetType().GetKind() == types.Int)
+            asm.BinaryOpReg(file, e.Operator.Type, asm.RegB, e.OperandR.GetType().Size(), e.GetType().GetKind() == types.Int)
         }
 
     // &&, ||
@@ -443,11 +424,11 @@ func GenBinary(file *os.File, e *ast.Binary) {
         // compile time evaluation
         if c := cmpTime.ConstEval(e.OperandL); c.Type != token.Unknown {
             if e.Operator.Type == token.And && c.Str == "false" {
-                asm.MovRegVal(file, asm.RegA, size, "0")
+                asm.MovRegVal(file, asm.RegA, types.Bool_Size, "0")
                 return
             }
             if e.Operator.Type == token.Or && c.Str == "true" {
-                asm.MovRegVal(file, asm.RegA, size, "1")
+                asm.MovRegVal(file, asm.RegA, types.Bool_Size, "1")
                 return
             }
 
@@ -617,7 +598,8 @@ func GenXSwitch(file *os.File, e *ast.XSwitch) {
 
 func DerefSetBigStruct(file *os.File, addr string, e ast.Expr) {
     if !types.IsBigStruct(e.GetType()) {
-        fmt.Fprintln(os.Stderr, "[ERROR] TODO: error msg")
+        fmt.Fprintln(os.Stderr, "[ERROR] expected expr to be a big struct")
+        fmt.Fprintln(os.Stderr, "\t" + e.At())
         os.Exit(1)
     }
 

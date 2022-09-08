@@ -292,3 +292,44 @@ func TypeOfVal(val string) Type {
 
     return nil
 }
+
+
+func MinSizeInt(val string) uint {
+    if i,err := strconv.ParseInt(val, 0, 64); err == nil {
+        if i < 0 {
+            i = -i - 1
+        }
+
+        switch {
+        case i < 0x80:       // i8
+            return 1
+        case i < 0x8000:     // i16
+            return 2
+        case i < 0x80000000: // i32
+            return 4
+        default:             // i64
+            if (i << 63) == 0 { // not u64
+                return 8
+            }
+        }
+    }
+
+    return 9
+}
+
+func MinSizeUint(val string) uint {
+    if u,err := strconv.ParseUint(val, 0, 64); err == nil {
+        switch {
+        case u <= 0xff:             // 8bit
+            return 1
+        case u <= 0xffff:           // 16bit
+            return 2
+        case u <= 0xffffffff:       // 32bit
+            return 4
+        default:                    // 64bit
+            return 8
+        }
+    }
+
+    return 9
+}

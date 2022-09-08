@@ -5,7 +5,7 @@ fn main() {
     local i32 := 0
     pLocal *i32 := &local
 
-    diff i64 := pLocal - pGlobal
+    diff u64 := pLocal - pGlobal
 
     printPtr(pGlobal)
     printStr("\n")
@@ -13,7 +13,7 @@ fn main() {
     printStr("\n")
 
     printStr("diff in bytes: ")
-    printInt(diff)
+    printUint(diff)
     printStr("   ~1MB difference (size of stack - 8)\n")
     // 1 more global var after v1 -> +8
     // 1 push (push rbp)          -> -8
@@ -24,8 +24,8 @@ fn main() {
     diff = pLocal - pGlobal + 8
 
     printStr("in bytes: ")
-    printInt(diff)
+    printUint(diff)
     printStr("\nin MB: ")
-    printInt(diff / 1024 / 1024)
+    printUint(diff / 1024 / 1024)
     printStr("\n")
 }
