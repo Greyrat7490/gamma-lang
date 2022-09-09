@@ -79,6 +79,7 @@ const (
     Struct          // struct
     Import          // import
     XSwitch         // $
+    As              // as
 
     TokenTypeCount uint = iota
 )
@@ -195,6 +196,8 @@ func ToTokenType(s string) TokenType {
         return Import
     case "$":
         return XSwitch
+    case "as":
+        return As
 
     default:
         if types.ToBaseType(s) != nil {
@@ -328,6 +331,8 @@ func (t TokenType) String() string {
         return "Import"
     case XSwitch:
         return "XSwitch"
+    case As:
+        return "As"
 
     case Typename:
         return "Typename"

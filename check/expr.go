@@ -37,6 +37,9 @@ func typeCheckExpr(e ast.Expr) {
     case *ast.FnCall:
         typeCheckFnCall(e)
 
+    case *ast.Cast:
+        typeCheckCast(e)
+
     case *ast.Lit, *ast.Ident:
         // nothing to check
 
@@ -262,4 +265,71 @@ func valuesToTypes(values []ast.Expr) (res []types.Type) {
     }
 
     return res
+}
+
+func typeCheckCast(e *ast.Cast) {
+    t := e.Expr.GetType()
+
+    switch e.DestType.GetKind() {
+    case types.Bool, types.Int, types.Uint, types.Char:
+        switch t.GetKind() {
+        case types.Bool, types.Uint, types.Int, types.Char:
+            return
+        case types.Ptr:
+            if e.DestType.GetKind() != types.Uint || e.DestType.Size() != types.Ptr_Size {
+                fmt.Fprintf(os.Stderr, "[ERROR] you can cast a pointer only into an u64 (got %v)\n", t)
+                fmt.Fprintln(os.Stderr, "\t" + e.Expr.At())
+                os.Exit(1)
+            }
+
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] cannot cast %v into %v)\n", t, e.DestType)
+            fmt.Fprintln(os.Stderr, "\t" + e.Expr.At())
+            os.Exit(1)
+        }
+
+
+    case types.Ptr:
+        switch t.GetKind() {
+        case types.Str:
+            dstType := e.DestType.(types.PtrType).BaseType
+
+            if dstType.GetKind() != types.Char {
+                fmt.Fprintf(os.Stderr, "[ERROR] you can only cast a string into *char (got %v)\n", t)
+                fmt.Fprintln(os.Stderr, "\t" + e.Expr.At())
+                os.Exit(1)
+            }
+
+        case types.Arr:
+            dstTyp := e.DestType.(types.PtrType).BaseType
+            srcTyp := t.(types.ArrType).Ptr.BaseType
+
+            if dstTyp.GetKind() != srcTyp.GetKind() {
+                fmt.Fprintf(os.Stderr, "[ERROR] you can only cast an array into a pointer with the same baseType (got %v)\n", t)
+                fmt.Fprintln(os.Stderr, "\t" + e.Expr.At())
+                os.Exit(1)
+            }
+
+        case types.Int, types.Uint:
+            if !checkTypeExpr(types.CreateUint(types.Ptr_Size), e.Expr) {
+                fmt.Fprintf(os.Stderr, "[ERROR] you can only cast an u64 into a pointer (got %v)\n", t)
+                fmt.Fprintln(os.Stderr, "\t" + e.Expr.At())
+                os.Exit(1)
+            }
+
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] cannot cast %v into %v)\n", t, e.DestType)
+            fmt.Fprintln(os.Stderr, "\t" + e.Expr.At())
+            os.Exit(1)
+        }
+
+
+    case types.Struct:
+        fmt.Fprintf(os.Stderr, "[ERROR] casting to a struct(%v) is not allowed\n", e.DestType)
+        fmt.Fprintln(os.Stderr, "\t" + e.AsPos.At())
+        os.Exit(1)
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] typeCheckCast for %v is not implemente yet\n", reflect.TypeOf(e))
+        os.Exit(1)
+    }
 }

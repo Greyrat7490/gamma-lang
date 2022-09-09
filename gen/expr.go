@@ -54,6 +54,9 @@ func GenExpr(file *os.File, e ast.Expr) {
     case *ast.XSwitch:
         GenXSwitch(file, e)
 
+    case *ast.Cast:
+        GenExpr(file, e.Expr)
+
     case *ast.BadExpr:
         fmt.Fprintln(os.Stderr, "[ERROR] bad expression")
         os.Exit(1)
@@ -101,12 +104,6 @@ func IndexedAddrToReg(file *os.File, e *ast.Indexed, r asm.RegGroup) {
     GenExpr(file, e.ArrExpr)
 
     baseTypeSize := uint64(e.ArrType.Ptr.BaseType.Size())
-
-    if len(e.ArrType.Lens) < len(e.Indices) {
-        fmt.Fprintf(os.Stderr, "[ERROR] dimension of the array is %d but got %d\n", len(e.ArrType.Lens), len(e.Indices))
-        fmt.Fprintln(os.Stderr, "\t" + e.At())
-        os.Exit(1)
-    }
 
     idxExpr := e.Flatten()
     val := cmpTime.ConstEval(idxExpr)
@@ -474,7 +471,12 @@ func GenFnCall(file *os.File, e *ast.FnCall) {
     // pass args on stack -------------------------------------------
     for i := len(e.F.GetArgs())-1; i >= stackArgsStart; i-- {
         if v := cmpTime.ConstEval(e.Values[i]); v.Type != token.Unknown {
-            PassValStack(file, v, e.F.GetArgs()[i])
+            // const expr containing &var as u64 detected (TODO fix: constEval &var)
+            if e.Values[i].GetType().GetKind() == types.Uint && v.Type == token.Str {
+                PassValStack(file, v, types.PtrType{})
+            } else {
+                PassValStack(file, v, e.F.GetArgs()[i])
+            }
 
         } else if ident,ok := e.Values[i].(*ast.Ident); ok {
             PassVarStack(file, ident.Obj.(vars.Var))
@@ -527,7 +529,12 @@ func GenFnCall(file *os.File, e *ast.FnCall) {
         regIdx -= types.RegCount(t)
 
         if v := cmpTime.ConstEval(e.Values[i]); v.Type != token.Unknown {
-            PassVal(file, regIdx, v, t)
+            // const expr containing &var as u64 detected
+            if e.Values[i].GetType().GetKind() == types.Uint && v.Type == token.Str {
+                PassVal(file, regIdx, v, types.PtrType{})
+            } else {
+                PassVal(file, regIdx, v, t)
+            }
 
         } else if ident,ok := e.Values[i].(*ast.Ident); ok {
             PassVar(file, regIdx, t, ident.Obj.(vars.Var))

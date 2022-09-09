@@ -1,0 +1,82 @@
+fn testSigned() {
+    i i8 := 127
+    printStr(" 127 as u8: ") printUint(i as u8) printStr(" (expected: 127)\n")
+
+    i = -128
+    printStr("-128 as u8: ") printUint(i as u8) printStr(" (expected: 128)\n")
+}
+
+fn testSizes() {
+    i i64 := 128
+    printStr("128 as i8: ") printInt(i as i8) printStr(" (expected: -128)\n")
+
+    i2 i16 := 255
+    printStr("255 as i8: ") printInt(i2 as i8) printStr(" (expected: -1)\n")
+}
+
+fn testPtr() {
+    addr := 0xb8000
+    vga_buf := addr as *u16     // u64 to ptr is unsafe but important for low-level programming
+
+    nullptr := 0 as *u64
+
+    i := 64
+    ptr := &i
+    printUint(&i as u64) printStr("\n")
+    printUint(ptr as u64) printStr("\n")
+}
+
+fn testStr() {
+    s := "test string"
+    ptr := s as *char
+
+    printChar(*ptr) printStr("\n")
+}
+
+fn testArr() {
+    arr := [3]i32{ -64, 69, 420 }
+    ptr := arr as *i32
+
+    printInt(*ptr) printStr("\n")
+}
+
+fn testChar() {
+    i0 := 48
+    printInt(i0) printStr("(int) -> '") printChar(i0 as char) printStr("'\n")
+
+    ia := 65
+    printInt(ia) printStr("(int) -> '") printChar(ia as char) printStr("'\n")
+    printInt(65) printStr("(int) -> '") printChar(65 as char) printStr("'\n")               // TODO: fix casting literal/constEval
+    printInt(ia + 25) printStr("(int) -> '") printChar((ia + 25) as char) printStr("'\n")   // TODO: fix parsing cast after binary op
+}
+
+fn testBool() {
+    b := true
+    printBool(b) printStr("(bool) -> '") printInt(b as i32) printStr("'\n")
+
+    b = false
+    printBool(b) printStr("(bool) -> '") printInt(b as i32) printStr("'\n")
+}
+
+fn main() {
+    printStr("test u8 / i8 ------\n")
+    testSigned()
+
+    printStr("\ntest sizes ------\n")
+    testSizes()
+
+    printStr("\ntest pointer ------\n")
+    testPtr()
+
+    printStr("\ntest string ------\n")
+    testStr()
+
+    printStr("\ntest array ------\n")
+    testArr()
+
+    printStr("\ntest char ------\n")
+    testChar()
+
+    printStr("\ntest bool ------\n")
+    testBool()
+}

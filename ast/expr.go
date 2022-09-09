@@ -111,6 +111,12 @@ type XCase struct {
     Expr Expr
 }
 
+type Cast struct {
+    Expr Expr
+    AsPos token.Pos
+    DestType types.Type
+}
+
 
 func (o *Lit) Readable(indent int) string {
     return strings.Repeat("   ", indent) + fmt.Sprintf("%s(%v)\n", o.Val.Str, o.Type)
@@ -217,11 +223,18 @@ func (o *XSwitch) Readable(indent int) string {
     return s
 }
 
+func (o *Cast) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "AS:\n" +
+        strings.Repeat("   ", indent+1) + o.DestType.String() + "\n" +
+        o.Expr.Readable(indent+1)
+}
+
 func (o *BadExpr) Readable(indent int) string {
     fmt.Fprintln(os.Stderr, "[ERROR] bad expression")
     os.Exit(1)
     return ""
 }
+
 
 func (e *Indexed) Flatten() Expr {
     // for dim = 1 (no need to flatten)
@@ -286,6 +299,7 @@ func (e *Binary)    GetType() types.Type { return e.Type }
 func (e *Paren)     GetType() types.Type { return e.Expr.GetType() }
 func (e *XSwitch)   GetType() types.Type { return e.Type }
 func (e *XCase)     GetType() types.Type { return e.Expr.GetType() }
+func (e *Cast)      GetType() types.Type { return e.DestType }
 
 
 func (e *BadExpr)   expr() {}
@@ -302,6 +316,7 @@ func (e *Binary)    expr() {}
 func (e *Paren)     expr() {}
 func (e *XSwitch)   expr() {}
 func (e *XCase)     expr() {}
+func (e *Cast)      expr() {}
 
 func (e *BadExpr)   At() string { return "" }
 func (e *FnCall)    At() string { return e.Ident.At() }
@@ -317,6 +332,7 @@ func (e *Binary)    At() string { return e.OperandL.At() }    // TODO: At() of O
 func (e *Paren)     At() string { return e.ParenLPos.At() }
 func (e *XSwitch)   At() string { return e.Pos.At() }
 func (e *XCase)     At() string { return e.ColonPos.At() }
+func (e *Cast)      At() string { return e.Expr.At() }
 
 func (e *BadExpr)   End() string { return "" }
 func (e *FnCall)    End() string { return e.ParenRPos.At() }
@@ -332,3 +348,4 @@ func (e *Binary)    End() string { return e.OperandR.At() }
 func (e *Paren)     End() string { return e.ParenRPos.At() }
 func (e *XSwitch)   End() string { return e.BraceRPos.At() }
 func (e *XCase)     End() string { return e.Expr.At() }
+func (e *Cast)      End() string { return e.AsPos.At() }

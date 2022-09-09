@@ -48,6 +48,9 @@ func ConstEval(e ast.Expr) token.Token {
     case *ast.XSwitch:
         return ConstEvalXSwitch(e)
 
+    case *ast.Cast:
+        return ConstEval(e.Expr)
+
     case *ast.BadExpr:
         fmt.Fprintln(os.Stderr, "[ERROR] bad expression")
         os.Exit(1)
