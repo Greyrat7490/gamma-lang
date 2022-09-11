@@ -182,7 +182,7 @@ func prsIdentExpr(tokens *token.Tokens) *ast.Ident {
     return nil
 }
 
-func prsLitExpr(tokens *token.Tokens) *ast.Lit {
+func prsLitExpr(tokens *token.Tokens) ast.Expr {
     val := tokens.Cur()
     t := types.TypeOfVal(val.Str)
 
@@ -191,6 +191,8 @@ func prsLitExpr(tokens *token.Tokens) *ast.Lit {
     case types.Str:
         idx := str.Add(val)
         repr.Str = fmt.Sprint(idx)
+        return &ast.StrLit{ Repr: repr, Idx: uint(idx), Val: val }
+
     case types.Bool:
         if val.Str == "true" {
             repr.Str = "1"
@@ -201,7 +203,7 @@ func prsLitExpr(tokens *token.Tokens) *ast.Lit {
         repr.Str = fmt.Sprint(int(val.Str[1]))
     }
 
-    return &ast.Lit{ Repr: repr, Type: t, Val: val }
+    return &ast.BasicLit{ Repr: repr, Type: t, Val: val }
 }
 
 func prsArrayLit(tokens *token.Tokens) *ast.ArrayLit {

@@ -22,8 +22,10 @@ import (
 
 func GenExpr(file *os.File, e ast.Expr) {
     switch e := e.(type) {
-    case *ast.Lit:
+    case *ast.BasicLit:
         GenLit(file, e)
+    case *ast.StrLit:
+        GenStrLit(file, e)
     case *ast.ArrayLit:
         GenArrayLit(file, e)
     case *ast.StructLit:
@@ -66,21 +68,13 @@ func GenExpr(file *os.File, e ast.Expr) {
     }
 }
 
-func GenLit(file *os.File, e *ast.Lit) {
-    switch e.Repr.Type {
-    case token.Str:
-        if idx,err := strconv.Atoi(e.Repr.Str); err == nil {
-            asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprintf("_str%d", idx))
-            asm.MovRegVal(file, asm.RegGroup(1), types.I32_Size, fmt.Sprintf("%d", str.GetSize(idx)))
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected str literal converted to a Number but got %v\n", e.Repr)
-            fmt.Fprintln(os.Stderr, "\t" + e.Repr.At())
-            os.Exit(1)
-        }
+func GenLit(file *os.File, e *ast.BasicLit) {
+    asm.MovRegVal(file, asm.RegGroup(0), e.Type.Size(), e.Repr.Str)
+}
 
-    default:
-        asm.MovRegVal(file, asm.RegGroup(0), e.Type.Size(), e.Repr.Str)
-    }
+func GenStrLit(file *os.File, e *ast.StrLit) {
+    asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprintf("_str%d", e.Idx))
+    asm.MovRegVal(file, asm.RegGroup(1), types.I32_Size, fmt.Sprintf("%d", str.GetSize(int(e.Idx))))
 }
 
 func GenStructLit(file *os.File, e *ast.StructLit) {
@@ -290,7 +284,7 @@ func GenField(file *os.File, e *ast.Field) {
 
 func GenIdent(file *os.File, e *ast.Ident) {
     if c,ok := e.Obj.(*consts.Const); ok {
-        l := ast.Lit{ Repr: c.GetVal(), Type: c.GetType() }
+        l := ast.BasicLit{ Repr: c.GetVal(), Type: c.GetType() }
         GenLit(file, &l)
         return
     }

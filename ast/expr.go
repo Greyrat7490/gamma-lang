@@ -26,10 +26,16 @@ type FnCall struct {
     ParenRPos token.Pos
 }
 
-type Lit struct {
+type BasicLit struct {
     Repr token.Token
     Val token.Token
     Type types.Type
+}
+
+type StrLit struct {
+    Idx uint
+    Repr token.Token
+    Val token.Token
 }
 
 type ArrayLit struct {
@@ -119,8 +125,11 @@ type Cast struct {
 }
 
 
-func (o *Lit) Readable(indent int) string {
+func (o *BasicLit) Readable(indent int) string {
     return strings.Repeat("   ", indent) + fmt.Sprintf("%s(%v)\n", o.Val.Str, o.Type)
+}
+func (o *StrLit) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + fmt.Sprintf("%s(str)\n", o.Val.Str)
 }
 func (o *FieldLit) Readable(indent int) string {
     return strings.Repeat("   ", indent) + fmt.Sprintf("%s: \n%s", o.Name, o.Value.Readable(indent+1))
@@ -257,7 +266,7 @@ func (e *Indexed) Flatten() Expr {
             Operator: token.Token{ Str: "+", Type: token.Plus }, OperandR: &Binary{
                 Operator: token.Token{ Str: "*", Type: token.Mul },
                 OperandL: e.Indices[len(e.Indices)-1-i],
-                OperandR: &Lit{
+                OperandR: &BasicLit{
                     Repr: token.Token{ Str: fmt.Sprint(innerLen), Type: token.Number },
                     Type: types.CreateUint(types.Ptr_Size),
                 },
@@ -275,7 +284,7 @@ func (e *Indexed) Flatten() Expr {
     *expr = &Binary{
         Operator: token.Token{ Str: "*", Type: token.Mul },
         OperandL: e.Indices[0],
-        OperandR: &Lit{
+        OperandR: &BasicLit{
             Repr: token.Token{ Str: fmt.Sprint(innerLen), Type: token.Number },
             Type: types.CreateInt(types.I32_Size),
         },
@@ -287,11 +296,12 @@ func (e *Indexed) Flatten() Expr {
 
 
 func (e *BadExpr)   GetType() types.Type { return nil }
-func (e *FnCall)    GetType() types.Type { return e.F.GetRetType() }
-func (e *Lit)       GetType() types.Type { return e.Type }
+func (e *BasicLit)  GetType() types.Type { return e.Type }
+func (e *StrLit)    GetType() types.Type { return types.CreateStr() }
 func (e *FieldLit)  GetType() types.Type { return e.Value.GetType() }
 func (e *StructLit) GetType() types.Type { return e.StructType }
 func (e *ArrayLit)  GetType() types.Type { return e.Type }
+func (e *FnCall)    GetType() types.Type { return e.F.GetRetType() }
 func (e *Indexed)   GetType() types.Type { return e.ArrType.Ptr.BaseType }
 func (e *Field)     GetType() types.Type { return e.Type }
 func (e *Ident)     GetType() types.Type { return e.Obj.GetType() }
@@ -304,11 +314,12 @@ func (e *Cast)      GetType() types.Type { return e.DestType }
 
 
 func (e *BadExpr)   expr() {}
-func (e *FnCall)    expr() {}
-func (e *Lit)       expr() {}
+func (e *BasicLit)  expr() {}
+func (e *StrLit)    expr() {}
 func (e *FieldLit)  expr() {}
 func (e *StructLit) expr() {}
 func (e *ArrayLit)  expr() {}
+func (e *FnCall)    expr() {}
 func (e *Indexed)   expr() {}
 func (e *Field)     expr() {}
 func (e *Ident)     expr() {}
@@ -320,11 +331,12 @@ func (e *XCase)     expr() {}
 func (e *Cast)      expr() {}
 
 func (e *BadExpr)   At() string { return "" }
-func (e *FnCall)    At() string { return e.Ident.At() }
-func (e *Lit)       At() string { return e.Repr.At() }
+func (e *BasicLit)  At() string { return e.Val.At() }
+func (e *StrLit)    At() string { return e.Val.At() }
 func (e *FieldLit)  At() string { return e.Name.At() }
 func (e *StructLit) At() string { return e.Pos.At() }
 func (e *ArrayLit)  At() string { return e.Pos.At() }
+func (e *FnCall)    At() string { return e.Ident.At() }
 func (e *Indexed)   At() string { return e.ArrExpr.At() }
 func (e *Field)     At() string { return e.Obj.At() }
 func (e *Ident)     At() string { return e.Pos.At() }
@@ -336,11 +348,12 @@ func (e *XCase)     At() string { return e.ColonPos.At() }
 func (e *Cast)      At() string { return e.Expr.At() }
 
 func (e *BadExpr)   End() string { return "" }
-func (e *FnCall)    End() string { return e.ParenRPos.At() }
-func (e *Lit)       End() string { return e.Repr.At() }
+func (e *BasicLit)  End() string { return e.Val.At() }
+func (e *StrLit)    End() string { return e.Val.At() }
 func (e *FieldLit)  End() string { return e.Value.End() }
 func (e *StructLit) End() string { return e.BraceRPos.At() }
 func (e *ArrayLit)  End() string { return e.BraceRPos.At() }
+func (e *FnCall)    End() string { return e.ParenRPos.At() }
 func (e *Indexed)   End() string { return e.BrackRPos.At() }
 func (e *Field)     End() string { return e.FieldName.At() }
 func (e *Ident)     End() string { return e.Pos.At() }

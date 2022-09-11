@@ -215,7 +215,7 @@ func prsWhileStmt(tokens *token.Tokens) ast.While {
             op.Def.Value = expr
             tokens.Next()
         } else {
-            op.Def.Value = &ast.Lit{ Repr: token.Token{ Type: token.Number, Str: "0" }, Val: token.Token{ Str: "0" }, Type: dec.Type }
+            op.Def.Value = &ast.BasicLit{ Repr: token.Token{ Type: token.Number, Str: "0" }, Val: token.Token{ Str: "0" }, Type: dec.Type }
             op.Cond = expr
         }
     } else {
@@ -237,7 +237,7 @@ func prsForStmt(tokens *token.Tokens) ast.For {
     tokens.Next()
     dec := prsDecVar(tokens)
     op.Def = ast.DefVar{
-        Value: &ast.Lit{
+        Value: &ast.BasicLit{
             Repr: token.Token{ Str: "0", Type: token.Number },
             Val: token.Token{ Str: "0", Type: token.Number },
             Type: dec.Type,
@@ -249,7 +249,7 @@ func prsForStmt(tokens *token.Tokens) ast.For {
     op.Step = &ast.Binary{
         Operator: token.Token{ Type: token.Plus },
         OperandL: &ast.Ident{ Obj: op.Def.V, Name: op.Def.V.GetName(), Pos: op.Def.V.GetPos() },
-        OperandR: &ast.Lit{
+        OperandR: &ast.BasicLit{
             Repr: token.Token{ Str: "1", Type: token.Number },
             Val: token.Token{ Str: "1", Type: token.Number },
             Type: dec.Type,

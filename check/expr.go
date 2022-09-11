@@ -40,7 +40,7 @@ func typeCheckExpr(e ast.Expr) {
     case *ast.Cast:
         typeCheckCast(e)
 
-    case *ast.Lit, *ast.Ident:
+    case *ast.BasicLit, *ast.StrLit, *ast.Ident:
         // nothing to check
 
     default:

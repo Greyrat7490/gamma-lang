@@ -18,8 +18,10 @@ import (
 
 func ConstEval(e ast.Expr) token.Token {
     switch e := e.(type) {
-    case *ast.Lit:
+    case *ast.BasicLit:
         return ConstEvalLit(e)
+    case *ast.StrLit:
+        return ConstEvalStrLit(e)
     case *ast.FieldLit:
         return ConstEvalFieldLit(e)
     case *ast.ArrayLit:
@@ -63,8 +65,12 @@ func ConstEval(e ast.Expr) token.Token {
     return token.Token{ Type: token.Unknown }
 }
 
-func ConstEvalLit(e *ast.Lit) token.Token {
+func ConstEvalLit(e *ast.BasicLit) token.Token {
     return e.Repr
+}
+
+func ConstEvalStrLit(e *ast.StrLit) token.Token {
+    return token.Token{ Type: token.Number, Str: fmt.Sprint(e.Idx) }
 }
 
 func ConstEvalFieldLit(e *ast.FieldLit) token.Token {
