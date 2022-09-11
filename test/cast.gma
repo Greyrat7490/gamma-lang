@@ -46,8 +46,8 @@ fn testChar() {
 
     ia := 65
     printInt(ia) printStr("(int) -> '") printChar(ia as char) printStr("'\n")
-    printInt(65) printStr("(int) -> '") printChar(65 as char) printStr("'\n")               // TODO: fix casting literal/constEval
-    printInt(ia + 25) printStr("(int) -> '") printChar((ia + 25) as char) printStr("'\n")   // TODO: fix parsing cast after binary op
+    printInt(65) printStr("(int) -> '") printChar(65 as char) printStr("'\n")
+    printInt(ia + 25) printStr("(int) -> '") printChar(ia + 25 as char) printStr("'\n")
 }
 
 fn testBool() {

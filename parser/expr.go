@@ -3,11 +3,12 @@ package prs
 import (
     "os"
     "fmt"
-    "gamma/types"
     "gamma/token"
-    "gamma/cmpTime"
+    "gamma/types"
+    "gamma/types/str"
     "gamma/types/array"
     "gamma/types/struct"
+    "gamma/cmpTime"
     "gamma/ast"
     "gamma/ast/identObj"
     "gamma/ast/identObj/func"
@@ -92,6 +93,10 @@ func prsExpr(tokens *token.Tokens) ast.Expr {
 
     if isBinaryExpr(tokens) {
         expr = prsBinary(tokens, expr, 0)
+        if tokens.Peek().Type == token.As {
+            tokens.Next()
+            expr = prsCast(tokens, expr)
+        }
     }
 
     return expr
@@ -181,7 +186,22 @@ func prsLitExpr(tokens *token.Tokens) *ast.Lit {
     val := tokens.Cur()
     t := types.TypeOfVal(val.Str)
 
-    return &ast.Lit{ Val: val, Type: t }
+    repr := val
+    switch t.GetKind() {
+    case types.Str:
+        idx := str.Add(val)
+        repr.Str = fmt.Sprint(idx)
+    case types.Bool:
+        if val.Str == "true" {
+            repr.Str = "1"
+        } else {
+            repr.Str = "0"
+        }
+    case types.Char:
+        repr.Str = fmt.Sprint(int(val.Str[1]))
+    }
+
+    return &ast.Lit{ Repr: repr, Type: t, Val: val }
 }
 
 func prsArrayLit(tokens *token.Tokens) *ast.ArrayLit {

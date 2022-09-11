@@ -103,7 +103,7 @@ func GenBlock(file *os.File, s *ast.Block) {
 
 func GenIf(file *os.File, s *ast.If) {
     if val := cmpTime.ConstEval(s.Cond); val.Type != token.Unknown {
-        if val.Str == "true" {
+        if val.Str == "1" {
             GenBlock(file, &s.Block)
         } else if s.Else != nil {
             GenBlock(file, &s.Else.Block)
@@ -159,7 +159,7 @@ func GenCase(file *os.File, s *ast.Case, switchCount uint) {
     }
 
     if val := cmpTime.ConstEval(s.Cond); val.Type != token.Unknown {
-        if val.Str == "true" {
+        if val.Str == "1" {
             cond.CaseBody(file)
             for _,s := range s.Stmts {
                 GenStmt(file, s)
@@ -196,7 +196,7 @@ func GenSwitch(file *os.File, s *ast.Switch) {
 
         cond := cmpTime.ConstEval(c.Cond)
 
-        if cond.Type == token.Boolean && cond.Str == "true" {
+        if cond.Type == token.Boolean && cond.Str == "1" {
             for _,s := range c.Stmts {
                 GenStmt(file, s)
             }
@@ -232,7 +232,7 @@ func GenWhile(file *os.File, s *ast.While) {
     }
 
     if c := cmpTime.ConstEval(s.Cond); c.Type != token.Unknown {
-        if c.Str == "true" {
+        if c.Str == "1" {
             count := loops.WhileStart(file)
             GenBlock(file, &s.Block)
             loops.WhileEnd(file, count)

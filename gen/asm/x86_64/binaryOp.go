@@ -59,16 +59,16 @@ func BinaryOpVals(op token.Token, lhs token.Token, rhs token.Token) token.Token 
     switch op.Type {
     case token.Eql:
         if lhs.Str == rhs.Str {
-            return token.Token{ Str: "true", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "1", Type: token.Boolean, Pos: op.Pos }
         } else {
-            return token.Token{ Str: "false", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "0", Type: token.Boolean, Pos: op.Pos }
         }
 
     case token.Neq:
         if lhs.Str != rhs.Str {
-            return token.Token{ Str: "true", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "1", Type: token.Boolean, Pos: op.Pos }
         } else {
-            return token.Token{ Str: "false", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "0", Type: token.Boolean, Pos: op.Pos }
         }
     default:
         if lhs.Type != token.Number {
@@ -96,30 +96,30 @@ func evalInts(op token.Token, i1 int64, i2 int64) token.Token {
     switch op.Type {
     case token.Lss:
         if i1 < i2 {
-            return token.Token{ Str: "true", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "1", Type: token.Boolean, Pos: op.Pos }
         } else {
-            return token.Token{ Str: "false", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "0", Type: token.Boolean, Pos: op.Pos }
         }
 
     case token.Grt:
         if i1 > i2 {
-            return token.Token{ Str: "true", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "1", Type: token.Boolean, Pos: op.Pos }
         } else {
-            return token.Token{ Str: "false", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "0", Type: token.Boolean, Pos: op.Pos }
         }
 
     case token.Leq:
         if i1 <= i2 {
-            return token.Token{ Str: "true", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "1", Type: token.Boolean, Pos: op.Pos }
         } else {
-            return token.Token{ Str: "false", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "0", Type: token.Boolean, Pos: op.Pos }
         }
 
     case token.Geq:
         if i1 >= i2 {
-            return token.Token{ Str: "true", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "1", Type: token.Boolean, Pos: op.Pos }
         } else {
-            return token.Token{ Str: "false", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "0", Type: token.Boolean, Pos: op.Pos }
         }
 
     case token.Plus:
@@ -164,30 +164,30 @@ func evalUints(op token.Token, i1 uint64, i2 uint64) token.Token {
     switch op.Type {
     case token.Lss:
         if i1 < i2 {
-            return token.Token{ Str: "true", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "1", Type: token.Boolean, Pos: op.Pos }
         } else {
-            return token.Token{ Str: "false", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "0", Type: token.Boolean, Pos: op.Pos }
         }
 
     case token.Grt:
         if i1 > i2 {
-            return token.Token{ Str: "true", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "1", Type: token.Boolean, Pos: op.Pos }
         } else {
-            return token.Token{ Str: "false", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "0", Type: token.Boolean, Pos: op.Pos }
         }
 
     case token.Leq:
         if i1 <= i2 {
-            return token.Token{ Str: "true", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "1", Type: token.Boolean, Pos: op.Pos }
         } else {
-            return token.Token{ Str: "false", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "0", Type: token.Boolean, Pos: op.Pos }
         }
 
     case token.Geq:
         if i1 >= i2 {
-            return token.Token{ Str: "true", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "1", Type: token.Boolean, Pos: op.Pos }
         } else {
-            return token.Token{ Str: "false", Type: token.Boolean, Pos: op.Pos }
+            return token.Token{ Str: "0", Type: token.Boolean, Pos: op.Pos }
         }
 
     case token.Plus:

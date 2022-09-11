@@ -104,22 +104,21 @@ func defPtr(val string) {
 }
 
 func defBool(val string) {
-    if val == "true" {
-        val = "1"
-    } else {
-        val = "0"
-    }
-
     nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(types.Bool_Size), val))
 }
 
 func defStr(val token.Token) {
-    strIdx := str.Add(val)
-    nasm.AddData(fmt.Sprintf("  %s _str%d\n  %s %d",
-        asm.GetDataSize(types.Ptr_Size),
-        strIdx,
-        asm.GetDataSize(types.I32_Size),
-        str.GetSize(strIdx)))
+    if idx,err := strconv.Atoi(val.Str); err == nil {
+        nasm.AddData(fmt.Sprintf("  %s _str%d\n  %s %d",
+            asm.GetDataSize(types.Ptr_Size),
+            idx,
+            asm.GetDataSize(types.I32_Size),
+            str.GetSize(idx)))
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected str literal converted to a Number but got %v\n", val)
+        fmt.Fprintln(os.Stderr, "\t" + val.At())
+        os.Exit(1)
+    }
 }
 
 func defArr(val string) {
@@ -273,29 +272,23 @@ func derefSetBigStructLit(file *os.File, t types.StructType, val token.Token, of
         for i,t := range t.Types {
             switch t := t.(type) {
             case types.StrType:
-                strIdx := str.Add(fields[i])
-
-                asm.MovDerefVal(file,
-                    asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
-                    types.Ptr_Size,
-                    fmt.Sprintf("_str%d", strIdx))
-                asm.MovDerefVal(file,
-                    asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)),
-                    types.I32_Size,
-                    fmt.Sprint(str.GetSize(strIdx)))
+                if idx,err := strconv.Atoi(fields[i].Str); err == nil {
+                    asm.MovDerefVal(file,
+                        asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
+                        types.Ptr_Size,
+                        fmt.Sprintf("_str%d", idx))
+                    asm.MovDerefVal(file,
+                        asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)),
+                        types.I32_Size,
+                        fmt.Sprint(str.GetSize(idx)))
+                } else {
+                    fmt.Fprintf(os.Stderr, "[ERROR] expected str literal converted to a Number but got %v\n", fields[i])
+                    fmt.Fprintln(os.Stderr, "\t" + fields[i].At())
+                    os.Exit(1)
+                }
 
             case types.StructType:
                 derefSetBigStructLit(file, t, fields[i], offset)
-
-            case types.BoolType:
-                if fields[i].Str == "true" {
-                    asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Bool_Size, "1")
-                } else {
-                    asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Bool_Size, "0")
-                }
-
-            case types.CharType:
-                asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Char_Size, fmt.Sprint(int(val.Str[1])))
 
             default:
                 asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size(), fields[i].Str)
@@ -336,11 +329,7 @@ func derefSetIntVal(file *os.File, addr string, offset int, size uint, val token
 }
 
 func derefSetBoolVal(file *os.File, addr string, offset int, val token.Token) {
-    if val.Str == "true" {
-        asm.MovDerefVal(file, asm.OffsetAddr(addr, offset), types.Bool_Size, "1")
-    } else {
-        asm.MovDerefVal(file, asm.OffsetAddr(addr, offset), types.Bool_Size, "0")
-    }
+    asm.MovDerefVal(file, asm.OffsetAddr(addr, offset), types.Bool_Size, val.Str)
 }
 
 func derefSetPtrVal(file *os.File, addr string, offset int, val token.Token) {
@@ -353,14 +342,18 @@ func derefSetPtrVal(file *os.File, addr string, offset int, val token.Token) {
 }
 
 func derefSetCharVal(file *os.File, addr string, offset int, val token.Token) {
-    asm.MovDerefVal(file, asm.OffsetAddr(addr, offset), types.Char_Size, fmt.Sprint(int(val.Str[1])))
+    asm.MovDerefVal(file, asm.OffsetAddr(addr, offset), types.Char_Size, val.Str)
 }
 
 func derefSetStrVal(file *os.File, addr string, offset int, val token.Token) {
-    strIdx := str.Add(val)
-
-    asm.MovDerefVal(file, asm.OffsetAddr(addr, offset), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx))
-    asm.MovDerefVal(file, asm.OffsetAddr(addr, offset + int(types.Ptr_Size)), types.I32_Size, fmt.Sprint(str.GetSize(strIdx)))
+    if idx,err := strconv.Atoi(val.Str); err == nil {
+        asm.MovDerefVal(file, asm.OffsetAddr(addr, offset), types.Ptr_Size, fmt.Sprintf("_str%d", idx))
+        asm.MovDerefVal(file, asm.OffsetAddr(addr, offset + int(types.Ptr_Size)), types.I32_Size, fmt.Sprint(str.GetSize(idx)))
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected str literal converted to a Number but got %v\n", val)
+        fmt.Fprintln(os.Stderr, "\t" + val.At())
+        os.Exit(1)
+    }
 }
 
 func derefSetArrVal(file *os.File, addr string, offset int, val token.Token) {

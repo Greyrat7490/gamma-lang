@@ -48,17 +48,7 @@ func Add(typ types.ArrType, values []token.Token) (i int) {
                 addStruct(t, v)
             }
 
-        case types.BoolType:
-            for _, v := range values {
-                addBool(v)
-            }
-
-        case types.CharType:
-            for _, v := range values {
-                addChar(v)
-            }
-
-        case types.IntType, types.PtrType, types.ArrType:
+        case types.IntType, types.BoolType, types.CharType, types.PtrType, types.ArrType:
             for _, v := range values {
                 addBasic(t.Size(), v)
             }
@@ -76,23 +66,15 @@ func addBasic(size uint, val token.Token) {
     nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(size), val.Str))
 }
 
-func addBool(val token.Token) {
-    if val.Str == "true" {
-        nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(types.Bool_Size), "1"))
-    } else {
-        nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(types.Bool_Size), "0"))
-    }
-}
-
-func addChar(val token.Token) {
-    nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(types.Bool_Size), fmt.Sprint(int(val.Str[1]))))
-}
-
 func addStr(val token.Token) {
-    strIdx := str.Add(val)
-
-    nasm.AddData(fmt.Sprintf("  %s _str%d", asm.GetDataSize(types.Ptr_Size), strIdx))
-    nasm.AddData(fmt.Sprintf("  %s %d", asm.GetDataSize(types.I32_Size), str.GetSize(strIdx)))
+    if idx,err := strconv.Atoi(val.Str); err == nil {
+        nasm.AddData(fmt.Sprintf("  %s _str%d", asm.GetDataSize(types.Ptr_Size), idx))
+        nasm.AddData(fmt.Sprintf("  %s %d", asm.GetDataSize(types.I32_Size), str.GetSize(idx)))
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected str literal converted to a Number but got %v\n", val)
+        fmt.Fprintln(os.Stderr, "\t" + val.At())
+        os.Exit(1)
+    }
 }
 
 func addStruct(t types.StructType, val token.Token) {
@@ -113,13 +95,7 @@ func addStruct(t types.StructType, val token.Token) {
         case types.StructType:
             addStruct(t, v)
 
-        case types.BoolType:
-            addBool(v)
-
-        case types.CharType:
-            addChar(v)
-
-        case types.IntType, types.PtrType, types.ArrType:
+        case types.IntType, types.BoolType, types.CharType, types.PtrType, types.ArrType:
             addBasic(t.Size(), v)
 
         default:

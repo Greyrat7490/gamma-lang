@@ -82,10 +82,14 @@ func DefArg(file *os.File, regIdx uint, v vars.Var) {
 func PassVal(file *os.File, regIdx uint, value token.Token, valtype types.Type) {
     switch t := valtype.(type) {
     case types.StrType:
-        strIdx := str.Add(value)
-
-        asm.MovRegVal(file, regs[regIdx],   types.Ptr_Size, fmt.Sprintf("_str%d", strIdx))
-        asm.MovRegVal(file, regs[regIdx+1], types.I32_Size, fmt.Sprint(str.GetSize(strIdx)))
+        if idx,err := strconv.Atoi(value.Str); err == nil {
+            asm.MovRegVal(file, regs[regIdx],   types.Ptr_Size, fmt.Sprintf("_str%d", idx))
+            asm.MovRegVal(file, regs[regIdx+1], types.I32_Size, fmt.Sprint(str.GetSize(idx)))
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected str literal converted to a Number but got %v\n", value)
+            fmt.Fprintln(os.Stderr, "\t" + value.At())
+            os.Exit(1)
+        }
 
     case types.ArrType:
         if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
@@ -115,17 +119,7 @@ func PassVal(file *os.File, regIdx uint, value token.Token, valtype types.Type) 
             os.Exit(1)
         }
 
-    case types.BoolType:
-        if value.Str == "true" {
-            asm.MovRegVal(file, regs[regIdx], valtype.Size(), "1")
-        } else {
-            asm.MovRegVal(file, regs[regIdx], valtype.Size(), "0")
-        }
-
-    case types.CharType:
-        asm.MovRegVal(file, regs[regIdx], types.Char_Size, fmt.Sprint(int(value.Str[1])))
-
-    case types.IntType, types.UintType:
+    case types.IntType, types.UintType, types.CharType, types.BoolType:
         asm.MovRegVal(file, regs[regIdx], valtype.Size(), value.Str)
 
     case types.PtrType:
@@ -189,10 +183,14 @@ func PassReg(file *os.File, regIdx uint, argType types.Type, regSize uint) {
 func PassValStack(file *os.File, value token.Token, valtype types.Type) {
     switch t := valtype.(type) {
     case types.StrType:
-        strIdx := str.Add(value)
-
-        asm.PushVal(file, fmt.Sprint(str.GetSize(strIdx)))
-        asm.PushVal(file, fmt.Sprintf("_str%d", strIdx))
+        if idx,err := strconv.Atoi(value.Str); err == nil {
+            asm.PushVal(file, fmt.Sprint(str.GetSize(idx)))
+            asm.PushVal(file, fmt.Sprintf("_str%d", idx))
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected str literal converted to a Number but got %v\n", value)
+            fmt.Fprintln(os.Stderr, "\t" + value.At())
+            os.Exit(1)
+        }
 
     case types.StructType:
         if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
@@ -258,29 +256,23 @@ func PassBigStructLit(file *os.File, t types.StructType, value token.Token, offs
         for i,t := range t.Types {
             switch t := t.(type) {
             case types.StrType:
-                strIdx := str.Add(fields[i])
-
-                asm.MovDerefVal(file,
-                    asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
-                    types.Ptr_Size,
-                    fmt.Sprintf("_str%d", strIdx))
-                asm.MovDerefVal(file,
-                    asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)),
-                    types.I32_Size,
-                    fmt.Sprint(str.GetSize(strIdx)))
+                if idx,err := strconv.Atoi(fields[i].Str); err == nil {
+                    asm.MovDerefVal(file,
+                        asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
+                        types.Ptr_Size,
+                        fmt.Sprintf("_str%d", idx))
+                    asm.MovDerefVal(file,
+                        asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)),
+                        types.I32_Size,
+                        fmt.Sprint(str.GetSize(idx)))
+                } else {
+                    fmt.Fprintf(os.Stderr, "[ERROR] expected str literal converted to a Number but got %v\n", value)
+                    fmt.Fprintln(os.Stderr, "\t" + value.At())
+                    os.Exit(1)
+                }
 
             case types.StructType:
                 PassBigStructLit(file, t, fields[i], offset)
-
-            case types.BoolType:
-                if fields[i].Str == "true" {
-                    asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Bool_Size, "1")
-                } else {
-                    asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Bool_Size, "0")
-                }
-
-            case types.CharType:
-                asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), types.Char_Size, fmt.Sprint(int(value.Str[1])))
 
             default:
                 asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size(), fields[i].Str)
@@ -343,10 +335,15 @@ func packValues(valtypes []types.Type, values []token.Token, packed []string, of
     for i,t := range valtypes {
         switch t := t.(type) {
         case types.StrType:
-            strIdx := str.Add(values[i])
-            packed = append(packed, fmt.Sprintf("_str%d", strIdx))
-            packed = append(packed, fmt.Sprint(str.GetSize(strIdx)))
-            offset += types.I32_Size
+            if idx,err := strconv.Atoi(values[i].Str); err == nil {
+                packed = append(packed, fmt.Sprintf("_str%d", idx))
+                packed = append(packed, fmt.Sprint(str.GetSize(idx)))
+                offset += types.I32_Size
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected str literal converted to a Number but got %v\n", values[i])
+                fmt.Fprintln(os.Stderr, "\t" + values[i].At())
+                os.Exit(1)
+            }
 
         case types.ArrType:
             if idx,err := strconv.ParseUint(values[i].Str, 10, 64); err == nil {
@@ -370,21 +367,10 @@ func packValues(valtypes []types.Type, values []token.Token, packed []string, of
                 os.Exit(1)
             }
 
-
-        case types.BoolType:
-            var val string
-            if values[i].Str == "true" { val = "1" } else { val = "0" }
-            packed = pack(packed, val, offset, t)
-            offset += types.Bool_Size
-
-        case types.CharType:
-            packed = pack(packed, fmt.Sprint(int(values[i].Str[1])), offset, t)
-            offset += types.Char_Size
-
         case types.PtrType:
             packed = append(packed, values[i].Str)
 
-        case types.IntType, types.UintType:
+        case types.IntType, types.UintType, types.BoolType, types.CharType:
             packed = pack(packed, values[i].Str, offset, t)
             offset += t.Size()
 

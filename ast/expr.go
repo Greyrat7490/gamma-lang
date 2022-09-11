@@ -27,6 +27,7 @@ type FnCall struct {
 }
 
 type Lit struct {
+    Repr token.Token
     Val token.Token
     Type types.Type
 }
@@ -257,7 +258,7 @@ func (e *Indexed) Flatten() Expr {
                 Operator: token.Token{ Str: "*", Type: token.Mul },
                 OperandL: e.Indices[len(e.Indices)-1-i],
                 OperandR: &Lit{
-                    Val: token.Token{ Str: fmt.Sprint(innerLen), Type: token.Number },
+                    Repr: token.Token{ Str: fmt.Sprint(innerLen), Type: token.Number },
                     Type: types.CreateUint(types.Ptr_Size),
                 },
                 Type: types.CreateUint(types.Ptr_Size),
@@ -275,7 +276,7 @@ func (e *Indexed) Flatten() Expr {
         Operator: token.Token{ Str: "*", Type: token.Mul },
         OperandL: e.Indices[0],
         OperandR: &Lit{
-            Val: token.Token{ Str: fmt.Sprint(innerLen), Type: token.Number },
+            Repr: token.Token{ Str: fmt.Sprint(innerLen), Type: token.Number },
             Type: types.CreateInt(types.I32_Size),
         },
         Type: types.CreateUint(types.Ptr_Size),
@@ -320,7 +321,7 @@ func (e *Cast)      expr() {}
 
 func (e *BadExpr)   At() string { return "" }
 func (e *FnCall)    At() string { return e.Ident.At() }
-func (e *Lit)       At() string { return e.Val.At() }
+func (e *Lit)       At() string { return e.Repr.At() }
 func (e *FieldLit)  At() string { return e.Name.At() }
 func (e *StructLit) At() string { return e.Pos.At() }
 func (e *ArrayLit)  At() string { return e.Pos.At() }
@@ -336,7 +337,7 @@ func (e *Cast)      At() string { return e.Expr.At() }
 
 func (e *BadExpr)   End() string { return "" }
 func (e *FnCall)    End() string { return e.ParenRPos.At() }
-func (e *Lit)       End() string { return e.Val.At() }
+func (e *Lit)       End() string { return e.Repr.At() }
 func (e *FieldLit)  End() string { return e.Value.End() }
 func (e *StructLit) End() string { return e.BraceRPos.At() }
 func (e *ArrayLit)  End() string { return e.BraceRPos.At() }

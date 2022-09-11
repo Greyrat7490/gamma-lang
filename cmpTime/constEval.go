@@ -64,7 +64,7 @@ func ConstEval(e ast.Expr) token.Token {
 }
 
 func ConstEvalLit(e *ast.Lit) token.Token {
-    return e.Val
+    return e.Repr
 }
 
 func ConstEvalFieldLit(e *ast.FieldLit) token.Token {
@@ -190,7 +190,7 @@ func ConstEvalXSwitch(e *ast.XSwitch) token.Token {
 
         v := ConstEval(c.Cond)
 
-        if v.Type == token.Boolean && v.Str == "true" {
+        if v.Type == token.Boolean && v.Str == "1" {
             return ConstEval(c.Expr)
         } else if v.Type == token.Unknown {
             return token.Token{ Type: token.Unknown }

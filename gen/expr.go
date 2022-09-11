@@ -67,22 +67,19 @@ func GenExpr(file *os.File, e ast.Expr) {
 }
 
 func GenLit(file *os.File, e *ast.Lit) {
-    switch e.Val.Type {
+    switch e.Repr.Type {
     case token.Str:
-        strIdx := str.Add(e.Val)
-
-        asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprintf("_str%d", strIdx))
-        asm.MovRegVal(file, asm.RegGroup(1), types.I32_Size, fmt.Sprintf("%d", str.GetSize(strIdx)))
-
-    case token.Boolean:
-        if e.Val.Str == "true" {
-            asm.MovRegVal(file, asm.RegGroup(0), e.Type.Size(), "1")
+        if idx,err := strconv.Atoi(e.Repr.Str); err == nil {
+            asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprintf("_str%d", idx))
+            asm.MovRegVal(file, asm.RegGroup(1), types.I32_Size, fmt.Sprintf("%d", str.GetSize(idx)))
         } else {
-            asm.MovRegVal(file, asm.RegGroup(0), e.Type.Size(), "0")
+            fmt.Fprintf(os.Stderr, "[ERROR] expected str literal converted to a Number but got %v\n", e.Repr)
+            fmt.Fprintln(os.Stderr, "\t" + e.Repr.At())
+            os.Exit(1)
         }
 
     default:
-        asm.MovRegVal(file, asm.RegGroup(0), e.Type.Size(), e.Val.Str)
+        asm.MovRegVal(file, asm.RegGroup(0), e.Type.Size(), e.Repr.Str)
     }
 }
 
@@ -293,7 +290,7 @@ func GenField(file *os.File, e *ast.Field) {
 
 func GenIdent(file *os.File, e *ast.Ident) {
     if c,ok := e.Obj.(*consts.Const); ok {
-        l := ast.Lit{ Val: c.GetVal(), Type: c.GetType() }
+        l := ast.Lit{ Repr: c.GetVal(), Type: c.GetType() }
         GenLit(file, &l)
         return
     }
@@ -364,10 +361,6 @@ func GenUnary(file *os.File, e *ast.Unary) {
 func GenBinary(file *os.File, e *ast.Binary) {
     // compile time evaluation (constEval whole expr)
     if c := cmpTime.ConstEval(e); c.Type != token.Unknown {
-        if c.Type == token.Boolean {
-            if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
-        }
-
         asm.MovRegVal(file, asm.RegA, e.GetType().Size(), c.Str)
         return
     }
@@ -377,20 +370,12 @@ func GenBinary(file *os.File, e *ast.Binary) {
     if e.Operator.Type != token.And && e.Operator.Type != token.Or {
         // compile time evaluation (constEval only left expr)
         if c := cmpTime.ConstEval(e.OperandL); c.Type != token.Unknown {
-            if c.Type == token.Boolean {
-                if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
-            }
-
             asm.MovRegVal(file, asm.RegA, e.OperandL.GetType().Size(), c.Str)
         } else {
             GenExpr(file, e.OperandL)
 
             // compile time evaluation (constEval only right expr)
             if c := cmpTime.ConstEval(e.OperandR); c.Type != token.Unknown {
-                if c.Type == token.Boolean {
-                    if c.Str == "true" { c.Str = "1" } else { c.Str = "0" }
-                }
-
                 asm.BinaryOp(file, e.Operator.Type, c.Str, e.OperandR.GetType().Size(), e.GetType().GetKind() == types.Int)
                 return
             }
@@ -420,11 +405,11 @@ func GenBinary(file *os.File, e *ast.Binary) {
     } else {
         // compile time evaluation
         if c := cmpTime.ConstEval(e.OperandL); c.Type != token.Unknown {
-            if e.Operator.Type == token.And && c.Str == "false" {
+            if e.Operator.Type == token.And && c.Str == "0" {
                 asm.MovRegVal(file, asm.RegA, types.Bool_Size, "0")
                 return
             }
-            if e.Operator.Type == token.Or && c.Str == "true" {
+            if e.Operator.Type == token.Or && c.Str == "1" {
                 asm.MovRegVal(file, asm.RegA, types.Bool_Size, "1")
                 return
             }
@@ -563,7 +548,7 @@ func GenXCase(file *os.File, e *ast.XCase, switchCount uint) {
     }
 
     if val := cmpTime.ConstEval(e.Cond); val.Type != token.Unknown {
-        if val.Str == "true" {
+        if val.Str == "1" {
             cond.CaseBody(file)
             GenExpr(file, e.Expr)
             cond.CaseBodyEnd(file, switchCount)
@@ -683,7 +668,7 @@ func bigStructXCaseToStack(file *os.File, addr string, e *ast.XCase, switchCount
     }
 
     if val := cmpTime.ConstEval(e.Cond); val.Type != token.Unknown {
-        if val.Str == "true" {
+        if val.Str == "1" {
             cond.CaseBody(file)
             DerefSetBigStruct(file, addr, e.Expr)
             cond.CaseBodyEnd(file, switchCount)
