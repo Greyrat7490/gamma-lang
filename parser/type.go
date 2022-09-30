@@ -17,6 +17,14 @@ func GetTypeUnary(e *ast.Unary) types.Type {
         return types.PtrType{ BaseType: e.Operand.GetType() }
     }
 
+    if e.Operator.Type == token.Minus {
+        t := e.Operand.GetType()
+        if t.GetKind() == types.Uint {
+            return types.CreateInt(t.Size())
+        }
+        return t
+    }
+
     if e.Operator.Type == token.Mul {
         if ptr, ok := e.Operand.GetType().(types.PtrType); ok {
             return ptr.BaseType

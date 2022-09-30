@@ -63,6 +63,14 @@ fn testMul(a1 u64, a2 u64) {
     printUint(a1) printStr(" * ") printUint(a2) printStr(" = ")
     printUint(a1 * a2)
     printStr("\n")
+
+    printInt(-a1) printStr(" * ") printInt(-a2) printStr(" = ")
+    printInt(-a1 * -a2)
+    printStr("\n")
+
+    printInt(a1 as i64) printStr(" * ") printInt(-a2) printStr(" = ")
+    printInt(a1 as i64 * -a2)
+    printStr("\n")
 }
 
 fn testDiv(a1 u64, a2 u64) {
