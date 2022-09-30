@@ -27,5 +27,5 @@ func LogicalOp(file *os.File, t token.Token) int {
 }
 
 func LogicalOpEnd(file *os.File, count int) {
-    file.WriteString(fmt.Sprintf(".cond%d\n", count))
+    file.WriteString(fmt.Sprintf(".cond%d:\n", count))
 }

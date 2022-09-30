@@ -430,8 +430,7 @@ func GenFnCall(file *os.File, e *ast.FnCall) {
     stackArgsStart := len(e.F.GetArgs())
     for i,t := range e.F.GetArgs() {
         if types.IsBigStruct(t) {
-            s := (t.Size() + 7) & ^uint(7)
-            rest += s
+            rest += (t.Size() + 7) & ^uint(7)
 
         } else if stackArgsStart == len(e.F.GetArgs()) {
             needed := types.RegCount(t)
