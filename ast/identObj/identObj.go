@@ -25,6 +25,8 @@ func GetCurFunc() *fn.Func {
 }
 
 func DecVar(name token.Token, t types.Type) vars.Var {
+    checkName(name)
+
     if InGlobalScope() {
         v := vars.CreateGlobalVar(name, t)
         curScope.identObjs[name.Str] = &v
