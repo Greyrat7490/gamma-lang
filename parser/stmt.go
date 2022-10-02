@@ -58,13 +58,26 @@ func prsStmt(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
         }
         return &ast.ExprStmt{ Expr: e }
 
+    case token.UndScr:
+        switch tokens.Peek().Type {
+        case token.DefVar, token.Assign:
+            tokens.Next()
+            tokens.Next()
+            return &ast.ExprStmt{ Expr: prsExpr(tokens) }
+        default:
+            fmt.Fprintln(os.Stderr, "[ERROR] unused \"_\" token")
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+            os.Exit(1)
+            return &ast.BadStmt{}
+        }
+
     case token.Name:
         if isDec(tokens) || isDefInfer(tokens) {
             return &ast.DeclStmt{ Decl: prsDefine(tokens) }
         }
         fallthrough
 
-    case token.UndScr, token.XSwitch, token.Plus, token.Minus, token.Mul, token.Amp:
+    case token.XSwitch, token.Plus, token.Minus, token.Mul, token.Amp:
         e := prsExpr(tokens)
 
         if tokens.Peek().Type == token.Assign {
