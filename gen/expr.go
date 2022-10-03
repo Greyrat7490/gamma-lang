@@ -40,9 +40,12 @@ func GenExpr(file *os.File, e ast.Expr) {
         GenIdent(file, e)
 
     case *ast.FnCall:
-        if e.Ident.Name == "_syscall" {
+        switch e.Ident.Name {
+        case "_syscall":
             GenSyscall(file, e.Values[0])
-        } else {
+        case "_asm":
+            GenInlineAsm(file, e.Values[0])
+        default:
             GenFnCall(file, e)
         }
 
@@ -692,4 +695,14 @@ func GenSyscall(file *os.File, val ast.Expr) {
     }
 
     file.WriteString("syscall\n")
+}
+
+func GenInlineAsm(file *os.File, val ast.Expr) {
+    if str,ok := val.(*ast.StrLit); ok {
+        file.WriteString(str.Val.Str[1:len(str.Val.Str)-1] + "\n")
+    } else {
+        fmt.Fprintln(os.Stderr, "[ERROR] _asm takes only a string literal")
+        fmt.Fprintln(os.Stderr, "\t" + val.At())
+        os.Exit(1)
+    }
 }

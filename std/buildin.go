@@ -23,7 +23,8 @@ func Declare() {
     identObj.AddBuildIn("printChar", types.CharType{}, nil)
     identObj.AddBuildIn("exit",      types.CreateInt(types.I32_Size), nil)
 
-    // "inline assembly"
+    // basic inline assembly
+    identObj.AddBuildIn("_asm", types.CreateStr(), nil)
     identObj.AddBuildIn("_syscall", types.CreateInt(types.I64_Size), nil)
 }
 
