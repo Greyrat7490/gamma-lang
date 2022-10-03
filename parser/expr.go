@@ -6,6 +6,7 @@ import (
     "gamma/token"
     "gamma/types"
     "gamma/types/str"
+    "gamma/types/char"
     "gamma/types/array"
     "gamma/types/struct"
     "gamma/cmpTime"
@@ -200,7 +201,11 @@ func prsLitExpr(tokens *token.Tokens) ast.Expr {
             repr.Str = "0"
         }
     case types.Char:
-        repr.Str = fmt.Sprint(int(val.Str[1]))
+        if val.Str[1] == '\\' {
+            repr.Str = fmt.Sprint(char.EscapeByte(val.Str[2]))
+        } else {
+            repr.Str = fmt.Sprint(int(val.Str[1]))
+        }
     }
 
     return &ast.BasicLit{ Repr: repr, Type: t, Val: val }

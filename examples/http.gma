@@ -24,7 +24,7 @@ fn testSwapEndians() {
 fn main() {
     testSwapEndians()
 
-    
+
     // create ipv4/tcp socket --------------------------------------------------------
     fd := socket(AF_INET, SOCK_STREAM, 0)
     if fd == -1 {
@@ -84,15 +84,13 @@ fn main() {
 
     // send and recv http ------------------------------------------------------------
     buffer := [MSG_SIZE]char {}
-    // TODO: error if func returns nothing
     readSize := read(client_fd, buffer as *char, MSG_SIZE)
 
-    // TODO: escape char
-    printStr("\n")
+    printChar('\n')
     for i i64, readSize {
         printChar(buffer[i])
     }
-    printStr("\n")
+    printChar('\n')
 
     bytes := send(client_fd, HTML, 0)
     if bytes == -1 {

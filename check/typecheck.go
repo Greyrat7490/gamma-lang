@@ -20,6 +20,10 @@ func TypeCheckNode(n ast.Node) {
 
 
 func CheckTypes(destType types.Type, srcType types.Type) bool {
+    if srcType == nil {
+        return false
+    }
+
     switch t := destType.(type) {
     case types.ArrType:
         if t2,ok := srcType.(types.ArrType); ok {

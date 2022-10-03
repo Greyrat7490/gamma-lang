@@ -464,7 +464,9 @@ func Tokenize(path string, src *os.File) (tokens Tokens) {
 
             // char literal
             case '\'':
-                // TODO: escape
+                if line[start+1] == '\\' {
+                    i++
+                }
                 tokens.split(line, start, i+3, lineNum)
                 start = i+3
                 i += 2

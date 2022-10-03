@@ -51,7 +51,7 @@ func typeCheckExpr(e ast.Expr) {
 
 func checkInt(destType types.Type, val ast.Expr) bool {
     t := val.GetType()
-    if t.GetKind() != types.Uint && t.GetKind() != types.Int {
+    if t == nil || (t.GetKind() != types.Uint && t.GetKind() != types.Int) {
         return false
     }
 
@@ -77,7 +77,7 @@ func checkInt(destType types.Type, val ast.Expr) bool {
 
 func checkUint(destType types.Type, val ast.Expr) bool {
     t := val.GetType()
-    if t.GetKind() != types.Uint && t.GetKind() != types.Int {
+    if t == nil || (t.GetKind() != types.Uint && t.GetKind() != types.Int) {
         return false
     }
 

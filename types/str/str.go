@@ -5,6 +5,7 @@ import (
     "fmt"
     "strings"
     "gamma/token"
+    "gamma/types/char"
     "gamma/gen/asm/x86_64/nasm"
 )
 
@@ -47,28 +48,16 @@ func escape(s token.Token) (string, int) {
                 continue
             }
         } else {
-            var i int
-            switch r {
-            case 't':
-                i = int('\t')
-            case 'r':
-                i = int('\r')
-            case 'n':
-                i = int('\n')
-            case '"':
-                i = int('"')
-            case '\\':
-                i = int('\\')
-            default:
+            if i := char.Escape(r); i != -1 {
+                s.Str = strings.Replace(s.Str, fmt.Sprintf("\\%c", r), fmt.Sprintf("\",%d,\"", i), 1)
+                escape = false
+            } else {
                 s.Pos.Col += size
 
                 fmt.Fprintf(os.Stderr, "[ERROR] unknown escape sequence \"\\%c\"\n", r)
                 fmt.Fprintln(os.Stderr, "\t" + s.At())
                 os.Exit(1)
             }
-
-            s.Str = strings.Replace(s.Str, fmt.Sprintf("\\%c", r), fmt.Sprintf("\",%d,\"", i), 1)
-            escape = false
         }
 
         size++
