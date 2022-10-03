@@ -1,3 +1,5 @@
+import "socket.gma"
+
 SYS_READ                   :: 0
 SYS_WRITE                  :: 1
 SYS_OPEN                   :: 2
@@ -333,9 +335,16 @@ SYS_PKEY_FREE              :: 331
 SYS_STATX                  :: 332
 
 
+fn read(fd i32, buf *char, size u64) -> i64 {
+    _syscall(SYS_READ)
+}
 
-fn write(fd i32, s str) {
+fn write(fd i32, s str) -> i64 {
     _syscall(SYS_WRITE)
+}
+
+fn close(fd i32) -> i32 {
+    _syscall(SYS_CLOSE)
 }
 
 fn socket(domain i32, type i32, protocol i32) -> i32 {
@@ -347,5 +356,38 @@ fn shutdown(sockfd i32, how i32) -> i32 {
 }
                                                 // TODO: *void/*generic
 fn setsockopt(sockfd i32, level i32, optname i32, optval *i32, optlen i32) -> i32 {
+    _asm("mov r10, rcx")
     _syscall(SYS_SETSOCKOPT)
 }
+
+fn getsockopt(sockfd i32, level i32, optname i32, optval *i32, optlen *i32) -> i32 {
+    _asm("mov r10, rcx")
+    _syscall(SYS_GETSOCKOPT)
+}
+
+fn bind(sockfd i32, addr *sockaddr_in, addr_len u32) -> i32 {
+    _syscall(SYS_BIND)
+}
+
+fn listen(sockfd i32, backlog i32) -> i32 {
+    _syscall(SYS_LISTEN)
+}
+
+fn accept(sockfd i32, addr *sockaddr_in, addr_len *u32) -> i32 {
+    _syscall(SYS_ACCEPT)
+}
+
+fn accept4(sockfd i32, addr *sockaddr_in, addr_len *u32, flags i32) -> i32 {
+    _asm("mov r10d, ecx")
+    _syscall(SYS_ACCEPT4)
+}
+
+fn sendto(sockfd i32, s str, flags i32, addr *sockaddr_in, addr_len u32) -> i64 {
+    _asm("mov r10d, ecx")
+    _syscall(SYS_SENDTO)
+}
+
+fn send(sockfd i32, s str, flags i32) -> i64 {
+    ret sendto(sockfd, s, flags, 0x0 as *sockaddr_in, 0)
+}
+

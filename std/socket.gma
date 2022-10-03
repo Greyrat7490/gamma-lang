@@ -151,3 +151,57 @@ SO_PRIORITY     :: 12
 SO_LINGER       :: 13
 SO_BSDCOMPAT    :: 14
 SO_REUSEPORT    :: 15
+
+
+/*
+ * in addresses -----------------------------------------------------
+*/
+struct in_addr {
+    s_addr u32
+}
+
+INADDR_ANY          :: in_addr{ s_addr: 0 }             // addr to accept any incoming msg
+INADDR_BROADCAST    :: in_addr{ s_addr: 0xffffffff }    // addr to send to all hosts
+INADDR_NONE         :: in_addr{ s_addr: 0xffffffff }    // addr indicating an error return
+INADDR_DUMMY        :: in_addr{ s_addr: 0xc0000008 }    // dummy addr for src of ICMPv6 errs converted to IPv4 (RFC 7600)
+
+IN_LOOPBACKNET      :: 127                              // Network number for local host loopback
+INADDR_LOOPBACK     :: in_addr{ s_addr: 0x7f000001 }    // addr(127.0.0.1) to loopback to local host
+
+// for Multicast INADDR
+INADDR_UNSPEC_GROUP         :: in_addr{ s_addr: 0xe0000000 } // 224.0.0.0
+INADDR_ALLHOSTS_GROUP       :: in_addr{ s_addr: 0xe0000001 } // 224.0.0.1
+INADDR_ALLRTRS_GROUP        :: in_addr{ s_addr: 0xe0000002 } // 224.0.0.2
+INADDR_ALLSNOOPERS_GROUP    :: in_addr{ s_addr: 0xe000006a } // 224.0.0.106
+INADDR_MAX_LOCAL_GROUP      :: in_addr{ s_addr: 0xe00000ff } // 224.0.0.255
+
+
+struct sockaddr_in {
+    sin_family  u16,
+    sin_port    u16,        // port num
+    sin_addr    in_addr,    // internet addr
+
+    // padding to size of struct sockaddr
+    sin_zero i64
+}
+
+
+/*
+ * funcs to convert byte order between host and network
+ * TODO: const funcs
+ * TODO: check if byte order is little endian -> if big endian do nothing
+*/
+fn htons(x u16) -> u16 {
+    ret (x << 8) | (x >> 8)
+}
+fn htonl(x u32) -> u32 {
+    ret (x & 0xff << 24) | (x & 0xff00 << 8) | (x >> 8 & 0xff00) | (x >> 24)
+}
+
+fn ntohs(x u16) -> u16 {
+    ret (x << 8) | (x >> 8)
+}
+fn ntohl(x u32) -> u32 {
+    ret (x << 24) | (x & 0xff00 << 8) | (x >> 8 & 0xff00) | (x >> 24 & 0xff)
+}
+
