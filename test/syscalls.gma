@@ -1,6 +1,6 @@
 import "std.gma"
 
 fn main() {
-    write(STDOUT, "write syscall (stdout)\n")
-    write(STDERR, "write syscall (stderr)\n")
+    _ := write(STDOUT, "write syscall (stdout)\n")
+    _ := write(STDERR, "write syscall (stderr)\n")
 }

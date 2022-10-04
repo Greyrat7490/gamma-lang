@@ -65,10 +65,14 @@ func prsStmt(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
             tokens.Next()
             return &ast.ExprStmt{ Expr: prsExpr(tokens) }
         default:
-            fmt.Fprintln(os.Stderr, "[ERROR] unused \"_\" token")
-            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-            os.Exit(1)
-            return &ast.BadStmt{}
+            if ignoreUnusedExpr {
+                return &ast.ExprStmt{ Expr: &ast.Ident{ Name: "_", Obj: nil } }
+            } else {
+                fmt.Fprintln(os.Stderr, "[ERROR] unused \"_\" token")
+                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+                os.Exit(1)
+                return &ast.BadStmt{}
+            }
         }
 
     case token.Name:

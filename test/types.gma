@@ -15,14 +15,14 @@ fn testIntSizes(i i8) {
 fn testUnsigned(u u8) {
     printUint(u) printStr("\n")
 
-    u2 u8 := 0x10
-    printUint(u2) printStr("\n")
+    u1 u8 := 0x10
+    printUint(u1) printStr("\n")
 
     printUint(0x8 + 0x8) printStr("\n")
 
-    u1 u32 := 0x10
     u2 u32 := 0x10
-    printUint(u1 * u2) printStr("\n")
+    u3 u32 := 0x10
+    printUint(u2 * u3) printStr("\n")
 }
 
 fn testConstEval() {
@@ -105,7 +105,7 @@ fn main() {
 
     printStr("\ntest unsigned mul -----\n")
     testMul(0x10, 0x10)
-    testMul(0x0fffffffffffffff, 0xf)
+    testMul(0x0fffffffffffffff, 0xf)    // some int overflows happen inside here (TODO: runtime errors for int overflows)
     testMul(0x0fffffffffffffff, 0x10)
     testMul(0x1111111111111111, 0xf)
 

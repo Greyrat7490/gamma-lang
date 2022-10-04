@@ -3,5 +3,5 @@ import "std.gma"
 SOMENUM :: 6969
 
 fn testPrintErr() {
-    write(STDERR, "test error msg\n")
+    _ := write(STDERR, "test error msg\n")
 }

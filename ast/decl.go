@@ -26,6 +26,12 @@ type DecVar struct {
     TypePos token.Pos
 }
 
+type DecField struct {
+    Name token.Token
+    Type types.Type
+    TypePos token.Pos
+}
+
 type DefVar struct {
     V vars.Var
     Type types.Type
@@ -53,7 +59,7 @@ type DefStruct struct {
     Pos token.Pos
     Name token.Token
     BraceLPos token.Pos
-    Fields []DecVar
+    Fields []DecField
     BraceRPos token.Pos
 }
 
@@ -87,6 +93,14 @@ func (o *DefVar) Readable(indent int) string {
     }
 
     return res + o.Value.Readable(indent+1)
+}
+
+func (d *DecField) Readable(indent int) string {
+    s := strings.Repeat("   ", indent+1)
+
+    return strings.Repeat("   ", indent) + "DEC_FIELD:\n" + 
+        s + fmt.Sprintf("%v(Name)\n", d.Name.Str) +
+        s + fmt.Sprintf("%v(Typename)\n", d.Type)
 }
 
 func (o *DefConst) Readable(indent int) string {
@@ -163,6 +177,7 @@ func (d *DefVar)    decl() {}
 func (d *DefConst)  decl() {}
 func (d *DefFn)     decl() {}
 func (d *DefStruct) decl() {}
+func (d *DecField)  decl() {}
 func (d *Import)    decl() {}
 
 func (d *BadDecl)   At() string { return "" }
@@ -171,6 +186,7 @@ func (d *DefVar)    At() string { return d.ColPos.At() }
 func (d *DefConst)  At() string { return d.ColPos.At() }
 func (d *DefFn)     At() string { return d.Pos.At() }
 func (d *DefStruct) At() string { return d.Pos.At() }
+func (d *DecField)  At() string { return d.Name.At() }
 func (d *Import)    At() string { return d.Pos.At() }
 
 func (d *BadDecl)   End() string { return "" }
@@ -179,4 +195,5 @@ func (d *DefVar)    End() string { return d.Value.End() }
 func (d *DefConst)  End() string { return d.Value.End() }
 func (d *DefFn)     End() string { return d.Block.End() }
 func (d *DefStruct) End() string { return d.BraceRPos.At() }
+func (d *DecField)  End() string { return d.TypePos.At() }
 func (d *Import)    End() string { return d.Path.At() }

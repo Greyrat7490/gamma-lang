@@ -300,15 +300,14 @@ func prsStruct(tokens *token.Tokens) ast.DefStruct {
     fields := prsDecFields(tokens)
     braceRPos := tokens.Cur().Pos
 
-    var types []types.Type
     var names []string
+    var types []types.Type
     for _,f := range fields {
+        names = append(names, f.Name.Str)
         types = append(types, f.Type)
-        names = append(names, f.V.GetName())
     }
-    s := identObj.DecStruct(name, names, types)
 
-    return ast.DefStruct{ S: s, Pos: pos, Name: name, Fields: fields, BraceLPos: braceLPos, BraceRPos: braceRPos }
+    return ast.DefStruct{ S: identObj.DecStruct(name, names, types), Pos: pos, Name: name, BraceLPos: braceLPos, Fields: fields, BraceRPos: braceRPos }
 }
 
 func prsDefFn(tokens *token.Tokens) ast.DefFn {
@@ -375,19 +374,24 @@ func prsDefFn(tokens *token.Tokens) ast.DefFn {
     return ast.DefFn{ Pos: pos, F: f, Args: argDecs, RetType: retType, Block: block }
 }
 
-func prsDecFields(tokens *token.Tokens) (decs []ast.DecVar) {
+func prsDecField(tokens *token.Tokens) ast.DecField {
+    name,t := prsNameType(tokens)
+    return ast.DecField{ Name: name, Type: t, TypePos: tokens.Cur().Pos }
+}
+
+func prsDecFields(tokens *token.Tokens) (fields []ast.DecField) {
     if tokens.Cur().Type != token.BraceL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", tokens.Cur())
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
 
-    if tokens.Next().Type != token.BraceR {
-        decs = append(decs, prsDecVar(tokens))
+    if tokens.Next().Type != token.ParenR {
+        fields = append(fields, prsDecField(tokens))
 
         for tokens.Next().Type == token.Comma {
             tokens.Next()
-            decs = append(decs, prsDecVar(tokens))
+            fields = append(fields, prsDecField(tokens))
         }
     }
 
