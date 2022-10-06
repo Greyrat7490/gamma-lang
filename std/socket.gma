@@ -185,23 +185,43 @@ struct sockaddr_in {
     sin_zero i64
 }
 
+fn isBigEndian() -> bool {
+    word i16 := 0x0001
+    ptr *bool := &word as u64 as *bool
+    ret *ptr == false
+}
 
 /*
  * funcs to convert byte order between host and network
  * TODO: const funcs
- * TODO: check if byte order is little endian -> if big endian do nothing
 */
 fn htons(x u16) -> u16 {
-    ret (x << 8) | (x >> 8)
+    if isBigEndian() {
+        ret x
+    } else {
+        ret (x << 8) | (x >> 8)
+    }
 }
 fn htonl(x u32) -> u32 {
-    ret (x & 0xff << 24) | (x & 0xff00 << 8) | (x >> 8 & 0xff00) | (x >> 24)
+    if isBigEndian() {
+        ret x
+    } else {
+        ret (x & 0xff << 24) | (x & 0xff00 << 8) | (x >> 8 & 0xff00) | (x >> 24)
+    }
 }
 
 fn ntohs(x u16) -> u16 {
-    ret (x << 8) | (x >> 8)
+    if isBigEndian() {
+        ret x
+    } else {
+        ret (x << 8) | (x >> 8)
+    }
 }
 fn ntohl(x u32) -> u32 {
-    ret (x << 24) | (x & 0xff00 << 8) | (x >> 8 & 0xff00) | (x >> 24 & 0xff)
+    if isBigEndian() {
+        ret x
+    } else {
+        ret (x << 24) | (x & 0xff00 << 8) | (x >> 8 & 0xff00) | (x >> 24 & 0xff)
+    }
 }
 
