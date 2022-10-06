@@ -363,17 +363,16 @@ func GenBinary(file *os.File, e *ast.Binary) {
     }
 
 
-    // +,-,*,/, <,<=,>,>=,==,!=
     if e.Operator.Type != token.And && e.Operator.Type != token.Or {
         // compile time evaluation (constEval only left expr)
         if c := cmpTime.ConstEval(e.OperandL); c.Type != token.Unknown {
-            asm.MovRegVal(file, asm.RegA, e.OperandL.GetType().Size(), c.Str)
+            asm.MovRegVal(file, asm.RegA, e.OperandR.GetType().Size(), c.Str)
         } else {
             GenExpr(file, e.OperandL)
 
             // compile time evaluation (constEval only right expr)
             if c := cmpTime.ConstEval(e.OperandR); c.Type != token.Unknown {
-                asm.BinaryOp(file, e.Operator.Type, c.Str, e.OperandR.GetType().Size(), e.GetType().GetKind() == types.Int)
+                asm.BinaryOp(file, e.Operator.Type, c.Str, e.OperandL.GetType().Size(), e.GetType().GetKind() == types.Int)
                 return
             }
         }

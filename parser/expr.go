@@ -20,12 +20,9 @@ type precedence int
 const (
     LOGICAL_PRECEDENCE precedence = iota // &&, ||
     COMPARE_PRECEDENCE            = iota // ==, !=, <, <=, >, >=
-    CAST_PRECEDENCE               = iota // as type
     BITWISE_PRECEDENCE            = iota // <<, >>, &, |, ^, ~
-    XSWITCH_PRECEDENCE            = iota // $ ... { ... }
     ADD_SUB_PRECEDENCE            = iota // +, -
     MUL_DIV_PRECEDENCE            = iota // *, /, %
-    EXP_PRECEDENCE                = iota // **(TODO)
     PAREN_PRECEDENCE              = iota // ()
 )
 
@@ -87,14 +84,14 @@ func prsExpr(tokens *token.Tokens) ast.Expr {
         expr = prsIndexExpr(tokens, expr)
     }
 
-    if tokens.Peek().Type == token.As {
+    for tokens.Peek().Type == token.As {
         tokens.Next()
         expr = prsCast(tokens, expr)
     }
 
     if isBinaryExpr(tokens) {
         expr = prsBinary(tokens, expr, 0)
-        if tokens.Peek().Type == token.As {
+        for tokens.Peek().Type == token.As {
             tokens.Next()
             expr = prsCast(tokens, expr)
         }
@@ -150,8 +147,6 @@ func getPrecedence(tokens *token.Tokens) precedence {
         return MUL_DIV_PRECEDENCE
     case isBitwise(tokens):
         return BITWISE_PRECEDENCE
-    case tokens.Peek().Type == token.As:
-        return CAST_PRECEDENCE
     case isParenExpr(tokens):
         return PAREN_PRECEDENCE
     default:
