@@ -98,7 +98,7 @@ func (o *DefVar) Readable(indent int) string {
 func (d *DecField) Readable(indent int) string {
     s := strings.Repeat("   ", indent+1)
 
-    return strings.Repeat("   ", indent) + "DEC_FIELD:\n" + 
+    return strings.Repeat("   ", indent) + "DEC_FIELD:\n" +
         s + fmt.Sprintf("%v(Name)\n", d.Name.Str) +
         s + fmt.Sprintf("%v(Typename)\n", d.Type)
 }

@@ -9,7 +9,9 @@ import (
     "gamma/token"
     "gamma/types"
     "gamma/ast"
+    "gamma/ast/identObj"
     "gamma/ast/identObj/func"
+    "gamma/ast/identObj/struct"
 )
 
 func typeCheckExpr(e ast.Expr) {
@@ -22,7 +24,7 @@ func typeCheckExpr(e ast.Expr) {
     case *ast.Indexed:
         typeCheckIndexed(e)
     case *ast.Field:
-        // TODO
+        typeCheckField(e)
 
     case *ast.Unary:
         typeCheckUnary(e)
@@ -119,6 +121,20 @@ func checkTypeExpr(destType types.Type, e ast.Expr) bool {
 func typeCheckIndexed(e *ast.Indexed) {
     if len(e.ArrType.Lens) < len(e.Indices){
         fmt.Fprintf(os.Stderr, "[ERROR] dimension of the array is %d but got %d\n", len(e.ArrType.Lens), len(e.Indices))
+        fmt.Fprintln(os.Stderr, "\t" + e.At())
+        os.Exit(1)
+    }
+}
+
+func typeCheckField(e *ast.Field) {
+    if s,ok := identObj.Get(e.StructType.Name).(*structDec.Struct); ok {
+        if _,b := s.GetFieldNum(e.FieldName.Str); !b {
+            fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName.Str)
+            fmt.Fprintln(os.Stderr, "\t" + e.At())
+            os.Exit(1)
+        }
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not declared\n", e.StructType.Name)
         fmt.Fprintln(os.Stderr, "\t" + e.At())
         os.Exit(1)
     }
@@ -283,7 +299,7 @@ func typeCheckCast(e *ast.Cast) {
             }
 
         default:
-            fmt.Fprintf(os.Stderr, "[ERROR] cannot cast %v into %v)\n", t, e.DestType)
+            fmt.Fprintf(os.Stderr, "[ERROR] cannot cast %v into %v\n", t, e.DestType)
             fmt.Fprintln(os.Stderr, "\t" + e.Expr.At())
             os.Exit(1)
         }
@@ -318,7 +334,7 @@ func typeCheckCast(e *ast.Cast) {
             }
 
         default:
-            fmt.Fprintf(os.Stderr, "[ERROR] cannot cast %v into %v)\n", t, e.DestType)
+            fmt.Fprintf(os.Stderr, "[ERROR] cannot cast %v into %v\n", t, e.DestType)
             fmt.Fprintln(os.Stderr, "\t" + e.Expr.At())
             os.Exit(1)
         }
