@@ -75,7 +75,8 @@ A statically and strongly typed programming language similar to Go, but with mor
   * [x] proof with Rule 110 programm
 * [x] type checking
 * [x] tests
-* [ ] examples
+* [x] examples
+  * [x] simple http server
 * [ ] self-hosted
 * [ ] cross-platform
 
