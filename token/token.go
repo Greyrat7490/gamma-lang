@@ -491,15 +491,14 @@ func Tokenize(path string, src *os.File) (tokens Tokens) {
                     case "/*":
                         tokens.split(line, start, i, lineNum)
                         mlComment = true
-                        start = i+1
                         i++
                         continue
 
                     case "&&", "||", ":=", "::", "!=", "==", "<=", ">=", "->", "<<", ">>":
                         tokens.split(line, start, i, lineNum)
                         tokens.tokens = append(tokens.tokens, Token{ ToTokenType(s), s, Pos{lineNum, i+1} })
-                        start = i+3
-                        i += 2
+                        start = i+2
+                        i++
                         continue
                     }
                 }

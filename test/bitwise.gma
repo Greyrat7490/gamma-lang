@@ -1,19 +1,19 @@
 fn main() {
-    i := 1          // TODO: fix tokenizer no whitespace after :=,<< -> bug
-    i2 := 8
-    i3 := 11
+    i:=1
+    i2:=8
+    i3:=11
 
-    printStr("i << 2 = ")
-    printInt(i << 2)
-    printStr(" (1 << 2) expected: 4\n")
+    printStr("i<<2 = ")
+    printInt(i<<2)
+    printStr(" (1<<2) expected: 4\n")
 
     printStr("i2 >> 3 = ")
     printInt(i2 >> 3)
     printStr(" (8 >> 3) expected: 1\n")
 
-    printStr("i3 & 3 = ")
-    printInt(i3 & 3)
-    printStr(" (11 & 3) expected: 3\n")
+    printStr("i3&3 = ")
+    printInt(i3&3)
+    printStr(" (11&3) expected: 3\n")
 
     printStr("i3 | 4 = ")
     printInt(i3 | 4)
