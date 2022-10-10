@@ -71,5 +71,7 @@ func GenDefFn(file *os.File, d *ast.DefFn) {
 
     GenBlock(file, &d.Block)
 
-    FnEnd(file);
+    if d.F.GetRetType() == nil {
+        FnEnd(file);
+    }
 }

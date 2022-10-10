@@ -25,7 +25,7 @@ func Declare() {
 
     // basic inline assembly
     identObj.AddBuildIn("_asm", types.CreateStr(), nil)
-    identObj.AddBuildIn("_syscall", types.CreateInt(types.I64_Size), nil)
+    identObj.AddBuildIn("_syscall", types.CreateInt(types.I64_Size), types.CreateInt(types.I64_Size))
 }
 
 func Define(file *os.File) {
