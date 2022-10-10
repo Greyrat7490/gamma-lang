@@ -50,6 +50,8 @@ func typeCheckStmt(s ast.Stmt) {
 }
 
 func typeCheckAssign(s *ast.Assign) {
+    typeCheckExpr(s.Dest)
+
     t1 := s.Dest.GetType()
     t2 := s.Value.GetType()
 
@@ -72,6 +74,8 @@ func typeCheckIf(s *ast.If) {
         fmt.Fprintln(os.Stderr, "\t" + s.Pos.At())
         os.Exit(1)
     }
+
+    typeCheckBlock(&s.Block)
 }
 
 func typeCheckElse(s *ast.Else) {
@@ -104,6 +108,8 @@ func typeCheckFor(s *ast.For) {
         fmt.Fprintln(os.Stderr, "\t" + s.ForPos.At())
         os.Exit(1)
     }
+
+    typeCheckBlock(&s.Block)
 }
 
 func typeCheckWhile(s *ast.While) {
@@ -112,6 +118,8 @@ func typeCheckWhile(s *ast.While) {
         fmt.Fprintln(os.Stderr, "\t" + s.WhilePos.At())
         os.Exit(1)
     }
+
+    typeCheckBlock(&s.Block)
 }
 
 func typeCheckRet(s *ast.Ret) {

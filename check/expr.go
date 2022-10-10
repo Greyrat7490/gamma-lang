@@ -259,10 +259,8 @@ func typeCheckFnCall(o *ast.FnCall) {
         }
 
         for i, t1 := range args {
-            t2 := o.Values[i].GetType()
-
             if !checkTypeExpr(t1, o.Values[i]) {
-                fmt.Fprintf(os.Stderr, "[ERROR] expected %v as arg %d but got %v for function \"%s\"\n", t1, i, t2, f.GetName())
+                fmt.Fprintf(os.Stderr, "[ERROR] expected %v as arg %d but got %v for function \"%s\"\n", t1, i, o.Values[i].GetType(), f.GetName())
                 fmt.Fprintf(os.Stderr, "\texpected: %v\n", args)
                 fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))
                 fmt.Fprintln(os.Stderr, "\t" + o.At())
