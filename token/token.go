@@ -361,11 +361,11 @@ func (t TokenType) String() string {
 type Pos struct {
     Line int
     Col int
-    // TODO later filename
+    File string
 }
 
 func (p Pos) At() string {
-    return fmt.Sprintf("at line: %d, col: %d", p.Line, p.Col)
+    return fmt.Sprintf("at: %s:%d:%d", p.File, p.Line, p.Col)
 }
 
 type Token struct {
@@ -390,12 +390,12 @@ type Tokens struct {
     lastImport bool
 }
 
-func (t *Tokens) split(s string, start int, end int, line int) {
+func (t *Tokens) split(s string, start int, end int, line int, file string) {
     if start != end {
         s := s[start:end]
-        typ := ToTokenType(s, Pos{line, start+1})
+        typ := ToTokenType(s, Pos{line, start+1, file})
 
-        t.tokens = append(t.tokens, Token{typ, s, Pos{line, start+1} })
+        t.tokens = append(t.tokens, Token{typ, s, Pos{line, start+1, file} })
     }
 }
 
@@ -473,13 +473,13 @@ func Tokenize(path string, src *os.File) (tokens Tokens) {
                 if line[start+1] == '\\' {
                     i++
                 }
-                tokens.split(line, start, i+3, lineNum)
+                tokens.split(line, start, i+3, lineNum, path)
                 start = i+3
                 i += 2
 
             // split at space
             case ' ', '\t':
-                tokens.split(line, start, i, lineNum)
+                tokens.split(line, start, i, lineNum, path)
                 start = i+1
 
             // split at //, /*, :=, ::, <=, >=, ==, !=, &&, ->, <<, >>
@@ -489,20 +489,20 @@ func Tokenize(path string, src *os.File) (tokens Tokens) {
                     switch s {
                     // start single line comment
                     case "//":
-                        tokens.split(line, start, i, lineNum)
+                        tokens.split(line, start, i, lineNum, path)
                         comment = true
                         i++
                         continue
                     // start multiline comment
                     case "/*":
-                        tokens.split(line, start, i, lineNum)
+                        tokens.split(line, start, i, lineNum, path)
                         mlComment = true
                         i++
                         continue
 
                     case "&&", "||", ":=", "::", "!=", "==", "<=", ">=", "->", "<<", ">>":
-                        tokens.split(line, start, i, lineNum)
-                        tokens.tokens = append(tokens.tokens, Token{ ToTokenType(s, Pos{lineNum, i+1}), s, Pos{lineNum, i+1} })
+                        tokens.split(line, start, i, lineNum, path)
+                        tokens.tokens = append(tokens.tokens, Token{ ToTokenType(s, Pos{lineNum, i+1, path}), s, Pos{lineNum, i+1, path} })
                         start = i+2
                         i++
                         continue
@@ -513,15 +513,15 @@ func Tokenize(path string, src *os.File) (tokens Tokens) {
 
             // split at non space char (and keep char)
             case '(', ')', '{', '}', '[', ']', '+', '*', '%', '.', ',', ';', '$', '^', '~':
-                tokens.split(line, start, i, lineNum)
+                tokens.split(line, start, i, lineNum, path)
 
-                tokens.tokens = append(tokens.tokens, Token{ ToTokenType(string(line[i]), Pos{lineNum, i+1}), string(line[i]), Pos{lineNum, i+1} })
+                tokens.tokens = append(tokens.tokens, Token{ ToTokenType(string(line[i]), Pos{lineNum, i+1, path}), string(line[i]), Pos{lineNum, i+1, path} })
                 start = i+1
             }
         }
 
         if !comment && !mlComment && len(line) > start {
-            tokens.split(line, start, len(line), lineNum)
+            tokens.split(line, start, len(line), lineNum, path)
         }
     }
 
@@ -600,7 +600,7 @@ func (t *Tokens) FindNext (typ TokenType) Pos {
         }
     }
 
-    return Pos{ -1, -1 }
+    return Pos{ -1, -1, "" }
 }
 
 func (t *Tokens) SaveIdx() {
