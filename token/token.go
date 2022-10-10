@@ -84,7 +84,7 @@ const (
     TokenTypeCount uint = iota
 )
 
-func ToTokenType(s string) TokenType {
+func ToTokenType(s string, p Pos) TokenType {
     switch s {
     case "true", "false":
         return Boolean
@@ -211,6 +211,12 @@ func ToTokenType(s string) TokenType {
             default:
                 if _, err := strconv.ParseUint(s, 0, 64); err == nil {
                     return Number
+                } else {
+                    if e,ok := err.(*strconv.NumError); ok && e.Err == strconv.ErrRange {
+                        fmt.Fprintf(os.Stderr, "[ERROR] %s is too big (out of u64 range)\n", s)
+                        fmt.Fprintln(os.Stderr, "\t" + p.At())
+                        os.Exit(1);
+                    }
                 }
             }
         }
@@ -387,7 +393,7 @@ type Tokens struct {
 func (t *Tokens) split(s string, start int, end int, line int) {
     if start != end {
         s := s[start:end]
-        typ := ToTokenType(s)
+        typ := ToTokenType(s, Pos{line, start+1})
 
         t.tokens = append(t.tokens, Token{typ, s, Pos{line, start+1} })
     }
@@ -496,7 +502,7 @@ func Tokenize(path string, src *os.File) (tokens Tokens) {
 
                     case "&&", "||", ":=", "::", "!=", "==", "<=", ">=", "->", "<<", ">>":
                         tokens.split(line, start, i, lineNum)
-                        tokens.tokens = append(tokens.tokens, Token{ ToTokenType(s), s, Pos{lineNum, i+1} })
+                        tokens.tokens = append(tokens.tokens, Token{ ToTokenType(s, Pos{lineNum, i+1}), s, Pos{lineNum, i+1} })
                         start = i+2
                         i++
                         continue
@@ -509,7 +515,7 @@ func Tokenize(path string, src *os.File) (tokens Tokens) {
             case '(', ')', '{', '}', '[', ']', '+', '*', '%', '.', ',', ';', '$', '^', '~':
                 tokens.split(line, start, i, lineNum)
 
-                tokens.tokens = append(tokens.tokens, Token{ ToTokenType(string(line[i])), string(line[i]), Pos{lineNum, i+1} })
+                tokens.tokens = append(tokens.tokens, Token{ ToTokenType(string(line[i]), Pos{lineNum, i+1}), string(line[i]), Pos{lineNum, i+1} })
                 start = i+1
             }
         }
