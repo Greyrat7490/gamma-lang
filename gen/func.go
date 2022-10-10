@@ -139,15 +139,15 @@ func PassVal(file *os.File, regIdx uint, value token.Token, valtype types.Type) 
 func PassVar(file *os.File, regIdx uint, t types.Type, otherVar vars.Var) {
     switch t := t.(type) {
     case types.StrType:
-        asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), types.Ptr_Size)
-        asm.MovRegDeref(file, regs[regIdx+1], otherVar.Addr(1), types.I32_Size)
+        asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), types.Ptr_Size, false)
+        asm.MovRegDeref(file, regs[regIdx+1], otherVar.Addr(1), types.U32_Size, false)
 
     case types.StructType:
         if t.Size() > uint(8) {
-            asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), types.Ptr_Size)
-            asm.MovRegDeref(file, regs[regIdx+1], otherVar.OffsetedAddr(int(types.Ptr_Size)), t.Size() - 8)
+            asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), types.Ptr_Size, false)
+            asm.MovRegDeref(file, regs[regIdx+1], otherVar.OffsetedAddr(int(types.Ptr_Size)), t.Size() - 8, false)
         } else {
-            asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), t.Size())
+            asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(0), t.Size(), false)
         }
 
     case types.IntType:
@@ -162,7 +162,7 @@ func PassReg(file *os.File, regIdx uint, argType types.Type, regSize uint) {
     switch t := argType.(type) {
     case types.StrType:
         asm.MovRegReg(file, regs[regIdx],   asm.RegGroup(0), types.Ptr_Size)
-        asm.MovRegReg(file, regs[regIdx+1], asm.RegGroup(1), types.I32_Size)
+        asm.MovRegReg(file, regs[regIdx+1], asm.RegGroup(1), types.U32_Size)
 
     case types.StructType:
         if t.Size() > uint(8) {
@@ -294,6 +294,7 @@ func PassBigStructVar(file *os.File, t types.StructType, v vars.Var, offset int)
             v.OffsetedAddr(offset),
             types.Ptr_Size,
             asm.RegA,
+            false,
         )
         offset += int(types.Ptr_Size)
     }
@@ -305,6 +306,7 @@ func PassBigStructVar(file *os.File, t types.StructType, v vars.Var, offset int)
             v.OffsetedAddr(offset),
             size,
             asm.RegA,
+            false,
         )
     }
 }

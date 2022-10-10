@@ -128,21 +128,31 @@ func GenIndexed(file *os.File, e *ast.Indexed) {
 
     switch t := e.ArrType.Ptr.BaseType.(type) {
     case types.StrType:
-        asm.MovRegDeref(file, asm.RegGroup(0), asm.GetReg(asm.RegC, types.Ptr_Size), types.Ptr_Size)
-        asm.MovRegDeref(file, asm.RegGroup(1), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, 8), types.I32_Size)
+        asm.MovRegDeref(file, asm.RegGroup(0), asm.GetReg(asm.RegC, types.Ptr_Size), types.Ptr_Size, false)
+        asm.MovRegDeref(file, asm.RegGroup(1), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, 8), types.U32_Size, false)
 
     case types.StructType:
         if t.Size() > uint(8) {
-            asm.MovRegDeref(file, asm.RegGroup(0), asm.GetReg(asm.RegC, types.Ptr_Size), types.Ptr_Size)
+            asm.MovRegDeref(file, asm.RegGroup(0), asm.GetReg(asm.RegC, types.Ptr_Size), types.Ptr_Size, false)
             asm.MovRegDeref(
                 file,
                 asm.RegGroup(1),
                 asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, int(t.Size() - 8)),
                 t.Size() - 8,
+                false,
             )
         } else {
-            asm.MovRegDeref(file, asm.RegGroup(0), asm.GetReg(asm.RegC, types.Ptr_Size), t.Size())
+            asm.MovRegDeref(file, asm.RegGroup(0), asm.GetReg(asm.RegC, types.Ptr_Size), t.Size(), false)
         }
+
+    case types.IntType:
+        asm.MovRegDeref(
+            file,
+            asm.RegGroup(0),
+            asm.GetReg(asm.RegC, types.Ptr_Size),
+            e.ArrType.Ptr.BaseType.Size(),
+            true,
+        )
 
     default:
         asm.MovRegDeref(
@@ -150,6 +160,7 @@ func GenIndexed(file *os.File, e *ast.Indexed) {
             asm.RegGroup(0),
             asm.GetReg(asm.RegC, types.Ptr_Size),
             e.ArrType.Ptr.BaseType.Size(),
+            false,
         )
     }
 }
@@ -206,29 +217,34 @@ func GenField(file *os.File, e *ast.Field) {
             case *ast.Ident:
                 switch t := s.GetTypes()[i].(type) {
                 case types.StrType:
-                    asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), types.Ptr_Size)
+                    asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), types.Ptr_Size, false)
                     asm.MovRegDeref(
                         file,
                         asm.RegGroup(1),
                         fmt.Sprintf("%s+%d", o.Obj.Addr(i), int(types.Ptr_Size)),
-                        types.I32_Size,
+                        types.U32_Size,
+                        false,
                     )
 
                 case types.StructType:
                     if t.Size() > uint(8) {
-                        asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), types.Ptr_Size)
+                        asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), types.Ptr_Size, false)
                         asm.MovRegDeref(
                             file,
                             asm.RegGroup(1),
                             fmt.Sprintf("%s+%d", o.Obj.Addr(i), int(types.Ptr_Size)),
                             t.Size() - 8,
+                            false,
                         )
                     } else {
-                        asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), t.Size())
+                        asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), t.Size(), false)
                     }
 
+                case types.IntType:
+                    asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), t.Size(), true)
+
                 default:
-                    asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), t.Size())
+                    asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr(i), t.Size(), false)
                 }
 
             case *ast.Field:
@@ -242,12 +258,14 @@ func GenField(file *os.File, e *ast.Field) {
                         asm.RegGroup(0),
                         asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
                         types.Ptr_Size,
+                        false,
                     )
                     asm.MovRegDeref(
                         file,
                         asm.RegGroup(1),
                         asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)),
                         types.I32_Size,
+                        false,
                     )
 
                 case types.StructType:
@@ -257,19 +275,24 @@ func GenField(file *os.File, e *ast.Field) {
                             asm.RegGroup(0),
                             asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
                             types.Ptr_Size,
+                            false,
                         )
                         asm.MovRegDeref(
                             file,
                             asm.RegGroup(1),
                             asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)),
                             t.Size() - 8,
+                            false,
                         )
                     } else {
-                        asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size())
+                        asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size(), false)
                     }
 
+                case types.IntType:
+                    asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size(), true)
+
                 default:
-                    asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size())
+                    asm.MovRegDeref(file, asm.RegGroup(0), asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size(), false)
                 }
 
             default:
@@ -295,19 +318,22 @@ func GenIdent(file *os.File, e *ast.Ident) {
     if v,ok := e.Obj.(vars.Var); ok {
         switch t := v.GetType().(type) {
         case types.StrType:
-            asm.MovRegDeref(file, asm.RegGroup(0), v.Addr(0), types.Ptr_Size)
-            asm.MovRegDeref(file, asm.RegGroup(1), v.Addr(1), types.I32_Size)
+            asm.MovRegDeref(file, asm.RegGroup(0), v.Addr(0), types.Ptr_Size, false)
+            asm.MovRegDeref(file, asm.RegGroup(1), v.Addr(1), types.I32_Size, false)
 
         case types.StructType:
             if t.Size() > uint(8) {
-                asm.MovRegDeref(file, asm.RegGroup(0), v.Addr(0), types.Ptr_Size)
-                asm.MovRegDeref(file, asm.RegGroup(1), v.OffsetedAddr(int(types.Ptr_Size)), t.Size() - 8)
+                asm.MovRegDeref(file, asm.RegGroup(0), v.Addr(0), types.Ptr_Size, false)
+                asm.MovRegDeref(file, asm.RegGroup(1), v.OffsetedAddr(int(types.Ptr_Size)), t.Size() - 8, false)
             } else {
-                asm.MovRegDeref(file, asm.RegGroup(0), v.Addr(0), t.Size())
+                asm.MovRegDeref(file, asm.RegGroup(0), v.Addr(0), t.Size(), false)
             }
 
+        case types.IntType:
+            asm.MovRegDeref(file, asm.RegGroup(0), v.Addr(0), t.Size(), false)
+
         default:
-            asm.MovRegDeref(file, asm.RegGroup(0), v.Addr(0), t.Size())
+            asm.MovRegDeref(file, asm.RegGroup(0), v.Addr(0), t.Size(), false)
         }
         return
     }
@@ -351,7 +377,8 @@ func GenUnary(file *os.File, e *ast.Unary) {
             }
         }
 
-        asm.DerefRax(file, e.GetType().Size())
+        t := e.GetType()
+        asm.DerefRax(file, t.Size(), t.GetKind() == types.Int)
     }
 }
 

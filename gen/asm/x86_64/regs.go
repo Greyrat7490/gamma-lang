@@ -8,13 +8,13 @@ var regs [][]string = [][]string{
     { "bl", "bx", "ebx", "rbx" },
     { "cl", "cx", "ecx", "rcx" },
 
-    { "di", "edi", "rdi" },
-    { "si", "esi", "rsi" },
+    { "dil", "di", "edi", "rdi" },
+    { "sil", "si", "esi", "rsi" },
 
-    { "r8d",  "r8" },
-    { "r9d",  "r9" },
-    { "r10d", "r10" },
-    { "r11d", "r11" },
+    { "r8l",  "r8w",  "r8d",  "r8" },
+    { "r9l",  "r9w",  "r9d",  "r9" },
+    { "r10l", "r10w", "r10d", "r10" },
+    { "r11l", "r11w", "r11d", "r11" },
 }
 
 var words     []string = []string{ "BYTE", "WORD", "DWORD", "QWORD" }
@@ -57,23 +57,13 @@ func GetBssSize(bytes uint) string {
 }
 
 func GetReg(g RegGroup, size uint) string {
-    if g >= RegR8 {
-        if size == 8 {
-            return regs[g][1]
-        }
-        return regs[g][0]
+    if size == 8 {
+        return regs[g][3]
     }
+    return regs[g][2]
+}
 
-    if g >= RegDi {
-        if size == 8 {
-            return regs[g][2]
-        }
-        if size == 1 {
-            return regs[g][0]
-        }
-        return regs[g][size / 2 - 1]
-    }
-
+func GetAnyReg(g RegGroup, size uint) string {
     if size == 8 {
         return regs[g][3]
     }
@@ -92,15 +82,4 @@ func GetOffsetedReg(g RegGroup, size uint, offset int) string {
     }
 
     return fmt.Sprintf("%s%d", reg, offset)
-}
-
-func GetSize(g RegGroup, size uint) uint {
-    switch {
-    case g >= RegR8 && size < 8:
-        return 4
-    case g >= RegDi && size < 2:
-        return 2
-    default:
-        return size
-    }
 }

@@ -63,8 +63,7 @@ func definePrintStr(asm *os.File) {
 
 func definePrintChar(asm *os.File) {
     asm.WriteString("printChar:\n")
-    asm.WriteString("mov ax, di\n")
-    asm.WriteString("mov byte [_intBuf], al\n")
+    asm.WriteString("mov byte [_intBuf], dil\n")
     asm.WriteString("mov rdx, 1\n")
     asm.WriteString("mov rsi, _intBuf\n")
     asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
@@ -115,7 +114,7 @@ func definePrintPtr(asm *os.File) {
 func definePrintBool(asm *os.File) {
     asm.WriteString("printBool:\n")
 
-    asm.WriteString("mov ax, di\n")
+    asm.WriteString("mov eax, edi\n")
     asm.WriteString("call _bool_to_str\n")
 
     asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
@@ -129,7 +128,7 @@ func definePrintBool(asm *os.File) {
 func defineBtoS(asm *os.File) {
     asm.WriteString(
 `_bool_to_str:
-    cmp ax, 0
+    test eax, eax
     jne .c1
     mov rbx, _false
     mov rax, 5
@@ -152,16 +151,16 @@ _uint_to_str:
     .l1:
         xor rdx, rdx
         div rcx
-        add dl, 48
+        add edx, 48
         dec rbx
         mov byte [rbx], dl
-        cmp rax, 0
+        test rax, rax
         jne .l1
     lea rax, [_intBuf+21]
     sub rax, rbx
     ret
 _int_to_str:
-    cmp rax, 0
+    test rax, rax
     jge _uint_to_str
     neg rax
     mov rcx, 10
@@ -169,10 +168,10 @@ _int_to_str:
     .l1:
         xor rdx, rdx
         div rcx
-        add dl, 48
+        add edx, 48
         dec rbx
         mov byte [rbx], dl
-        cmp rax, 0
+        test rax, rax
         jne .l1
     dec rbx
     mov byte [rbx], 0x2d

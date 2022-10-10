@@ -200,8 +200,8 @@ func DerefSetVar(file *os.File, addr string, other vars.Var) {
 func DerefSetDeref(file *os.File, addr string, t types.Type, otherAddr string) {
     switch t := t.(type) {
     case types.StrType:
-        asm.MovDerefDeref(file, addr, otherAddr, types.Ptr_Size, asm.RegB)
-        asm.MovDerefDeref(file, asm.OffsetAddr(addr, int(types.Ptr_Size)), asm.OffsetAddr(otherAddr, int(types.Ptr_Size)), types.I32_Size, asm.RegB)
+        asm.MovDerefDeref(file, addr, otherAddr, types.Ptr_Size, asm.RegB, false)
+        asm.MovDerefDeref(file, asm.OffsetAddr(addr, int(types.Ptr_Size)), asm.OffsetAddr(otherAddr, int(types.Ptr_Size)), types.I32_Size, asm.RegB, false)
 
     case types.StructType:
         var offset int = 0
@@ -212,6 +212,7 @@ func DerefSetDeref(file *os.File, addr string, t types.Type, otherAddr string) {
                 asm.OffsetAddr(otherAddr, offset),
                 types.Ptr_Size,
                 asm.RegB,
+                false,
             )
             offset += int(types.Ptr_Size)
         }
@@ -223,11 +224,15 @@ func DerefSetDeref(file *os.File, addr string, t types.Type, otherAddr string) {
                 asm.OffsetAddr(otherAddr, offset),
                 size,
                 asm.RegB,
+                false,
             )
         }
 
-    case types.IntType, types.UintType, types.BoolType, types.PtrType, types.ArrType, types.CharType:
-        asm.MovDerefDeref(file, asm.GetReg(asm.RegA, types.Ptr_Size), otherAddr, t.Size(), asm.RegB)
+    case types.IntType:
+        asm.MovDerefDeref(file, asm.GetReg(asm.RegA, types.Ptr_Size), otherAddr, t.Size(), asm.RegB, true)
+
+    case types.UintType, types.BoolType, types.PtrType, types.ArrType, types.CharType:
+        asm.MovDerefDeref(file, asm.GetReg(asm.RegA, types.Ptr_Size), otherAddr, t.Size(), asm.RegB, false)
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (DerefSetVar)\n", t)

@@ -290,7 +290,7 @@ func GenContinue(file *os.File, s *ast.Continue) {
 func GenRet(file *os.File, s *ast.Ret) {
     if s.RetExpr != nil {
         if types.IsBigStruct(s.RetExpr.GetType()) {
-            asm.MovRegDeref(file, asm.RegC, fmt.Sprintf("rbp-%d", types.Ptr_Size), types.Ptr_Size)
+            asm.MovRegDeref(file, asm.RegC, fmt.Sprintf("rbp-%d", types.Ptr_Size), types.Ptr_Size, false)
 
             t := s.RetExpr.GetType().(types.StructType)
 
