@@ -1,0 +1,9 @@
+struct Coord {
+    x i32,
+    y i32,
+    z i32
+}
+
+fn main() {
+    c := Coord{ x: 1, a: 3, y: 2 }
+}

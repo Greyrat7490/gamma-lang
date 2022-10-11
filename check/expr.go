@@ -194,7 +194,9 @@ func typeCheckStructLit(o *ast.StructLit) {
         if !checkTypeExpr(o.StructType.Types[i], f.Value) {
             fmt.Fprintf(os.Stderr, "[ERROR] expected a %v as field %d of struct %s but got %v\n",
                 o.StructType.Types[i], i, o.StructType.Name, f.GetType())
-            fmt.Fprintln(os.Stderr, "\t" + f.At())
+            fmt.Fprintf(os.Stderr, "\texpected: %v\n", o.StructType.Types)
+            fmt.Fprintf(os.Stderr, "\tgot:      %v\n", fieldsToTypes(o.Fields))
+            fmt.Fprintln(os.Stderr, "\t" + f.End())
             os.Exit(1)
         }
     }
@@ -276,6 +278,14 @@ func typeCheckFnCall(o *ast.FnCall) {
 func valuesToTypes(values []ast.Expr) (res []types.Type) {
     for _, v := range values {
         res = append(res, v.GetType())
+    }
+
+    return res
+}
+
+func fieldsToTypes(fields []ast.FieldLit) (res []types.Type) {
+    for _, f := range fields {
+        res = append(res, f.GetType())
     }
 
     return res

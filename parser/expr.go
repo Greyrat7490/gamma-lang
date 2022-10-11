@@ -238,9 +238,11 @@ func prsStructLit(tokens *token.Tokens) *ast.StructLit {
     }
 
     var t types.StructType
+    var s *structDec.Struct
     if obj := identObj.Get(name.Str); obj != nil {
         if strct,ok := obj.(*structDec.Struct); ok {
             t = strct.GetType().(types.StructType)
+            s = strct
         }
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not defined\n", name.Str)
@@ -269,29 +271,60 @@ func prsStructLit(tokens *token.Tokens) *ast.StructLit {
         }
     }
 
+    if !omitNames {
+        orderedFields := make([]ast.FieldLit, len(fields))
+        for _,f := range fields {
+            if idx, b := s.GetFieldNum(f.Name.Str); !b {
+                fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" has no field called \"%s\"\n", name.Str, f.Name.Str)
+                fmt.Fprintf(os.Stderr, "\tfields: %v\n", s.GetNames())
+                fmt.Fprintln(os.Stderr, "\t" + f.At())
+                os.Exit(1)
+            } else {
+                orderedFields[idx] = f
+            }
+        }
+        fields = orderedFields
+    }
+
     if tokens.Cur().Type != token.BraceR {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"}\" but got %v\n", tokens.Cur())
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
 
-    s := ast.StructLit{
+    if len(fields) != len(t.Types) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected %d fields for struct \"%s\" but got %d\n", len(t.Types), t.Name, len(fields))
+        fmt.Fprintf(os.Stderr, "\texpected: %v\n", t.Types)
+        fmt.Fprintf(os.Stderr, "\tgot:      %v\n", fieldsToTypes(fields))
+        fmt.Fprintln(os.Stderr, "\t" + braceL.Pos.At())
+        os.Exit(1)
+    }
+
+    return &ast.StructLit{
         Idx: structLit.Add(name.Str, constEvalFields(name.Str, fields, omitNames)),
         Pos: name.Pos, StructType: t,
         BraceLPos: braceL.Pos,
         BraceRPos: tokens.Cur().Pos,
         Fields: fields,
     }
-    return &s
 }
 
 func omitNames(tokens *token.Tokens) bool {
     return tokens.Peek().Type != token.Name && tokens.Peek2().Type != token.Colon
 }
 
+func fieldsToTypes(fields []ast.FieldLit) []types.Type {
+    res := make([]types.Type, len(fields))
+    for i, f := range fields {
+        res[i] = f.GetType()
+    }
+
+    return res
+}
+
 func prsFieldLit(tokens *token.Tokens, omitNames bool) ast.FieldLit {
     var name token.Token
-    var colonPos token.Pos
+    var pos token.Pos
 
     if !omitNames {
         name = tokens.Cur()
@@ -301,15 +334,16 @@ func prsFieldLit(tokens *token.Tokens, omitNames bool) ast.FieldLit {
             os.Exit(1)
         }
 
-        colon := tokens.Next()
-        if colon.Type != token.Colon {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected a \":\" but got %v\n", colon)
-            fmt.Fprintln(os.Stderr, "\t" + colon.At())
+        if tokens.Next().Type != token.Colon {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a \":\" but got %v\n", tokens.Cur())
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
             os.Exit(1)
         }
-        colonPos = colon.Pos
+        pos = name.Pos
 
         tokens.Next()
+    } else {
+        pos = tokens.Cur().Pos
     }
 
     expr := prsExpr(tokens)
@@ -320,7 +354,7 @@ func prsFieldLit(tokens *token.Tokens, omitNames bool) ast.FieldLit {
         os.Exit(1)
     }
 
-    return ast.FieldLit{ Name: name, Pos: colonPos, Value: expr }
+    return ast.FieldLit{ Name: name, Pos: pos, Value: expr }
 }
 
 func constEvalExprs(values []ast.Expr) (res []token.Token) {

@@ -57,8 +57,8 @@ type StructLit struct {
 }
 
 type FieldLit struct {
-    Name token.Token
     Pos token.Pos
+    Name token.Token
     Value Expr
 }
 
@@ -132,7 +132,11 @@ func (o *StrLit) Readable(indent int) string {
     return strings.Repeat("   ", indent) + fmt.Sprintf("%s(str)\n", o.Val.Str)
 }
 func (o *FieldLit) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + fmt.Sprintf("%s: \n%s", o.Name, o.Value.Readable(indent+1))
+    if o.Name.Type == token.Unknown {
+        return o.Value.Readable(indent)
+    } else {
+        return strings.Repeat("   ", indent) + fmt.Sprintf("%s: \n%s", o.Name, o.Value.Readable(indent+1))
+    }
 }
 func (o *StructLit) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "STRUCT_LIT:\n"
@@ -333,7 +337,7 @@ func (e *Cast)      expr() {}
 func (e *BadExpr)   At() string { return "" }
 func (e *BasicLit)  At() string { return e.Val.At() }
 func (e *StrLit)    At() string { return e.Val.At() }
-func (e *FieldLit)  At() string { return e.Name.At() }
+func (e *FieldLit)  At() string { return e.Pos.At() }
 func (e *StructLit) At() string { return e.Pos.At() }
 func (e *ArrayLit)  At() string { return e.Pos.At() }
 func (e *FnCall)    At() string { return e.Ident.At() }

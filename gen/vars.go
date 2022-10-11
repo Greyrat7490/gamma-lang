@@ -324,7 +324,7 @@ func DerefSetVal(file *os.File, addr string, typ types.Type, val token.Token) {
     case types.CharType:
         derefSetCharVal(file, addr, 0, val)
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (DerefSetVal)\n", t)
+        fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (DerefSetVal)\n", typ)
         os.Exit(1)
     }
 }
@@ -390,12 +390,14 @@ func derefSetStructVal(file *os.File, t types.StructType, addr string, offset in
             derefSetArrVal(file, addr, offset + t.GetOffset(uint(i)), val)
         case types.BoolType:
             derefSetBoolVal(file, addr, offset + t.GetOffset(uint(i)), val)
+        case types.CharType:
+            derefSetCharVal(file, addr, offset + t.GetOffset(uint(i)), val)
         case types.IntType, types.UintType:
             derefSetIntVal(file, addr, offset + t.GetOffset(uint(i)), typ.Size(), val)
         case types.PtrType:
             derefSetPtrVal(file, addr, offset + t.GetOffset(uint(i)), val)
         default:
-            fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (derefSetStructVal)\n", t)
+            fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (derefSetStructVal)\n", t.Types[i])
             os.Exit(1)
         }
     }
