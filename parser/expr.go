@@ -255,14 +255,16 @@ func prsStructLit(tokens *token.Tokens) *ast.StructLit {
         os.Exit(1)
     }
 
+    omitNames := omitNames(tokens)
+
     var fields []ast.FieldLit
     if tokens.Next().Type != token.BraceR {
-        f := prsFieldLit(tokens)
+        f := prsFieldLit(tokens, omitNames)
         fields = append(fields, f)
 
         for tokens.Next().Type == token.Comma {
             tokens.Next()
-            f := prsFieldLit(tokens)
+            f := prsFieldLit(tokens, omitNames)
             fields = append(fields, f)
         }
     }
@@ -274,7 +276,7 @@ func prsStructLit(tokens *token.Tokens) *ast.StructLit {
     }
 
     s := ast.StructLit{
-        Idx: structLit.Add(name.Str, constEvalFields(name.Str, fields)),
+        Idx: structLit.Add(name.Str, constEvalFields(name.Str, fields, omitNames)),
         Pos: name.Pos, StructType: t,
         BraceLPos: braceL.Pos,
         BraceRPos: tokens.Cur().Pos,
@@ -283,22 +285,33 @@ func prsStructLit(tokens *token.Tokens) *ast.StructLit {
     return &s
 }
 
-func prsFieldLit(tokens *token.Tokens) ast.FieldLit {
-    name := tokens.Cur()
-    if name.Type != token.Name {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
+func omitNames(tokens *token.Tokens) bool {
+    return tokens.Peek().Type != token.Name && tokens.Peek2().Type != token.Colon
+}
+
+func prsFieldLit(tokens *token.Tokens, omitNames bool) ast.FieldLit {
+    var name token.Token
+    var colonPos token.Pos
+
+    if !omitNames {
+        name = tokens.Cur()
+        if name.Type != token.Name {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
+            fmt.Fprintln(os.Stderr, "\t" + name.At())
+            os.Exit(1)
+        }
+
+        colon := tokens.Next()
+        if colon.Type != token.Colon {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a \":\" but got %v\n", colon)
+            fmt.Fprintln(os.Stderr, "\t" + colon.At())
+            os.Exit(1)
+        }
+        colonPos = colon.Pos
+
+        tokens.Next()
     }
 
-    colon := tokens.Next()
-    if colon.Type != token.Colon {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a \":\" but got %v\n", colon)
-        fmt.Fprintln(os.Stderr, "\t" + colon.At())
-        os.Exit(1)
-    }
-
-    tokens.Next()
     expr := prsExpr(tokens)
     constVal := cmpTime.ConstEval(expr)
     if constVal.Type == token.Unknown {
@@ -307,7 +320,7 @@ func prsFieldLit(tokens *token.Tokens) ast.FieldLit {
         os.Exit(1)
     }
 
-    return ast.FieldLit{ Name: name, Pos: colon.Pos, Value: expr }
+    return ast.FieldLit{ Name: name, Pos: colonPos, Value: expr }
 }
 
 func constEvalExprs(values []ast.Expr) (res []token.Token) {
@@ -324,20 +337,32 @@ func constEvalExprs(values []ast.Expr) (res []token.Token) {
     return
 }
 
-func constEvalFields(structName string, fields []ast.FieldLit) (res []token.Token) {
-    s := identObj.Get(structName).(*structDec.Struct)
-
-    for _,n := range s.GetNames() {
+func constEvalFields(structName string, fields []ast.FieldLit, omitNames bool) (res []token.Token) {
+    if omitNames {
         for _,l := range fields {
-            if l.Name.Str == n {
-                constVal := cmpTime.ConstEvalFieldLit(&l)
-                if constVal.Type == token.Unknown {
-                    fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
-                    fmt.Fprintln(os.Stderr, "\t" + l.At())
-                    os.Exit(1)
+            constVal := cmpTime.ConstEvalFieldLit(&l)
+            if constVal.Type == token.Unknown {
+                fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
+                fmt.Fprintln(os.Stderr, "\t" + l.At())
+                os.Exit(1)
+            }
+            res = append(res, constVal)
+        }
+    } else {
+        s := identObj.Get(structName).(*structDec.Struct)
+
+        for _,n := range s.GetNames() {
+            for _,l := range fields {
+                if l.Name.Str == n {
+                    constVal := cmpTime.ConstEvalFieldLit(&l)
+                    if constVal.Type == token.Unknown {
+                        fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
+                        fmt.Fprintln(os.Stderr, "\t" + l.At())
+                        os.Exit(1)
+                    }
+                    res = append(res, constVal)
+                    break
                 }
-                res = append(res, constVal)
-                break
             }
         }
     }

@@ -57,7 +57,6 @@ fn main() {
 
     // prepare socket for connections ------------------------------------------------
                                             // TODO: allow non-const
-                                            // TODO: omit field names
                                             // TODO: missing field -> error
     addr := sockaddr_in{ sin_family: AF_INET, sin_port: PORT, sin_addr: INADDR_ANY, sin_zero: 0 }
     addr.sin_port = htons(PORT)

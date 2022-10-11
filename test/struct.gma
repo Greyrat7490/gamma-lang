@@ -240,6 +240,20 @@ fn testRet() {
     printBigStruct(b3)
 }
 
+fn testOmitedNames() {
+    c := Coord{ 1, 2, 3 }
+    printCoord(c)
+
+    printStr("-----\n")
+
+    t := Test2{ -64, Test{ 64, "test string", -69 }, true }
+    printStr("i: ")    printInt(t.i)
+    printStr("\ni1: ") printInt(t.t.i1)
+    printStr("\ns1: ") printStr(t.t.s1)
+    printStr("\ni2: ") printInt(t.t.i2)
+    printStr("\nb: ") printBool(t.b) printChar('\n')
+}
+
 fn main() {
     printStr("global ---------\n")
     test_global()
@@ -249,6 +263,9 @@ fn main() {
 
     printStr("\nnested struct ---------\n")
     testNested()
+
+    printStr("\nomited fieldNames -----\n")
+    testOmitedNames()
 
     printStr("\nassignField ---------\n")
     assignField()
