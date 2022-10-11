@@ -54,16 +54,69 @@ func typeCheckDefConst(d *ast.DefConst) {
     }
 }
 
+func typeCheckImport(d *ast.Import) {
+    for _,d := range d.Decls {
+        typeCheckDecl(d)
+    }
+}
+
 func typeCheckDefFn(d *ast.DefFn) {
-    // TODO: check missing ret
+    if d.RetType != nil && !hasRet(&d.Block) {
+        fmt.Fprintln(os.Stderr, "[ERROR] missing return")
+        fmt.Fprintln(os.Stderr, "\t" + d.At())
+        os.Exit(1)
+    }
 
     for _,s := range d.Block.Stmts {
         typeCheckStmt(s)
     }
 }
 
-func typeCheckImport(d *ast.Import) {
-    for _,d := range d.Decls {
-        typeCheckDecl(d)
+func hasRet(s ast.Stmt) bool {
+    switch s := s.(type) {
+    case *ast.Block:
+        for _,s := range s.Stmts {
+            if hasRet(s) {
+                return true
+            }
+        }
+        return false
+
+    case *ast.If:
+        if hasRet(&s.Block) {
+            if s.Elif != nil {
+                return hasRet((*ast.If)(s.Elif))
+            } else if s.Else != nil {
+                return hasRet(&s.Else.Block)
+            }
+        }
+        return false
+
+    case *ast.Switch:
+        for _,c := range s.Cases {
+            has := false
+            for _,s := range c.Stmts {
+                if hasRet(s) {
+                    has = true
+                    break
+                }
+            }
+            if !has {
+                return false
+            }
+        }
+        return true
+
+    case *ast.Ret:
+        return true
+
+    case *ast.For:
+        return hasRet(&s.Block)
+
+    case *ast.While:
+        return hasRet(&s.Block)
+
+    default:
+        return false
     }
 }

@@ -13,8 +13,6 @@ import (
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
     "gamma/gen/asm/x86_64"
-    "gamma/gen/asm/x86_64/loops"
-    "gamma/gen/asm/x86_64/conditions"
 )
 
 /*
@@ -48,11 +46,8 @@ func Define(file *os.File, f *fn.Func) {
 }
 
 func FnEnd(file *os.File) {
-    cond.ResetCount()
-    loops.ResetCount()
-
     file.WriteString("leave\n")
-    file.WriteString("ret\n\n")
+    file.WriteString("ret\n")
 }
 
 func CallFn(file *os.File, f *fn.Func) {

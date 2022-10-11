@@ -1,0 +1,17 @@
+// TODO: better postion of error
+fn test(a1 i32) -> i32 {
+    if a1 > 0 {
+        if a1 == 1 {
+            ret 1
+        }
+        // ERROR here missing ret
+    } elif a1 == 0 {
+        ret a1
+    } else {
+        ret -a1
+    }
+}
+
+fn main() {
+    _ := test(-64)
+}

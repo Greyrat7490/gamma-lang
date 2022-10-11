@@ -9,6 +9,8 @@ import (
     "gamma/types"
     "gamma/cmpTime"
     "gamma/gen/asm/x86_64"
+    "gamma/gen/asm/x86_64/loops"
+    "gamma/gen/asm/x86_64/conditions"
 )
 
 func GenDecl(file *os.File, d ast.Decl) {
@@ -74,4 +76,7 @@ func GenDefFn(file *os.File, d *ast.DefFn) {
     if d.F.GetRetType() == nil {
         FnEnd(file);
     }
+
+    cond.ResetCount()
+    loops.ResetCount()
 }
