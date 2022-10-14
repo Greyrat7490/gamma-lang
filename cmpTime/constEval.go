@@ -3,11 +3,11 @@ package cmpTime
 import (
     "os"
     "fmt"
-    "strconv"
     "reflect"
     "gamma/token"
     "gamma/types/array"
     "gamma/types/struct"
+    "gamma/cmpTime/constVal"
     "gamma/gen/asm/x86_64"
     "gamma/ast"
     "gamma/ast/identObj"
@@ -16,18 +16,56 @@ import (
     "gamma/ast/identObj/struct"
 )
 
-func ConstEval(e ast.Expr) token.Token {
+func ConstEvalInt(e ast.Expr) (int64, bool) {
+    if c := ConstEval(e); c != nil {
+        switch c := c.(type) {
+        case *constVal.IntConst:
+            return int64(*c), true
+        case *constVal.UintConst:
+            return int64(*c), true
+        }
+    }
+
+    return 0, false
+}
+
+func ConstEvalUint(e ast.Expr) (uint64, bool) {
+    if c := ConstEval(e); c != nil {
+        switch c := c.(type) {
+        case *constVal.IntConst:
+            if int64(*c) >= 0 {
+                return uint64(*c), true
+            }
+        case *constVal.UintConst:
+            return uint64(*c), true
+        }
+    }
+
+    return 0, false
+}
+
+func ConstEval(e ast.Expr) constVal.ConstVal {
     switch e := e.(type) {
-    case *ast.BasicLit:
-        return ConstEvalLit(e)
+    case *ast.IntLit:
+        c := constVal.IntConst(e.Repr)
+        return &c
+    case *ast.UintLit:
+        return (*constVal.UintConst)(&e.Repr)
+    case *ast.BoolLit:
+        return (*constVal.BoolConst)(&e.Repr)
+    case *ast.CharLit:
+        return (*constVal.CharConst)(&e.Repr)
+    case *ast.PtrLit:
+        return &constVal.PtrConst{ Addr: e.Addr, Local: e.Local }
+
     case *ast.StrLit:
-        return ConstEvalStrLit(e)
+        return (*constVal.StrConst)(&e.Idx)
     case *ast.FieldLit:
-        return ConstEvalFieldLit(e)
+        return ConstEval(e.Value)
     case *ast.ArrayLit:
-        return ConstEvalArrayLit(e)
+        return (*constVal.ArrConst)(&e.Idx)
     case *ast.StructLit:
-        return ConstEvalStructLit(e)
+        return (*constVal.StructConst)(&e.Idx)
 
     case *ast.Indexed:
         return ConstEvalIndexed(e)
@@ -62,70 +100,40 @@ func ConstEval(e ast.Expr) token.Token {
         os.Exit(1)
     }
 
-    return token.Token{ Type: token.Unknown }
+    return nil
 }
 
-func ConstEvalLit(e *ast.BasicLit) token.Token {
-    return e.Repr
+func ConstEvalIdent(e *ast.Ident) constVal.ConstVal {
+    if c,ok := e.Obj.(*consts.Const); ok {
+        return c.GetVal()
+    }
+
+    return nil
 }
 
-func ConstEvalStrLit(e *ast.StrLit) token.Token {
-    return token.Token{ Type: token.Number, Str: fmt.Sprint(e.Idx) }
-}
-
-func ConstEvalFieldLit(e *ast.FieldLit) token.Token {
-    return ConstEval(e.Value)
-}
-
-func ConstEvalStructLit(e *ast.StructLit) token.Token {
-    return token.Token{ Type: token.Number, Str: fmt.Sprint(e.Idx) }
-}
-
-func ConstEvalArrayLit(e *ast.ArrayLit) token.Token {
-    return token.Token{ Type: token.Number, Str: fmt.Sprint(e.Idx) }
-}
-
-func ConstEvalIndexed(e *ast.Indexed) token.Token {
+func ConstEvalIndexed(e *ast.Indexed) constVal.ConstVal {
     idxExpr := e.Flatten()
-    val := ConstEval(idxExpr)
-    if val.Type != token.Unknown {
-        if val.Type != token.Number {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", val)
-            fmt.Fprintln(os.Stderr, "\t" + idxExpr.At())
-            os.Exit(1)
-        }
-
-        idx,_ := strconv.ParseUint(val.Str, 10, 64)
-
-        arr := ConstEval(e.ArrExpr)
-        if arr.Type != token.Unknown {
-            if arr.Type != token.Number {
-                fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", val)
-                fmt.Fprintln(os.Stderr, "\t" + idxExpr.At())
-                os.Exit(1)
-            }
-
-            arrIdx,_ := strconv.Atoi(arr.Str)
-            return array.GetValues(arrIdx)[idx]
+    if idx,ok := ConstEvalUint(idxExpr); ok {
+        if arrIdx,ok := ConstEval(e.ArrExpr).(*constVal.ArrConst); ok {
+            return array.GetValues(int(*arrIdx))[idx]
         }
     }
 
-    return token.Token{ Type: token.Unknown }
+    return nil
 }
 
-func ConstEvalField(e *ast.Field) token.Token {
-    if c := ConstEval(e.Obj); c.Type != token.Unknown {
+func ConstEvalField(e *ast.Field) constVal.ConstVal {
+    if c := ConstEval(e.Obj); c != nil {
         obj := identObj.Get(e.StructType.Name)
         if s,ok := obj.(*structDec.Struct); ok {
             if i,b := s.GetFieldNum(e.FieldName.Str); b {
-                if c.Type != token.Number {
-                    fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", c)
-                    fmt.Fprintln(os.Stderr, "\t" + c.At())
+                if idx,ok := c.(*constVal.StructConst); ok {
+                    return structLit.GetValues(uint64(*idx))[i]
+                } else {
+                    fmt.Fprintf(os.Stderr, "[ERROR] expected a *constVal.StructConst but got %v\n", reflect.TypeOf(c))
+                    fmt.Fprintln(os.Stderr, "\t" + e.At())
                     os.Exit(1)
                 }
-
-                idx,_ := strconv.ParseUint(c.Str, 10, 64)
-                return structLit.GetValues(idx)[i]
             } else {
                 fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName)
                 fmt.Fprintln(os.Stderr, "\t" + e.At())
@@ -134,18 +142,32 @@ func ConstEvalField(e *ast.Field) token.Token {
         }
     }
 
-    return token.Token{ Type: token.Unknown }
+    return nil
 }
 
-func ConstEvalUnary(e *ast.Unary) token.Token {
+func ConstEvalUnary(e *ast.Unary) constVal.ConstVal {
     val := ConstEval(e.Operand)
 
     switch e.Operator.Type {
     case token.Minus:
-        return token.Token{ Str: e.Operator.Str + val.Str, Type: val.Type, Pos: e.Operator.Pos }
+        switch v := val.(type) {
+        case *constVal.IntConst:
+            c := constVal.IntConst(-int64(*v))
+            return &c
+        case *constVal.UintConst:
+            c := constVal.UintConst(-uint64(*v))
+            return &c
+        }
 
     case token.BitNot:
-        return token.Token{ Str: e.Operator.Str + val.Str, Type: val.Type, Pos: e.Operator.Pos }
+        switch v := val.(type) {
+        case *constVal.IntConst:
+            c := (constVal.IntConst)(^int64(*v))
+            return &c
+        case *constVal.UintConst:
+            c := (constVal.UintConst)(^uint64(*v))
+            return &c
+        }
 
     case token.Plus:
         return val
@@ -155,11 +177,10 @@ func ConstEvalUnary(e *ast.Unary) token.Token {
             if v,ok := ident.Obj.(vars.Var); ok {
                 // global vars are lables with optional offset -> constEval for assembler
                 if _,ok := v.(*vars.GlobalVar); ok {
-                    return token.Token{ Str: v.Addr(0), Type: token.Name, Pos: e.Operator.Pos }
-                // local vars are addr with optional offset -> not constEval for assembler
-                // TokenType = Str to indicate
+                    return &constVal.PtrConst{ Addr: v.Addr(0), Local: false }
+                // local vars are rbp with a const offset -> not constEval for assembler
                 } else {
-                    return token.Token{ Str: v.Addr(0), Type: token.Str, Pos: e.Operator.Pos }
+                    return &constVal.PtrConst{ Addr: v.Addr(0), Local: true }
                 }
             } else {
                 fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a var (in constEval.go Unary)")
@@ -168,27 +189,20 @@ func ConstEvalUnary(e *ast.Unary) token.Token {
         }
     }
 
-    return token.Token{ Type: token.Unknown }
+    return nil
 }
 
-func ConstEvalFnCall(e *ast.FnCall) token.Token {
+func ConstEvalFnCall(e *ast.FnCall) constVal.ConstVal {
     // TODO: in work
-    return token.Token{ Type: token.Unknown }
+    return nil
 }
 
-func ConstEvalIdent(e *ast.Ident) token.Token {
-    if c,ok := e.Obj.(*consts.Const); ok {
-        return c.GetVal()
-    }
 
-    return token.Token{ Type: token.Unknown }
-}
-
-func ConstEvalParen(e *ast.Paren) token.Token {
+func ConstEvalParen(e *ast.Paren) constVal.ConstVal {
     return ConstEval(e.Expr)
 }
 
-func ConstEvalXSwitch(e *ast.XSwitch) token.Token {
+func ConstEvalXSwitch(e *ast.XSwitch) constVal.ConstVal {
     for _,c := range e.Cases {
         if c.Cond == nil {
             return ConstEval(c.Expr)
@@ -196,32 +210,58 @@ func ConstEvalXSwitch(e *ast.XSwitch) token.Token {
 
         v := ConstEval(c.Cond)
 
-        if v.Type == token.Boolean && v.Str == "1" {
+        if b,ok := v.(*constVal.BoolConst); ok && bool(*b) {
             return ConstEval(c.Expr)
-        } else if v.Type == token.Unknown {
-            return token.Token{ Type: token.Unknown }
+        } else if v == nil {
+            return nil
         }
     }
 
-    return token.Token{ Type: token.Unknown }
+    return nil
 }
 
-func ConstEvalBinary(e *ast.Binary) token.Token {
+func ConstEvalBinary(e *ast.Binary) constVal.ConstVal {
     l := ConstEval(e.OperandL)
     r := ConstEval(e.OperandR)
 
-    if l.Type != token.Unknown && r.Type != token.Unknown {
-        if l.Type == token.Name {
-            l.Str += e.Operator.Str + r.Str
-            return l
-        }
-        if r.Type == token.Name {
-            r.Str += e.Operator.Str + l.Str
-            return r
-        }
+    if l != nil && r != nil {
+        switch l := l.(type) {
+        case *constVal.PtrConst:
+            switch r := r.(type) {
+            case *constVal.UintConst:
+                c := *l
+                c.Addr += e.Operator.Str + fmt.Sprint(*r)
+                return &c
 
-        return asm.BinaryOpVals(e.Operator, l, r)
+            case *constVal.IntConst:
+                c := *l
+                c.Addr += e.Operator.Str + fmt.Sprint(*r)
+                return &c
+            }
+
+        case *constVal.UintConst:
+            switch r := r.(type) {
+            case *constVal.UintConst:
+                return asm.BinaryOpEvalUints(e.Operator, uint64(*l), uint64(*r))
+
+            case *constVal.PtrConst:
+                c := *r
+                c.Addr += e.Operator.Str + fmt.Sprint(uint64(*l))
+                return &c
+            }
+
+        case *constVal.IntConst:
+            switch r := r.(type) {
+            case *constVal.IntConst:
+                return asm.BinaryOpEvalInts(e.Operator, int64(*l), int64(*r))
+
+            case *constVal.PtrConst:
+                c := *r
+                c.Addr += e.Operator.Str + fmt.Sprint(int64(*l))
+                return &c
+            }
+        }
     }
 
-    return token.Token{ Type: token.Unknown }
+    return nil
 }

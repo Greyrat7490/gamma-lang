@@ -3,7 +3,6 @@ package prs
 import (
     "os"
     "fmt"
-    "strconv"
     "gamma/types"
     "gamma/token"
     "gamma/import"
@@ -86,20 +85,17 @@ func prsArrType(tokens *token.Tokens) types.ArrType {
 
     var lens []uint64
     for tokens.Cur().Type == token.BrackL {
-        tokens.Next()
-        eval := cmpTime.ConstEval(prsExpr(tokens))
-        if eval.Type != token.Number {
-            if eval.Type == token.Unknown {
-                fmt.Fprintln(os.Stderr, "[ERROR] lenght of an array has to a const/eval at compile time")
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] lenght of an array has to a Number but got (%v)\n", eval.Type)
-            }
-            fmt.Fprintln(os.Stderr, "\t" + eval.At())
+        pos := tokens.Next().Pos
+        expr := prsExpr(tokens)
+
+        if length,ok := cmpTime.ConstEvalUint(expr); ok {
+            lens = append(lens, length)
+        } else {
+            fmt.Fprintln(os.Stderr, "[ERROR] length of an array has to a const/eval at compile time")
+            fmt.Fprintln(os.Stderr, "\t" + pos.At())
             os.Exit(1)
         }
 
-        lenght,_ := strconv.ParseUint(eval.Str, 10, 64)
-        lens = append(lens, lenght)
 
         if tokens.Next().Type != token.BrackR {
             fmt.Fprintf(os.Stderr, "[ERROR] expected %v but got %v\n", token.BrackR, tokens.Cur())
@@ -176,7 +172,8 @@ func isNextType(tokens *token.Tokens) bool {
             return false
         }
 
-        return cmpTime.ConstEval(expr).Type != token.Number
+        kind := cmpTime.ConstEval(expr).GetKind()
+        return kind == types.Int || kind == types.Uint
 
     case token.Name:
         if obj := identObj.Get(tokens.Cur().Str); obj != nil {
@@ -205,7 +202,7 @@ func prsDefConst(tokens *token.Tokens, name token.Token, t types.Type) ast.DefCo
     val := prsExpr(tokens)
 
     v := cmpTime.ConstEval(val)
-    if v.Type == token.Unknown {
+    if v == nil {
         fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
         fmt.Fprintln(os.Stderr, "\t" + val.At())
         os.Exit(1)
@@ -249,7 +246,7 @@ func prsDefConstInfer(tokens *token.Tokens, name token.Token) ast.DefConst {
         os.Exit(1)
     }
     v := cmpTime.ConstEval(val)
-    if v.Type == token.Unknown {
+    if v == nil {
         fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
         fmt.Fprintln(os.Stderr, "\t" + val.At())
         os.Exit(1)

@@ -4,12 +4,12 @@ import (
     "os"
     "fmt"
     "reflect"
-    "strconv"
     "gamma/token"
     "gamma/types"
-    "gamma/cmpTime"
     "gamma/types/str"
     "gamma/types/struct"
+    "gamma/cmpTime"
+    "gamma/cmpTime/constVal"
     "gamma/ast"
     "gamma/ast/identObj"
     "gamma/ast/identObj/func"
@@ -22,8 +22,17 @@ import (
 
 func GenExpr(file *os.File, e ast.Expr) {
     switch e := e.(type) {
-    case *ast.BasicLit:
-        GenLit(file, e)
+    case *ast.IntLit:
+        GenIntLit(file, e.Type.Size(), e)
+    case *ast.UintLit:
+        GenUintLit(file, e.Type.Size(), e)
+    case *ast.CharLit:
+        GenCharLit(file, e)
+    case *ast.BoolLit:
+        GenBoolLit(file, e)
+    case *ast.PtrLit:
+        GenPtrLit(file, e)
+
     case *ast.StrLit:
         GenStrLit(file, e)
     case *ast.ArrayLit:
@@ -71,8 +80,33 @@ func GenExpr(file *os.File, e ast.Expr) {
     }
 }
 
-func GenLit(file *os.File, e *ast.BasicLit) {
-    asm.MovRegVal(file, asm.RegGroup(0), e.Type.Size(), e.Repr.Str)
+func GenIntLit(file *os.File, size uint, e *ast.IntLit) {
+    asm.MovRegVal(file, asm.RegGroup(0), e.Type.Size(), fmt.Sprint(e.Repr))
+}
+
+func GenUintLit(file *os.File, size uint, e *ast.UintLit) {
+    asm.MovRegVal(file, asm.RegGroup(0), e.Type.Size(), fmt.Sprint(e.Repr))
+}
+
+func GenCharLit(file *os.File, e *ast.CharLit) {
+    asm.MovRegVal(file, asm.RegGroup(0), types.Char_Size, fmt.Sprint(e.Repr))
+}
+
+func GenPtrLit(file *os.File, e *ast.PtrLit) {
+    if e.Local {
+        file.WriteString(fmt.Sprintf("lea %s, [%s]\n", asm.GetReg(asm.RegA, types.Ptr_Size), e.Addr))
+        asm.MovRegReg(file, asm.RegGroup(0), asm.RegA, types.Ptr_Size)
+    } else {
+        asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, e.Addr)
+    }
+}
+
+func GenBoolLit(file *os.File, e *ast.BoolLit) {
+    if e.Repr {
+        asm.MovRegVal(file, asm.RegGroup(0), types.Bool_Size, "1")
+    } else {
+        asm.MovRegVal(file, asm.RegGroup(0), types.Bool_Size, "0")
+    }
 }
 
 func GenStrLit(file *os.File, e *ast.StrLit) {
@@ -100,22 +134,14 @@ func IndexedAddrToReg(file *os.File, e *ast.Indexed, r asm.RegGroup) {
     baseTypeSize := uint64(e.ArrType.Ptr.BaseType.Size())
 
     idxExpr := e.Flatten()
-    val := cmpTime.ConstEval(idxExpr)
-    if val.Type != token.Unknown {
-        if val.Type != token.Number {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected a Number but got %v\n", val)
-            fmt.Fprintln(os.Stderr, "\t" + idxExpr.At())
-            os.Exit(1)
-        }
-
-        idx,_ := strconv.ParseUint(val.Str, 10, 64)
+    if idx,ok := cmpTime.ConstEvalUint(idxExpr); ok {
         file.WriteString(fmt.Sprintf("lea %s, [rax+%d]\n", asm.GetReg(r, types.Ptr_Size), idx * baseTypeSize))
     } else {
-        asm.MovRegReg(file, asm.RegC, asm.RegA, types.Ptr_Size)
+        asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
         GenExpr(file, idxExpr)
 
         asm.Mul(file, fmt.Sprint(baseTypeSize), types.Ptr_Size, false)
-        asm.Add(file, asm.GetReg(asm.RegC, types.Ptr_Size), types.Ptr_Size)
+        asm.Add(file, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size)
 
         if r != asm.RegA {
             asm.MovRegReg(file, r, asm.RegA, types.Ptr_Size)
@@ -310,8 +336,7 @@ func GenField(file *os.File, e *ast.Field) {
 
 func GenIdent(file *os.File, e *ast.Ident) {
     if c,ok := e.Obj.(*consts.Const); ok {
-        l := ast.BasicLit{ Repr: c.GetVal(), Type: c.GetType() }
-        GenLit(file, &l)
+        GenConstVal(file, e.GetType(), c.GetVal())
         return
     }
 
@@ -354,8 +379,8 @@ func GenParen(file *os.File, e *ast.Paren) {
 }
 
 func GenUnary(file *os.File, e *ast.Unary) {
-    if c := cmpTime.ConstEval(e); c.Type != token.Unknown {
-        asm.MovRegVal(file, asm.RegA, e.Operand.GetType().Size(), c.Str)
+    if c := cmpTime.ConstEval(e); c != nil {
+        asm.MovRegVal(file, asm.RegA, e.Operand.GetType().Size(), c.GetVal())
         return
     }
 
@@ -384,22 +409,22 @@ func GenUnary(file *os.File, e *ast.Unary) {
 
 func GenBinary(file *os.File, e *ast.Binary) {
     // compile time evaluation (constEval whole expr)
-    if c := cmpTime.ConstEval(e); c.Type != token.Unknown {
-        asm.MovRegVal(file, asm.RegA, e.GetType().Size(), c.Str)
+    if c := cmpTime.ConstEval(e); c != nil {
+        asm.MovRegVal(file, asm.RegA, e.GetType().Size(), c.GetVal())
         return
     }
 
 
     if e.Operator.Type != token.And && e.Operator.Type != token.Or {
         // compile time evaluation (constEval only left expr)
-        if c := cmpTime.ConstEval(e.OperandL); c.Type != token.Unknown {
-            asm.MovRegVal(file, asm.RegA, e.OperandR.GetType().Size(), c.Str)
+        if c := cmpTime.ConstEval(e.OperandL); c != nil {
+            asm.MovRegVal(file, asm.RegA, e.OperandR.GetType().Size(), c.GetVal())
         } else {
             GenExpr(file, e.OperandL)
 
             // compile time evaluation (constEval only right expr)
-            if c := cmpTime.ConstEval(e.OperandR); c.Type != token.Unknown {
-                asm.BinaryOp(file, e.Operator.Type, c.Str, e.OperandL.GetType().Size(), e.GetType().GetKind() == types.Int)
+            if c := cmpTime.ConstEval(e.OperandR); c != nil {
+                asm.BinaryOp(file, e.Operator.Type, c.GetVal(), e.OperandL.GetType().Size(), e.GetType().GetKind() == types.Int)
                 return
             }
         }
@@ -427,12 +452,12 @@ func GenBinary(file *os.File, e *ast.Binary) {
     // &&, ||
     } else {
         // compile time evaluation
-        if c := cmpTime.ConstEval(e.OperandL); c.Type != token.Unknown {
-            if e.Operator.Type == token.And && c.Str == "0" {
+        if b,ok := cmpTime.ConstEval(e.OperandL).(*constVal.BoolConst); ok {
+            if e.Operator.Type == token.And && !bool(*b) {
                 asm.MovRegVal(file, asm.RegA, types.Bool_Size, "0")
                 return
             }
-            if e.Operator.Type == token.Or && c.Str == "1" {
+            if e.Operator.Type == token.Or && bool(*b) {
                 asm.MovRegVal(file, asm.RegA, types.Bool_Size, "1")
                 return
             }
@@ -477,13 +502,8 @@ func GenFnCall(file *os.File, e *ast.FnCall) {
 
     // pass args on stack -------------------------------------------
     for i := len(e.F.GetArgs())-1; i >= stackArgsStart; i-- {
-        if v := cmpTime.ConstEval(e.Values[i]); v.Type != token.Unknown {
-            // const expr containing &var as u64 detected (TODO fix: constEval &var)
-            if e.Values[i].GetType().GetKind() == types.Uint && v.Type == token.Str {
-                PassValStack(file, v, types.PtrType{})
-            } else {
-                PassValStack(file, v, e.F.GetArgs()[i])
-            }
+        if v := cmpTime.ConstEval(e.Values[i]); v != nil {
+            PassValStack(file, v, e.F.GetArgs()[i])
 
         } else if ident,ok := e.Values[i].(*ast.Ident); ok {
             PassVarStack(file, ident.Obj.(vars.Var))
@@ -510,9 +530,9 @@ func GenFnCall(file *os.File, e *ast.FnCall) {
 
                 file.WriteString(fmt.Sprintf("sub rsp, %d\n", size))
 
-                if v := cmpTime.ConstEval(e.Values[i]); v.Type != token.Unknown {
+                if v := cmpTime.ConstEval(e.Values[i]); v != nil {
                     file.WriteString("mov rcx, rsp\n")
-                    PassBigStructLit(file, t, v, 0)
+                    PassBigStructLit(file, t, *v.(*constVal.StructConst), 0)
 
                 } else if ident,ok := e.Values[i].(*ast.Ident); ok {
                     file.WriteString("mov rcx, rsp\n")
@@ -535,13 +555,8 @@ func GenFnCall(file *os.File, e *ast.FnCall) {
 
         regIdx -= types.RegCount(t)
 
-        if v := cmpTime.ConstEval(e.Values[i]); v.Type != token.Unknown {
-            // const expr containing &var as u64 detected
-            if e.Values[i].GetType().GetKind() == types.Uint && v.Type == token.Str {
-                PassVal(file, regIdx, v, types.PtrType{})
-            } else {
-                PassVal(file, regIdx, v, t)
-            }
+        if v := cmpTime.ConstEval(e.Values[i]); v != nil {
+            PassVal(file, regIdx, v, t)
 
         } else if ident,ok := e.Values[i].(*ast.Ident); ok {
             PassVar(file, regIdx, t, ident.Obj.(vars.Var))
@@ -569,8 +584,8 @@ func GenXCase(file *os.File, e *ast.XCase, switchCount uint) {
         return
     }
 
-    if val := cmpTime.ConstEval(e.Cond); val.Type != token.Unknown {
-        if val.Str == "1" {
+    if val,ok := cmpTime.ConstEval(e.Cond).(*constVal.BoolConst); ok {
+        if bool(*val) {
             cond.CaseBody(file)
             GenExpr(file, e.Expr)
             cond.CaseBodyEnd(file, switchCount)
@@ -592,8 +607,8 @@ func GenXCase(file *os.File, e *ast.XCase, switchCount uint) {
 }
 
 func GenXSwitch(file *os.File, e *ast.XSwitch) {
-    if c := cmpTime.ConstEval(e); c.Type != token.Unknown {
-        asm.MovRegVal(file, asm.RegA, types.TypeOfVal(c.Str).Size(), c.Str)
+    if c := cmpTime.ConstEval(e); c != nil {
+        GenConstVal(file, e.GetType(), c)
         return
     }
 
@@ -617,9 +632,11 @@ func DerefSetBigStruct(file *os.File, addr string, e ast.Expr) {
         os.Exit(1)
     }
 
+
     switch e := e.(type) {
     case *ast.StructLit:
-        DerefSetVal(file, addr, e.StructType, token.Token{ Str: fmt.Sprint(e.Idx), Type: token.Number })
+        c := constVal.StructConst(e.Idx)
+        DerefSetVal(file, addr, e.StructType, &c)
 
     case *ast.Indexed:
         IndexedAddrToReg(file, e, asm.RegA)
@@ -664,8 +681,8 @@ func DerefSetBigStruct(file *os.File, addr string, e ast.Expr) {
 }
 
 func bigStructXSwitchToStack(file *os.File, addr string, e *ast.XSwitch) {
-    if c := cmpTime.ConstEval(e); c.Type != token.Unknown {
-        asm.MovRegVal(file, asm.RegA, types.TypeOfVal(c.Str).Size(), c.Str)
+    if c := cmpTime.ConstEval(e); c != nil {
+        GenConstVal(file, e.GetType(), c)
         return
     }
 
@@ -689,8 +706,8 @@ func bigStructXCaseToStack(file *os.File, addr string, e *ast.XCase, switchCount
         return
     }
 
-    if val := cmpTime.ConstEval(e.Cond); val.Type != token.Unknown {
-        if val.Str == "1" {
+    if val,ok := cmpTime.ConstEval(e.Cond).(*constVal.BoolConst); ok {
+        if bool(*val) {
             cond.CaseBody(file)
             DerefSetBigStruct(file, addr, e.Expr)
             cond.CaseBodyEnd(file, switchCount)
@@ -712,8 +729,8 @@ func bigStructXCaseToStack(file *os.File, addr string, e *ast.XCase, switchCount
 }
 
 func GenSyscall(file *os.File, val ast.Expr) {
-    if v := cmpTime.ConstEval(val); v.Type != token.Unknown {
-        asm.MovRegVal(file, asm.RegA, types.Ptr_Size, v.Str)
+    if v := cmpTime.ConstEval(val); v != nil {
+        asm.MovRegVal(file, asm.RegA, types.Ptr_Size, v.GetVal())
     } else {
         fmt.Fprintln(os.Stderr, "[ERROR] _syscall takes only const")
         fmt.Fprintln(os.Stderr, "\t" + val.At())
@@ -730,5 +747,28 @@ func GenInlineAsm(file *os.File, val ast.Expr) {
         fmt.Fprintln(os.Stderr, "[ERROR] _asm takes only a string literal")
         fmt.Fprintln(os.Stderr, "\t" + val.At())
         os.Exit(1)
+    }
+}
+
+func GenConstVal(file *os.File, t types.Type, val constVal.ConstVal) {
+    switch c := val.(type) {
+    case *constVal.StrConst:
+        asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprintf("_str%d", int(*c)))
+        asm.MovRegVal(file, asm.RegGroup(1), types.I32_Size, fmt.Sprintf("%d", str.GetSize(int(*c))))
+
+    case *constVal.PtrConst:
+        asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, PtrConstToAddr(file, *c))
+
+    default:
+        asm.MovRegVal(file, asm.RegGroup(0), t.Size(), c.GetVal())
+    }
+}
+
+func PtrConstToAddr(file *os.File, c constVal.PtrConst) string {
+    if c.Local {
+        file.WriteString(fmt.Sprintf("lea %s, [%s]\n", asm.GetReg(asm.RegA, types.Ptr_Size), c.Addr))
+        return asm.GetReg(asm.RegA, types.Ptr_Size)
+    } else {
+        return c.Addr
     }
 }

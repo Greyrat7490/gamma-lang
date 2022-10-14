@@ -5,6 +5,7 @@ import (
     "fmt"
     "gamma/token"
     "gamma/types"
+    "gamma/cmpTime/constVal"
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
     "gamma/ast/identObj/consts"
@@ -52,7 +53,7 @@ func DecArgFromStack(name token.Token, t types.Type, offset uint) vars.Var {
     return &v
 }
 
-func DecConst(name token.Token, t types.Type, val token.Token) *consts.Const {
+func DecConst(name token.Token, t types.Type, val constVal.ConstVal) *consts.Const {
     checkName(name)
 
     c := consts.CreateConst(name, t, val)

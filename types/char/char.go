@@ -1,6 +1,8 @@
 package char
 
+// 0 -> unexpected escape sequence
 func Escape(r rune) int {
+    // TODO uint8 instead of int
     switch r {
     case 't':
         return int('\t')
@@ -17,19 +19,20 @@ func Escape(r rune) int {
     }
 }
 
-func EscapeByte(c byte) int {
+// 0 -> unexpected escape sequence
+func EscapeByte(c byte) uint8 {
     switch c {
     case 't':
-        return int('\t')
+        return uint8('\t')
     case 'r':
-        return int('\r')
+        return uint8('\r')
     case 'n':
-        return int('\n')
+        return uint8('\n')
     case '"':
-        return int('"')
+        return uint8('"')
     case '\\':
-        return int('\\')
+        return uint8('\\')
     default:
-        return -1
+        return 0
     }
 }

@@ -7,6 +7,7 @@ import (
     "gamma/token"
     "gamma/types"
     "gamma/cmpTime"
+    "gamma/cmpTime/constVal"
     "gamma/ast"
     "gamma/ast/identObj/vars"
     "gamma/gen/asm/x86_64"
@@ -102,8 +103,8 @@ func GenBlock(file *os.File, s *ast.Block) {
 }
 
 func GenIf(file *os.File, s *ast.If) {
-    if val := cmpTime.ConstEval(s.Cond); val.Type != token.Unknown {
-        if val.Str == "1" {
+    if val,ok := cmpTime.ConstEval(s.Cond).(*constVal.BoolConst); ok {
+        if bool(*val) {
             GenBlock(file, &s.Block)
         } else if s.Else != nil {
             GenBlock(file, &s.Else.Block)
@@ -158,8 +159,8 @@ func GenCase(file *os.File, s *ast.Case, switchCount uint) {
         return
     }
 
-    if val := cmpTime.ConstEval(s.Cond); val.Type != token.Unknown {
-        if val.Str == "1" {
+    if val,ok := cmpTime.ConstEval(s.Cond).(*constVal.BoolConst); ok {
+        if bool(*val) {
             cond.CaseBody(file)
             for _,s := range s.Stmts {
                 GenStmt(file, s)
@@ -195,14 +196,12 @@ func GenSwitch(file *os.File, s *ast.Switch) {
         }
 
         cond := cmpTime.ConstEval(c.Cond)
-
-        if cond.Type == token.Boolean && cond.Str == "1" {
+        if val,ok := cond.(*constVal.BoolConst); ok && bool(*val) {
             for _,s := range c.Stmts {
                 GenStmt(file, s)
             }
-
             return
-        } else if cond.Type == token.Unknown {
+        } else if cond == nil {
             break
         }
     }
@@ -231,8 +230,8 @@ func GenWhile(file *os.File, s *ast.While) {
         GenDefVar(file, s.Def)
     }
 
-    if c := cmpTime.ConstEval(s.Cond); c.Type != token.Unknown {
-        if c.Str == "1" {
+    if val,ok := cmpTime.ConstEval(s.Cond).(*constVal.BoolConst); ok {
+        if bool(*val) {
             count := loops.WhileStart(file)
             GenBlock(file, &s.Block)
             loops.WhileEnd(file, count)
@@ -294,8 +293,8 @@ func GenRet(file *os.File, s *ast.Ret) {
 
             t := s.RetExpr.GetType().(types.StructType)
 
-            if val := cmpTime.ConstEval(s.RetExpr); val.Type != token.Unknown {
-                RetBigStructLit(file, t, val)
+            if val := cmpTime.ConstEval(s.RetExpr); val != nil {
+                RetBigStructLit(file, t, *val.(*constVal.StructConst))
             } else if ident,ok := s.RetExpr.(*ast.Ident); ok {
                 RetBigStructVar(file, t, ident.Obj.(vars.Var))
             } else {

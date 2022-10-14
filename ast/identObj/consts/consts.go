@@ -5,16 +5,17 @@ import (
     "fmt"
     "gamma/token"
     "gamma/types"
+    "gamma/cmpTime/constVal"
 )
 
 type Const struct {
     decPos token.Pos
     name string
     typ types.Type
-    val token.Token
+    val constVal.ConstVal
 }
 
-func CreateConst(name token.Token, t types.Type, val token.Token) Const {
+func CreateConst(name token.Token, t types.Type, val constVal.ConstVal) Const {
     return Const{ name: name.Str, decPos: name.Pos, typ: t, val: val }
 }
 
@@ -30,7 +31,7 @@ func (c *Const) GetType() types.Type {
     return c.typ
 }
 
-func (c *Const) GetVal() token.Token {
+func (c *Const) GetVal() constVal.ConstVal {
     return c.val
 }
 

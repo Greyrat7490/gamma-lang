@@ -5,7 +5,6 @@ import (
     "fmt"
     "reflect"
     "gamma/ast"
-    "gamma/token"
     "gamma/types"
     "gamma/cmpTime"
     "gamma/gen/asm/x86_64"
@@ -43,7 +42,7 @@ func GenImport(file *os.File, d *ast.Import) {
 }
 
 func GenDefVar(file *os.File, d *ast.DefVar) {
-    if val := cmpTime.ConstEval(d.Value); val.Type != token.Unknown {
+    if val := cmpTime.ConstEval(d.Value); val != nil {
         VarDefVal(file, d.V, val)
     } else {
         VarDefExpr(file, d.V, d.Value)

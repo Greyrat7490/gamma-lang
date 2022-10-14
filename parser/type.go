@@ -7,6 +7,7 @@ import (
     "gamma/token"
     "gamma/types"
     "gamma/cmpTime"
+    "gamma/cmpTime/constVal"
     "gamma/ast"
     "gamma/ast/identObj"
     "gamma/ast/identObj/struct"
@@ -76,8 +77,8 @@ func GetTypeBinary(e *ast.Binary) types.Type {
             }
         // check for cases like &v1 + const
         default:
-            if v2 := cmpTime.ConstEval(e.OperandR); v2.Type != token.Unknown {
-                if types.MinSizeUint(v2.Str) <= t1.Size() {
+            if v2,ok := cmpTime.ConstEvalUint(e.OperandR); ok {
+                if types.MinSizeUint(v2) <= t1.Size() {
                     return t1
                 }
             }
@@ -103,8 +104,8 @@ func GetTypeBinary(e *ast.Binary) types.Type {
             }
         // check for cases like const + &v1
         default:
-            if v1 := cmpTime.ConstEval(e.OperandL); v1.Type != token.Unknown {
-                if types.MinSizeUint(v1.Str) <= t2.Size() {
+            if v1,ok := cmpTime.ConstEvalUint(e.OperandL); ok {
+                if types.MinSizeUint(v1) <= t2.Size() {
                     return t2
                 }
             }
@@ -129,39 +130,39 @@ func GetTypeBinary(e *ast.Binary) types.Type {
         v2 := cmpTime.ConstEval(e.OperandR)
 
         // var + const
-        if v1.Type == token.Unknown {
-            if v2.Type != token.Unknown {
-                if t1.GetKind() == types.Int {
-                    if types.MinSizeInt(v2.Str) <= t1.Size() {
+        if v1 == nil {
+            if v2 != nil {
+                if v,ok := v2.(*constVal.IntConst); ok {
+                    if types.MinSizeInt(int64(*v)) <= t1.Size() {
                         return t1
                     }
-                } else if t1.GetKind() == types.Uint {
-                    if types.MinSizeUint(v2.Str) <= t1.Size() {
+                } else if v,ok := v2.(*constVal.UintConst); ok {
+                    if types.MinSizeUint(uint64(*v)) <= t1.Size() {
                         return t1
                     }
                 }
             }
         // const + var
         } else {
-            if v2.Type == token.Unknown {
-                if t2.GetKind() == types.Int {
-                    if types.MinSizeInt(v1.Str) <= t2.Size() {
+            if v2 == nil {
+                if v,ok := v1.(*constVal.IntConst); ok {
+                    if types.MinSizeInt(int64(*v)) <= t2.Size() {
                         return t2
                     }
-                } else if t2.GetKind() == types.Uint {
-                    if types.MinSizeUint(v1.Str) <= t2.Size() {
+                } else if v,ok := v1.(*constVal.UintConst); ok {
+                    if types.MinSizeUint(uint64(*v)) <= t2.Size() {
                         return t2
                     }
                 }
 
             // const + const
             } else {
-                if t1.GetKind() == types.Int {
-                    if types.MinSizeInt(v2.Str) <= t1.Size() {
+                if v,ok := v2.(*constVal.IntConst); ok {
+                    if types.MinSizeInt(int64(*v)) <= t1.Size() {
                         return t1
                     }
-                } else if t2.GetKind() == types.Int {
-                    if types.MinSizeInt(v1.Str) <= t2.Size() {
+                } else if v,ok := v1.(*constVal.IntConst); ok {
+                    if types.MinSizeInt(int64(*v)) <= t2.Size() {
                         return t2
                     }
                 } else {

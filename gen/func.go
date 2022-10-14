@@ -4,14 +4,13 @@ import (
     "os"
     "fmt"
     "reflect"
-    "strconv"
-    "gamma/token"
     "gamma/types"
     "gamma/types/str"
     "gamma/types/struct"
     "gamma/ast"
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
+    "gamma/cmpTime/constVal"
     "gamma/gen/asm/x86_64"
 )
 
@@ -74,59 +73,39 @@ func DefArg(file *os.File, regIdx uint, v vars.Var) {
 }
 
 
-func PassVal(file *os.File, regIdx uint, value token.Token, valtype types.Type) {
-    switch t := valtype.(type) {
-    case types.StrType:
-        if idx,err := strconv.Atoi(value.Str); err == nil {
-            asm.MovRegVal(file, regs[regIdx],   types.Ptr_Size, fmt.Sprintf("_str%d", idx))
-            asm.MovRegVal(file, regs[regIdx+1], types.I32_Size, fmt.Sprint(str.GetSize(idx)))
+func PassVal(file *os.File, regIdx uint, value constVal.ConstVal, valtype types.Type) {
+    switch v := value.(type) {
+    case *constVal.StrConst:
+        asm.MovRegVal(file, regs[regIdx],   types.Ptr_Size, fmt.Sprintf("_str%d", int(*v)))
+        asm.MovRegVal(file, regs[regIdx+1], types.I32_Size, fmt.Sprint(str.GetSize(int(*v))))
+
+    case *constVal.ArrConst:
+        asm.MovRegVal(file, regs[regIdx], types.Ptr_Size, fmt.Sprintf("_arr%d", int(*v)))
+
+    case *constVal.StructConst:
+        fields := structLit.GetValues(uint64(*v))
+        t := valtype.(types.StructType)
+
+        if len(t.Types) == 1 && t.Types[0].GetKind() != types.Str {
+            asm.MovRegVal(file, regs[regIdx], t.Size(), fields[0].GetVal())
         } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected str literal converted to a Number but got %v\n", value)
-            fmt.Fprintln(os.Stderr, "\t" + value.At())
-            os.Exit(1)
-        }
-
-    case types.ArrType:
-        if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
-            asm.MovRegVal(file, regs[regIdx], types.Ptr_Size, fmt.Sprintf("_arr%d", idx))
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected array literal converted to a Number but got %v\n", value)
-            fmt.Fprintln(os.Stderr, "\t" + value.At())
-            os.Exit(1)
-        }
-
-    case types.StructType:
-        if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
-            fields := structLit.GetValues(idx)
-
-            if len(t.Types) == 1 {
-                asm.MovRegVal(file, regs[regIdx], t.Size(), fields[0].Str)
-            } else {
-                vs := PackValues(t.Types, fields)
-                asm.MovRegVal(file, regs[regIdx], types.Ptr_Size, vs[0])
-                if len(vs) == 2 {
-                    asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vs[1])
-                }
+            vs := PackValues(t.Types, fields)
+            asm.MovRegVal(file, regs[regIdx], types.Ptr_Size, vs[0])
+            if len(vs) == 2 {
+                asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vs[1])
             }
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected struct literal converted to a Number but got %v\n", value)
-            fmt.Fprintln(os.Stderr, "\t" + value.At())
-            os.Exit(1)
         }
 
-    case types.IntType, types.UintType, types.CharType, types.BoolType:
-        asm.MovRegVal(file, regs[regIdx], valtype.Size(), value.Str)
+    case *constVal.IntConst, *constVal.UintConst, *constVal.CharConst, *constVal.BoolConst:
+        asm.MovRegVal(file, regs[regIdx], valtype.Size(), value.GetVal())
 
-    case types.PtrType:
-        if value.Type == token.Str {
-            file.WriteString(fmt.Sprintf("lea %s, [%s]\n", asm.GetReg(regs[regIdx], types.Ptr_Size), value.Str))
-        } else {
-            asm.MovRegVal(file, regs[regIdx], valtype.Size(), value.Str)
-        }
+    case *constVal.PtrConst:
+        file.WriteString("; ---- check here 3\n")
+        asm.MovRegVal(file, regs[regIdx], valtype.Size(), PtrConstToAddr(file, *v))
+        file.WriteString("; -----------------\n")
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] cannot pass value of type %v yet\n", valtype)
-        fmt.Fprintln(os.Stderr, "\t" + value.At())
         os.Exit(1)
     }
 }
@@ -175,38 +154,36 @@ func PassReg(file *os.File, regIdx uint, argType types.Type, regSize uint) {
     }
 }
 
-func PassValStack(file *os.File, value token.Token, valtype types.Type) {
-    switch t := valtype.(type) {
-    case types.StrType:
-        if idx,err := strconv.Atoi(value.Str); err == nil {
-            asm.PushVal(file, fmt.Sprint(str.GetSize(idx)))
-            asm.PushVal(file, fmt.Sprintf("_str%d", idx))
+func PassValStack(file *os.File, value constVal.ConstVal, valtype types.Type) {
+    switch v := value.(type) {
+    case *constVal.StrConst:
+        asm.PushVal(file, fmt.Sprint(str.GetSize(int(*v))))
+        asm.PushVal(file, fmt.Sprintf("_str%d", int(*v)))
+
+    case *constVal.StructConst:
+        fields := structLit.GetValues(uint64(*v))
+        t := valtype.(types.StructType)
+
+        if len(t.Types) == 1 && t.Types[0].GetKind() != types.Str {
+            asm.PushVal(file, fields[0].GetVal())
         } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected str literal converted to a Number but got %v\n", value)
-            fmt.Fprintln(os.Stderr, "\t" + value.At())
-            os.Exit(1)
+            vs := PackValues(t.Types, fields)
+            asm.PushVal(file, vs[0])
+            if len(vs) == 2 {
+                asm.PushVal(file, vs[1])
+            }
         }
 
-    case types.StructType:
-        if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
-            fields := structLit.GetValues(idx)
-            if len(t.Types) == 1 {
-                asm.PushVal(file, fields[0].Str)
-            } else {
-                vs := PackValues(t.Types, fields)
-                asm.PushVal(file, vs[0])
-                if len(vs) == 2 {
-                    asm.PushVal(file, vs[1])
-                }
-            }
+    case *constVal.PtrConst:
+        if v.Local {
+            file.WriteString(fmt.Sprintf("lea %s, [%s]\n", asm.GetReg(asm.RegA, types.Ptr_Size), v.Addr))
+            asm.PushReg(file, asm.RegA)
         } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected struct literal converted to a Number but got %v\n", value)
-            fmt.Fprintln(os.Stderr, "\t" + value.At())
-            os.Exit(1)
+            asm.PushVal(file, v.GetVal())
         }
 
     default:
-        asm.PushVal(file, value.Str)
+        asm.PushVal(file, v.GetVal())
     }
 }
 
@@ -244,40 +221,28 @@ func PassRegStack(file *os.File, argType types.Type) {
     }
 }
 
-func PassBigStructLit(file *os.File, t types.StructType, value token.Token, offset int) {
-    if idx,err := strconv.ParseUint(value.Str, 10, 64); err == nil {
-        fields := structLit.GetValues(idx)
+func PassBigStructLit(file *os.File, t types.StructType, value constVal.StructConst, offset int) {
+    fields := structLit.GetValues(uint64(value))
 
-        for i,t := range t.Types {
-            switch t := t.(type) {
-            case types.StrType:
-                if idx,err := strconv.Atoi(fields[i].Str); err == nil {
-                    asm.MovDerefVal(file,
-                        asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
-                        types.Ptr_Size,
-                        fmt.Sprintf("_str%d", idx))
-                    asm.MovDerefVal(file,
-                        asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)),
-                        types.I32_Size,
-                        fmt.Sprint(str.GetSize(idx)))
-                } else {
-                    fmt.Fprintf(os.Stderr, "[ERROR] expected str literal converted to a Number but got %v\n", value)
-                    fmt.Fprintln(os.Stderr, "\t" + value.At())
-                    os.Exit(1)
-                }
+    for i,f := range fields {
+        switch f := f.(type) {
+        case *constVal.StrConst:
+            asm.MovDerefVal(file,
+                asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
+                types.Ptr_Size,
+                fmt.Sprintf("_str%d", int(*f)))
+            asm.MovDerefVal(file,
+                asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)),
+                types.I32_Size,
+                fmt.Sprint(str.GetSize(int(*f))))
 
-            case types.StructType:
-                PassBigStructLit(file, t, fields[i], offset)
+        case *constVal.StructConst:
+            PassBigStructLit(file, t.Types[i].(types.StructType), *f, offset)
 
-            default:
-                asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size(), fields[i].Str)
-            }
-            offset += int(t.Size())
+        default:
+            asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Types[i].Size(), f.GetVal())
         }
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected struct literal converted to a Number but got %v\n", value)
-        fmt.Fprintln(os.Stderr, "\t" + value.At())
-        os.Exit(1)
+        offset += int(t.Types[i].Size())
     }
 }
 
@@ -310,7 +275,7 @@ func PassBigStructReg(file *os.File, addr string, e ast.Expr) {
     DerefSetBigStruct(file, addr, e)
 }
 
-func RetBigStructLit(file *os.File, t types.StructType, val token.Token) {
+func RetBigStructLit(file *os.File, t types.StructType, val constVal.StructConst) {
     PassBigStructLit(file, t, val, 0)
 }
 
@@ -324,56 +289,47 @@ func RetBigStructExpr(file *os.File, addr string, e ast.Expr) {
 
 
 
-func PackValues(valtypes []types.Type, values []token.Token) []string {
-    return packValues(valtypes, values, nil, 0)
+func PackValues(types []types.Type, values []constVal.ConstVal) []string {
+    return packValues(types, values, nil, 0)
 }
 
-func packValues(valtypes []types.Type, values []token.Token, packed []string, offset uint) []string {
-    for i,t := range valtypes {
-        switch t := t.(type) {
-        case types.StrType:
-            if idx,err := strconv.Atoi(values[i].Str); err == nil {
-                packed = append(packed, fmt.Sprintf("_str%d", idx))
-                packed = append(packed, fmt.Sprint(str.GetSize(idx)))
-                offset += types.I32_Size
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] expected str literal converted to a Number but got %v\n", values[i])
-                fmt.Fprintln(os.Stderr, "\t" + values[i].At())
-                os.Exit(1)
-            }
+func packValues(valtypes []types.Type, values []constVal.ConstVal, packed []string, offset uint) []string {
+    for i,v := range values {
+        switch v := v.(type) {
+        case *constVal.StrConst:
+            packed = append(packed, fmt.Sprintf("_str%d", int(*v)))
+            packed = append(packed, fmt.Sprint(str.GetSize(int(*v))))
+            offset += types.I32_Size
 
-        case types.ArrType:
-            if idx,err := strconv.ParseUint(values[i].Str, 10, 64); err == nil {
-                packed = append(packed, fmt.Sprintf("_arr%d", idx))
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] expected array literal converted to a Number but got %v\n", values[i])
-                fmt.Fprintln(os.Stderr, "\t" + values[i].At())
-                os.Exit(1)
-            }
+        case *constVal.ArrConst:
+            packed = append(packed, fmt.Sprintf("_arr%d", int(*v)))
 
-        case types.StructType:
-            if idx,err := strconv.ParseUint(values[i].Str, 10, 64); err == nil {
-                fields := structLit.GetValues(idx)
+        case *constVal.StructConst:
+            fields := structLit.GetValues(uint64(*v))
+            packed = packValues(valtypes[i].(types.StructType).Types, fields, packed, offset)
+            offset += valtypes[i].Size() % 8
 
-                packed = packValues(t.Types, fields, packed, offset)
+        case *constVal.PtrConst:
+            packed = append(packed, v.Addr)
 
-                offset += t.Size() % 8
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] expected struct literal converted to a Number but got %v\n", values[i])
-                fmt.Fprintln(os.Stderr, "\t" + values[i].At())
-                os.Exit(1)
-            }
+        case *constVal.IntConst:
+            packed = pack(packed, fmt.Sprint(int64(*v)), offset, valtypes[i])
+            offset += valtypes[i].Size()
 
-        case types.PtrType:
-            packed = append(packed, values[i].Str)
+        case *constVal.UintConst:
+            packed = pack(packed, fmt.Sprint(uint64(*v)), offset, valtypes[i])
+            offset += valtypes[i].Size()
 
-        case types.IntType, types.UintType, types.BoolType, types.CharType:
-            packed = pack(packed, values[i].Str, offset, t)
-            offset += t.Size()
+        case *constVal.BoolConst:
+            packed = pack(packed, fmt.Sprint(bool(*v)), offset, valtypes[i])
+            offset += types.Bool_Size
+
+        case *constVal.CharConst:
+            packed = pack(packed, fmt.Sprint(uint8(*v)), offset, valtypes[i])
+            offset += types.Char_Size
 
         default:
-            fmt.Fprintf(os.Stderr, "[ERROR] cannot pack value of type %v yet\n", reflect.TypeOf(t))
-            fmt.Fprintln(os.Stderr, "\t" + values[i].At())
+            fmt.Fprintf(os.Stderr, "[ERROR] cannot pack value of type %v yet\n", reflect.TypeOf(valtypes[i]))
             os.Exit(1)
         }
 

@@ -4,10 +4,9 @@ import (
     "os"
     "fmt"
     "reflect"
-    "strconv"
-    "gamma/cmpTime"
     "gamma/token"
     "gamma/types"
+    "gamma/cmpTime"
     "gamma/ast"
     "gamma/ast/identObj"
     "gamma/ast/identObj/func"
@@ -42,7 +41,7 @@ func typeCheckExpr(e ast.Expr) {
     case *ast.Cast:
         typeCheckCast(e)
 
-    case *ast.BasicLit, *ast.StrLit, *ast.Ident:
+    case *ast.IntLit, *ast.UintLit, *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.Ident:
         // nothing to check
 
     default:
@@ -57,21 +56,14 @@ func checkInt(destType types.Type, val ast.Expr) bool {
         return false
     }
 
-    if v := cmpTime.ConstEval(val); v.Type == token.Number {
-        _,err := strconv.ParseInt(v.Str, 0, int(destType.Size()*8))
-        if err != nil {
-            if e,ok := err.(*strconv.NumError); ok && e.Err == strconv.ErrRange {
-                fmt.Fprintf(os.Stderr, "[ERROR] %s does not fit into %v\n", v.Str, destType)
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] %s is not a valid %v\n", v.Str, destType)
-            }
-
+    if v,ok := cmpTime.ConstEvalInt(val); ok {
+        if types.MinSizeInt(v) > destType.Size() {
+            fmt.Fprintf(os.Stderr, "[ERROR] %d does not fit into %v\n", v, destType)
             fmt.Fprintln(os.Stderr, "\t" + val.At())
             os.Exit(1)
         }
 
         return true
-
     } else {
         return t.GetKind() == types.Int && t.Size() <= destType.Size()
     }
@@ -83,21 +75,14 @@ func checkUint(destType types.Type, val ast.Expr) bool {
         return false
     }
 
-    if v := cmpTime.ConstEval(val); v.Type == token.Number {
-        _,err := strconv.ParseUint(v.Str, 0, int(destType.Size()*8))
-        if err != nil {
-            if e,ok := err.(*strconv.NumError); ok && e.Err == strconv.ErrRange {
-                fmt.Fprintf(os.Stderr, "[ERROR] %s does not fit into %v\n", v.Str, destType)
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] %s is not a valid %v\n", v.Str, destType)
-            }
-
+    if v,ok := cmpTime.ConstEvalUint(val); ok {
+        if types.MinSizeUint(v) > destType.Size() {
+            fmt.Fprintf(os.Stderr, "[ERROR] %d does not fit into %v\n", v, destType)
             fmt.Fprintln(os.Stderr, "\t" + val.At())
             os.Exit(1)
         }
 
         return true
-
     } else {
         return t.GetKind() == types.Uint && t.Size() <= destType.Size()
     }
@@ -181,7 +166,7 @@ func typeCheckArrayLit(o *ast.ArrayLit) {
             os.Exit(1)
         }
 
-        if cmpTime.ConstEval(v).Type == token.Unknown {
+        if cmpTime.ConstEval(v) == nil {
             fmt.Fprintln(os.Stderr, "[ERROR] all values in the ArrayLit should be const")
             fmt.Fprintln(os.Stderr, "\t" + v.At())
             os.Exit(1)

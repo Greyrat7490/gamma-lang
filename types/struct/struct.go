@@ -1,19 +1,21 @@
 package structLit
 
-import "gamma/token"
+import (
+	"gamma/cmpTime/constVal"
+)
 
 var structLits []structLit
 
 type structLit struct {
     name string
-    fields []token.Token
+    fields []constVal.ConstVal
 }
 
-func GetValues(structLitIdx uint64) (res []token.Token) {
+func GetValues(structLitIdx uint64) []constVal.ConstVal {
     return structLits[structLitIdx].fields
 }
 
-func Add(name string, fields []token.Token) int {
+func Add(name string, fields []constVal.ConstVal) int {
     structLits = append(structLits, structLit{ name: name, fields: fields })
     return len(structLits)-1
 }

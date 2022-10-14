@@ -3,6 +3,7 @@ package prs
 import (
     "os"
     "fmt"
+    "strconv"
     "gamma/token"
     "gamma/types"
     "gamma/types/str"
@@ -10,6 +11,7 @@ import (
     "gamma/types/array"
     "gamma/types/struct"
     "gamma/cmpTime"
+    "gamma/cmpTime/constVal"
     "gamma/ast"
     "gamma/ast/identObj"
     "gamma/ast/identObj/func"
@@ -29,8 +31,11 @@ const (
 func prsExpr(tokens *token.Tokens) ast.Expr {
     var expr ast.Expr
     switch tokens.Cur().Type {
-    case token.Number, token.Str, token.Boolean, token.Char:
-        expr = prsLitExpr(tokens)
+    case token.Number, token.Boolean, token.Char:
+        expr = prsBasicLit(tokens)
+
+    case token.Str:
+        expr = prsStrLit(tokens)
 
     case token.BrackL:
         return prsArrayLit(tokens)
@@ -178,32 +183,51 @@ func prsIdentExpr(tokens *token.Tokens) *ast.Ident {
     return nil
 }
 
-func prsLitExpr(tokens *token.Tokens) ast.Expr {
+func prsBasicLit(tokens *token.Tokens) ast.Expr {
     val := tokens.Cur()
     t := types.TypeOfVal(val.Str)
 
-    repr := val
     switch t.GetKind() {
-    case types.Str:
-        idx := str.Add(val)
-        repr.Str = fmt.Sprint(idx)
-        return &ast.StrLit{ Repr: repr, Idx: uint(idx), Val: val }
-
     case types.Bool:
+        repr := false
         if val.Str == "true" {
-            repr.Str = "1"
-        } else {
-            repr.Str = "0"
+            repr = true
         }
-    case types.Char:
-        if val.Str[1] == '\\' {
-            repr.Str = fmt.Sprint(char.EscapeByte(val.Str[2]))
-        } else {
-            repr.Str = fmt.Sprint(int(val.Str[1]))
-        }
-    }
 
-    return &ast.BasicLit{ Repr: repr, Type: t, Val: val }
+        return &ast.BoolLit{ Repr: repr, Val: val }
+
+    case types.Char:
+        var repr uint8
+        if val.Str[1] == '\\' {
+            repr = char.EscapeByte(val.Str[2])
+            if repr == 0 {
+                fmt.Fprintf(os.Stderr, "[ERROR] unexpected escape sequence %s\n", val.Str)
+                os.Exit(1)
+            }
+        } else {
+            repr = uint8(val.Str[1])
+        }
+
+        return &ast.CharLit{ Repr: repr, Val: val }
+
+    case types.Int:
+        repr,_ := strconv.ParseInt(val.Str, 0, 64)
+        return &ast.IntLit{ Repr: repr, Val: val, Type: t.(types.IntType) }
+
+    case types.Uint:
+        repr,_ := strconv.ParseUint(val.Str, 0, 64)
+        return &ast.UintLit{ Repr: repr, Val: val, Type: t.(types.UintType) }
+
+    default:
+        return &ast.BadExpr{}
+    }
+}
+
+func prsStrLit(tokens *token.Tokens) *ast.StrLit {
+    val := tokens.Cur()
+
+    idx := str.Add(val)
+    return &ast.StrLit{ Idx: uint(idx), Val: val }
 }
 
 func prsArrayLit(tokens *token.Tokens) *ast.ArrayLit {
@@ -348,7 +372,7 @@ func prsFieldLit(tokens *token.Tokens, omitNames bool) ast.FieldLit {
 
     expr := prsExpr(tokens)
     constVal := cmpTime.ConstEval(expr)
-    if constVal.Type == token.Unknown {
+    if constVal == nil {
         fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
         fmt.Fprintln(os.Stderr, "\t" + expr.At())
         os.Exit(1)
@@ -357,10 +381,10 @@ func prsFieldLit(tokens *token.Tokens, omitNames bool) ast.FieldLit {
     return ast.FieldLit{ Name: name, Pos: pos, Value: expr }
 }
 
-func constEvalExprs(values []ast.Expr) (res []token.Token) {
+func constEvalExprs(values []ast.Expr) (res []constVal.ConstVal) {
     for _,v := range values {
         constVal := cmpTime.ConstEval(v)
-        if constVal.Type == token.Unknown {
+        if constVal == nil {
             fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
             fmt.Fprintln(os.Stderr, "\t" + v.At())
             os.Exit(1)
@@ -371,11 +395,11 @@ func constEvalExprs(values []ast.Expr) (res []token.Token) {
     return
 }
 
-func constEvalFields(structName string, fields []ast.FieldLit, omitNames bool) (res []token.Token) {
+func constEvalFields(structName string, fields []ast.FieldLit, omitNames bool) (res []constVal.ConstVal) {
     if omitNames {
         for _,l := range fields {
-            constVal := cmpTime.ConstEvalFieldLit(&l)
-            if constVal.Type == token.Unknown {
+            constVal := cmpTime.ConstEval(l.Value)
+            if constVal == nil {
                 fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
                 fmt.Fprintln(os.Stderr, "\t" + l.At())
                 os.Exit(1)
@@ -388,8 +412,8 @@ func constEvalFields(structName string, fields []ast.FieldLit, omitNames bool) (
         for _,n := range s.GetNames() {
             for _,l := range fields {
                 if l.Name.Str == n {
-                    constVal := cmpTime.ConstEvalFieldLit(&l)
-                    if constVal.Type == token.Unknown {
+                    constVal := cmpTime.ConstEval(l.Value)
+                    if constVal == nil {
                         fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
                         fmt.Fprintln(os.Stderr, "\t" + l.At())
                         os.Exit(1)
@@ -543,7 +567,7 @@ func prsUnaryExpr(tokens *token.Tokens) *ast.Unary {
         if tokens.Next().Type == token.Name {
             expr.Operand = prsIdentExpr(tokens)
         } else {
-            expr.Operand = prsLitExpr(tokens)
+            expr.Operand = prsBasicLit(tokens)
         }
     }
 
@@ -724,7 +748,7 @@ func prsBinary(tokens *token.Tokens, expr ast.Expr, min_precedence precedence) a
                 b.OperandR = prsIdentExpr(tokens)
             }
         default:
-            b.OperandR = prsLitExpr(tokens)
+            b.OperandR = prsBasicLit(tokens)
         }
 
         b.Type = GetTypeBinary(&b)
