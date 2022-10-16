@@ -70,7 +70,6 @@ type ArrayLit struct {
 }
 
 type StructLit struct {
-    Idx int
     Pos token.Pos
     StructType types.StructType
     BraceLPos token.Pos

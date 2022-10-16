@@ -17,12 +17,15 @@ type CharConst uint8;
 type BoolConst bool;
 type StrConst uint;
 type ArrConst int;
-type StructConst int;
+
+type StructConst struct {
+    Fields []ConstVal
+}
+
 type PtrConst struct {
     Addr string
     Local bool
 }
-
 
 func (c *IntConst)    GetKind() types.TypeKind { return types.Int }
 func (c *UintConst)   GetKind() types.TypeKind { return types.Uint }

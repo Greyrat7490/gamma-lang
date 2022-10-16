@@ -1,21 +1,20 @@
 package char
 
 // 0 -> unexpected escape sequence
-func Escape(r rune) int {
-    // TODO uint8 instead of int
+func Escape(r rune) uint8 {
     switch r {
     case 't':
-        return int('\t')
+        return uint8('\t')
     case 'r':
-        return int('\r')
+        return uint8('\r')
     case 'n':
-        return int('\n')
+        return uint8('\n')
     case '"':
-        return int('"')
+        return uint8('"')
     case '\\':
-        return int('\\')
+        return uint8('\\')
     default:
-        return -1
+        return 0
     }
 }
 

@@ -7,7 +7,6 @@ import (
     "gamma/token"
     "gamma/types"
     "gamma/types/str"
-    "gamma/types/struct"
     "gamma/cmpTime"
     "gamma/cmpTime/constVal"
     "gamma/ast"
@@ -115,12 +114,16 @@ func GenStrLit(file *os.File, e *ast.StrLit) {
 }
 
 func GenStructLit(file *os.File, e *ast.StructLit) {
-    values := structLit.GetValues(uint64(e.Idx))
-
-    vs := PackValues(e.StructType.Types, values)
-    asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, vs[0])
-    if len(vs) == 2 {
-        asm.MovRegVal(file, asm.RegGroup(1), types.Ptr_Size, vs[1])
+    if c,ok := cmpTime.ConstEvalStructLit(e).(*constVal.StructConst); ok {
+        vs := PackValues(e.StructType.Types, c.Fields)
+        asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, vs[0])
+        if len(vs) == 2 {
+            asm.MovRegVal(file, asm.RegGroup(1), e.StructType.Size() - 8, vs[1])
+        }
+    } else {
+        // TODO
+        fmt.Fprintln(os.Stderr, "[ERROR] TODO GenStructLit (not const) in work")
+        os.Exit(1)
     }
 }
 
@@ -635,8 +638,13 @@ func DerefSetBigStruct(file *os.File, addr string, e ast.Expr) {
 
     switch e := e.(type) {
     case *ast.StructLit:
-        c := constVal.StructConst(e.Idx)
-        DerefSetVal(file, addr, e.StructType, &c)
+        for i,f := range e.Fields {
+            if c := cmpTime.ConstEval(f.Value); c != nil {
+                DerefSetVal(file, asm.OffsetAddr(addr, e.StructType.GetOffset(uint(i))), e.StructType.Types[i], c)
+            } else {
+                DerefSetExpr(file, asm.OffsetAddr(addr, e.StructType.GetOffset(uint(i))), e.StructType.Types[i], f.Value)
+            }
+        }
 
     case *ast.Indexed:
         IndexedAddrToReg(file, e, asm.RegA)

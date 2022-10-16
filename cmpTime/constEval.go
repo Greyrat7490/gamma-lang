@@ -6,7 +6,6 @@ import (
     "reflect"
     "gamma/token"
     "gamma/types/array"
-    "gamma/types/struct"
     "gamma/cmpTime/constVal"
     "gamma/gen/asm/x86_64"
     "gamma/ast"
@@ -65,7 +64,7 @@ func ConstEval(e ast.Expr) constVal.ConstVal {
     case *ast.ArrayLit:
         return (*constVal.ArrConst)(&e.Idx)
     case *ast.StructLit:
-        return (*constVal.StructConst)(&e.Idx)
+        return ConstEvalStructLit(e)
 
     case *ast.Indexed:
         return ConstEvalIndexed(e)
@@ -122,23 +121,37 @@ func ConstEvalIndexed(e *ast.Indexed) constVal.ConstVal {
     return nil
 }
 
+func ConstEvalStructLit(e *ast.StructLit) constVal.ConstVal {
+    res := make([]constVal.ConstVal, len(e.Fields))
+
+    for i,v := range e.Fields {
+        constVal := ConstEval(v.Value)
+        if constVal == nil {
+            return nil
+        }
+        res[i] = constVal
+    }
+
+    return &constVal.StructConst{ Fields: res }
+}
+
 func ConstEvalField(e *ast.Field) constVal.ConstVal {
     if c := ConstEval(e.Obj); c != nil {
-        obj := identObj.Get(e.StructType.Name)
-        if s,ok := obj.(*structDec.Struct); ok {
-            if i,b := s.GetFieldNum(e.FieldName.Str); b {
-                if idx,ok := c.(*constVal.StructConst); ok {
-                    return structLit.GetValues(uint64(*idx))[i]
+        if strct,ok := c.(*constVal.StructConst); ok {
+            obj := identObj.Get(e.StructType.Name)
+            if s,ok := obj.(*structDec.Struct); ok {
+                if i,ok := s.GetFieldNum(e.FieldName.Str); ok {
+                    return strct.Fields[i]
                 } else {
-                    fmt.Fprintf(os.Stderr, "[ERROR] expected a *constVal.StructConst but got %v\n", reflect.TypeOf(c))
+                    fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName)
                     fmt.Fprintln(os.Stderr, "\t" + e.At())
                     os.Exit(1)
                 }
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName)
-                fmt.Fprintln(os.Stderr, "\t" + e.At())
-                os.Exit(1)
             }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a *constVal.StructConst but got %v\n", reflect.TypeOf(c))
+            fmt.Fprintln(os.Stderr, "\t" + e.At())
+            os.Exit(1)
         }
     }
 

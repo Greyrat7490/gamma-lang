@@ -5,7 +5,6 @@ import (
     "fmt"
     "gamma/types"
     "gamma/types/str"
-    "gamma/types/struct"
     "gamma/cmpTime/constVal"
     "gamma/gen/asm/x86_64"
     "gamma/gen/asm/x86_64/nasm"
@@ -155,9 +154,7 @@ func addPtr(val constVal.PtrConst) {
 }
 
 func addStruct(t types.StructType, val constVal.StructConst) {
-    values := structLit.GetValues(uint64(val))
-
-    for i,v := range values {
+    for i,v := range val.Fields {
         switch v := v.(type) {
         case *constVal.StrConst:
             addStr(*v)

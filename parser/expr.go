@@ -9,7 +9,6 @@ import (
     "gamma/types/str"
     "gamma/types/char"
     "gamma/types/array"
-    "gamma/types/struct"
     "gamma/cmpTime"
     "gamma/cmpTime/constVal"
     "gamma/ast"
@@ -325,8 +324,8 @@ func prsStructLit(tokens *token.Tokens) *ast.StructLit {
     }
 
     return &ast.StructLit{
-        Idx: structLit.Add(name.Str, constEvalFields(name.Str, fields, omitNames)),
-        Pos: name.Pos, StructType: t,
+        Pos: name.Pos,
+        StructType: t,
         BraceLPos: braceL.Pos,
         BraceRPos: tokens.Cur().Pos,
         Fields: fields,
@@ -370,62 +369,23 @@ func prsFieldLit(tokens *token.Tokens, omitNames bool) ast.FieldLit {
         pos = tokens.Cur().Pos
     }
 
-    expr := prsExpr(tokens)
-    constVal := cmpTime.ConstEval(expr)
-    if constVal == nil {
-        fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
-        fmt.Fprintln(os.Stderr, "\t" + expr.At())
-        os.Exit(1)
-    }
-
-    return ast.FieldLit{ Name: name, Pos: pos, Value: expr }
+    return ast.FieldLit{ Name: name, Pos: pos, Value: prsExpr(tokens) }
 }
 
-func constEvalExprs(values []ast.Expr) (res []constVal.ConstVal) {
-    for _,v := range values {
+func constEvalExprs(values []ast.Expr) []constVal.ConstVal {
+    res := make([]constVal.ConstVal, len(values))
+
+    for i,v := range values {
         constVal := cmpTime.ConstEval(v)
         if constVal == nil {
             fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
             fmt.Fprintln(os.Stderr, "\t" + v.At())
             os.Exit(1)
         }
-        res = append(res, constVal)
+        res[i] = constVal
     }
 
-    return
-}
-
-func constEvalFields(structName string, fields []ast.FieldLit, omitNames bool) (res []constVal.ConstVal) {
-    if omitNames {
-        for _,l := range fields {
-            constVal := cmpTime.ConstEval(l.Value)
-            if constVal == nil {
-                fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
-                fmt.Fprintln(os.Stderr, "\t" + l.At())
-                os.Exit(1)
-            }
-            res = append(res, constVal)
-        }
-    } else {
-        s := identObj.Get(structName).(*structDec.Struct)
-
-        for _,n := range s.GetNames() {
-            for _,l := range fields {
-                if l.Name.Str == n {
-                    constVal := cmpTime.ConstEval(l.Value)
-                    if constVal == nil {
-                        fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
-                        fmt.Fprintln(os.Stderr, "\t" + l.At())
-                        os.Exit(1)
-                    }
-                    res = append(res, constVal)
-                    break
-                }
-            }
-        }
-    }
-
-    return
+    return res
 }
 
 func prsArrayLitExprs(tokens *token.Tokens, lenghts []uint64) (exprs []ast.Expr) {
@@ -447,11 +407,6 @@ func prsArrayLitExprs(tokens *token.Tokens, lenghts []uint64) (exprs []ast.Expr)
 
         case token.BraceR:
             return
-
-        case token.XSwitch, token.UndScr:
-            fmt.Fprintln(os.Stderr, "[ERROR] XSwitch(\"$\") and Wildcard(\"_\") are not supported in ArrayLits (yet)")
-            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-            os.Exit(1)
 
         default:
             if len(lenghts) == 1 {

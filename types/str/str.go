@@ -48,7 +48,7 @@ func escape(s token.Token) (string, int) {
                 continue
             }
         } else {
-            if i := char.Escape(r); i != -1 {
+            if i := char.Escape(r); i != 0 {
                 s.Str = strings.Replace(s.Str, fmt.Sprintf("\\%c", r), fmt.Sprintf("\",%d,\"", i), 1)
                 escape = false
             } else {

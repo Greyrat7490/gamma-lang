@@ -7,7 +7,6 @@ import (
     "gamma/token"
     "gamma/types"
     "gamma/types/str"
-    "gamma/types/struct"
     "gamma/ast"
     "gamma/ast/identObj/vars"
     "gamma/cmpTime"
@@ -63,7 +62,7 @@ func globalVarDefVal(file *os.File, v *vars.GlobalVar, val constVal.ConstVal) {
 }
 
 func defStruct(t types.StructType, val *constVal.StructConst) {
-    for i,v := range structLit.GetValues(uint64(*val)) {
+    for i,v := range val.Fields {
         switch c := v.(type) {
         case *constVal.StrConst:
             defStr(c)
@@ -239,10 +238,8 @@ func DerefSetExpr(file *os.File, addr string, t types.Type, val ast.Expr) {
 }
 
 func derefSetBigStructLit(file *os.File, t types.StructType, val constVal.StructConst, offset int) {
-    fields := structLit.GetValues(uint64(val))
-
-    for i,f := range fields {
-        switch f := f.(type) {
+    for _,field := range val.Fields {
+        switch f := field.(type) {
         case *constVal.StrConst:
             asm.MovDerefVal(file,
                 asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
@@ -257,7 +254,7 @@ func derefSetBigStructLit(file *os.File, t types.StructType, val constVal.Struct
             derefSetBigStructLit(file, t, *f, offset)
 
         default:
-            asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size(), fields[i].GetVal())
+            asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size(), field.GetVal())
         }
         offset += int(t.Size())
     }
@@ -278,7 +275,7 @@ func DerefSetVal(file *os.File, addr string, typ types.Type, val constVal.ConstV
         derefSetPtrVal(file, addr, 0, val)
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (derefSetStructVal)\n", reflect.TypeOf(typ))
+        fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (derefSetStructVal)\n", typ)
         os.Exit(1)
     }
 }
@@ -297,7 +294,7 @@ func derefSetStrVal(file *os.File, addr string, offset int, val *constVal.StrCon
 }
 
 func derefSetStructVal(file *os.File, t types.StructType, addr string, offset int, val *constVal.StructConst) {
-    for i,val := range structLit.GetValues(uint64(*val)) {
+    for i,val := range val.Fields {
         switch val := val.(type) {
         case *constVal.StrConst:
             derefSetStrVal(file, addr, offset + t.GetOffset(uint(i)), val)

@@ -6,7 +6,6 @@ import (
     "reflect"
     "gamma/types"
     "gamma/types/str"
-    "gamma/types/struct"
     "gamma/ast"
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
@@ -83,13 +82,12 @@ func PassVal(file *os.File, regIdx uint, value constVal.ConstVal, valtype types.
         asm.MovRegVal(file, regs[regIdx], types.Ptr_Size, fmt.Sprintf("_arr%d", int(*v)))
 
     case *constVal.StructConst:
-        fields := structLit.GetValues(uint64(*v))
         t := valtype.(types.StructType)
 
         if len(t.Types) == 1 && t.Types[0].GetKind() != types.Str {
-            asm.MovRegVal(file, regs[regIdx], t.Size(), fields[0].GetVal())
+            asm.MovRegVal(file, regs[regIdx], t.Size(), v.Fields[0].GetVal())
         } else {
-            vs := PackValues(t.Types, fields)
+            vs := PackValues(t.Types, v.Fields)
             asm.MovRegVal(file, regs[regIdx], types.Ptr_Size, vs[0])
             if len(vs) == 2 {
                 asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vs[1])
@@ -100,9 +98,7 @@ func PassVal(file *os.File, regIdx uint, value constVal.ConstVal, valtype types.
         asm.MovRegVal(file, regs[regIdx], valtype.Size(), value.GetVal())
 
     case *constVal.PtrConst:
-        file.WriteString("; ---- check here 3\n")
         asm.MovRegVal(file, regs[regIdx], valtype.Size(), PtrConstToAddr(file, *v))
-        file.WriteString("; -----------------\n")
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] cannot pass value of type %v yet\n", valtype)
@@ -161,13 +157,12 @@ func PassValStack(file *os.File, value constVal.ConstVal, valtype types.Type) {
         asm.PushVal(file, fmt.Sprintf("_str%d", int(*v)))
 
     case *constVal.StructConst:
-        fields := structLit.GetValues(uint64(*v))
         t := valtype.(types.StructType)
 
         if len(t.Types) == 1 && t.Types[0].GetKind() != types.Str {
-            asm.PushVal(file, fields[0].GetVal())
+            asm.PushVal(file, v.Fields[0].GetVal())
         } else {
-            vs := PackValues(t.Types, fields)
+            vs := PackValues(t.Types, v.Fields)
             asm.PushVal(file, vs[0])
             if len(vs) == 2 {
                 asm.PushVal(file, vs[1])
@@ -222,9 +217,7 @@ func PassRegStack(file *os.File, argType types.Type) {
 }
 
 func PassBigStructLit(file *os.File, t types.StructType, value constVal.StructConst, offset int) {
-    fields := structLit.GetValues(uint64(value))
-
-    for i,f := range fields {
+    for i,f := range value.Fields {
         switch f := f.(type) {
         case *constVal.StrConst:
             asm.MovDerefVal(file,
@@ -305,8 +298,7 @@ func packValues(valtypes []types.Type, values []constVal.ConstVal, packed []stri
             packed = append(packed, fmt.Sprintf("_arr%d", int(*v)))
 
         case *constVal.StructConst:
-            fields := structLit.GetValues(uint64(*v))
-            packed = packValues(valtypes[i].(types.StructType).Types, fields, packed, offset)
+            packed = packValues(valtypes[i].(types.StructType).Types, v.Fields, packed, offset)
             offset += valtypes[i].Size() % 8
 
         case *constVal.PtrConst:
