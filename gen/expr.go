@@ -114,6 +114,11 @@ func GenStrLit(file *os.File, e *ast.StrLit) {
 }
 
 func GenStructLit(file *os.File, e *ast.StructLit) {
+    if types.IsBigStruct(e.StructType) {
+        fmt.Fprintf(os.Stderr, "[ERROR] (internal) called GenStructLit with a big struct type %v\n", e.StructType)
+        os.Exit(1)
+    }
+
     if c,ok := cmpTime.ConstEvalStructLit(e).(*constVal.StructConst); ok {
         vs := PackValues(e.StructType.Types, c.Fields)
         asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, vs[0])
@@ -121,9 +126,7 @@ func GenStructLit(file *os.File, e *ast.StructLit) {
             asm.MovRegVal(file, asm.RegGroup(1), e.StructType.Size() - 8, vs[1])
         }
     } else {
-        // TODO
-        fmt.Fprintln(os.Stderr, "[ERROR] TODO GenStructLit (not const) in work")
-        os.Exit(1)
+        PackFields(file, e.StructType, e.Fields)
     }
 }
 

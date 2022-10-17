@@ -286,6 +286,46 @@ func PackValues(types []types.Type, values []constVal.ConstVal) []string {
     return packValues(types, values, nil, 0)
 }
 
+func PackFields(file *os.File, typ types.StructType, fields []ast.FieldLit) {
+    if len(fields) > 1 {
+        offset := -8
+        for i,f := range fields {
+            t := typ.Types[i]
+
+            switch t.GetKind() {
+            case types.Str:
+                GenExpr(file, f.Value)
+                asm.MovDerefReg(file, asm.OffsetAddr("rsp", offset), types.Ptr_Size, asm.RegA)
+                asm.MovDerefReg(file, asm.OffsetAddr("rsp", offset - int(types.Ptr_Size)), types.U32_Size, asm.RegD)
+                offset -= int(types.U32_Size)
+
+            case types.Struct:
+                GenExpr(file, f.Value)
+                if t.Size() > 8 {
+                    asm.MovDerefReg(file, asm.OffsetAddr("rsp", offset), t.Size(), asm.RegA)
+                    asm.MovDerefReg(file, asm.OffsetAddr("rsp", offset - int(types.Ptr_Size)), t.Size() - 8, asm.RegD)
+                    offset -= int(t.Size()) - 8
+                } else {
+                    asm.MovDerefReg(file, asm.OffsetAddr("rsp", offset), t.Size(), asm.RegA)
+                    offset -= int(t.Size())
+                }
+
+            default:
+                GenExpr(file, f.Value)
+                asm.MovDerefReg(file, asm.OffsetAddr("rsp", offset), t.Size(), asm.RegA)
+                offset += int(t.Size())
+            }
+        }
+
+        asm.MovRegDeref(file, asm.RegGroup(0), "rsp-8", types.Ptr_Size, false)
+        if typ.Size() > 8 {
+            asm.MovRegDeref(file, asm.RegGroup(1), "rsp-16", types.Ptr_Size, false)
+        }
+    } else {
+        GenExpr(file, fields[0].Value)
+    }
+}
+
 func packValues(valtypes []types.Type, values []constVal.ConstVal, packed []string, offset uint) []string {
     for i,v := range values {
         switch v := v.(type) {

@@ -46,8 +46,7 @@ func ConstEvalUint(e ast.Expr) (uint64, bool) {
 func ConstEval(e ast.Expr) constVal.ConstVal {
     switch e := e.(type) {
     case *ast.IntLit:
-        c := constVal.IntConst(e.Repr)
-        return &c
+        return (*constVal.IntConst)(&e.Repr)
     case *ast.UintLit:
         return (*constVal.UintConst)(&e.Repr)
     case *ast.BoolLit:
@@ -125,11 +124,11 @@ func ConstEvalStructLit(e *ast.StructLit) constVal.ConstVal {
     res := make([]constVal.ConstVal, len(e.Fields))
 
     for i,v := range e.Fields {
-        constVal := ConstEval(v.Value)
-        if constVal == nil {
+        c := ConstEval(v.Value)
+        if c == nil {
             return nil
         }
-        res[i] = constVal
+        res[i] = c
     }
 
     return &constVal.StructConst{ Fields: res }

@@ -14,6 +14,18 @@ struct Simple {
     i i32
 }
 
+struct Test3 {
+    s Simple
+}
+
+struct Test4 {
+    i1 i8,
+    i2 i8,
+    i3 i8,
+    i4 i16,
+    i5 i8
+}
+
 fn printTest(t Test) {
     printStr("Test:")
     printStr("\nb: ") printBool(t.b)
@@ -73,6 +85,27 @@ fn testSimple() -> Simple {
     ret Simple{ s: "simple string\n", i: 64 }
 }
 
+fn testNonConst(i i32) -> Simple {
+    dummy1 := 0
+    dummy2 := 0
+    i4 := i
+    ret Simple{ i: i4, s: "test string\n" }
+}
+
+fn testNonConst2(i i32) -> Test3 {
+    dummy1 := 0
+    dummy2 := 0
+    i4 := i
+    ret Test3{ s: Simple{ i: i4, s: "test2 string\n" } }
+}
+
+fn testNonConst3(i i32) -> Test4 {
+    i2 := 2 as i8
+    i3 := 3 as i8
+    i4 := i as i16
+    ret Test4{ i1: i as i8, i2: i2, i3: i3, i4: 4, i5: 5 }
+}
+
 fn main() {
     printStr("ret simple ------\n")
     s := testSimple()
@@ -95,4 +128,20 @@ fn main() {
 
     printStr("\nret fnCall ------\n")
     printTest(test5())
+
+    printStr("\nret non-const structLit\n")
+    s = testNonConst(-69)
+    printStr(s.s)
+    printInt(s.i) printChar('\n')
+    printStr("----\n")
+    t := testNonConst2(64)
+    printStr(t.s.s)
+    printInt(t.s.i) printChar('\n')
+    printStr("----\n")
+    t2 := testNonConst3(-64)
+    printInt(t2.i1) printChar(' ')
+    printInt(t2.i2) printChar(' ')
+    printInt(t2.i3) printChar(' ')
+    printInt(t2.i4) printChar(' ')
+    printInt(t2.i5) printChar('\n')
 }
