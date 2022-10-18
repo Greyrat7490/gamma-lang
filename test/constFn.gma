@@ -1,0 +1,7 @@
+fn test1() -> i32 {
+    ret 30 + 34
+}
+
+fn main() {
+    printInt(test1()) printChar('\n')
+}

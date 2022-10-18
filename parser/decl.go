@@ -368,7 +368,9 @@ func prsDefFn(tokens *token.Tokens) ast.DefFn {
     f.SetFrameSize(identObj.GetFrameSize())
     identObj.EndScope()
 
-    return ast.DefFn{ Pos: pos, F: f, Args: argDecs, RetType: retType, Block: block }
+    def := ast.DefFn{ Pos: pos, F: f, Args: argDecs, RetType: retType, Block: block }
+    cmpTime.AddConstFunc(def)
+    return def
 }
 
 func prsDecField(tokens *token.Tokens) ast.DecField {

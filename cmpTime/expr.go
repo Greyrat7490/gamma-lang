@@ -205,10 +205,8 @@ func ConstEvalUnary(e *ast.Unary) constVal.ConstVal {
 }
 
 func ConstEvalFnCall(e *ast.FnCall) constVal.ConstVal {
-    // TODO: in work
-    return nil
+    return EvalFunc(e.F.GetName())
 }
-
 
 func ConstEvalParen(e *ast.Paren) constVal.ConstVal {
     return ConstEval(e.Expr)
