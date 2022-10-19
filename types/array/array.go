@@ -21,8 +21,8 @@ func GetValues(arrLitIdx int) []constVal.ConstVal {
     return arrLits[arrLitIdx].values
 }
 
-func Add(typ types.ArrType, values []constVal.ConstVal) (i int) {
-    i = len(arrLits)
+func Add(typ types.ArrType, values []constVal.ConstVal) uint64 {
+    i := uint64(len(arrLits))
     arr := arrLit{ baseType: typ.Ptr.BaseType, values: values }
     arrLits = append(arrLits, arr)
 
@@ -78,7 +78,7 @@ func Add(typ types.ArrType, values []constVal.ConstVal) (i int) {
         }
     }
 
-    return
+    return i
 }
 
 func addInt(size uint, val constVal.IntConst) {

@@ -12,6 +12,9 @@ type constFunc struct {
 }
 
 func (c constFunc) eval() constVal.ConstVal {
+    startScope()
+    defer endScope()
+
     return evalBlock(&c.fn.Block)
 }
 

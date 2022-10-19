@@ -15,8 +15,8 @@ type IntConst int64;
 type UintConst uint64;
 type CharConst uint8;
 type BoolConst bool;
-type StrConst uint;
-type ArrConst int;
+type StrConst uint64;
+type ArrConst uint64;
 
 type StructConst struct {
     Fields []ConstVal

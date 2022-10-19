@@ -20,21 +20,21 @@ func GetSize(idx int) int {
     return strLits[idx].size
 }
 
-func Add(s token.Token) (idx int) {
+func Add(s token.Token) uint64 {
     str, size := escape(s)
 
-    if idx = find(str); idx != -1 {
+    if idx,ok := find(str); ok {
         return idx
     }
 
-    idx = len(strLits)
+    idx := uint64(len(strLits))
     strLits = append(strLits, strLit{str, size})
     nasm.AddRodata(GetDefineStr(idx))
 
     return idx
 }
 
-func GetDefineStr(idx int) string {
+func GetDefineStr(idx uint64) string {
     return fmt.Sprintf("_str%d: db %s", idx, strLits[idx].value)
 }
 
@@ -71,12 +71,12 @@ func escape(s token.Token) (string, int) {
     return s.Str, size
 }
 
-func find(s string) int {
+func find(s string) (uint64, bool) {
     for i, v := range strLits {
         if v.value == s {
-            return i
+            return uint64(i), true
         }
     }
 
-    return -1
+    return 0, false
 }

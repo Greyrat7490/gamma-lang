@@ -226,7 +226,7 @@ func prsStrLit(tokens *token.Tokens) *ast.StrLit {
     val := tokens.Cur()
 
     idx := str.Add(val)
-    return &ast.StrLit{ Idx: uint(idx), Val: val }
+    return &ast.StrLit{ Idx: uint64(idx), Val: val }
 }
 
 func prsArrayLit(tokens *token.Tokens) *ast.ArrayLit {

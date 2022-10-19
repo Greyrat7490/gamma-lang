@@ -101,7 +101,7 @@ func PassVal(file *os.File, regIdx uint, value constVal.ConstVal, valtype types.
         asm.MovRegVal(file, regs[regIdx], valtype.Size(), PtrConstToAddr(file, *v))
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] cannot pass value of type %v yet\n", valtype)
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot pass %v yet\n", reflect.TypeOf(value))
         os.Exit(1)
     }
 }

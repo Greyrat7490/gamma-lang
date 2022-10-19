@@ -41,9 +41,22 @@ fn testThrough() -> i32 {
     }
 }
 
+fn testVar() -> i32 {
+    i := 1
+
+    i = i + 2
+
+    if i == 1 {
+        ret 63 + i
+    } else {
+        ret -i
+    }
+}
+
 fn main() {
     printInt(test1()) printChar('\n')
     printInt(testIf()) printChar('\n')
     printInt(testSwitch()) printChar('\n')
     printInt(testThrough()) printChar('\n')
+    printInt(testVar()) printChar('\n')
 }

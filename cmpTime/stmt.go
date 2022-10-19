@@ -17,8 +17,14 @@ func EvalStmt(s ast.Stmt) constVal.ConstVal {
         return evalIf(s)
     case *ast.Switch:
         return evalSwitch(s)
+    case *ast.Assign:
+        evalAssign(s)
+        return nil
     case *ast.Through:
         through = true
+        return nil
+    case *ast.DeclStmt:
+        evalDecl(s.Decl)
         return nil
     default:
         return nil
@@ -89,4 +95,19 @@ func evalStmts(stmts []ast.Stmt) constVal.ConstVal {
     }
 
     return nil
+}
+
+func evalAssign(s *ast.Assign) {
+    if ident,ok := s.Dest.(*ast.Ident); ok {
+        if val := ConstEval(s.Value); val != nil {
+            setConst(ident.Name, s.Pos, val)
+        }
+    } else {
+        /*
+        // TODO only in const funcs
+        fmt.Fprintf(os.Stderr, "[ERROR] only assigning to ident is allowed yet (but got %v)\n", reflect.TypeOf(s.Dest))
+        fmt.Fprintln(os.Stderr, "\t" + s.At())
+        os.Exit(1)
+        */
+    }
 }

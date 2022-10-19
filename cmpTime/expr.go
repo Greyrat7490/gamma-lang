@@ -102,6 +102,12 @@ func ConstEval(e ast.Expr) constVal.ConstVal {
 }
 
 func ConstEvalIdent(e *ast.Ident) constVal.ConstVal {
+    if inConstEnv() {
+        if val,ok := getVal(e.Name, e.Pos); ok {
+            return val
+        }
+    }
+
     if c,ok := e.Obj.(*consts.Const); ok {
         return c.GetVal()
     }

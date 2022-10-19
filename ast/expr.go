@@ -56,12 +56,12 @@ type PtrLit struct {
 }
 
 type StrLit struct {
-    Idx uint
+    Idx uint64
     Val token.Token
 }
 
 type ArrayLit struct {
-    Idx int
+    Idx uint64
     Pos token.Pos
     Type types.ArrType
     BraceLPos token.Pos
