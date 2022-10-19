@@ -519,9 +519,12 @@ func prsUnaryExpr(tokens *token.Tokens) *ast.Unary {
         tokens.Next()
         expr.Operand = prsExpr(tokens)
     default:
-        if tokens.Next().Type == token.Name {
+        switch tokens.Next().Type {
+        case token.Name:
             expr.Operand = prsIdentExpr(tokens)
-        } else {
+        case token.ParenL:
+            expr.Operand = prsParenExpr(tokens)
+        default:
             expr.Operand = prsBasicLit(tokens)
         }
     }

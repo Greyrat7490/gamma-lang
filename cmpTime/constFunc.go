@@ -12,13 +12,7 @@ type constFunc struct {
 }
 
 func (c constFunc) eval() constVal.ConstVal {
-    for _,s := range c.fn.Block.Stmts {
-        if res := EvalStmt(s); res != nil {
-            return res
-        }
-    }
-
-    return nil
+    return evalBlock(&c.fn.Block)
 }
 
 func AddConstFunc(fn ast.DefFn) {

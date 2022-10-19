@@ -149,9 +149,8 @@ func GenElse(file *os.File, s *ast.Else) {
 }
 
 func GenCase(file *os.File, s *ast.Case, switchCount uint) {
-    cond.CaseStart(file)
-
     if s.Cond == nil {
+        cond.CaseStart(file)
         cond.CaseBody(file)
         for _,s := range s.Stmts {
             GenStmt(file, s)
@@ -161,6 +160,7 @@ func GenCase(file *os.File, s *ast.Case, switchCount uint) {
 
     if val,ok := cmpTime.ConstEval(s.Cond).(*constVal.BoolConst); ok {
         if bool(*val) {
+            cond.CaseStart(file)
             cond.CaseBody(file)
             for _,s := range s.Stmts {
                 GenStmt(file, s)
@@ -171,6 +171,7 @@ func GenCase(file *os.File, s *ast.Case, switchCount uint) {
         return
     }
 
+    cond.CaseStart(file)
     if i,ok := s.Cond.(*ast.Ident); ok {
         cond.CaseVar(file, i.Obj.Addr(0))
     } else {
@@ -186,32 +187,11 @@ func GenCase(file *os.File, s *ast.Case, switchCount uint) {
 }
 
 func GenSwitch(file *os.File, s *ast.Switch) {
-    for _,c := range s.Cases {
-        if c.Cond == nil {
-            for _,s := range c.Stmts {
-                GenStmt(file, s)
-            }
-
-            return
-        }
-
-        cond := cmpTime.ConstEval(c.Cond)
-        if val,ok := cond.(*constVal.BoolConst); ok && bool(*val) {
-            for _,s := range c.Stmts {
-                GenStmt(file, s)
-            }
-            return
-        } else if cond == nil {
-            break
-        }
-    }
-
+    count := cond.StartSwitch()
 
     // TODO: detect unreachable code and throw error
     // * a1 < but case 420 before 86
     // * cases with same cond
-    count := cond.StartSwitch()
-
     for i := 0; i < len(s.Cases)-1; i++ {
         GenCase(file, &s.Cases[i], count)
     }

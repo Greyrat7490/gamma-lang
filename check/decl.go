@@ -107,7 +107,7 @@ func hasRet(s ast.Stmt) bool {
         }
         return true
 
-    case *ast.Ret:
+    case *ast.Ret, *ast.Through:
         return true
 
     case *ast.For:

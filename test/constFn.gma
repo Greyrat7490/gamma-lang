@@ -2,6 +2,48 @@ fn test1() -> i32 {
     ret 30 + 34
 }
 
+fn testIf() -> i32 {
+    c :: 2
+
+    if c == 1 {
+        ret 30 + 34
+    } elif c == 2 {
+        ret -(30 + 34)
+    } else {
+        ret c
+    }
+}
+
+fn testSwitch() -> i32 {
+    c :: 3
+
+    if c == {
+        1: ret 30 + 38 + c
+        2: ret -(30 + 37 + c)
+        _: ret c * c
+    }
+}
+
+fn testThrough() -> i32 {
+    c :: 2
+
+    if c == {
+        1:
+            ret 30 + 38 + c
+        2:
+            if c > 1 {
+                through
+            } else {
+                ret 420
+            }
+        _:
+            ret c * c
+    }
+}
+
 fn main() {
     printInt(test1()) printChar('\n')
+    printInt(testIf()) printChar('\n')
+    printInt(testSwitch()) printChar('\n')
+    printInt(testThrough()) printChar('\n')
 }
