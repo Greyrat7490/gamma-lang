@@ -25,7 +25,11 @@ func prsDecl(tokens *token.Tokens) ast.Decl {
         return &d
 
     case token.Fn:
-        d := prsDefFn(tokens)
+        d := prsDefFn(tokens, false)
+        return &d
+
+    case token.ConstFn:
+        d := prsDefFn(tokens, true)
         return &d
 
     case token.Struct:
@@ -307,7 +311,7 @@ func prsStruct(tokens *token.Tokens) ast.DefStruct {
     return ast.DefStruct{ S: identObj.DecStruct(name, names, types), Pos: pos, Name: name, BraceLPos: braceLPos, Fields: fields, BraceRPos: braceRPos }
 }
 
-func prsDefFn(tokens *token.Tokens) ast.DefFn {
+func prsDefFn(tokens *token.Tokens, isConst bool) ast.DefFn {
     pos := tokens.Cur().Pos
     name := tokens.Next()
 
@@ -368,8 +372,10 @@ func prsDefFn(tokens *token.Tokens) ast.DefFn {
     f.SetFrameSize(identObj.GetFrameSize())
     identObj.EndScope()
 
-    def := ast.DefFn{ Pos: pos, F: f, Args: argDecs, RetType: retType, Block: block }
-    cmpTime.AddConstFunc(def)
+    def := ast.DefFn{ Pos: pos, F: f, Args: argDecs, RetType: retType, Block: block, IsConst: isConst }
+    if isConst {
+        cmpTime.AddConstFunc(def)
+    }
     return def
 }
 

@@ -52,6 +52,7 @@ type DefFn struct {
     Args []DecVar
     RetType types.Type
     Block Block
+    IsConst bool
 }
 
 type DefStruct struct {
@@ -137,7 +138,7 @@ func (o *DefFn) Readable(indent int) string {
         res += fmt.Sprintf("%sRet: %v\n", s, o.RetType)
     }
 
-    return res + o.Block.Readable(indent+2)
+    return res + fmt.Sprintf("%sIsConst: %t\n", s, o.IsConst) + o.Block.Readable(indent+2)
 }
 
 func (o *DefStruct) Readable(indent int) string {

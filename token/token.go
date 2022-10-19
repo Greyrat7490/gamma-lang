@@ -67,6 +67,7 @@ const (
     DefConst        // ::
     Assign          // =
     Fn              // fn
+    ConstFn         // cfn
     Ret             // ret
     If              // if
     Elif            // elif
@@ -172,6 +173,8 @@ func ToTokenType(s string, p Pos) TokenType {
         return Assign
     case "fn":
         return Fn
+    case "cfn":
+        return ConstFn
     case "ret":
         return Ret
     case "if":
@@ -313,6 +316,8 @@ func (t TokenType) String() string {
         return "Assign"
     case Fn:
         return "Fn"
+    case ConstFn:
+        return "ConstFn"
     case Ret:
         return "Ret"
     case If:

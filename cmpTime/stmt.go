@@ -1,6 +1,9 @@
 package cmpTime
 
 import (
+    "os"
+    "fmt"
+    "reflect"
     "gamma/ast"
     "gamma/cmpTime/constVal"
 )
@@ -27,6 +30,8 @@ func EvalStmt(s ast.Stmt) constVal.ConstVal {
         evalDecl(s.Decl)
         return nil
     default:
+        fmt.Fprintf(os.Stderr, "[ERROR] EvalStmt for %v is not implemente yet\n", reflect.TypeOf(s))
+        os.Exit(1)
         return nil
     }
 }
@@ -103,11 +108,8 @@ func evalAssign(s *ast.Assign) {
             setConst(ident.Name, s.Pos, val)
         }
     } else {
-        /*
-        // TODO only in const funcs
         fmt.Fprintf(os.Stderr, "[ERROR] only assigning to ident is allowed yet (but got %v)\n", reflect.TypeOf(s.Dest))
         fmt.Fprintln(os.Stderr, "\t" + s.At())
         os.Exit(1)
-        */
     }
 }

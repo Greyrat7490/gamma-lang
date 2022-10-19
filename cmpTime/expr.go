@@ -106,10 +106,18 @@ func ConstEvalIdent(e *ast.Ident) constVal.ConstVal {
         if val,ok := getVal(e.Name, e.Pos); ok {
             return val
         }
-    }
+        if c,ok := e.Obj.(*consts.Const); ok {
+            return c.GetVal()
+        }
 
-    if c,ok := e.Obj.(*consts.Const); ok {
-        return c.GetVal()
+        fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared\n", e.Name)
+        fmt.Fprintln(os.Stderr, "\t" + e.At())
+        os.Exit(1)
+
+    } else {
+        if c,ok := e.Obj.(*consts.Const); ok {
+            return c.GetVal()
+        }
     }
 
     return nil
@@ -211,7 +219,16 @@ func ConstEvalUnary(e *ast.Unary) constVal.ConstVal {
 }
 
 func ConstEvalFnCall(e *ast.FnCall) constVal.ConstVal {
-    return EvalFunc(e.F.GetName())
+    args := make([]constVal.ConstVal, len(e.Values))
+    for i,val := range e.Values {
+        if c := ConstEval(val); c != nil {
+            args[i] = c
+        } else {
+            return nil
+        }
+    }
+    
+    return EvalFunc(e.F.GetName(), args)
 }
 
 func ConstEvalParen(e *ast.Paren) constVal.ConstVal {
