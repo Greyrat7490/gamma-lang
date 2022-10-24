@@ -9,14 +9,17 @@ var funcs map[string]constFunc = make(map[string]constFunc)
 
 type constFunc struct {
     fn ast.DefFn
+    // TODO save result (depending on args)
 }
 
 func (c constFunc) eval(args []constVal.ConstVal) constVal.ConstVal {
     startScope()
+    initStack(c.fn.F.GetFrameSize())
+    defer clearStack()
     defer endScope()
 
-    for i,a := range args {
-        defConst(c.fn.Args[i].V.GetName(), c.fn.Args[i].TypePos, a)
+    for i,a := range c.fn.Args {
+        defVar(a.V.GetName(), a.V.Addr(0), a.V.GetType(), a.TypePos, args[i])
     }
 
     return evalBlock(&c.fn.Block)

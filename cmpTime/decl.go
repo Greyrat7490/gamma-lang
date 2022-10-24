@@ -11,7 +11,7 @@ func evalDecl(d ast.Decl) {
     switch d := d.(type) {
     case *ast.DefVar:
         if val := ConstEval(d.Value); val != nil {
-            defConst(d.V.GetName(), d.V.GetPos(), val)
+            defVar(d.V.GetName(), d.V.Addr(0), d.V.GetType(), d.V.GetPos(), val)
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] expected a const value to define %v\n", d.V.GetName())
             fmt.Fprintln(os.Stderr, "\t" + d.At())

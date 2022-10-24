@@ -62,7 +62,20 @@ cfn testArgs(i i32) -> i32 {
     }
 }
 
+cfn testDeref() -> bool {
+    word i16 := 0x0001
+    ptr *bool := &word as u64 as *bool
+    ret *ptr == false
+}
+
+fn isBigEndian() -> bool {
+    word i16 := 0x0001
+    ptr *bool := &word as u64 as *bool
+    ret *ptr == false
+}
+
 fn main() {
+    printStr("\ntest simple --------\n")
     printInt(test1()) printChar('\n')
     printInt(testIf()) printChar('\n')
     printInt(testSwitch()) printChar('\n')
@@ -74,4 +87,8 @@ fn main() {
     printInt(testArgs(1)) printChar('\n')
     printInt(testArgs(2)) printChar('\n')
     printInt(testArgs(69)) printChar('\n')
+
+    printStr("\ntest deref --------\n")
+    printBool(testDeref()) printChar('\n')
+    printBool(isBigEndian()) printChar('\n')
 }

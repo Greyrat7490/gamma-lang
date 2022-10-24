@@ -5,6 +5,7 @@ import (
     "fmt"
     "reflect"
     "gamma/token"
+    "gamma/types"
     "gamma/types/array"
     "gamma/cmpTime/constVal"
     "gamma/gen/asm/x86_64"
@@ -198,6 +199,30 @@ func ConstEvalUnary(e *ast.Unary) constVal.ConstVal {
     case token.Plus:
         return val
 
+    case token.Mul:
+        if inConstEnv() {
+            if ident,ok := e.Operand.(*ast.Ident); ok {
+                if t,ok := ident.GetType().(types.PtrType); ok {
+                    if addr,ok := getVal(ident.Name, ident.Pos); ok {
+                        return getValFromStack(addr.(*constVal.PtrConst).Addr, t.BaseType)
+                    } else {
+                        fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared\n", ident.Name)
+                        fmt.Fprintln(os.Stderr, "\t" + e.At())
+                        os.Exit(1)
+                    }
+                } else {
+                    fmt.Fprintf(os.Stderr, "[ERROR] expected a pointer type to dereference but got %v\n", ident.GetType())
+                    fmt.Fprintln(os.Stderr, "\t" + e.At())
+                    os.Exit(1)
+                }
+            } else {
+                fmt.Fprintln(os.Stderr, "[ERROR] only dereferencing an identifier is support in const funcs yet")
+                fmt.Fprintln(os.Stderr, "\t" + e.At())
+                os.Exit(1)
+            }
+        }
+        return nil
+
     case token.Amp:
         if ident,ok := e.Operand.(*ast.Ident); ok {
             if v,ok := ident.Obj.(vars.Var); ok {
@@ -227,7 +252,7 @@ func ConstEvalFnCall(e *ast.FnCall) constVal.ConstVal {
             return nil
         }
     }
-    
+
     return EvalFunc(e.F.GetName(), args)
 }
 
@@ -277,6 +302,9 @@ func ConstEvalBinary(e *ast.Binary) constVal.ConstVal {
             case *constVal.UintConst:
                 return asm.BinaryOpEvalUints(e.Operator, uint64(*l), uint64(*r))
 
+            case *constVal.IntConst:
+                return asm.BinaryOpEvalUints(e.Operator, uint64(*l), uint64(*r))
+
             case *constVal.PtrConst:
                 c := *r
                 c.Addr += e.Operator.Str + fmt.Sprint(uint64(*l))
@@ -288,10 +316,18 @@ func ConstEvalBinary(e *ast.Binary) constVal.ConstVal {
             case *constVal.IntConst:
                 return asm.BinaryOpEvalInts(e.Operator, int64(*l), int64(*r))
 
+            case *constVal.UintConst:
+                return asm.BinaryOpEvalUints(e.Operator, uint64(*l), uint64(*r))
+
             case *constVal.PtrConst:
                 c := *r
                 c.Addr += e.Operator.Str + fmt.Sprint(int64(*l))
                 return &c
+            }
+
+        case *constVal.BoolConst:
+            if r, ok := r.(*constVal.BoolConst); ok {
+                return asm.BinaryOpEvalBools(e.Operator, bool(*l), bool(*r))
             }
         }
     }

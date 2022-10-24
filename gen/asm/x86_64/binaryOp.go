@@ -55,6 +55,21 @@ func BinaryOpReg(file *os.File, opType token.TokenType, reg RegGroup, size uint,
     BinaryOp(file, opType, GetReg(reg, size), size, signed)
 }
 
+func BinaryOpEvalBools(op token.Token, lhs bool, rhs bool) constVal.ConstVal {
+    var b1 int64 = 0
+    var b2 int64 = 0
+
+    if lhs {
+        b1 = 1
+    }
+
+    if rhs {
+        b2 = 1
+    }
+
+    return BinaryOpEvalInts(op, b1, b2)
+}
+
 func BinaryOpEvalUints(op token.Token, lhs uint64, rhs uint64) constVal.ConstVal {
     return BinaryOpEvalInts(op, int64(lhs), int64(rhs))
 }

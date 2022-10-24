@@ -185,7 +185,7 @@ struct sockaddr_in {
     sin_zero i64
 }
 
-fn isBigEndian() -> bool {
+cfn isBigEndian() -> bool {
     word i16 := 0x0001
     ptr *bool := &word as u64 as *bool
     ret *ptr == false
@@ -193,16 +193,16 @@ fn isBigEndian() -> bool {
 
 /*
  * funcs to convert byte order between host and network
- * TODO: const funcs
 */
-fn htons(x u16) -> u16 {
+cfn htons(x u16) -> u16 {
     if isBigEndian() {
         ret x
     } else {
-        ret (x << 8) | (x >> 8)
+        ret (x & 0xff << 8) | (x >> 8)
     }
 }
-fn htonl(x u32) -> u32 {
+
+cfn htonl(x u32) -> u32 {
     if isBigEndian() {
         ret x
     } else {
@@ -210,18 +210,10 @@ fn htonl(x u32) -> u32 {
     }
 }
 
-fn ntohs(x u16) -> u16 {
-    if isBigEndian() {
-        ret x
-    } else {
-        ret (x << 8) | (x >> 8)
-    }
-}
-fn ntohl(x u32) -> u32 {
-    if isBigEndian() {
-        ret x
-    } else {
-        ret (x << 24) | (x & 0xff00 << 8) | (x >> 8 & 0xff00) | (x >> 24 & 0xff)
-    }
+cfn ntohs(x u16) -> u16 {
+    ret htons(x)
 }
 
+cfn ntohl(x u32) -> u32 {
+    ret htonl(x)
+}

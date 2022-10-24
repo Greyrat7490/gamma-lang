@@ -13,7 +13,7 @@ var through bool = false
 func EvalStmt(s ast.Stmt) constVal.ConstVal {
     switch s := s.(type) {
     case *ast.Ret:
-        return ConstEval(s.RetExpr)
+        return evalRet(s)
     case *ast.Block:
         return evalBlock(s)
     case *ast.If:
@@ -31,6 +31,7 @@ func EvalStmt(s ast.Stmt) constVal.ConstVal {
         return nil
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] EvalStmt for %v is not implemente yet\n", reflect.TypeOf(s))
+        fmt.Fprintln(os.Stderr, "\t" + s.At())
         os.Exit(1)
         return nil
     }
@@ -42,7 +43,14 @@ func evalBlock(s *ast.Block) constVal.ConstVal {
 }
 
 func evalRet(s *ast.Ret) constVal.ConstVal {
-    return ConstEval(s.RetExpr)
+    if c := ConstEval(s.RetExpr); c != nil {
+        return c
+    } else {
+        fmt.Fprintln(os.Stderr, "[ERROR] ret expr is not const")
+        fmt.Fprintln(os.Stderr, "\t" + s.At())
+        os.Exit(1)
+        return nil
+    }
 }
 
 func evalIf(s *ast.If) constVal.ConstVal {
@@ -105,7 +113,7 @@ func evalStmts(stmts []ast.Stmt) constVal.ConstVal {
 func evalAssign(s *ast.Assign) {
     if ident,ok := s.Dest.(*ast.Ident); ok {
         if val := ConstEval(s.Value); val != nil {
-            setConst(ident.Name, s.Pos, val)
+            setVar(ident.Name, ident.Obj.Addr(0), ident.GetType(), s.Pos, val)
         }
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] only assigning to ident is allowed yet (but got %v)\n", reflect.TypeOf(s.Dest))
