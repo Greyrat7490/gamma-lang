@@ -90,6 +90,14 @@ cfn testWhile(a i32) -> i32 {
     ret a
 }
 
+cfn testPtr() -> bool {
+    word i16 := 0x0001
+    ptr *bool := &word as u64 as *bool
+    ptr2 := &ptr
+    ptr3 := *ptr2
+    ret *ptr3 == false                     // TODO: parse **ptr2
+}
+
 fn main() {
     printStr("\ntest simple --------\n")
     printInt(test1()) printChar('\n')
@@ -107,6 +115,7 @@ fn main() {
     printStr("\ntest deref --------\n")
     printBool(testDeref()) printChar('\n')
     printBool(isBigEndian()) printChar('\n')
+    printBool(testPtr()) printChar('\n')
 
     printStr("\ntest loops --------\n")
     printInt(testFor(6)) printChar('\n')

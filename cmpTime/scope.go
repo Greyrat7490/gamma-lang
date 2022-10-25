@@ -113,19 +113,26 @@ func getValFromStack(addr string, t types.Type) constVal.ConstVal {
     }
 }
 
-func getStackIdx(addr string, t types.Type) int {
+func getOffset(addr string) int {
     if len(addr) > 4 {
         if offset,err := strconv.Atoi(addr[4:]); err == nil {
-            if idx := offset - int(t.Size()); idx >= 0 && idx < len(stack) {
-                return idx
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] %s (of type %v) is outside of the stack (size: %d)\n", addr, t, len(stack))
-                os.Exit(1)
-            }
+            return offset
         }
     }
 
-    return -1
+    return 0
+}
+
+func getStackIdx(addr string, t types.Type) int {
+    offset := getOffset(addr)
+
+    if idx := offset - int(t.Size()); idx >= 0 && idx < len(stack) {
+        return idx
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] %s (of type %v) is outside of the stack (size: %d)\n", addr, t, len(stack))
+        os.Exit(1)
+        return -1
+    }
 }
 
 func readStack(idx int, t types.Type) constVal.ConstVal {
@@ -169,6 +176,11 @@ func readStack(idx int, t types.Type) constVal.ConstVal {
 
     case types.Char:
         return (*constVal.CharConst)(&stack[idx])
+
+    case types.Ptr:
+        offset := getByteOrder().Uint64(stack[idx:])
+        c := constVal.PtrConst{ Local: true, Addr: fmt.Sprintf("rbp-%d", offset) }
+        return &c
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] reading a %v from stack is not supported yet\n", t)
@@ -214,7 +226,12 @@ func writeStack(idx int, size uint, val constVal.ConstVal) {
         stack[idx] = byte(*c)
 
     case *constVal.PtrConst:
-        // TODO
+        if offset := getOffset(c.Addr); offset != 0 {
+            getByteOrder().PutUint64(stack[idx:], uint64(offset))
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] invalid addr %s\n", c.Addr)
+            os.Exit(1)
+        }
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] writing a %v from stack is not supported yet\n", reflect.TypeOf(val))
