@@ -130,6 +130,24 @@ func BinaryOpEvalInts(op token.Token, lhs int64, rhs int64) constVal.ConstVal {
             return &c
         }
 
+    case token.And:
+        if lhs == 1 && rhs == 1 {
+            c := constVal.BoolConst(true)
+            return &c
+        } else {
+            c := constVal.BoolConst(false)
+            return &c
+        }
+
+    case token.Or:
+        if lhs == 1 || rhs == 1 {
+            c := constVal.BoolConst(true)
+            return &c
+        } else {
+            c := constVal.BoolConst(false)
+            return &c
+        }
+
     case token.Plus:
         c := constVal.IntConst(lhs + rhs)
         return &c

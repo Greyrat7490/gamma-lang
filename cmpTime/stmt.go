@@ -5,6 +5,7 @@ import (
     "fmt"
     "reflect"
     "gamma/ast"
+    "gamma/types"
     "gamma/cmpTime/constVal"
 )
 
@@ -20,6 +21,10 @@ func EvalStmt(s ast.Stmt) constVal.ConstVal {
         return evalIf(s)
     case *ast.Switch:
         return evalSwitch(s)
+    case *ast.For:
+        return evalFor(s)
+    case *ast.While:
+        return evalWhile(s)
     case *ast.Assign:
         evalAssign(s)
         return nil
@@ -120,4 +125,53 @@ func evalAssign(s *ast.Assign) {
         fmt.Fprintln(os.Stderr, "\t" + s.At())
         os.Exit(1)
     }
+}
+
+func evalFor(s *ast.For) constVal.ConstVal {
+    evalDecl(&s.Def)
+
+    assign := ast.Assign{
+        Dest: &ast.Ident{ Obj: s.Def.V, Name: s.Def.V.GetName(), Pos: s.Def.V.GetPos() },
+        Value: s.Step,
+    }
+
+    if s.Def.Type.GetKind() == types.Uint {
+        if limit,ok := ConstEvalUint(s.Limit); ok {
+            i := uint64(*getVal(s.Def.V.GetName(), s.Def.V.GetPos()).(*constVal.UintConst))
+
+            for i < limit {
+                evalBlock(&s.Block)
+
+                evalAssign(&assign)
+                i = uint64(*getVal(s.Def.V.GetName(), s.Def.V.GetPos()).(*constVal.UintConst))
+            }
+        }
+    } else if s.Def.Type.GetKind() == types.Int {
+        if limit,ok := ConstEvalInt(s.Limit); ok {
+            i := int64(*getVal(s.Def.V.GetName(), s.Def.V.GetPos()).(*constVal.IntConst))
+
+            for i < limit {
+                evalBlock(&s.Block)
+
+                evalAssign(&assign)
+                i = int64(*getVal(s.Def.V.GetName(), s.Def.V.GetPos()).(*constVal.IntConst))
+            }
+        }
+    }
+
+    return nil
+}
+
+func evalWhile(s *ast.While) constVal.ConstVal {
+    if s.Def != nil {
+        evalDecl(s.Def)
+    }
+
+    cond := ConstEval(s.Cond).(*constVal.BoolConst)
+    for cond != nil && bool(*cond) {
+        evalBlock(&s.Block)
+        cond = ConstEval(s.Cond).(*constVal.BoolConst)
+    }
+
+    return nil
 }

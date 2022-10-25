@@ -74,6 +74,22 @@ fn isBigEndian() -> bool {
     ret *ptr == false
 }
 
+cfn testFor(a i32) -> i32 {
+    res := 0
+    for i i32, a {
+        res = res + i
+    }
+    ret res
+}
+
+cfn testWhile(a i32) -> i32 {
+    while a % 3 != 0 || a % 4 != 0 {
+        a = a + 1
+    }
+
+    ret a
+}
+
 fn main() {
     printStr("\ntest simple --------\n")
     printInt(test1()) printChar('\n')
@@ -91,4 +107,10 @@ fn main() {
     printStr("\ntest deref --------\n")
     printBool(testDeref()) printChar('\n')
     printBool(isBigEndian()) printChar('\n')
+
+    printStr("\ntest loops --------\n")
+    printInt(testFor(6)) printChar('\n')
+    printInt(testFor(3)) printChar('\n')
+    printInt(testWhile(3)) printChar('\n')
+    printInt(testWhile(13)) printChar('\n')
 }

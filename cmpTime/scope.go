@@ -92,17 +92,17 @@ func setVar(name string, addr string, t types.Type, pos token.Pos, val constVal.
     os.Exit(1)
 }
 
-func getVal(name string, pos token.Pos) (constVal.ConstVal, bool) {
+func getVal(name string, pos token.Pos) constVal.ConstVal {
     cur := curScope
     for cur != nil {
         if c,ok := cur.consts[name]; ok {
-            return c, true
+            return c
         } else {
             cur = cur.parent
         }
     }
 
-    return nil, false
+    return nil
 }
 
 func getValFromStack(addr string, t types.Type) constVal.ConstVal {
