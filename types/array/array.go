@@ -10,75 +10,85 @@ import (
     "gamma/gen/asm/x86_64/nasm"
 )
 
-var arrLits []arrLit
+var arrayData []arrData
 
-type arrLit struct {
-    baseType types.Type
-    values []constVal.ConstVal
+type arrData struct {
+    typ types.ArrType
+    elems []constVal.ConstVal
 }
 
-func GetValues(arrLitIdx int) []constVal.ConstVal {
-    return arrLits[arrLitIdx].values
-}
-
-func Add(typ types.ArrType, values []constVal.ConstVal) uint64 {
-    i := uint64(len(arrLits))
-    arr := arrLit{ baseType: typ.Ptr.BaseType, values: values }
-    arrLits = append(arrLits, arr)
-
-    if len(arr.values) == 0 {
-        var total uint64 = 1
-        for _,l := range typ.Lens {
-            total *= l
+func SetElem(arrIdx uint64, idx uint64, val constVal.ConstVal) {
+    if len(arrayData[arrIdx].elems) == 0 {
+        sum := uint64(0)
+        for _,l := range arrayData[arrIdx].typ.Lens {
+            sum += l
         }
-        nasm.AddBss(fmt.Sprintf("_arr%d: %s %d", i, asm.GetBssSize(arr.baseType.Size()), total))
-    } else {
-        nasm.AddData(fmt.Sprintf("_arr%d:", i))
-        switch t := typ.Ptr.BaseType.(type) {
-        case types.StrType:
-            for _, v := range values {
-                addStr(*v.(*constVal.StrConst))
-            }
-
-        case types.StructType:
-            for _, v := range values {
-                addStruct(t, *v.(*constVal.StructConst))
-            }
-
-        case types.IntType:
-            for _, v := range values {
-                addInt(t.Size(), *v.(*constVal.IntConst))
-            }
-        case types.UintType:
-            for _, v := range values {
-                addUint(t.Size(), *v.(*constVal.UintConst))
-            }
-        case types.BoolType:
-            for _, v := range values {
-                addBool(*v.(*constVal.BoolConst))
-            }
-        case types.CharType:
-            for _, v := range values {
-                addChar(*v.(*constVal.CharConst))
-            }
-
-        case types.PtrType:
-            for _, v := range values {
-                addPtr(*v.(*constVal.PtrConst))
-            }
-
-        case types.ArrType:
-            for _, v := range values {
-                addArr(t, *v.(*constVal.ArrConst))
-            }
-
-        default:
-            fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (in work)\n", typ.Ptr.BaseType)
-            os.Exit(1)
-        }
+        arrayData[arrIdx].elems = make([]constVal.ConstVal, sum)
     }
 
+    arrayData[arrIdx].elems[idx] = val
+}
+
+func GetValues(arrIdx uint64) []constVal.ConstVal {
+    return arrayData[arrIdx].elems
+}
+
+func Add(elems []constVal.ConstVal, typ types.ArrType) uint64 {
+    i := uint64(len(arrayData))
+    arrayData = append(arrayData, arrData{ typ: typ, elems: elems })
     return i
+}
+
+func Gen() {
+    for i,arr := range arrayData {
+        if len(arr.elems) == 0 {
+            nasm.AddBss(fmt.Sprintf("_arr%d: %s %d", i, asm.GetBssSize(arr.typ.Ptr.BaseType.Size()), len(arr.elems)))
+        } else {
+            nasm.AddData(fmt.Sprintf("_arr%d:", i))
+            switch t := arr.typ.Ptr.BaseType.(type) {
+            case types.StrType:
+                for _, v := range arr.elems {
+                    addStr(*v.(*constVal.StrConst))
+                }
+
+            case types.StructType:
+                for _, v := range arr.elems {
+                    addStruct(t, *v.(*constVal.StructConst))
+                }
+
+            case types.IntType:
+                for _, v := range arr.elems {
+                    addInt(t.Size(), *v.(*constVal.IntConst))
+                }
+            case types.UintType:
+                for _, v := range arr.elems {
+                    addUint(t.Size(), *v.(*constVal.UintConst))
+                }
+            case types.BoolType:
+                for _, v := range arr.elems {
+                    addBool(*v.(*constVal.BoolConst))
+                }
+            case types.CharType:
+                for _, v := range arr.elems {
+                    addChar(*v.(*constVal.CharConst))
+                }
+
+            case types.PtrType:
+                for _, v := range arr.elems {
+                    addPtr(*v.(*constVal.PtrConst))
+                }
+
+            case types.ArrType:
+                for _, v := range arr.elems {
+                    addArr(t, GetValues(uint64(*v.(*constVal.ArrConst))))
+                }
+
+            default:
+                fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (in work)\n", arr.typ.Ptr.BaseType)
+                os.Exit(1)
+            }
+        }
+    }
 }
 
 func addInt(size uint, val constVal.IntConst) {
@@ -102,45 +112,43 @@ func addStr(val constVal.StrConst) {
     nasm.AddData(fmt.Sprintf("  %s %d", asm.GetDataSize(types.I32_Size), str.GetSize(int(val))))
 }
 
-func addArr(baseType types.Type, val constVal.ArrConst) {
-    values := GetValues(int(val))
-
+func addArr(baseType types.Type, elems []constVal.ConstVal) {
     switch t := baseType.(type) {
     case types.StrType:
-        for _, v := range values {
+        for _, v := range elems {
             addStr(*v.(*constVal.StrConst))
         }
 
     case types.StructType:
-        for _, v := range values {
+        for _, v := range elems {
             addStruct(t, *v.(*constVal.StructConst))
         }
 
     case types.IntType:
-        for _, v := range values {
+        for _, v := range elems {
             addInt(t.Size(), *v.(*constVal.IntConst))
         }
     case types.UintType:
-        for _, v := range values {
+        for _, v := range elems {
             addUint(t.Size(), *v.(*constVal.UintConst))
         }
     case types.BoolType:
-        for _, v := range values {
+        for _, v := range elems {
             addBool(*v.(*constVal.BoolConst))
         }
     case types.CharType:
-        for _, v := range values {
+        for _, v := range elems {
             addChar(*v.(*constVal.CharConst))
         }
 
     case types.PtrType:
-        for _, v := range values {
+        for _, v := range elems {
             addPtr(*v.(*constVal.PtrConst))
         }
 
     case types.ArrType:
-        for _, v := range values {
-            addArr(t, *v.(*constVal.ArrConst))
+        for _, v := range elems {
+            addArr(t, GetValues(uint64(*v.(*constVal.ArrConst))))
         }
 
     default:
@@ -178,7 +186,7 @@ func addStruct(t types.StructType, val constVal.StructConst) {
             addPtr(*v)
 
         case *constVal.ArrConst:
-            addArr(t.Types[i], *v)
+            addArr(t, GetValues(uint64(*v)))
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (in work)\n", t)

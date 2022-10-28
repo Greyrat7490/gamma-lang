@@ -23,7 +23,7 @@ type StructConst struct {
 }
 
 type PtrConst struct {
-    Addr string
+    Addr string         // TODO addr struct with baseAddr and offset
     Local bool
 }
 
@@ -41,7 +41,7 @@ func (c *IntConst)    GetVal() string { return fmt.Sprint(int64(*c)) }
 func (c *UintConst)   GetVal() string { return fmt.Sprint(uint64(*c)) }
 func (c *CharConst)   GetVal() string { return fmt.Sprint(uint8(*c)) }
 func (c *BoolConst)   GetVal() string { if bool(*c) { return "1" } else { return "0" } }
-func (c *ArrConst)    GetVal() string { return fmt.Sprintf("_arr%d", int(*c)) }
+func (c *ArrConst)    GetVal() string { return fmt.Sprintf("_arr%d", uint64(*c)) }
 func (c *PtrConst)    GetVal() string { return c.Addr }
 
 func (c *StrConst)    GetVal() string {

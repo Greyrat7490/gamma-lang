@@ -51,8 +51,8 @@ func globalVarDefVal(file *os.File, v *vars.GlobalVar, val constVal.ConstVal) {
     case *constVal.StructConst:
         defStruct(v.GetType().(types.StructType), c)
 
-    case *constVal.PtrConst, *constVal.ArrConst, *constVal.BoolConst, *constVal.IntConst, *constVal.UintConst:
-        defInt(val.GetVal(), v.GetType().Size())
+    case *constVal.ArrConst, *constVal.PtrConst, *constVal.BoolConst, *constVal.IntConst, *constVal.UintConst:
+        defBasic(val.GetVal(), v.GetType().Size())
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] define global var of typ %v is not supported yet\n", v.GetType())
@@ -70,8 +70,8 @@ func defStruct(t types.StructType, val *constVal.StructConst) {
         case *constVal.StructConst:
             defStruct(t.Types[i].(types.StructType), c)
 
-        case *constVal.PtrConst, *constVal.ArrConst, *constVal.BoolConst, *constVal.IntConst, *constVal.UintConst:
-            defInt(v.GetVal(), t.Types[i].Size())
+        case *constVal.ArrConst, *constVal.PtrConst, *constVal.BoolConst, *constVal.IntConst, *constVal.UintConst:
+            defBasic(v.GetVal(), t.Types[i].Size())
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet\n", t)
@@ -80,7 +80,7 @@ func defStruct(t types.StructType, val *constVal.StructConst) {
     }
 }
 
-func defInt(val string, size uint) {
+func defBasic(val string, size uint) {
     nasm.AddData(fmt.Sprintf("  %s %s", asm.GetDataSize(size), val))
 }
 

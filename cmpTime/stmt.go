@@ -6,6 +6,7 @@ import (
     "reflect"
     "gamma/ast"
     "gamma/types"
+    "gamma/types/array"
     "gamma/cmpTime/constVal"
 )
 
@@ -116,14 +117,38 @@ func evalStmts(stmts []ast.Stmt) constVal.ConstVal {
 }
 
 func evalAssign(s *ast.Assign) {
-    if ident,ok := s.Dest.(*ast.Ident); ok {
-        if val := ConstEval(s.Value); val != nil {
-            setVar(ident.Name, ident.Obj.Addr(0), ident.GetType(), s.Pos, val)
+    if val := ConstEval(s.Value); val != nil {
+        switch dst := s.Dest.(type) {
+        case *ast.Ident:
+            setVar(dst.Name, dst.Obj.Addr(0), dst.GetType(), s.Pos, val)
+
+        case *ast.Indexed:
+            if ident,ok := dst.ArrExpr.(*ast.Ident); ok {
+                if idx,ok := ConstEvalUint(dst.Flatten()); ok {
+                    if arrIdx,ok := getVal(ident.Name, ident.Pos).(*constVal.ArrConst); ok {
+                        array.SetElem(uint64(*arrIdx), idx, val)
+                    }
+                } else {
+                    if len(dst.Indices) == 1 {
+                        fmt.Fprintln(os.Stderr, "[ERROR] cannot const eval index")
+                    } else {
+                        fmt.Fprintln(os.Stderr, "[ERROR] cannot const eval indices")
+                    }
+                    fmt.Fprintln(os.Stderr, "\t" + dst.At())
+                    os.Exit(1)
+                }
+
+            } else {
+                if addr,ok := ConstEval(dst.ArrExpr).(*constVal.PtrConst); ok {
+                    fmt.Println(addr)
+                }
+            }
+
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] assigning to %v is not supported yet\n", reflect.TypeOf(s.Dest))
+            fmt.Fprintln(os.Stderr, "\t" + s.At())
+            os.Exit(1)
         }
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] only assigning to ident is allowed yet (but got %v)\n", reflect.TypeOf(s.Dest))
-        fmt.Fprintln(os.Stderr, "\t" + s.At())
-        os.Exit(1)
     }
 }
 
@@ -174,4 +199,9 @@ func evalWhile(s *ast.While) constVal.ConstVal {
     }
 
     return nil
+}
+
+func offsetAddr(addr string, offset uint) string {
+    offset += getOffset(addr)
+    return fmt.Sprintf("rbp-%d", offset)
 }

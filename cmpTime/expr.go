@@ -7,8 +7,8 @@ import (
     "gamma/token"
     "gamma/types"
     "gamma/types/array"
-    "gamma/cmpTime/constVal"
     "gamma/gen/asm/x86_64"
+    "gamma/cmpTime/constVal"
     "gamma/ast"
     "gamma/ast/identObj"
     "gamma/ast/identObj/vars"
@@ -59,12 +59,12 @@ func ConstEval(e ast.Expr) constVal.ConstVal {
 
     case *ast.StrLit:
         return (*constVal.StrConst)(&e.Idx)
-    case *ast.FieldLit:
-        return ConstEval(e.Value)
     case *ast.ArrayLit:
         return (*constVal.ArrConst)(&e.Idx)
     case *ast.StructLit:
         return ConstEvalStructLit(e)
+    case *ast.FieldLit:
+        return ConstEval(e.Value)
 
     case *ast.Indexed:
         return ConstEvalIndexed(e)
@@ -128,7 +128,7 @@ func ConstEvalIndexed(e *ast.Indexed) constVal.ConstVal {
     idxExpr := e.Flatten()
     if idx,ok := ConstEvalUint(idxExpr); ok {
         if arrIdx,ok := ConstEval(e.ArrExpr).(*constVal.ArrConst); ok {
-            return array.GetValues(int(*arrIdx))[idx]
+            return array.GetValues(uint64(*arrIdx))[idx]
         }
     }
 

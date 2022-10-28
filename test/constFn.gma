@@ -98,6 +98,27 @@ cfn testPtr() -> bool {
     ret *ptr3 == false                     // TODO: parse **ptr2
 }
 
+cfn testArr() -> [3]i32 {
+    res := [3]i32{}
+
+    for i i32, 3 {
+        res[i] = 1 + i * 2
+    }
+
+    ret res
+}
+
+
+fn printArr(arr [3]i32) {
+    printStr("{ ")
+
+    printInt(arr[0]) printStr(", ")
+    printInt(arr[1]) printStr(", ")
+    printInt(arr[2])
+
+    printStr(" }\n")
+}
+
 fn main() {
     printStr("\ntest simple --------\n")
     printInt(test1()) printChar('\n')
@@ -122,4 +143,7 @@ fn main() {
     printInt(testFor(3)) printChar('\n')
     printInt(testWhile(3)) printChar('\n')
     printInt(testWhile(13)) printChar('\n')
+
+    printStr("\ntest array --------\n")
+    printArr(testArr())
 }

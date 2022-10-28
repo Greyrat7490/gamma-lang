@@ -247,7 +247,7 @@ func prsArrayLit(tokens *token.Tokens) *ast.ArrayLit {
 
     lit.BraceRPos = tokens.Cur().Pos
 
-    lit.Idx = array.Add(lit.Type, constEvalExprs(lit.Values))
+    lit.Idx = array.Add(constEvalExprs(lit.Values), lit.Type)
 
     return &lit
 }

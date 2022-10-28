@@ -5,6 +5,7 @@ import (
     "fmt"
     "gamma/ast"
     "gamma/std"
+    "gamma/types/array"
     "gamma/gen/asm/x86_64/nasm"
 )
 
@@ -25,6 +26,8 @@ func GenAsm(Ast ast.Ast) {
     for _,d := range Ast.Decls {
         GenDecl(asm, d)
     }
+
+    array.Gen()
 
     nasm.Footer(asm)
 }

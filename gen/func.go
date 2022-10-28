@@ -78,9 +78,6 @@ func PassVal(file *os.File, regIdx uint, value constVal.ConstVal, valtype types.
         asm.MovRegVal(file, regs[regIdx],   types.Ptr_Size, fmt.Sprintf("_str%d", int(*v)))
         asm.MovRegVal(file, regs[regIdx+1], types.I32_Size, fmt.Sprint(str.GetSize(int(*v))))
 
-    case *constVal.ArrConst:
-        asm.MovRegVal(file, regs[regIdx], types.Ptr_Size, fmt.Sprintf("_arr%d", int(*v)))
-
     case *constVal.StructConst:
         t := valtype.(types.StructType)
 
@@ -94,7 +91,7 @@ func PassVal(file *os.File, regIdx uint, value constVal.ConstVal, valtype types.
             }
         }
 
-    case *constVal.IntConst, *constVal.UintConst, *constVal.CharConst, *constVal.BoolConst:
+    case *constVal.ArrConst, *constVal.IntConst, *constVal.UintConst, *constVal.CharConst, *constVal.BoolConst:
         asm.MovRegVal(file, regs[regIdx], valtype.Size(), value.GetVal())
 
     case *constVal.PtrConst:
@@ -334,31 +331,17 @@ func packValues(valtypes []types.Type, values []constVal.ConstVal, packed []stri
             packed = append(packed, fmt.Sprint(str.GetSize(int(*v))))
             offset += types.I32_Size
 
-        case *constVal.ArrConst:
-            packed = append(packed, fmt.Sprintf("_arr%d", int(*v)))
-
         case *constVal.StructConst:
             packed = packValues(valtypes[i].(types.StructType).Types, v.Fields, packed, offset)
             offset += valtypes[i].Size() % 8
 
-        case *constVal.PtrConst:
-            packed = append(packed, v.Addr)
+        case *constVal.ArrConst, *constVal.PtrConst:
+            packed = pack(packed, v.GetVal(), offset, valtypes[i])
+            continue
 
-        case *constVal.IntConst:
-            packed = pack(packed, fmt.Sprint(int64(*v)), offset, valtypes[i])
+        case *constVal.IntConst, *constVal.UintConst, *constVal.BoolConst, *constVal.CharConst:
+            packed = pack(packed, v.GetVal(), offset, valtypes[i])
             offset += valtypes[i].Size()
-
-        case *constVal.UintConst:
-            packed = pack(packed, fmt.Sprint(uint64(*v)), offset, valtypes[i])
-            offset += valtypes[i].Size()
-
-        case *constVal.BoolConst:
-            packed = pack(packed, fmt.Sprint(bool(*v)), offset, valtypes[i])
-            offset += types.Bool_Size
-
-        case *constVal.CharConst:
-            packed = pack(packed, fmt.Sprint(uint8(*v)), offset, valtypes[i])
-            offset += types.Char_Size
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] cannot pack value of type %v yet\n", reflect.TypeOf(valtypes[i]))
