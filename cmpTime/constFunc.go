@@ -1,7 +1,10 @@
 package cmpTime
 
 import (
+    "os"
+    "fmt"
     "gamma/ast"
+    "gamma/token"
     "gamma/cmpTime/constVal"
 )
 
@@ -29,10 +32,16 @@ func AddConstFunc(fn ast.DefFn) {
     funcs[fn.F.GetName()] = constFunc{ fn: fn }
 }
 
-func EvalFunc(name string, args []constVal.ConstVal) constVal.ConstVal {
+func EvalFunc(name string, pos token.Pos, args []constVal.ConstVal) constVal.ConstVal {
     if f,ok := funcs[name]; ok {
         return f.eval(args)
-    } else {
-        return nil
     }
+
+    if inConstEnv() {
+        fmt.Fprintf(os.Stderr, "[ERROR] %s is not a const func\n", name)
+        fmt.Fprintln(os.Stderr, "\t" + pos.At())
+        os.Exit(1)
+    }
+
+    return nil
 }

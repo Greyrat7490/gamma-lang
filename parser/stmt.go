@@ -308,7 +308,7 @@ func prsContinue(tokens *token.Tokens) ast.Continue {
 func prsRet(tokens *token.Tokens) ast.Ret {
     r := ast.Ret{ Pos: tokens.Cur().Pos, F: identObj.GetCurFunc() }
 
-    if r.F.GetRetType() != nil {
+    if tokens.Peek().Pos.Line == r.Pos.Line && tokens.Peek().Type != token.BraceR {
         tokens.Next()
         r.RetExpr = prsExpr(tokens)
     }

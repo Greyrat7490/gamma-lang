@@ -35,6 +35,8 @@ func EvalStmt(s ast.Stmt) constVal.ConstVal {
     case *ast.DeclStmt:
         evalDecl(s.Decl)
         return nil
+    case *ast.ExprStmt:
+        return ConstEval(s.Expr)
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] EvalStmt for %v is not implemente yet\n", reflect.TypeOf(s))
         fmt.Fprintln(os.Stderr, "\t" + s.At())
@@ -137,12 +139,19 @@ func evalAssign(s *ast.Assign) {
                     fmt.Fprintln(os.Stderr, "\t" + dst.At())
                     os.Exit(1)
                 }
-
             } else {
                 if addr,ok := ConstEval(dst.ArrExpr).(*constVal.PtrConst); ok {
                     fmt.Println(addr)
                 }
             }
+
+        case *ast.Field:
+            fmt.Fprintln(os.Stderr, "[ERROR] TODO evalAssign ast.Field")
+            os.Exit(1)
+
+        case *ast.Unary:
+            fmt.Fprintln(os.Stderr, "[ERROR] TODO evalAssign ast.Unary")
+            os.Exit(1)
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] assigning to %v is not supported yet\n", reflect.TypeOf(s.Dest))

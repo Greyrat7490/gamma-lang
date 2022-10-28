@@ -67,6 +67,12 @@ func typeCheckDefFn(d *ast.DefFn) {
         os.Exit(1)
     }
 
+    if d.IsConst && d.RetType == nil {
+        fmt.Fprintln(os.Stderr, "[ERROR] a const func returning nothing has no purpose")
+        fmt.Fprintln(os.Stderr, "\t" + d.At())
+        os.Exit(1)
+    }
+
     for _,s := range d.Block.Stmts {
         typeCheckStmt(s)
     }

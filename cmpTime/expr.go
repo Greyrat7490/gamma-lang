@@ -253,7 +253,7 @@ func ConstEvalFnCall(e *ast.FnCall) constVal.ConstVal {
         }
     }
 
-    return EvalFunc(e.F.GetName(), args)
+    return EvalFunc(e.F.GetName(), e.Ident.Pos, args)
 }
 
 func ConstEvalParen(e *ast.Paren) constVal.ConstVal {
