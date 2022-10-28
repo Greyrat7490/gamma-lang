@@ -5,6 +5,7 @@ import (
     "fmt"
     "gamma/ast"
     "gamma/std"
+    "gamma/types/str"
     "gamma/types/array"
     "gamma/gen/asm/x86_64/nasm"
 )
@@ -27,6 +28,7 @@ func GenAsm(Ast ast.Ast) {
         GenDecl(asm, d)
     }
 
+    str.Gen()
     array.Gen()
 
     nasm.Footer(asm)

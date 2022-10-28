@@ -87,9 +87,9 @@ func defBasic(val string, size uint) {
 func defStr(val *constVal.StrConst) {
     nasm.AddData(fmt.Sprintf("  %s _str%d\n  %s %d",
         asm.GetDataSize(types.Ptr_Size),
-        int(*val),
+        uint64(*val),
         asm.GetDataSize(types.I32_Size),
-        str.GetSize(int(*val))))
+        str.GetSize(uint64(*val))))
 }
 
 
@@ -244,11 +244,11 @@ func derefSetBigStructLit(file *os.File, t types.StructType, val constVal.Struct
             asm.MovDerefVal(file,
                 asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
                 types.Ptr_Size,
-                fmt.Sprintf("_str%d", int(*f)))
+                fmt.Sprintf("_str%d", uint64(*f)))
             asm.MovDerefVal(file,
                 asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)),
                 types.I32_Size,
-                fmt.Sprint(str.GetSize(int(*f))))
+                fmt.Sprint(str.GetSize(uint64(*f))))
 
         case *constVal.StructConst:
             derefSetBigStructLit(file, t, *f, offset)
@@ -289,8 +289,8 @@ func derefSetPtrVal(file *os.File, addr string, offset int, val *constVal.PtrCon
 }
 
 func derefSetStrVal(file *os.File, addr string, offset int, val *constVal.StrConst) {
-    asm.MovDerefVal(file, asm.OffsetAddr(addr, offset), types.Ptr_Size, fmt.Sprintf("_str%d", int(*val)))
-    asm.MovDerefVal(file, asm.OffsetAddr(addr, offset + int(types.Ptr_Size)), types.I32_Size, fmt.Sprint(str.GetSize(int(*val))))
+    asm.MovDerefVal(file, asm.OffsetAddr(addr, offset), types.Ptr_Size, fmt.Sprintf("_str%d", uint64(*val)))
+    asm.MovDerefVal(file, asm.OffsetAddr(addr, offset + int(types.Ptr_Size)), types.I32_Size, fmt.Sprint(str.GetSize(uint64(*val))))
 }
 
 func derefSetStructVal(file *os.File, t types.StructType, addr string, offset int, val *constVal.StructConst) {

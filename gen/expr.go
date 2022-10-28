@@ -110,7 +110,7 @@ func GenBoolLit(file *os.File, e *ast.BoolLit) {
 
 func GenStrLit(file *os.File, e *ast.StrLit) {
     asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprintf("_str%d", e.Idx))
-    asm.MovRegVal(file, asm.RegGroup(1), types.I32_Size, fmt.Sprintf("%d", str.GetSize(int(e.Idx))))
+    asm.MovRegVal(file, asm.RegGroup(1), types.I32_Size, fmt.Sprintf("%d", str.GetSize(e.Idx)))
 }
 
 func GenStructLit(file *os.File, e *ast.StructLit) {
@@ -764,8 +764,8 @@ func GenInlineAsm(file *os.File, val ast.Expr) {
 func GenConstVal(file *os.File, t types.Type, val constVal.ConstVal) {
     switch c := val.(type) {
     case *constVal.StrConst:
-        asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprintf("_str%d", int(*c)))
-        asm.MovRegVal(file, asm.RegGroup(1), types.I32_Size, fmt.Sprintf("%d", str.GetSize(int(*c))))
+        asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprintf("_str%d", uint64(*c)))
+        asm.MovRegVal(file, asm.RegGroup(1), types.I32_Size, fmt.Sprintf("%d", str.GetSize(uint64(*c))))
 
     case *constVal.PtrConst:
         asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, PtrConstToAddr(file, *c))

@@ -75,8 +75,8 @@ func DefArg(file *os.File, regIdx uint, v vars.Var) {
 func PassVal(file *os.File, regIdx uint, value constVal.ConstVal, valtype types.Type) {
     switch v := value.(type) {
     case *constVal.StrConst:
-        asm.MovRegVal(file, regs[regIdx],   types.Ptr_Size, fmt.Sprintf("_str%d", int(*v)))
-        asm.MovRegVal(file, regs[regIdx+1], types.I32_Size, fmt.Sprint(str.GetSize(int(*v))))
+        asm.MovRegVal(file, regs[regIdx],   types.Ptr_Size, fmt.Sprintf("_str%d", uint64(*v)))
+        asm.MovRegVal(file, regs[regIdx+1], types.I32_Size, fmt.Sprint(str.GetSize(uint64(*v))))
 
     case *constVal.StructConst:
         t := valtype.(types.StructType)
@@ -150,8 +150,8 @@ func PassReg(file *os.File, regIdx uint, argType types.Type, regSize uint) {
 func PassValStack(file *os.File, value constVal.ConstVal, valtype types.Type) {
     switch v := value.(type) {
     case *constVal.StrConst:
-        asm.PushVal(file, fmt.Sprint(str.GetSize(int(*v))))
-        asm.PushVal(file, fmt.Sprintf("_str%d", int(*v)))
+        asm.PushVal(file, fmt.Sprint(str.GetSize(uint64(*v))))
+        asm.PushVal(file, fmt.Sprintf("_str%d", uint64(*v)))
 
     case *constVal.StructConst:
         t := valtype.(types.StructType)
@@ -220,11 +220,11 @@ func PassBigStructLit(file *os.File, t types.StructType, value constVal.StructCo
             asm.MovDerefVal(file,
                 asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
                 types.Ptr_Size,
-                fmt.Sprintf("_str%d", int(*f)))
+                fmt.Sprintf("_str%d", uint64(*f)))
             asm.MovDerefVal(file,
                 asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)),
                 types.I32_Size,
-                fmt.Sprint(str.GetSize(int(*f))))
+                fmt.Sprint(str.GetSize(uint64(*f))))
 
         case *constVal.StructConst:
             PassBigStructLit(file, t.Types[i].(types.StructType), *f, offset)
@@ -327,8 +327,8 @@ func packValues(valtypes []types.Type, values []constVal.ConstVal, packed []stri
     for i,v := range values {
         switch v := v.(type) {
         case *constVal.StrConst:
-            packed = append(packed, fmt.Sprintf("_str%d", int(*v)))
-            packed = append(packed, fmt.Sprint(str.GetSize(int(*v))))
+            packed = append(packed, fmt.Sprintf("_str%d", uint64(*v)))
+            packed = append(packed, fmt.Sprint(str.GetSize(uint64(*v))))
             offset += types.I32_Size
 
         case *constVal.StructConst:

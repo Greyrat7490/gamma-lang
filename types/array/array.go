@@ -108,8 +108,8 @@ func addChar(val constVal.CharConst) {
 }
 
 func addStr(val constVal.StrConst) {
-    nasm.AddData(fmt.Sprintf("  %s _str%d", asm.GetDataSize(types.Ptr_Size), val))
-    nasm.AddData(fmt.Sprintf("  %s %d", asm.GetDataSize(types.I32_Size), str.GetSize(int(val))))
+    nasm.AddData(fmt.Sprintf("  %s _str%d", asm.GetDataSize(types.Ptr_Size), uint64(val)))
+    nasm.AddData(fmt.Sprintf("  %s %d", asm.GetDataSize(types.I32_Size), str.GetSize(uint64(val))))
 }
 
 func addArr(baseType types.Type, elems []constVal.ConstVal) {
