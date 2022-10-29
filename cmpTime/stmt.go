@@ -5,6 +5,7 @@ import (
     "fmt"
     "reflect"
     "gamma/ast"
+    "gamma/token"
     "gamma/types"
     "gamma/types/array"
     "gamma/cmpTime/constVal"
@@ -122,42 +123,96 @@ func evalAssign(s *ast.Assign) {
     if val := ConstEval(s.Value); val != nil {
         switch dst := s.Dest.(type) {
         case *ast.Ident:
-            setVar(dst.Name, dst.Obj.Addr(0), dst.GetType(), s.Pos, val)
+            setVar(dst.Name, dst.GetType(), s.Pos, val)
 
         case *ast.Indexed:
-            if ident,ok := dst.ArrExpr.(*ast.Ident); ok {
-                if idx,ok := ConstEvalUint(dst.Flatten()); ok {
-                    if arrIdx,ok := getVal(ident.Name, ident.Pos).(*constVal.ArrConst); ok {
-                        array.SetElem(uint64(*arrIdx), idx, val)
-                    }
-                } else {
-                    if len(dst.Indices) == 1 {
-                        fmt.Fprintln(os.Stderr, "[ERROR] cannot const eval index")
-                    } else {
-                        fmt.Fprintln(os.Stderr, "[ERROR] cannot const eval indices")
-                    }
-                    fmt.Fprintln(os.Stderr, "\t" + dst.At())
-                    os.Exit(1)
-                }
-            } else {
-                if addr,ok := ConstEval(dst.ArrExpr).(*constVal.PtrConst); ok {
-                    fmt.Println(addr)
-                }
-            }
+            setIndexed(dst, val)
 
         case *ast.Field:
-            fmt.Fprintln(os.Stderr, "[ERROR] TODO evalAssign ast.Field")
-            os.Exit(1)
+            switch o := dst.Obj.(type) {
+            case *ast.Ident:
+                setVarField(o.Name, uint(dst.StructType.GetOffset(dst.FieldNum)), dst.GetType(), dst.DotPos, val)
+
+            case *ast.Field:
+                ident := getIdentOfField(dst)
+                setVarField(ident.Name, uint(dst.StructType.GetOffset(dst.FieldNum)), dst.GetType(), dst.DotPos, val)
+
+            default:
+                fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet (evalAssign)")
+                fmt.Fprintln(os.Stderr, "\t" + dst.At())
+                os.Exit(1)
+            }
 
         case *ast.Unary:
-            fmt.Fprintln(os.Stderr, "[ERROR] TODO evalAssign ast.Unary")
-            os.Exit(1)
+            setDeref(dst, val)
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] assigning to %v is not supported yet\n", reflect.TypeOf(s.Dest))
             fmt.Fprintln(os.Stderr, "\t" + s.At())
             os.Exit(1)
         }
+    } else {
+        fmt.Fprintln(os.Stderr, "[ERROR] right side of assignment is not const")
+        fmt.Fprintln(os.Stderr, "\t" + s.At())
+        os.Exit(1)
+    }
+}
+
+func getIdentOfField(field *ast.Field) *ast.Ident {
+    switch o := field.Obj.(type) {
+    case *ast.Ident:
+        return o
+
+    case *ast.Field:
+        return getIdentOfField(o)
+
+    default:
+        fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet (getIdentOfField)")
+        fmt.Fprintln(os.Stderr, "\t" + field.At())
+        os.Exit(1)
+        return nil
+    }
+}
+
+func setIndexed(dst *ast.Indexed, val constVal.ConstVal) {
+    if idx,ok := ConstEvalUint(dst.Flatten()); ok {
+        if arr := ConstEval(dst.ArrExpr); arr != nil {
+            if arrIdx,ok := arr.(*constVal.ArrConst); ok {
+                array.SetElem(uint64(*arrIdx), idx, val)
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected a const array but got %v\n", reflect.TypeOf(arr))
+                fmt.Fprintln(os.Stderr, "\t" + dst.At())
+                os.Exit(1)
+            }
+        } else {
+            fmt.Fprintln(os.Stderr, "[ERROR] cannot const eval expr you want to index")
+            fmt.Fprintln(os.Stderr, "\t" + dst.At())
+            os.Exit(1)
+        }
+    } else {
+        if len(dst.Indices) == 1 {
+            fmt.Fprintln(os.Stderr, "[ERROR] cannot const eval index")
+        } else {
+            fmt.Fprintln(os.Stderr, "[ERROR] cannot const eval indices")
+        }
+        fmt.Fprintln(os.Stderr, "\t" + dst.BrackLPos.At())
+        os.Exit(1)
+    }
+}
+
+func setDeref(dst *ast.Unary, val constVal.ConstVal) {
+    if dst.Operator.Type != token.Mul {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"*\" but got \"%v\"\n", dst.Operator)
+        fmt.Fprintln(os.Stderr, "\t" + dst.At())
+        os.Exit(1)
+    }
+
+    if ptr,ok := ConstEval(dst.Operand).(*constVal.PtrConst); ok {
+        setVarAddr(ptr.Addr, dst.Type, val)
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a const pointer to dereference but got %v\n", reflect.TypeOf(ptr))
+        fmt.Fprintln(os.Stderr, "\t" + dst.Operand.At())
+        os.Exit(1)
     }
 }
 

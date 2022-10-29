@@ -70,3 +70,13 @@ func (s *Struct) GetFieldNum(name string) (uint, bool) {
 
     return 0, false
 }
+
+func (s *Struct) GetField(name string) (types.Type, uint) {
+    for i,f := range s.fieldNames {
+        if f == name {
+            return s.fieldTypes[i], uint(i)
+        }
+    }
+
+    return nil, 0
+}

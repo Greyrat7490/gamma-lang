@@ -212,30 +212,30 @@ func FieldAddrToReg(file *os.File, e *ast.Field, r asm.RegGroup) {
     }
 }
 
-func FieldToOffset(e *ast.Field) int {
-    if s,ok := identObj.Get(e.StructType.Name).(*structDec.Struct); ok {
-        if i,b := s.GetFieldNum(e.FieldName.Str); b {
-            switch o := e.Obj.(type) {
+func FieldToOffset(f *ast.Field) int {
+    if s,ok := identObj.Get(f.StructType.Name).(*structDec.Struct); ok {
+        if i,b := s.GetFieldNum(f.FieldName.Str); b {
+            switch o := f.Obj.(type) {
             case *ast.Ident:
-                return e.StructType.GetOffset(uint(i))
+                return f.StructType.GetOffset(uint(i))
 
             case *ast.Field:
-                return e.StructType.GetOffset(uint(i)) + FieldToOffset(o)
+                return f.StructType.GetOffset(uint(i)) + FieldToOffset(o)
 
             default:
                 fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
-                fmt.Fprintln(os.Stderr, "\t" + e.At())
+                fmt.Fprintln(os.Stderr, "\t" + f.At())
                 os.Exit(1)
             }
         } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName)
-            fmt.Fprintln(os.Stderr, "\t" + e.At())
+            fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", f.StructType.Name, f.FieldName)
+            fmt.Fprintln(os.Stderr, "\t" + f.At())
             os.Exit(1)
         }
 
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not declared\n", e.StructType.Name)
-        fmt.Fprintln(os.Stderr, "\t" + e.At())
+        fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not declared\n", f.StructType.Name)
+        fmt.Fprintln(os.Stderr, "\t" + f.At())
         os.Exit(1)
     }
 
@@ -655,8 +655,7 @@ func DerefSetBigStruct(file *os.File, addr string, e ast.Expr) {
 
     case *ast.Field:
         FieldAddrToReg(file, e, asm.RegA)
-        offset := FieldToOffset(e)
-        file.WriteString(fmt.Sprintf("lea rax, [rax+%d]\n", offset))
+        file.WriteString(fmt.Sprintf("lea rax, [rax+%d]\n", FieldToOffset(e)))
         DerefSetDeref(file, addr, e.GetType(), "rax")
 
     case *ast.Ident:

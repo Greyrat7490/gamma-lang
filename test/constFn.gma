@@ -108,6 +108,34 @@ cfn testArr() -> [3]i32 {
     ret res
 }
 
+cfn testArr2() -> [3]i32 {
+    res := [3]i32{}
+    ptr := &res
+
+    for i i32, 3 {
+        *ptr[i] = 1 + i * 2
+    }
+
+    ret res
+}
+
+struct Test {
+    b bool,
+    i i32
+}
+
+cfn testStruct(i i32) -> i32 {
+    t := Test{ true, 0 }
+    t.i = i
+    ret t.i
+}
+
+cfn testDeref2(i i32) -> i32 {  // TODO "-> {" wrong error (no missing type error)
+    i2 := 0
+    ptr := &i2
+    *ptr = i
+    ret i2
+}
 
 fn printArr(arr [3]i32) {
     printStr("{ ")
@@ -146,4 +174,12 @@ fn main() {
 
     printStr("\ntest array --------\n")
     printArr(testArr())
+    printArr(testArr2())
+
+    printStr("\ntest struct --------\n")
+    printInt(testStruct(64)) printChar('\n')
+    printInt(testStruct(-64)) printChar('\n')
+
+    printStr("\ntest assign deref --------\n")
+    printInt(testDeref2(-64)) printChar('\n')
 }

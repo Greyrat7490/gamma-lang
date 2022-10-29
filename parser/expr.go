@@ -481,7 +481,7 @@ func prsField(tokens *token.Tokens, obj ast.Expr) *ast.Field {
     }
 
     field := ast.Field{ Obj: obj, DotPos: dot.Pos, FieldName: fieldName }
-    field.StructType, field.Type = GetTypesField(&field)
+    field.StructType, field.Type, field.FieldNum = GetFieldInfo(&field)
     return &field
 }
 

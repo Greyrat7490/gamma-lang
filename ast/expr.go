@@ -97,6 +97,7 @@ type Field struct {
     Obj Expr
     DotPos token.Pos
     FieldName token.Token
+    FieldNum uint
 }
 
 type Ident struct {

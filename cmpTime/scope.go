@@ -17,7 +17,13 @@ var stack []byte = nil
 
 type scope struct {
     consts map[string]constVal.ConstVal
+    vars map[string]varInfo
     parent *scope
+}
+
+type varInfo struct {
+    stackIdx uint
+    typ types.Type
 }
 
 func initStack(framesize uint) {
@@ -29,7 +35,7 @@ func clearStack() {
 }
 
 func startScope() {
-    curScope = &scope{ parent: curScope, consts: make(map[string]constVal.ConstVal) }
+    curScope = &scope{ parent: curScope, consts: make(map[string]constVal.ConstVal), vars: make(map[string]varInfo) }
 }
 
 func endScope() {
@@ -40,33 +46,59 @@ func inConstEnv() bool {
     return curScope != nil
 }
 
-func defVar(name string, addr string, t types.Type, pos token.Pos, val constVal.ConstVal) {
+func checkNameTaken(name string, pos token.Pos) {
     if _,ok := curScope.consts[name]; ok {
         fmt.Fprintf(os.Stderr, "[ERROR] %s is already declared in this scope\n", name)
         fmt.Fprintln(os.Stderr, "\t", pos.At())
         os.Exit(1)
     }
+    if _,ok := curScope.vars[name]; ok {
+        fmt.Fprintf(os.Stderr, "[ERROR] %s is already declared in this scope\n", name)
+        fmt.Fprintln(os.Stderr, "\t", pos.At())
+        os.Exit(1)
+    }
+}
 
-    curScope.consts[name] = val
-    writeStack(getStackIdx(addr, t), t.Size(), val)
+func defVar(name string, addr string, t types.Type, pos token.Pos, val constVal.ConstVal) {
+    checkNameTaken(name, pos)
+
+    idx := getStackIdx(addr, t)
+    curScope.vars[name] = varInfo{ stackIdx: idx, typ: t }
+    writeStack(idx, t, val)
 }
 
 func defConst(name string, pos token.Pos, val constVal.ConstVal) {
-    if _,ok := curScope.consts[name]; ok {
-        fmt.Fprintf(os.Stderr, "[ERROR] %s is already declared in this scope\n", name)
-        fmt.Fprintln(os.Stderr, "\t", pos.At())
-        os.Exit(1)
-    }
+    checkNameTaken(name, pos)
 
     curScope.consts[name] = val
 }
 
-func setVar(name string, addr string, t types.Type, pos token.Pos, val constVal.ConstVal) {
+func setVar(name string, t types.Type, pos token.Pos, val constVal.ConstVal) {
     cur := curScope
     for cur != nil {
-        if _,ok := cur.consts[name]; ok {
-            cur.consts[name] = val
-            writeStack(getStackIdx(addr, t), t.Size(), val)
+        if v,ok := cur.vars[name]; ok {
+            writeStack(v.stackIdx, t, val)
+            return
+        } else {
+            cur = cur.parent
+        }
+    }
+
+    // TODO: better error message (check if ident of global or non const local var)
+    fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared\n", name)
+    fmt.Fprintln(os.Stderr, "\t", pos.At())
+    os.Exit(1)
+}
+
+func setVarAddr(addr string, t types.Type, val constVal.ConstVal) {
+    writeStack(getStackIdx(addr, t), t, val)
+}
+
+func setVarField(name string, offset uint, t types.Type, pos token.Pos, val constVal.ConstVal) {
+    cur := curScope
+    for cur != nil {
+        if v,ok := cur.vars[name]; ok {
+            writeStack(v.stackIdx + offset, t, val)
             return
         } else {
             cur = cur.parent
@@ -84,6 +116,8 @@ func getVal(name string, pos token.Pos) constVal.ConstVal {
     for cur != nil {
         if c,ok := cur.consts[name]; ok {
             return c
+        } else if c,ok := cur.vars[name]; ok {
+            return readStack(c.stackIdx, c.typ)
         } else {
             cur = cur.parent
         }
@@ -92,7 +126,7 @@ func getVal(name string, pos token.Pos) constVal.ConstVal {
     return nil
 }
 
-func getValFromStack(addr string, t types.Type) constVal.ConstVal {
+func getValAddr(addr string, t types.Type) constVal.ConstVal {
     return readStack(getStackIdx(addr, t), t)
 }
 
@@ -121,22 +155,22 @@ func getStackIdx(addr string, t types.Type) uint {
 }
 
 func readStack(idx uint, t types.Type) constVal.ConstVal {
-    switch t.GetKind() {
-    case types.Int:
+    switch t := t.(type) {
+    case types.IntType:
         var c int64
         switch t.Size() {
         case 1:
-            c = int64(stack[idx])
+            c = int64(int8(stack[idx]))     // to sign extend
         case 2:
-            c = int64(getByteOrder().Uint16(stack[idx:]))
+            c = int64(int16(getByteOrder().Uint16(stack[idx:])))
         case 4:
-            c = int64(getByteOrder().Uint32(stack[idx:]))
+            c = int64(int32(getByteOrder().Uint32(stack[idx:])))
         default:
             c = int64(getByteOrder().Uint64(stack[idx:]))
         }
         return (*constVal.IntConst)(&c)
 
-    case types.Uint:
+    case types.UintType:
         var c uint64
         switch t.Size() {
         case 1:
@@ -150,7 +184,7 @@ func readStack(idx uint, t types.Type) constVal.ConstVal {
         }
         return (*constVal.UintConst)(&c)
 
-    case types.Bool:
+    case types.BoolType:
         if stack[idx] == 0 {
             b := constVal.BoolConst(false)
             return &b
@@ -159,29 +193,37 @@ func readStack(idx uint, t types.Type) constVal.ConstVal {
             return &b
         }
 
-    case types.Char:
+    case types.CharType:
         return (*constVal.CharConst)(&stack[idx])
 
-    case types.Ptr:
+    case types.PtrType:
         offset := getByteOrder().Uint64(stack[idx:])
         c := constVal.PtrConst{ Local: true, Addr: fmt.Sprintf("rbp-%d", offset) }
         return &c
 
-    case types.Arr:
+    case types.ArrType:
         idx := getByteOrder().Uint64(stack[idx:])
         return (*constVal.ArrConst)(&idx)
 
+    case types.StructType:
+        c := constVal.StructConst{ Fields: make([]constVal.ConstVal, len(t.Types)) }
+        for i,t := range t.Types {
+            c.Fields[i] = readStack(idx, t)
+            idx += t.Size()
+        }
+        return &c
+
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] reading a %v from stack is not supported yet\n", t)
+        fmt.Fprintf(os.Stderr, "[ERROR] reading %v from the const stack is not supported yet\n", t)
         os.Exit(1)
         return nil
     }
 }
 
-func writeStack(idx uint, size uint, val constVal.ConstVal) {
+func writeStack(idx uint, typ types.Type, val constVal.ConstVal) {
     switch c := val.(type) {
     case *constVal.IntConst:
-        switch size {
+        switch typ.Size() {
         case 1:
             stack[idx] = byte(*c)
         case 2:
@@ -193,7 +235,7 @@ func writeStack(idx uint, size uint, val constVal.ConstVal) {
         }
 
     case *constVal.UintConst:
-        switch size {
+        switch typ.Size() {
         case 1:
             stack[idx] = byte(*c)
         case 2:
@@ -225,8 +267,15 @@ func writeStack(idx uint, size uint, val constVal.ConstVal) {
     case *constVal.ArrConst:
         getByteOrder().PutUint64(stack[idx:], uint64(*c))
 
+    case *constVal.StructConst:
+        for i,field := range c.Fields {
+            t := typ.(types.StructType).Types[i]
+            writeStack(idx, t, field)
+            idx += t.Size()
+        }
+
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] writing a %v from stack is not supported yet\n", reflect.TypeOf(val))
+        fmt.Fprintf(os.Stderr, "[ERROR] writing %v to the const stack is not supported yet\n", reflect.TypeOf(val))
         os.Exit(1)
     }
 }

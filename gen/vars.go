@@ -148,8 +148,7 @@ func AssignDeref(file *os.File, t types.Type, dest *ast.Unary, val ast.Expr) {
 
 func AssignField(file *os.File, t types.Type, dest *ast.Field, val ast.Expr) {
     FieldAddrToReg(file, dest, asm.RegC)
-    offset := FieldToOffset(dest)
-    file.WriteString(fmt.Sprintf("lea rcx, [rcx+%d]\n", offset))
+    file.WriteString(fmt.Sprintf("lea rcx, [rcx+%d]\n", FieldToOffset(dest)))
 
     DerefSetExpr(file, asm.GetReg(asm.RegC, types.Ptr_Size), t, val)
 }

@@ -103,22 +103,18 @@ func ConstEval(e ast.Expr) constVal.ConstVal {
 }
 
 func ConstEvalIdent(e *ast.Ident) constVal.ConstVal {
+    if c,ok := e.Obj.(*consts.Const); ok {
+        return c.GetVal()
+    }
+
     if inConstEnv() {
         if val := getVal(e.Name, e.Pos); val != nil {
             return val
-        }
-        if c,ok := e.Obj.(*consts.Const); ok {
-            return c.GetVal()
         }
 
         fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared\n", e.Name)
         fmt.Fprintln(os.Stderr, "\t" + e.At())
         os.Exit(1)
-
-    } else {
-        if c,ok := e.Obj.(*consts.Const); ok {
-            return c.GetVal()
-        }
     }
 
     return nil
@@ -204,7 +200,7 @@ func ConstEvalUnary(e *ast.Unary) constVal.ConstVal {
             if ident,ok := e.Operand.(*ast.Ident); ok {
                 if t,ok := ident.GetType().(types.PtrType); ok {
                     if addr := getVal(ident.Name, ident.Pos); addr != nil {
-                        return getValFromStack(addr.(*constVal.PtrConst).Addr, t.BaseType)
+                        return getValAddr(addr.(*constVal.PtrConst).Addr, t.BaseType)
                     } else {
                         fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared\n", ident.Name)
                         fmt.Fprintln(os.Stderr, "\t" + e.At())

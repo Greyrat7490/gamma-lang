@@ -197,10 +197,11 @@ func GetTypeIndexed(e *ast.Indexed) types.ArrType {
     }
 }
 
-func GetTypesField(e *ast.Field) (types.StructType, types.Type) {
+func GetFieldInfo(e *ast.Field) (types.StructType, types.Type, uint) {
     if sType,ok := e.Obj.GetType().(types.StructType); ok {
         if s,ok := identObj.Get(sType.Name).(*structDec.Struct); ok {
-            return sType, s.GetTypeOfField(e.FieldName.Str)
+            t, idx := s.GetField(e.FieldName.Str)
+            return sType, t, idx
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not declared\n", sType.Name)
             fmt.Fprintln(os.Stderr, "\t" + e.At())
@@ -212,5 +213,5 @@ func GetTypesField(e *ast.Field) (types.StructType, types.Type) {
         os.Exit(1)
     }
 
-    return types.StructType{}, nil
+    return types.StructType{}, nil, 0
 }
