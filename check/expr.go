@@ -56,17 +56,21 @@ func checkInt(destType types.Type, val ast.Expr) bool {
         return false
     }
 
-    if v,ok := cmpTime.ConstEvalInt(val); ok {
-        if types.MinSizeInt(v) > destType.Size() {
-            fmt.Fprintf(os.Stderr, "[ERROR] %d does not fit into %v\n", v, destType)
-            fmt.Fprintln(os.Stderr, "\t" + val.At())
-            os.Exit(1)
-        }
-
+    if t.GetKind() == types.Int && t.Size() <= destType.Size() {
         return true
     } else {
-        return t.GetKind() == types.Int && t.Size() <= destType.Size()
+        if v,ok := cmpTime.ConstEvalInt(val); ok {
+            if types.MinSizeInt(v) > destType.Size() {
+                fmt.Fprintf(os.Stderr, "[ERROR] %d does not fit into %v\n", v, destType)
+                fmt.Fprintln(os.Stderr, "\t" + val.At())
+                os.Exit(1)
+            }
+
+            return true
+        }
     }
+
+    return false
 }
 
 func checkUint(destType types.Type, val ast.Expr) bool {
@@ -75,17 +79,21 @@ func checkUint(destType types.Type, val ast.Expr) bool {
         return false
     }
 
-    if v,ok := cmpTime.ConstEvalUint(val); ok {
-        if types.MinSizeUint(v) > destType.Size() {
-            fmt.Fprintf(os.Stderr, "[ERROR] %d does not fit into %v\n", v, destType)
-            fmt.Fprintln(os.Stderr, "\t" + val.At())
-            os.Exit(1)
-        }
-
+    if t.GetKind() == types.Uint && t.Size() <= destType.Size() {
         return true
     } else {
-        return t.GetKind() == types.Uint && t.Size() <= destType.Size()
+        if v,ok := cmpTime.ConstEvalUint(val); ok {
+            if types.MinSizeUint(v) > destType.Size() {
+                fmt.Fprintf(os.Stderr, "[ERROR] %d does not fit into %v\n", v, destType)
+                fmt.Fprintln(os.Stderr, "\t" + val.At())
+                os.Exit(1)
+            }
+
+            return true
+        }
     }
+
+    return false
 }
 
 func checkTypeExpr(destType types.Type, e ast.Expr) bool {

@@ -16,9 +16,7 @@ type constFunc struct {
 }
 
 func (c constFunc) eval(args []constVal.ConstVal) constVal.ConstVal {
-    startScope()
-    initStack(c.fn.F.GetFrameSize())
-    defer clearStack()
+    startScope(c.fn.F.GetFrameSize())
     defer endScope()
 
     for i,a := range c.fn.Args {

@@ -13,11 +13,11 @@ import (
 )
 
 var curScope *scope = nil
-var stack []byte = nil
 
 type scope struct {
     consts map[string]constVal.ConstVal
     vars map[string]varInfo
+    stack []byte
     parent *scope
 }
 
@@ -26,16 +26,8 @@ type varInfo struct {
     typ types.Type
 }
 
-func initStack(framesize uint) {
-    stack = make([]uint8, framesize)
-}
-
-func clearStack() {
-    stack = nil
-}
-
-func startScope() {
-    curScope = &scope{ parent: curScope, consts: make(map[string]constVal.ConstVal), vars: make(map[string]varInfo) }
+func startScope(framesize uint) {
+    curScope = &scope{ parent: curScope, consts: make(map[string]constVal.ConstVal), vars: make(map[string]varInfo), stack: make([]uint8, framesize) }
 }
 
 func endScope() {
@@ -145,10 +137,10 @@ func getOffset(addr string) uint {
 func getStackIdx(addr string, t types.Type) uint {
     offset := getOffset(addr)
 
-    if idx := offset - t.Size(); idx >= 0 && idx < uint(len(stack)) {
+    if idx := offset - t.Size(); idx >= 0 && idx < uint(len(curScope.stack)) {
         return idx
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] %s (of type %v) is outside of the stack (size: %d)\n", addr, t, len(stack))
+        fmt.Fprintf(os.Stderr, "[ERROR] %s (of type %v) is outside of the stack (size: %d)\n", addr, t, len(curScope.stack))
         os.Exit(1)
         return 0
     }
@@ -160,13 +152,13 @@ func readStack(idx uint, t types.Type) constVal.ConstVal {
         var c int64
         switch t.Size() {
         case 1:
-            c = int64(int8(stack[idx]))     // to sign extend
+            c = int64(int8(curScope.stack[idx]))     // to sign extend
         case 2:
-            c = int64(int16(getByteOrder().Uint16(stack[idx:])))
+            c = int64(int16(getByteOrder().Uint16(curScope.stack[idx:])))
         case 4:
-            c = int64(int32(getByteOrder().Uint32(stack[idx:])))
+            c = int64(int32(getByteOrder().Uint32(curScope.stack[idx:])))
         default:
-            c = int64(getByteOrder().Uint64(stack[idx:]))
+            c = int64(getByteOrder().Uint64(curScope.stack[idx:]))
         }
         return (*constVal.IntConst)(&c)
 
@@ -174,18 +166,18 @@ func readStack(idx uint, t types.Type) constVal.ConstVal {
         var c uint64
         switch t.Size() {
         case 1:
-            c = uint64(stack[idx])
+            c = uint64(curScope.stack[idx])
         case 2:
-            c = uint64(getByteOrder().Uint16(stack[idx:]))
+            c = uint64(getByteOrder().Uint16(curScope.stack[idx:]))
         case 4:
-            c = uint64(getByteOrder().Uint32(stack[idx:]))
+            c = uint64(getByteOrder().Uint32(curScope.stack[idx:]))
         default:
-            c = getByteOrder().Uint64(stack[idx:])
+            c = getByteOrder().Uint64(curScope.stack[idx:])
         }
         return (*constVal.UintConst)(&c)
 
     case types.BoolType:
-        if stack[idx] == 0 {
+        if curScope.stack[idx] == 0 {
             b := constVal.BoolConst(false)
             return &b
         } else {
@@ -194,15 +186,15 @@ func readStack(idx uint, t types.Type) constVal.ConstVal {
         }
 
     case types.CharType:
-        return (*constVal.CharConst)(&stack[idx])
+        return (*constVal.CharConst)(&curScope.stack[idx])
 
     case types.PtrType:
-        offset := getByteOrder().Uint64(stack[idx:])
+        offset := getByteOrder().Uint64(curScope.stack[idx:])
         c := constVal.PtrConst{ Local: true, Addr: fmt.Sprintf("rbp-%d", offset) }
         return &c
 
     case types.ArrType:
-        idx := getByteOrder().Uint64(stack[idx:])
+        idx := getByteOrder().Uint64(curScope.stack[idx:])
         return (*constVal.ArrConst)(&idx)
 
     case types.StructType:
@@ -225,47 +217,47 @@ func writeStack(idx uint, typ types.Type, val constVal.ConstVal) {
     case *constVal.IntConst:
         switch typ.Size() {
         case 1:
-            stack[idx] = byte(*c)
+            curScope.stack[idx] = byte(*c)
         case 2:
-            getByteOrder().PutUint16(stack[idx:], uint16(*c))
+            getByteOrder().PutUint16(curScope.stack[idx:], uint16(*c))
         case 4:
-            getByteOrder().PutUint32(stack[idx:], uint32(*c))
+            getByteOrder().PutUint32(curScope.stack[idx:], uint32(*c))
         default:
-            getByteOrder().PutUint64(stack[idx:], uint64(*c))
+            getByteOrder().PutUint64(curScope.stack[idx:], uint64(*c))
         }
 
     case *constVal.UintConst:
         switch typ.Size() {
         case 1:
-            stack[idx] = byte(*c)
+            curScope.stack[idx] = byte(*c)
         case 2:
-            getByteOrder().PutUint16(stack[idx:], uint16(*c))
+            getByteOrder().PutUint16(curScope.stack[idx:], uint16(*c))
         case 4:
-            getByteOrder().PutUint32(stack[idx:], uint32(*c))
+            getByteOrder().PutUint32(curScope.stack[idx:], uint32(*c))
         default:
-            getByteOrder().PutUint64(stack[idx:], uint64(*c))
+            getByteOrder().PutUint64(curScope.stack[idx:], uint64(*c))
         }
 
     case *constVal.BoolConst:
         if bool(*c) {
-            stack[idx] = 1
+            curScope.stack[idx] = 1
         } else {
-            stack[idx] = 0
+            curScope.stack[idx] = 0
         }
 
     case *constVal.CharConst:
-        stack[idx] = byte(*c)
+        curScope.stack[idx] = byte(*c)
 
     case *constVal.PtrConst:
         if offset := getOffset(c.Addr); offset != 0 {
-            getByteOrder().PutUint64(stack[idx:], uint64(offset))
+            getByteOrder().PutUint64(curScope.stack[idx:], uint64(offset))
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] invalid addr %s\n", c.Addr)
             os.Exit(1)
         }
 
     case *constVal.ArrConst:
-        getByteOrder().PutUint64(stack[idx:], uint64(*c))
+        getByteOrder().PutUint64(curScope.stack[idx:], uint64(*c))
 
     case *constVal.StructConst:
         for i,field := range c.Fields {

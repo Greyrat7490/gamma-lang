@@ -147,6 +147,13 @@ fn printArr(arr [3]i32) {
     printStr(" }\n")
 }
 
+cfn fib(i u64) -> u64 {
+    ret $ i == {
+        0, 1: 1 as u64
+           _: fib(i-1) + fib(i-2)
+    }
+}
+
 fn main() {
     printStr("\ntest simple --------\n")
     printInt(test1()) printChar('\n')
@@ -182,4 +189,17 @@ fn main() {
 
     printStr("\ntest assign deref --------\n")
     printInt(testDeref2(-64)) printChar('\n')
+
+    printStr("\ntest recursive --------\n")
+    printUint(fib(0)) printChar('\n')
+    printUint(fib(1)) printChar('\n')
+    printUint(fib(2)) printChar('\n')
+    printUint(fib(3)) printChar('\n')
+    printUint(fib(4)) printChar('\n')
+    printUint(fib(5)) printChar('\n')
+
+    printChar('\n')
+    for i u64, 6 {
+        printUint(fib(i)) printChar('\n')
+    }
 }
