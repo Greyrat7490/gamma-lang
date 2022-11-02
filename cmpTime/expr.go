@@ -197,25 +197,15 @@ func ConstEvalUnary(e *ast.Unary) constVal.ConstVal {
 
     case token.Mul:
         if inConstEnv() {
-            if ident,ok := e.Operand.(*ast.Ident); ok {
-                if t,ok := ident.GetType().(types.PtrType); ok {
-                    if addr := getVal(ident.Name, ident.Pos); addr != nil {
-                        return getValAddr(addr.(*constVal.PtrConst).Addr, t.BaseType)
-                    } else {
-                        fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared\n", ident.Name)
-                        fmt.Fprintln(os.Stderr, "\t" + e.At())
-                        os.Exit(1)
-                    }
-                } else {
-                    fmt.Fprintf(os.Stderr, "[ERROR] expected a pointer type to dereference but got %v\n", ident.GetType())
-                    fmt.Fprintln(os.Stderr, "\t" + e.At())
-                    os.Exit(1)
+            if t,ok := e.Operand.GetType().(types.PtrType); ok {
+                if ptr,ok := ConstEval(e.Operand).(*constVal.PtrConst); ok {
+                    return getValAddr(ptr.Addr, t.BaseType)
                 }
-            } else {
-                fmt.Fprintln(os.Stderr, "[ERROR] only dereferencing an identifier is support in const funcs yet")
-                fmt.Fprintln(os.Stderr, "\t" + e.At())
-                os.Exit(1)
             }
+
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a pointer type to dereference but got %v\n", e.Operand.GetType())
+            fmt.Fprintln(os.Stderr, "\t" + e.At())
+            os.Exit(1)
         }
         return nil
 

@@ -94,8 +94,7 @@ cfn testPtr() -> bool {
     word i16 := 0x0001
     ptr *bool := &word as u64 as *bool
     ptr2 := &ptr
-    ptr3 := *ptr2
-    ret *ptr3 == false                     // TODO: parse **ptr2
+    ret **ptr2 == false
 }
 
 cfn testArr() -> [3]i32 {

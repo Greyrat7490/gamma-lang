@@ -136,13 +136,24 @@ func typeCheckField(e *ast.Field) {
 func typeCheckUnary(e *ast.Unary) {
     switch e.Operator.Type {
     case token.Mul:
-        if _,ok := e.Operand.(*ast.Ident); !ok {
-            if _,ok := e.Operand.(*ast.Paren); !ok {
-                fmt.Fprintln(os.Stderr, "[ERROR] expected a variable or parentheses after \"*\"")
+        if u,ok := e.Operand.(*ast.Unary); ok {
+            if u.Operator.Type != token.Mul {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected another \"*\" but got %s\n", u.Operator.Str)
                 fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
                 os.Exit(1)
             }
+            return
         }
+        if _,ok := e.Operand.(*ast.Ident); ok {
+            return
+        }
+        if _,ok := e.Operand.(*ast.Paren); ok {
+            return
+        }
+
+        fmt.Fprintln(os.Stderr, "[ERROR] expected a variable or parentheses after \"*\"")
+        fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
+        os.Exit(1)
 
     case token.Amp:
         if _,ok := e.Operand.(*ast.Ident); !ok {

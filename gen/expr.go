@@ -400,14 +400,6 @@ func GenUnary(file *os.File, e *ast.Unary) {
         asm.Not(file, e.Operand.GetType().Size())
 
     case token.Mul:
-        if _,ok := e.Operand.(*ast.Ident); !ok {
-            if _,ok := e.Operand.(*ast.Paren); !ok {
-                fmt.Fprintln(os.Stderr, "[ERROR] expected a variable or parentheses after \"*\"")
-                fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
-                os.Exit(1)
-            }
-        }
-
         t := e.GetType()
         asm.DerefRax(file, t.Size(), t.GetKind() == types.Int)
     }

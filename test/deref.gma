@@ -56,10 +56,29 @@ fn test_deref_local() {
     printStr(" (expected: 192 (2 * 86 + 10 * 2))\n")
 }
 
+fn test_deref_deref() {
+    var := 64
+    ptr := &var
+    ptr2 := &ptr
+
+    printInt(var) printChar('\n')
+    printInt(*ptr) printChar('\n')
+    printInt(**ptr2) printChar('\n')
+
+    **ptr2 = -69
+
+    printInt(var) printChar('\n')
+    printInt(*ptr) printChar('\n')
+    printInt(**ptr2) printChar('\n')
+}
+
 fn main() {
     printStr("global pointer\n")
     test_deref_global()
 
     printStr("\nlocal pointer\n")
     test_deref_local()
+
+    printStr("\ntest **var\n")
+    test_deref_deref()
 }

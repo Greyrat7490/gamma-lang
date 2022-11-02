@@ -507,8 +507,11 @@ func prsUnaryExpr(tokens *token.Tokens) *ast.Unary {
 
     switch expr.Operator.Type {
     case token.Mul:
-        if tokens.Next().Type == token.ParenL {
+        tokens.Next()
+        if tokens.Cur().Type == token.ParenL {
             expr.Operand = prsParenExpr(tokens)
+        } else if tokens.Cur().Type == token.Mul {
+            expr.Operand = prsUnaryExpr(tokens)
         } else {
             expr.Operand = prsIdentExpr(tokens)
         }
