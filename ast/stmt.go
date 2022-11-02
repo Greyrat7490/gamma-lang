@@ -206,7 +206,12 @@ func (o *Continue) Readable(indent int) string {
 }
 
 func (o *Ret) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + "RET\n"
+    if o.RetExpr != nil {
+        return strings.Repeat("   ", indent) + "RET:\n" +
+            o.RetExpr.Readable(indent+1)
+    } else {
+        return strings.Repeat("   ", indent) + "RET\n"
+    }
 }
 
 func (o *ExprStmt) Readable(indent int) string {
