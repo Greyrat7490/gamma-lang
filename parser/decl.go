@@ -76,7 +76,13 @@ func prsType(tokens *token.Tokens) types.Type {
         return nil
 
     default:
-        return types.ToBaseType(tokens.Cur().Str)
+        t := types.ToBaseType(tokens.Cur().Str)
+        if t == nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] %s is not a valid type\n", tokens.Cur().Str)
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+            os.Exit(1)
+        }
+        return t
     }
 }
 
@@ -130,11 +136,6 @@ func prsNameType(tokens *token.Tokens) (name token.Token, typ types.Type) {
 
     tokens.Next()
     typ = prsType(tokens)
-    if typ == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not a valid type\n", tokens.Last().Str)
-        fmt.Fprintln(os.Stderr, "\t" + tokens.Last().At())
-        os.Exit(1)
-    }
 
     return
 }
@@ -261,8 +262,12 @@ func prsDefConstInfer(tokens *token.Tokens, name token.Token) ast.DefConst {
 
 func prsDefine(tokens *token.Tokens) ast.Decl {
     name := tokens.Cur()
+
+    var t types.Type = nil
     tokens.Next()
-    t := prsType(tokens)
+    if tokens.Cur().Type != token.DefVar && tokens.Cur().Type != token.DefConst {
+        t = prsType(tokens)
+    }
 
     if t == nil {       // infer the type with the value
         if tokens.Cur().Type == token.DefVar {
