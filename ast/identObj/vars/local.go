@@ -4,6 +4,7 @@ import (
     "fmt"
     "gamma/token"
     "gamma/types"
+    "gamma/types/addr"
 )
 
 type LocalVar struct {
@@ -11,11 +12,11 @@ type LocalVar struct {
     name string
     typ types.Type
     isArg bool
-    offset int
+    addr addr.Addr
 }
 
 func CreateLocal(name token.Token, t types.Type, frameSize uint, isArg bool, fromStack bool) LocalVar {
-    return LocalVar{ name: name.Str, decPos: name.Pos, typ: t, isArg: isArg, offset: calcOffset(t, frameSize, fromStack) }
+    return LocalVar{ name: name.Str, decPos: name.Pos, typ: t, isArg: isArg, addr: addr.Addr{ BaseAddr: "rbp", Offset: calcOffset(t, frameSize, fromStack) } }
 }
 
 func (v *LocalVar) String() string {
@@ -34,44 +35,14 @@ func (v *LocalVar) GetType() types.Type {
     return v.typ
 }
 
-func (v *LocalVar) OffsetedAddr(offset int) string {
-    offset = v.offset + offset
-
-    if offset > 0 {
-        return fmt.Sprintf("rbp+%d", offset)
-    } else if offset < 0 {
-        return fmt.Sprintf("rbp%d", offset)
-    } else {
-        return "rbp"
-    }
+func (v *LocalVar) Addr() addr.Addr {
+    return v.addr
 }
 
-func (v *LocalVar) Addr(field uint) string {
-    offset := v.offset
-
-    switch t := v.typ.(type) {
-    case types.StrType:
-        if field == 1 {
-            offset += int(types.Ptr_Size)
-        }
-
-    case types.StructType:
-        offset += int(t.GetOffset(field))
-    }
-
-    if offset > 0 {
-        return fmt.Sprintf("rbp+%d", offset)
-    } else if offset < 0 {
-        return fmt.Sprintf("rbp%d", offset)
-    } else {
-        return "rbp"
-    }
-}
-
-func calcOffset(t types.Type, frameSize uint, fromStack bool) int {
+func calcOffset(t types.Type, frameSize uint, fromStack bool) int64 {
     if fromStack {
-        return int(types.Ptr_Size + frameSize + 7) & ^7
+        return int64(types.Ptr_Size + frameSize + 7) & ^7
     }
 
-    return -int(frameSize + t.Size())
+    return -int64(frameSize + t.Size())
 }

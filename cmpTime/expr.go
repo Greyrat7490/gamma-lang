@@ -214,10 +214,10 @@ func ConstEvalUnary(e *ast.Unary) constVal.ConstVal {
             if v,ok := ident.Obj.(vars.Var); ok {
                 // global vars are lables with optional offset -> constEval for assembler
                 if _,ok := v.(*vars.GlobalVar); ok {
-                    return &constVal.PtrConst{ Addr: v.Addr(0), Local: false }
+                    return &constVal.PtrConst{ Addr: v.Addr(), Local: false }
                 // local vars are rbp with a const offset -> not constEval for assembler
                 } else {
-                    return &constVal.PtrConst{ Addr: v.Addr(0), Local: true }
+                    return &constVal.PtrConst{ Addr: v.Addr(), Local: true }
                 }
             } else {
                 fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a var (in constEval.go Unary)")
@@ -271,17 +271,21 @@ func ConstEvalBinary(e *ast.Binary) constVal.ConstVal {
     if l != nil && r != nil {
         switch l := l.(type) {
         case *constVal.PtrConst:
+            var offset int64 = 0
             switch r := r.(type) {
             case *constVal.UintConst:
-                c := *l
-                c.Addr += e.Operator.Str + fmt.Sprint(*r)
-                return &c
-
+                offset = int64(*r)
             case *constVal.IntConst:
-                c := *l
-                c.Addr += e.Operator.Str + fmt.Sprint(*r)
-                return &c
+                offset = int64(*r)
             }
+
+            c := *l
+            if e.Operator.Type == token.Plus {
+                c.Addr.Offset += offset
+            } else {
+                c.Addr.Offset -= offset
+            }
+            return &c
 
         case *constVal.UintConst:
             switch r := r.(type) {
@@ -293,7 +297,11 @@ func ConstEvalBinary(e *ast.Binary) constVal.ConstVal {
 
             case *constVal.PtrConst:
                 c := *r
-                c.Addr += e.Operator.Str + fmt.Sprint(uint64(*l))
+                if e.Operator.Type == token.Plus {
+                    c.Addr.Offset += int64(*l)
+                } else {
+                    c.Addr.Offset -= int64(*l)
+                }
                 return &c
             }
 
@@ -307,7 +315,11 @@ func ConstEvalBinary(e *ast.Binary) constVal.ConstVal {
 
             case *constVal.PtrConst:
                 c := *r
-                c.Addr += e.Operator.Str + fmt.Sprint(int64(*l))
+                if e.Operator.Type == token.Plus {
+                    c.Addr.Offset += int64(*l)
+                } else {
+                    c.Addr.Offset -= int64(*l)
+                }
                 return &c
             }
 

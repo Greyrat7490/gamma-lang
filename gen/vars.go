@@ -7,6 +7,7 @@ import (
     "gamma/token"
     "gamma/types"
     "gamma/types/str"
+    "gamma/types/addr"
     "gamma/ast"
     "gamma/ast/identObj/vars"
     "gamma/cmpTime"
@@ -23,7 +24,7 @@ func VarDefVal(file *os.File, v vars.Var, val constVal.ConstVal) {
         globalVarDefVal(file, v, val)
 
     case *vars.LocalVar:
-        DerefSetVal(file, v.Addr(0), v.GetType(), val)
+        DerefSetVal(file, v.Addr(), v.GetType(), val)
 
     default:
         fmt.Fprintln(os.Stderr, "[ERROR] (unreachable) DefVarVal: v is neigther GlobalVar nor LocalVar")
@@ -38,7 +39,7 @@ func VarDefExpr(file *os.File, v vars.Var, e ast.Expr) {
         os.Exit(1)
     }
 
-    DerefSetExpr(file, v.Addr(0), v.GetType(), e)
+    DerefSetExpr(file, v.Addr(), v.GetType(), e)
 }
 
 func globalVarDefVal(file *os.File, v *vars.GlobalVar, val constVal.ConstVal) {
@@ -97,7 +98,7 @@ func defStr(val *constVal.StrConst) {
 
 func AssignVar(file *os.File, v vars.Var, val ast.Expr) {
     if value := cmpTime.ConstEval(val); value != nil {
-        DerefSetVal(file, v.Addr(0), v.GetType(), value)
+        DerefSetVal(file, v.Addr(), v.GetType(), value)
 
     } else if e,ok := val.(*ast.Ident); ok {
         if other,ok := e.Obj.(vars.Var); ok {
@@ -107,7 +108,7 @@ func AssignVar(file *os.File, v vars.Var, val ast.Expr) {
                 return
             }
 
-            DerefSetVar(file, v.Addr(0), other)
+            DerefSetVar(file, v.Addr(), other)
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] expected identifier %s to be a variable but got %v\n", e.Name, reflect.TypeOf(e.Obj))
             fmt.Fprintln(os.Stderr, "\t" + e.At())
@@ -115,7 +116,7 @@ func AssignVar(file *os.File, v vars.Var, val ast.Expr) {
         }
 
     } else {
-        DerefSetExpr(file, v.Addr(0), v.GetType(), val)
+        DerefSetExpr(file, v.Addr(), v.GetType(), val)
     }
 }
 
@@ -129,11 +130,11 @@ func AssignDeref(file *os.File, t types.Type, dest *ast.Unary, val ast.Expr) {
     GenExpr(file, dest.Operand)
 
     if value := cmpTime.ConstEval(val); value != nil {
-        DerefSetVal(file, asm.GetReg(asm.RegA, types.Ptr_Size), t, value)
+        DerefSetVal(file, asm.RegAsAddr(asm.RegA), t, value)
 
     } else if e,ok := val.(*ast.Ident); ok {
         if v,ok := e.Obj.(vars.Var); ok {
-            DerefSetVar(file, asm.GetReg(asm.RegA, types.Ptr_Size), v)
+            DerefSetVar(file, asm.RegAsAddr(asm.RegA), v)
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] expected identifier %s to be a variable but got %v\n", val, reflect.TypeOf(e.Obj))
             fmt.Fprintln(os.Stderr, "\t" + dest.At())
@@ -142,7 +143,7 @@ func AssignDeref(file *os.File, t types.Type, dest *ast.Unary, val ast.Expr) {
 
     } else {
         asm.MovRegReg(file, asm.RegC, asm.RegA, types.Ptr_Size)
-        DerefSetExpr(file, asm.GetReg(asm.RegC, types.Ptr_Size), t, val)
+        DerefSetExpr(file, asm.RegAsAddr(asm.RegC), t, val)
     }
 }
 
@@ -150,55 +151,42 @@ func AssignField(file *os.File, t types.Type, dest *ast.Field, val ast.Expr) {
     FieldAddrToReg(file, dest, asm.RegC)
     file.WriteString(fmt.Sprintf("lea rcx, [rcx+%d]\n", FieldToOffset(dest)))
 
-    DerefSetExpr(file, asm.GetReg(asm.RegC, types.Ptr_Size), t, val)
+    DerefSetExpr(file, asm.RegAsAddr(asm.RegC), t, val)
 }
 
 func AssignIndexed(file *os.File, t types.Type, dest *ast.Indexed, val ast.Expr) {
     IndexedAddrToReg(file, dest, asm.RegC)
 
-    DerefSetExpr(file, asm.GetReg(asm.RegC, types.Ptr_Size), t, val)
+    DerefSetExpr(file, asm.RegAsAddr(asm.RegC), t, val)
 }
 
-func DerefSetVar(file *os.File, addr string, other vars.Var) {
-    DerefSetDeref(file, addr, other.GetType(), other.Addr(0))
+func DerefSetVar(file *os.File, addr addr.Addr, other vars.Var) {
+    DerefSetDeref(file, addr, other.GetType(), other.Addr())
 }
 
-func DerefSetDeref(file *os.File, addr string, t types.Type, otherAddr string) {
+func DerefSetDeref(file *os.File, addr addr.Addr, t types.Type, otherAddr addr.Addr) {
     switch t := t.(type) {
     case types.StrType:
         asm.MovDerefDeref(file, addr, otherAddr, types.Ptr_Size, asm.RegB, false)
-        asm.MovDerefDeref(file, asm.OffsetAddr(addr, int(types.Ptr_Size)), asm.OffsetAddr(otherAddr, int(types.Ptr_Size)), types.I32_Size, asm.RegB, false)
+        asm.MovDerefDeref(file, addr.Offseted(int64(types.Ptr_Size)), otherAddr.Offseted(int64(types.Ptr_Size)), types.I32_Size, asm.RegB, false)
 
     case types.StructType:
-        var offset int = 0
         for i := 0; i < int(t.Size()/types.Ptr_Size); i++ {
-            asm.MovDerefDeref(
-                file,
-                asm.OffsetAddr(addr, offset),
-                asm.OffsetAddr(otherAddr, offset),
-                types.Ptr_Size,
-                asm.RegB,
-                false,
-            )
-            offset += int(types.Ptr_Size)
+            asm.MovDerefDeref(file, addr, otherAddr, types.Ptr_Size, asm.RegB, false)
+
+            addr.Offset += int64(types.Ptr_Size)
+            otherAddr.Offset += int64(types.Ptr_Size)
         }
 
         if size := t.Size() % types.Ptr_Size; size != 0 {
-            asm.MovDerefDeref(
-                file,
-                asm.OffsetAddr(addr, offset),
-                asm.OffsetAddr(otherAddr, offset),
-                size,
-                asm.RegB,
-                false,
-            )
+            asm.MovDerefDeref(file, addr, otherAddr, size, asm.RegB, false)
         }
 
     case types.IntType:
-        asm.MovDerefDeref(file, asm.GetReg(asm.RegA, types.Ptr_Size), otherAddr, t.Size(), asm.RegB, true)
+        asm.MovDerefDeref(file, asm.RegAsAddr(asm.RegA), otherAddr, t.Size(), asm.RegB, true)
 
     case types.UintType, types.BoolType, types.PtrType, types.ArrType, types.CharType:
-        asm.MovDerefDeref(file, asm.GetReg(asm.RegA, types.Ptr_Size), otherAddr, t.Size(), asm.RegB, false)
+        asm.MovDerefDeref(file, asm.RegAsAddr(asm.RegA), otherAddr, t.Size(), asm.RegB, false)
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (DerefSetVar)\n", t)
@@ -206,12 +194,12 @@ func DerefSetDeref(file *os.File, addr string, t types.Type, otherAddr string) {
     }
 }
 
-func DerefSetExpr(file *os.File, addr string, t types.Type, val ast.Expr) {
+func DerefSetExpr(file *os.File, addr addr.Addr, t types.Type, val ast.Expr) {
     switch t := t.(type) {
     case types.StrType:
         GenExpr(file, val)
         asm.MovDerefReg(file, addr, types.Ptr_Size, asm.RegGroup(0))
-        asm.MovDerefReg(file, asm.OffsetAddr(addr, int(types.Ptr_Size)), types.I32_Size, asm.RegGroup(1))
+        asm.MovDerefReg(file, addr.Offseted(int64(types.Ptr_Size)), types.I32_Size, asm.RegGroup(1))
 
     case types.StructType:
         if types.IsBigStruct(t) {
@@ -220,7 +208,7 @@ func DerefSetExpr(file *os.File, addr string, t types.Type, val ast.Expr) {
             GenExpr(file, val)
             if t.Size() > uint(8) {
                 asm.MovDerefReg(file, addr, types.Ptr_Size, asm.RegGroup(0))
-                asm.MovDerefReg(file, asm.OffsetAddr(addr, int(types.Ptr_Size)), t.Size() - 8, asm.RegGroup(1))
+                asm.MovDerefReg(file, addr.Offseted(int64(types.Ptr_Size)), t.Size() - 8, asm.RegGroup(1))
             } else {
                 asm.MovDerefReg(file, addr, t.Size(), asm.RegGroup(0))
             }
@@ -237,29 +225,26 @@ func DerefSetExpr(file *os.File, addr string, t types.Type, val ast.Expr) {
 }
 
 func derefSetBigStructLit(file *os.File, t types.StructType, val constVal.StructConst, offset int) {
+    addr := asm.RegAsAddr(asm.RegC).Offseted(int64(offset))
+
     for _,field := range val.Fields {
         switch f := field.(type) {
         case *constVal.StrConst:
-            asm.MovDerefVal(file,
-                asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset),
-                types.Ptr_Size,
-                fmt.Sprintf("_str%d", uint64(*f)))
-            asm.MovDerefVal(file,
-                asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset + int(types.Ptr_Size)),
-                types.I32_Size,
-                fmt.Sprint(str.GetSize(uint64(*f))))
-
+            idx := uint64(*f)
+            asm.MovDerefVal(file, addr, types.Ptr_Size, fmt.Sprintf("_str%d", idx))
+            asm.MovDerefVal(file, addr.Offseted(int64(types.Ptr_Size)), types.I32_Size, fmt.Sprint(str.GetSize(idx)))
         case *constVal.StructConst:
             derefSetBigStructLit(file, t, *f, offset)
 
         default:
-            asm.MovDerefVal(file, asm.GetOffsetedReg(asm.RegC, types.Ptr_Size, offset), t.Size(), field.GetVal())
+            asm.MovDerefVal(file, addr, t.Size(), field.GetVal())
         }
-        offset += int(t.Size())
+
+        addr.Offset += int64(t.Size())
     }
 }
 
-func DerefSetVal(file *os.File, addr string, typ types.Type, val constVal.ConstVal) {
+func DerefSetVal(file *os.File, addr addr.Addr, typ types.Type, val constVal.ConstVal) {
     switch val := val.(type) {
     case *constVal.StrConst:
         derefSetStrVal(file, addr, 0, val)
@@ -279,20 +264,20 @@ func DerefSetVal(file *os.File, addr string, typ types.Type, val constVal.ConstV
     }
 }
 
-func derefSetBasicVal(file *os.File, addr string, offset int, size uint, val string) {
-    asm.MovDerefVal(file, asm.OffsetAddr(addr, offset), size, val)
+func derefSetBasicVal(file *os.File, addr addr.Addr, offset int, size uint, val string) {
+    asm.MovDerefVal(file, addr.Offseted(int64(offset)), size, val)
 }
 
-func derefSetPtrVal(file *os.File, addr string, offset int, val *constVal.PtrConst) {
-    asm.MovDerefVal(file, asm.OffsetAddr(addr, offset), types.Ptr_Size, PtrConstToAddr(file, *val))
+func derefSetPtrVal(file *os.File, addr addr.Addr, offset int, val *constVal.PtrConst) {
+    asm.MovDerefVal(file, addr.Offseted(int64(offset)), types.Ptr_Size, PtrConstToAddr(file, *val))
 }
 
-func derefSetStrVal(file *os.File, addr string, offset int, val *constVal.StrConst) {
-    asm.MovDerefVal(file, asm.OffsetAddr(addr, offset), types.Ptr_Size, fmt.Sprintf("_str%d", uint64(*val)))
-    asm.MovDerefVal(file, asm.OffsetAddr(addr, offset + int(types.Ptr_Size)), types.I32_Size, fmt.Sprint(str.GetSize(uint64(*val))))
+func derefSetStrVal(file *os.File, addr addr.Addr, offset int, val *constVal.StrConst) {
+    asm.MovDerefVal(file, addr.Offseted(int64(offset)), types.Ptr_Size, fmt.Sprintf("_str%d", uint64(*val)))
+    asm.MovDerefVal(file, addr.Offseted(int64(offset) + int64(types.Ptr_Size)), types.I32_Size, fmt.Sprint(str.GetSize(uint64(*val))))
 }
 
-func derefSetStructVal(file *os.File, t types.StructType, addr string, offset int, val *constVal.StructConst) {
+func derefSetStructVal(file *os.File, t types.StructType, addr addr.Addr, offset int, val *constVal.StructConst) {
     for i,val := range val.Fields {
         switch val := val.(type) {
         case *constVal.StrConst:

@@ -6,6 +6,7 @@ import (
     "strings"
     "gamma/token"
     "gamma/types"
+    "gamma/types/addr"
     "gamma/ast/identObj"
     "gamma/ast/identObj/func"
 )
@@ -49,7 +50,7 @@ type CharLit struct {
 }
 
 type PtrLit struct {
-    Addr string
+    Addr addr.Addr
     Local bool
     Val token.Token
     Type types.PtrType

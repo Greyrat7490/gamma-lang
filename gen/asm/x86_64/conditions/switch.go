@@ -4,6 +4,7 @@ import (
     "os"
     "fmt"
     "gamma/token"
+    "gamma/types/addr"
 )
 
 var inSwitch bool = false
@@ -33,7 +34,7 @@ func CaseStart(file *os.File) {
     file.WriteString(fmt.Sprintf(".case%d:\n", caseCount))
 }
 
-func CaseVar(file *os.File, addr string) {
+func CaseVar(file *os.File, addr addr.Addr) {
     file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", addr))
     if !inLastCase {
         file.WriteString(fmt.Sprintf("jne .case%d\n", caseCount+1))

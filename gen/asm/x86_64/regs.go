@@ -1,6 +1,9 @@
 package asm
 
-import "fmt"
+import (
+    "fmt"
+    "gamma/types/addr"
+)
 
 var regs [][]string = [][]string{
     { "al", "ax", "eax", "rax" },
@@ -82,4 +85,8 @@ func GetOffsetedReg(g RegGroup, size uint, offset int) string {
     }
 
     return fmt.Sprintf("%s%d", reg, offset)
+}
+
+func RegAsAddr(reg RegGroup) addr.Addr {
+    return addr.Addr{ BaseAddr: GetReg(reg, 8) }
 }

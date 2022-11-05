@@ -5,6 +5,7 @@ import (
     "fmt"
     "gamma/token"
     "gamma/types"
+    "gamma/types/addr"
 )
 
 type Func struct {
@@ -55,8 +56,8 @@ func (f *Func) GetFrameSize() uint {
     return f.frameSize
 }
 
-func (f *Func) Addr(field uint) string {
+func (f *Func) Addr() addr.Addr {
     fmt.Fprintln(os.Stderr, "[ERROR] TODO: func.go Addr()")
     os.Exit(1)
-    return ""
+    return addr.Addr{}
 }

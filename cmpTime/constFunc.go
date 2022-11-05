@@ -20,7 +20,7 @@ func (c constFunc) eval(args []constVal.ConstVal) constVal.ConstVal {
     defer endScope()
 
     for i,a := range c.fn.Args {
-        defVar(a.V.GetName(), a.V.Addr(0), a.V.GetType(), a.TypePos, args[i])
+        defVar(a.V.GetName(), a.V.Addr(), a.V.GetType(), a.TypePos, args[i])
     }
 
     return evalBlock(&c.fn.Block)

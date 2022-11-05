@@ -5,6 +5,7 @@ import (
     "fmt"
     "gamma/token"
     "gamma/types"
+    "gamma/types/addr"
     "gamma/cmpTime/constVal"
 )
 
@@ -35,8 +36,8 @@ func (c *Const) GetVal() constVal.ConstVal {
     return c.val
 }
 
-func (c *Const) Addr(field uint) string {
+func (c *Const) Addr() addr.Addr {
     fmt.Fprintln(os.Stderr, "[ERROR] Cannot get the addr of a const (consts are not allocated anywhere)")
     os.Exit(1)
-    return ""
+    return addr.Addr{}
 }

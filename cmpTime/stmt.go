@@ -264,8 +264,3 @@ func evalWhile(s *ast.While) constVal.ConstVal {
 
     return nil
 }
-
-func offsetAddr(addr string, offset uint) string {
-    offset += getOffset(addr)
-    return fmt.Sprintf("rbp-%d", offset)
-}

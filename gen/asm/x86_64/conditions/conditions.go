@@ -3,6 +3,7 @@ package cond
 import (
     "os"
     "fmt"
+    "gamma/types/addr"
 )
 
 var ifCount uint = 0
@@ -14,7 +15,7 @@ func ResetCount() {
     switchCount = 0
 }
 
-func IfVar(file *os.File, addr string, hasElse bool) uint {
+func IfVar(file *os.File, addr addr.Addr, hasElse bool) uint {
     ifCount++
 
     file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", addr))

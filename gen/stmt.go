@@ -6,6 +6,7 @@ import (
     "reflect"
     "gamma/token"
     "gamma/types"
+    "gamma/types/addr"
     "gamma/cmpTime"
     "gamma/cmpTime/constVal"
     "gamma/ast"
@@ -117,7 +118,7 @@ func GenIf(file *os.File, s *ast.If) {
 
     var count uint = 0
     if ident,ok := s.Cond.(*ast.Ident); ok {
-        count = cond.IfVar(file, ident.Obj.Addr(0), hasElse)
+        count = cond.IfVar(file, ident.Obj.Addr(), hasElse)
     } else {
         GenExpr(file, s.Cond)
         count = cond.IfExpr(file, hasElse)
@@ -173,7 +174,7 @@ func GenCase(file *os.File, s *ast.Case, switchCount uint) {
 
     cond.CaseStart(file)
     if i,ok := s.Cond.(*ast.Ident); ok {
-        cond.CaseVar(file, i.Obj.Addr(0))
+        cond.CaseVar(file, i.Obj.Addr())
     } else {
         GenExpr(file, s.Cond)
         cond.CaseExpr(file)
@@ -222,7 +223,7 @@ func GenWhile(file *os.File, s *ast.While) {
 
     count := loops.WhileStart(file)
     if e,ok := s.Cond.(*ast.Ident); ok {
-        loops.WhileVar(file, e.Obj.Addr(0))
+        loops.WhileVar(file, e.Obj.Addr())
     } else {
         GenExpr(file, s.Cond)
         loops.WhileExpr(file)
@@ -269,7 +270,7 @@ func GenContinue(file *os.File, s *ast.Continue) {
 func GenRet(file *os.File, s *ast.Ret) {
     if s.RetExpr != nil {
         if types.IsBigStruct(s.RetExpr.GetType()) {
-            asm.MovRegDeref(file, asm.RegC, fmt.Sprintf("rbp-%d", types.Ptr_Size), types.Ptr_Size, false)
+            asm.MovRegDeref(file, asm.RegC, addr.Addr{ BaseAddr: "rbp", Offset: -int64(types.Ptr_Size) }, types.Ptr_Size, false)
 
             t := s.RetExpr.GetType().(types.StructType)
 
@@ -278,7 +279,7 @@ func GenRet(file *os.File, s *ast.Ret) {
             } else if ident,ok := s.RetExpr.(*ast.Ident); ok {
                 RetBigStructVar(file, t, ident.Obj.(vars.Var))
             } else {
-                RetBigStructExpr(file, "rcx", s.RetExpr)
+                RetBigStructExpr(file, asm.RegAsAddr(asm.RegC), s.RetExpr)
             }
 
             asm.MovRegReg(file, asm.RegA, asm.RegC, types.Ptr_Size)

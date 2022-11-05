@@ -5,10 +5,10 @@ import (
     "fmt"
     "unsafe"
     "reflect"
-    "strconv"
     "encoding/binary"
     "gamma/token"
     "gamma/types"
+    "gamma/types/addr"
     "gamma/cmpTime/constVal"
 )
 
@@ -51,7 +51,7 @@ func checkNameTaken(name string, pos token.Pos) {
     }
 }
 
-func defVar(name string, addr string, t types.Type, pos token.Pos, val constVal.ConstVal) {
+func defVar(name string, addr addr.Addr, t types.Type, pos token.Pos, val constVal.ConstVal) {
     checkNameTaken(name, pos)
 
     idx := getStackIdx(addr, t)
@@ -82,7 +82,7 @@ func setVar(name string, t types.Type, pos token.Pos, val constVal.ConstVal) {
     os.Exit(1)
 }
 
-func setVarAddr(addr string, t types.Type, val constVal.ConstVal) {
+func setVarAddr(addr addr.Addr, t types.Type, val constVal.ConstVal) {
     writeStack(getStackIdx(addr, t), t, val)
 }
 
@@ -118,27 +118,13 @@ func getVal(name string, pos token.Pos) constVal.ConstVal {
     return nil
 }
 
-func getValAddr(addr string, t types.Type) constVal.ConstVal {
+func getValAddr(addr addr.Addr, t types.Type) constVal.ConstVal {
     return readStack(getStackIdx(addr, t), t)
 }
 
-func getOffset(addr string) uint {
-    if len(addr) > 4 {
-        if offset,err := strconv.ParseUint(addr[4:], 10, 32); err == nil {
-            return uint(offset)
-        }
-    }
-
-    fmt.Fprintf(os.Stderr, "[ERROR] invalid addr %s (could not get offset)\n", addr)
-    os.Exit(1)
-    return 0
-}
-
-func getStackIdx(addr string, t types.Type) uint {
-    offset := getOffset(addr)
-
-    if idx := offset - t.Size(); idx >= 0 && idx < uint(len(curScope.stack)) {
-        return idx
+func getStackIdx(addr addr.Addr, t types.Type) uint {
+    if idx := -addr.Offset - int64(t.Size()); idx >= 0 && idx < int64(len(curScope.stack)) {
+        return uint(idx)
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] %s (of type %v) is outside of the stack (size: %d)\n", addr, t, len(curScope.stack))
         os.Exit(1)
@@ -190,7 +176,7 @@ func readStack(idx uint, t types.Type) constVal.ConstVal {
 
     case types.PtrType:
         offset := getByteOrder().Uint64(curScope.stack[idx:])
-        c := constVal.PtrConst{ Local: true, Addr: fmt.Sprintf("rbp-%d", offset) }
+        c := constVal.PtrConst{ Local: true, Addr: addr.Addr{ BaseAddr: "rbp", Offset: int64(offset) } }
         return &c
 
     case types.ArrType:
@@ -249,12 +235,7 @@ func writeStack(idx uint, typ types.Type, val constVal.ConstVal) {
         curScope.stack[idx] = byte(*c)
 
     case *constVal.PtrConst:
-        if offset := getOffset(c.Addr); offset != 0 {
-            getByteOrder().PutUint64(curScope.stack[idx:], uint64(offset))
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] invalid addr %s\n", c.Addr)
-            os.Exit(1)
-        }
+        getByteOrder().PutUint64(curScope.stack[idx:], uint64(c.Addr.Offset))
 
     case *constVal.ArrConst:
         getByteOrder().PutUint64(curScope.stack[idx:], uint64(*c))

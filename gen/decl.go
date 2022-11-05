@@ -5,11 +5,12 @@ import (
     "fmt"
     "reflect"
     "gamma/ast"
-    "gamma/types"
     "gamma/cmpTime"
     "gamma/gen/asm/x86_64"
-    "gamma/gen/asm/x86_64/loops"
     "gamma/gen/asm/x86_64/conditions"
+    "gamma/gen/asm/x86_64/loops"
+    "gamma/types"
+    "gamma/types/addr"
 )
 
 func GenDecl(file *os.File, d ast.Decl) {
@@ -55,7 +56,7 @@ func GenDefFn(file *os.File, d *ast.DefFn) {
     regIdx := uint(0)
 
     if types.IsBigStruct(d.F.GetRetType()) {
-        asm.MovDerefReg(file, fmt.Sprintf("rbp-%d", types.Ptr_Size), types.Ptr_Size, asm.RegDi)
+        asm.MovDerefReg(file, addr.Addr{ BaseAddr: "rbp", Offset: -int64(types.Ptr_Size) }, types.Ptr_Size, asm.RegDi)
         regIdx++
     }
 

@@ -5,6 +5,7 @@ import (
     "fmt"
     "gamma/token"
     "gamma/types"
+    "gamma/types/addr"
 )
 
 type Struct struct {
@@ -33,10 +34,10 @@ func (s *Struct) GetPos() token.Pos {
     return s.decPos
 }
 
-func (s *Struct) Addr(field uint) string {
+func (s *Struct) Addr() addr.Addr {
     fmt.Fprintln(os.Stderr, "[ERROR] Cannot get the addr of a struct type definition (not allocated anywhere)")
     os.Exit(1)
-    return ""
+    return addr.Addr{}
 }
 
 func (s *Struct) GetType() types.Type {

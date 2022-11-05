@@ -3,6 +3,7 @@ package loops
 import (
     "os"
     "fmt"
+    "gamma/types/addr"
 )
 
 
@@ -22,7 +23,7 @@ func WhileStart(file *os.File) uint {
     return whileCount
 }
 
-func WhileVar(file *os.File, addr string) {
+func WhileVar(file *os.File, addr addr.Addr) {
     file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", addr))
     file.WriteString(fmt.Sprintf("jne .while%dEnd\n", whileCount))
 }

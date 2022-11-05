@@ -5,6 +5,7 @@ import (
     "fmt"
     "gamma/token"
     "gamma/types"
+    "gamma/types/addr"
     "gamma/cmpTime/constVal"
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
@@ -16,7 +17,7 @@ type IdentObj interface {
     GetName() string
     GetType() types.Type
     GetPos() token.Pos
-    Addr(field uint) string
+    Addr() addr.Addr
 }
 
 var curFunc *fn.Func = nil

@@ -3,12 +3,11 @@ package vars
 import (
     "gamma/token"
     "gamma/types"
+    "gamma/types/addr"
 )
 
 type Var interface {
-    Addr(field uint) string
-    OffsetedAddr(offset int) string
-
+    Addr() addr.Addr
     GetType() types.Type
     GetName() string
     GetPos() token.Pos
