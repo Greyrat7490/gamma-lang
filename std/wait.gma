@@ -1,0 +1,45 @@
+import "syscall.gma"
+
+// waitpid opts
+WNOHANG     :: 1            // do not block waiting
+WUNTRACED   :: 2            // report status of stopped children
+
+// waitid opts
+WSTOPPED    :: 2            // report stopped child (same as WUNTRACED)
+WEXITED     :: 4            // report dead child
+WCONTINUED  :: 8            // report continued child
+WNOWAIT     :: 0x01000000   // no wait just poll status
+
+
+fn waitpid(pid i32, status *i32, opts i32) -> i32 {
+    ret _syscall(SYS_WAIT4) as i32
+}
+
+
+cfn WIFEXITED(status i32) -> bool {
+    ret status & 0x7f == 0
+}
+
+cfn WEXITSTATUS(status i32) -> i32 {
+    ret (status & 0xff00) >> 8
+}
+
+cfn WIFSIGNALED(status i32) -> bool {
+    ret ((status & 0x7f) + 1) >> 1 > 0
+}
+
+cfn WTERMSIG(status i32) -> i32 {
+    ret status & 0x7f
+}
+
+cfn WIFSTOPPED(status i32) -> bool {
+    ret status & 0xff == 0x7f
+}
+
+cfn WSTOPSIG(status i32) -> i32 {
+    ret WEXITSTATUS(status)
+}
+
+cfn WIFCONTINUED(status i32) -> bool {
+    ret status == 0xffff
+}

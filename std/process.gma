@@ -1,0 +1,46 @@
+import "syscall.gma"
+import "wait.gma"
+
+fn execve(path *char, argv **char, envp **char) -> i32 {
+    ret _syscall(SYS_EXECVE) as i32
+}
+
+fn fork() -> i32 {
+    ret _syscall(SYS_FORK) as i32
+}
+
+fn getpid() -> i32 {
+    ret _syscall(SYS_GETPID) as i32
+}
+
+// cmd has to be null terminated
+// returns exitcode
+fn system(cmd str) -> i32 {
+    status := 0
+    childPid := fork()
+
+    if childPid == {            // TODO switch execute only once
+    -1:
+        // break                // TODO fix (uses while lable)
+        ret -1
+
+    // in child process
+    0:
+        exe :: "/bin/sh\0"
+
+        // TODO non const for array literals
+        args := [3]*char{ exe as *char, "-c\0", 0x0 as *char, 0x0 as *char }
+        args[2] = cmd as *char
+
+        _ := execve(exe as *char, args as **char, 0x0 as **char)
+        exit(127)   // could not execute shell
+
+    // in parent process
+    _:
+        if waitpid(childPid, &status, 0) == -1 {
+            ret -1
+        }
+    }
+
+    ret WEXITSTATUS(status)
+}

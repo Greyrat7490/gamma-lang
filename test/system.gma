@@ -1,0 +1,10 @@
+import "process.gma"
+
+fn main() {
+    _ := system("pfetch\0")
+    _ := system("echo 'test echo1'\0")
+    _ := system("echo 'test echo2'\0")
+    _ := system("echo 'test echo3'\0")
+
+    exit(system("fake_command\0"))
+}
