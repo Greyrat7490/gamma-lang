@@ -42,14 +42,10 @@ func (c *IntConst)    GetVal() string { return fmt.Sprint(int64(*c)) }
 func (c *UintConst)   GetVal() string { return fmt.Sprint(uint64(*c)) }
 func (c *CharConst)   GetVal() string { return fmt.Sprint(uint8(*c)) }
 func (c *BoolConst)   GetVal() string { if bool(*c) { return "1" } else { return "0" } }
+func (c *StrConst)    GetVal() string { return fmt.Sprintf("_str%d", uint64(*c)) }
 func (c *ArrConst)    GetVal() string { return fmt.Sprintf("_arr%d", uint64(*c)) }
 func (c *PtrConst)    GetVal() string { return c.Addr.String() }
 
-func (c *StrConst)    GetVal() string {
-    fmt.Fprintln(os.Stderr, "[ERROR] (internal) StrConst.GetVal() got called")
-    os.Exit(1)
-    return ""
-}
 func (c *StructConst) GetVal() string {
     fmt.Fprintln(os.Stderr, "[ERROR] (internal) StructConst.GetVal() got called")
     os.Exit(1)
