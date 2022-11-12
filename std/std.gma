@@ -1,3 +1,2 @@
-import "syscall.gma"
 import "io.gma"
 import "socket.gma"

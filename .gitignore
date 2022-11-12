@@ -2,5 +2,6 @@
 *.o
 *.asm
 *.rec
+test/txt/
 gammac
 output

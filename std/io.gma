@@ -1,4 +1,71 @@
+import "syscall.gma"
+
+// std stream file descriptors
 STDIN  :: 0
 STDOUT :: 1
 STDERR :: 2
 
+// file access flags
+O_RDONLY    :: 0
+O_WRONLY    :: 1
+O_RDWR      :: 2
+
+// open flags
+O_CREAT     :: 0100                     // create file if not existing
+O_TRUNC     :: 01000                    // clear file on open
+O_APPEND    :: 02000                    // open in append mode
+O_PATH      :: 010000000                // open dir or file
+O_DIRECTORY :: 0200000                  // open a dir (error if not a dir)
+O_EXCL      :: 0200                     // create file (error if existing)
+O_NOCTTY    :: 0400                     // if terminal it will not become process controlling terminal
+O_NONBLOCK  :: 04000                    // open in non-blocking mode if possible
+O_NDELAY    :: O_NONBLOCK
+O_SYNC      :: 04010000                 // writes will complete according to the requirements of synched IO file integrity completion
+O_ASYNC     :: 020000                   // enable signal-driven IO
+O_NOATIME   :: 01000000                 // do not modify last access time of file
+O_TMPFILE   :: 020000000 | O_DIRECTORY  // created unnamed tmp file
+
+
+AT_FDCWD    :: -100
+
+PATH_MAX :: 0x1000
+
+
+fn read(fd i32, buf *char, size u64) -> i64 {
+    ret _syscall(SYS_READ)
+}
+
+fn write(fd i32, s str) -> i64 {
+    ret _syscall(SYS_WRITE)
+}
+
+/*
+* if O_CREAT is not set ignore permission
+* permission: 0<owner><group><other>
+  * 1 -> exec, 2 -> write, 4 -> read
+  * actual resulting permission is (mode & ~umask)
+*/
+fn openfile(file *char, flags i32, permission u32) -> i32 {
+    ret _syscall(SYS_OPEN) as i32
+}
+
+fn open(file *char, flags i32) -> i32 {
+    ret openfile(file, flags, 0)
+}
+
+fn openat(dirfd i32, file *char, oflags i32) -> i32 {
+    ret _syscall(SYS_OPENAT) as i32
+}
+
+fn create(file *char) -> i32 {
+    // read/write for all users (if umask allows)
+    ret openfile(file, O_TRUNC | O_RDWR | O_CREAT, 0666)
+}
+
+fn close(fd i32) -> i32 {
+    ret _syscall(SYS_CLOSE) as i32
+}
+
+fn getcwd(buf *char, size u64) -> bool {
+    ret _syscall(SYS_GETCWD) != 0
+}

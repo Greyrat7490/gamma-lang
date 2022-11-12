@@ -1,3 +1,5 @@
+import "syscall.gma"
+
 /*
  * shutdown consts --------------------------------------------------
 */
@@ -216,4 +218,49 @@ cfn ntohs(x u16) -> u16 {
 
 cfn ntohl(x u32) -> u32 {
     ret htonl(x)
+}
+
+
+fn socket(domain i32, type i32, protocol i32) -> i32 {
+    ret _syscall(SYS_SOCKET) as i32
+}
+
+fn shutdown(sockfd i32, how i32) -> i32 {
+    ret _syscall(SYS_SHUTDOWN) as i32
+}
+                                                // TODO: *void/*generic
+fn setsockopt(sockfd i32, level i32, optname i32, optval *i32, optlen i32) -> i32 {
+    _asm("mov r10, rcx")
+    ret _syscall(SYS_SETSOCKOPT) as i32
+}
+
+fn getsockopt(sockfd i32, level i32, optname i32, optval *i32, optlen *i32) -> i32 {
+    _asm("mov r10, rcx")
+    ret _syscall(SYS_GETSOCKOPT) as i32
+}
+
+fn bind(sockfd i32, addr *sockaddr_in, addr_len u32) -> i32 {
+    ret _syscall(SYS_BIND) as i32
+}
+
+fn listen(sockfd i32, backlog i32) -> i32 {
+    ret _syscall(SYS_LISTEN) as i32
+}
+
+fn accept(sockfd i32, addr *sockaddr_in, addr_len *u32) -> i32 {
+    ret _syscall(SYS_ACCEPT) as i32
+}
+
+fn accept4(sockfd i32, addr *sockaddr_in, addr_len *u32, flags i32) -> i32 {
+    _asm("mov r10d, ecx")
+    ret _syscall(SYS_ACCEPT4) as i32
+}
+
+fn sendto(sockfd i32, s str, flags i32, addr *sockaddr_in, addr_len u32) -> i64 {
+    _asm("mov r10d, ecx")
+    ret _syscall(SYS_SENDTO)
+}
+
+fn send(sockfd i32, s str, flags i32) -> i64 {
+    ret sendto(sockfd, s, flags, 0x0 as *sockaddr_in, 0)
 }

@@ -58,6 +58,23 @@ fn testBool() {
     printBool(b) printStr("(bool) -> '") printInt(b as i32) printStr("'\n")
 }
 
+fn testExtend() {
+    u := -64 as u32             // 4294967232 / 0xffffffc0
+    printUint(u) printChar('\n')
+    printInt(u as i32) printChar('\n')
+    printInt(u as i64) printChar('\n')
+
+    printInt(u as i32 as i64) printChar('\n')   // expected result: 4294967232
+    /*
+     * go result: -64
+     * size of u is 32bit a sign extention would be needed to set upper 32 bits
+     * go seems to sign extend from signed 32bit to signed 64bit
+
+     * gamma will not do that because casts are supposed to be as simple as possible and should
+       not add extra instructions or change values in any way
+    */
+}
+
 fn main() {
     printStr("test u8 / i8 ------\n")
     testSigned()
@@ -79,4 +96,7 @@ fn main() {
 
     printStr("\ntest bool ------\n")
     testBool()
+
+    printStr("\ntest extend ------\n")
+    testExtend()
 }
