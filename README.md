@@ -40,10 +40,10 @@ A statically and strongly typed programming language similar to Go, but with mor
   * [ ] pub keyword
   * [ ] access by package name
 * [ ] stdlib
-  * [ ] sockets
-  * [ ] io
+  * [x] sockets
+  * [x] io
     * [x] print
-    * [ ] read/write files
+    * [x] read/write files
 * [x] arithmetics
   * [x] unary ops
   * [x] binary ops
