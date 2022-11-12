@@ -42,7 +42,12 @@ func Add(elems []constVal.ConstVal, typ types.ArrType) uint64 {
 func Gen() {
     for i,arr := range arrayData {
         if len(arr.elems) == 0 {
-            nasm.AddBss(fmt.Sprintf("_arr%d: %s %d", i, asm.GetBssSize(arr.typ.Ptr.BaseType.Size()), len(arr.elems)))
+            sum := uint64(0)
+            for _,l := range arr.typ.Lens {
+                sum += l
+            }
+
+            nasm.AddBss(fmt.Sprintf("_arr%d: %s %d", i, asm.GetBssSize(arr.typ.Ptr.BaseType.Size()), sum))
         } else {
             nasm.AddData(fmt.Sprintf("_arr%d:", i))
             switch t := arr.typ.Ptr.BaseType.(type) {
