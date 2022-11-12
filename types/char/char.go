@@ -1,37 +1,39 @@
 package char
 
-// 0 -> unexpected escape sequence
-func Escape(r rune) uint8 {
+func Escape(r rune) (uint8, bool) {
     switch r {
+    case '0':
+        return 0, true
     case 't':
-        return uint8('\t')
+        return uint8('\t'), true
     case 'r':
-        return uint8('\r')
+        return uint8('\r'), true
     case 'n':
-        return uint8('\n')
+        return uint8('\n'), true
     case '"':
-        return uint8('"')
+        return uint8('"'), true
     case '\\':
-        return uint8('\\')
+        return uint8('\\'), true
     default:
-        return 0
+        return 0, false
     }
 }
 
-// 0 -> unexpected escape sequence
-func EscapeByte(c byte) uint8 {
+func EscapeByte(c byte) (uint8, bool) {
     switch c {
+    case '0':
+        return 0, true
     case 't':
-        return uint8('\t')
+        return uint8('\t'), true
     case 'r':
-        return uint8('\r')
+        return uint8('\r'), true
     case 'n':
-        return uint8('\n')
+        return uint8('\n'), true
     case '"':
-        return uint8('"')
+        return uint8('"'), true
     case '\\':
-        return uint8('\\')
+        return uint8('\\'), true
     default:
-        return 0
+        return 0, false
     }
 }

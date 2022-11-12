@@ -76,8 +76,10 @@ func DefArg(file *os.File, regIdx uint, v vars.Var) {
 func PassVal(file *os.File, regIdx uint, value constVal.ConstVal, valtype types.Type) {
     switch v := value.(type) {
     case *constVal.StrConst:
-        asm.MovRegVal(file, regs[regIdx],   types.Ptr_Size, fmt.Sprintf("_str%d", uint64(*v)))
-        asm.MovRegVal(file, regs[regIdx+1], types.I32_Size, fmt.Sprint(str.GetSize(uint64(*v))))
+        asm.MovRegVal(file, regs[regIdx], types.Ptr_Size, fmt.Sprintf("_str%d", uint64(*v)))
+        if valtype.GetKind() == types.Str { // check for *char cast
+            asm.MovRegVal(file, regs[regIdx+1], types.I32_Size, fmt.Sprint(str.GetSize(uint64(*v))))
+        }
 
     case *constVal.StructConst:
         t := valtype.(types.StructType)
@@ -325,8 +327,10 @@ func packValues(valtypes []types.Type, values []constVal.ConstVal, packed []stri
         switch v := v.(type) {
         case *constVal.StrConst:
             packed = append(packed, fmt.Sprintf("_str%d", uint64(*v)))
-            packed = append(packed, fmt.Sprint(str.GetSize(uint64(*v))))
-            offset += types.I32_Size
+            if valtypes[i].GetKind() == types.Str { // check for *char cast
+                packed = append(packed, fmt.Sprint(str.GetSize(uint64(*v))))
+                offset += types.I32_Size
+            }
 
         case *constVal.StructConst:
             packed = packValues(valtypes[i].(types.StructType).Types, v.Fields, packed, offset)

@@ -198,8 +198,9 @@ func prsBasicLit(tokens *token.Tokens) ast.Expr {
     case types.Char:
         var repr uint8
         if val.Str[1] == '\\' {
-            repr = char.EscapeByte(val.Str[2])
-            if repr == 0 {
+            var ok bool
+            repr,ok = char.EscapeByte(val.Str[2])
+            if !ok {
                 fmt.Fprintf(os.Stderr, "[ERROR] unexpected escape sequence %s\n", val.Str)
                 os.Exit(1)
             }
