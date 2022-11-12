@@ -11,6 +11,11 @@ var whileCount uint = 0
 var forCount   uint = 0
 
 var inForLoop bool = false
+var inWhileLoop bool = false
+
+func InLoop() bool {
+    return inForLoop || inWhileLoop
+}
 
 func ResetCount() {
     whileCount = 0
@@ -18,6 +23,7 @@ func ResetCount() {
 }
 
 func WhileStart(file *os.File) uint {
+    inWhileLoop = true
     whileCount++
     file.WriteString(fmt.Sprintf(".while%d:\n", whileCount))
     return whileCount
@@ -33,6 +39,7 @@ func WhileExpr(file *os.File) {
 }
 
 func WhileEnd(file *os.File, count uint) {
+    inWhileLoop = false
     file.WriteString(fmt.Sprintf("jmp .while%d\n", count))
     file.WriteString(fmt.Sprintf(".while%dEnd:\n", count))
 }

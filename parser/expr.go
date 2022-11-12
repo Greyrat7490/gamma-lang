@@ -395,7 +395,7 @@ func prsArrayLitExprs(tokens *token.Tokens, lenghts []uint64) (exprs []ast.Expr)
         case token.BraceL:
             if len(lenghts) == 1 {
                 // TODO better error
-                fmt.Fprintln(os.Stderr, "[ERROR] unexpected \"{\" maybe a missing \"}\" or one \"{\" to much")
+                fmt.Fprintln(os.Stderr, "[ERROR] unexpected \"{\" maybe a missing \"}\" or one \"{\" too much")
                 fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
                 os.Exit(1)
             }

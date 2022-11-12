@@ -116,7 +116,7 @@ func prsArrType(tokens *token.Tokens) types.ArrType {
         tokens.Next()
     }
 
-    return types.ArrType{ Ptr: types.PtrType{ BaseType: prsType(tokens) }, Lens: lens }
+    return types.ArrType{ BaseType: prsType(tokens), Lens: lens }
 }
 
 func prsDecVar(tokens *token.Tokens) ast.DecVar {

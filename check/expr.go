@@ -180,7 +180,7 @@ func typeCheckArrayLit(o *ast.ArrayLit) {
     for _,v := range o.Values {
         t := v.GetType()
         if !checkTypeExpr(t, v) {
-            fmt.Fprintf(os.Stderr, "[ERROR] all values in the ArrayLit should be of type %v but got a value of %v\n", o.Type.Ptr.BaseType, t)
+            fmt.Fprintf(os.Stderr, "[ERROR] all values in the ArrayLit should be of type %v but got a value of %v\n", o.Type.BaseType, t)
             fmt.Fprintln(os.Stderr, "\t" + v.At())
             os.Exit(1)
         }
@@ -330,7 +330,7 @@ func typeCheckCast(e *ast.Cast) {
 
         case types.Arr:
             dstTyp := e.DestType.(types.PtrType).BaseType
-            srcTyp := t.(types.ArrType).Ptr.BaseType
+            srcTyp := t.(types.ArrType).BaseType
 
             if dstTyp.GetKind() != srcTyp.GetKind() {
                 fmt.Fprintf(os.Stderr, "[ERROR] you can only cast an array into a pointer with the same baseType (got %v)\n", t)

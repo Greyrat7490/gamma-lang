@@ -351,7 +351,7 @@ func (e *FieldLit)  GetType() types.Type { return e.Value.GetType() }
 func (e *StructLit) GetType() types.Type { return e.StructType }
 func (e *ArrayLit)  GetType() types.Type { return e.Type }
 func (e *FnCall)    GetType() types.Type { return e.F.GetRetType() }
-func (e *Indexed)   GetType() types.Type { return e.ArrType.Ptr.BaseType }
+func (e *Indexed)   GetType() types.Type { return e.ArrType.BaseType }
 func (e *Field)     GetType() types.Type { return e.Type }
 func (e *Ident)     GetType() types.Type { return e.Obj.GetType() }
 func (e *Unary)     GetType() types.Type { return e.Type }

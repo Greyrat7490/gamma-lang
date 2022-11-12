@@ -47,10 +47,10 @@ func Gen() {
                 sum += l
             }
 
-            nasm.AddBss(fmt.Sprintf("_arr%d: %s %d", i, asm.GetBssSize(arr.typ.Ptr.BaseType.Size()), sum))
+            nasm.AddBss(fmt.Sprintf("_arr%d: %s %d", i, asm.GetBssSize(arr.typ.BaseType.Size()), sum))
         } else {
             nasm.AddData(fmt.Sprintf("_arr%d:", i))
-            addArr(arr.typ.Ptr.BaseType, arr.elems)
+            addArr(arr.typ.BaseType, arr.elems)
         }
     }
 }

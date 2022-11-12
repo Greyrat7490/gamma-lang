@@ -20,9 +20,7 @@ fn system(cmd str) -> i32 {
     childPid := fork()
 
     if childPid == {            // TODO switch execute only once
-    -1:
-        // break                // TODO fix (uses while lable)
-        ret -1
+    -1: break
 
     // in child process
     0:
@@ -37,10 +35,10 @@ fn system(cmd str) -> i32 {
 
     // in parent process
     _:
-        if waitpid(childPid, &status, 0) == -1 {
-            ret -1
+        if waitpid(childPid, &status, 0) != -1 {
+            ret WEXITSTATUS(status)
         }
     }
 
-    ret WEXITSTATUS(status)
+    ret -1
 }

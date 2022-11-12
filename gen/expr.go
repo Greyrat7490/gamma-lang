@@ -138,7 +138,7 @@ func GenArrayLit(file *os.File, e *ast.ArrayLit) {
 func IndexedAddrToReg(file *os.File, e *ast.Indexed, r asm.RegGroup) {
     GenExpr(file, e.ArrExpr)
 
-    baseTypeSize := uint64(e.ArrType.Ptr.BaseType.Size())
+    baseTypeSize := uint64(e.ArrType.BaseType.Size())
 
     idxExpr := e.Flatten()
     if idx,ok := cmpTime.ConstEvalUint(idxExpr); ok {
@@ -160,7 +160,7 @@ func GenIndexed(file *os.File, e *ast.Indexed) {
     IndexedAddrToReg(file, e, asm.RegC)
     addr := asm.RegAsAddr(asm.RegC)
 
-    switch t := e.ArrType.Ptr.BaseType.(type) {
+    switch t := e.ArrType.BaseType.(type) {
     case types.StrType:
         asm.MovRegDeref(file, asm.RegGroup(0), addr, types.Ptr_Size, false)
         asm.MovRegDeref(file, asm.RegGroup(1), addr.Offseted(int64(types.Ptr_Size)), types.U32_Size, false)
@@ -184,7 +184,7 @@ func GenIndexed(file *os.File, e *ast.Indexed) {
             file,
             asm.RegGroup(0),
             addr,
-            e.ArrType.Ptr.BaseType.Size(),
+            e.ArrType.BaseType.Size(),
             true,
         )
 
@@ -193,7 +193,7 @@ func GenIndexed(file *os.File, e *ast.Indexed) {
             file,
             asm.RegGroup(0),
             addr,
-            e.ArrType.Ptr.BaseType.Size(),
+            e.ArrType.BaseType.Size(),
             false,
         )
     }

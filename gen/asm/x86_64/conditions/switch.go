@@ -12,6 +12,10 @@ var inLastCase bool = false
 var caseCount uint = 0
 var switchCount uint = 0
 
+func InSwitch() bool {
+    return inSwitch
+}
+
 func StartSwitch() uint {
     inSwitch = true
     switchCount++
@@ -54,6 +58,10 @@ func CaseBody(file *os.File) {
 
 func CaseBodyEnd(file *os.File, count uint) {
     file.WriteString(fmt.Sprintf("jmp .switch%dEnd\n", count))
+}
+
+func Break(file *os.File) {
+    file.WriteString(fmt.Sprintf("jmp .switch%dEnd\n", switchCount))
 }
 
 func Through(file *os.File, pos token.Pos) {

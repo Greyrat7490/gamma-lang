@@ -260,7 +260,15 @@ func GenFor(file *os.File, s *ast.For) {
 }
 
 func GenBreak(file *os.File, s *ast.Break) {
-    loops.Break(file)
+    if loops.InLoop() {
+        loops.Break(file)
+    } else if cond.InSwitch() {
+        cond.Break(file)
+    } else {
+        fmt.Fprintln(os.Stderr, "[ERROR] break can only be used inside of a switch or a loop")
+        fmt.Fprintln(os.Stderr, "\t" + s.At())
+        os.Exit(1)
+    }
 }
 
 func GenContinue(file *os.File, s *ast.Continue) {

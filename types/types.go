@@ -54,7 +54,7 @@ type PtrType struct {
     BaseType Type
 }
 type ArrType  struct {
-    Ptr PtrType
+    BaseType Type
     Lens []uint64
 }
 type StrType  struct {
@@ -233,7 +233,7 @@ func (t ArrType)  String() string {
         res += fmt.Sprintf("[%d]", l)
     }
 
-    return res + t.Ptr.BaseType.String()
+    return res + t.BaseType.String()
 }
 func (t StructType) String() string { return t.Name }
 
