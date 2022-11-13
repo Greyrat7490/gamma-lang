@@ -177,8 +177,8 @@ func getIdentOfField(field *ast.Field) *ast.Ident {
 func setIndexed(dst *ast.Indexed, val constVal.ConstVal) {
     if idx,ok := ConstEvalUint(dst.Flatten()); ok {
         if arr := ConstEval(dst.ArrExpr); arr != nil {
-            if arrIdx,ok := arr.(*constVal.ArrConst); ok {
-                array.SetElem(uint64(*arrIdx), idx, val)
+            if arr,ok := arr.(*constVal.ArrConst); ok {
+                array.SetElem(arr.Idx, idx, val)
             } else {
                 fmt.Fprintf(os.Stderr, "[ERROR] expected a const array but got %v\n", reflect.TypeOf(arr))
                 fmt.Fprintln(os.Stderr, "\t" + dst.At())

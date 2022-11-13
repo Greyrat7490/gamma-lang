@@ -8,6 +8,7 @@ import (
     "gamma/types"
     "gamma/types/str"
     "gamma/types/addr"
+    "gamma/types/array"
     "gamma/ast"
     "gamma/ast/identObj/vars"
     "gamma/cmpTime"
@@ -194,29 +195,43 @@ func DerefSetDeref(file *os.File, addr addr.Addr, t types.Type, otherAddr addr.A
     }
 }
 
-func DerefSetExpr(file *os.File, addr addr.Addr, t types.Type, val ast.Expr) {
+func DerefSetExpr(file *os.File, dst addr.Addr, t types.Type, val ast.Expr) {
     switch t := t.(type) {
     case types.StrType:
         GenExpr(file, val)
-        asm.MovDerefReg(file, addr, types.Ptr_Size, asm.RegGroup(0))
-        asm.MovDerefReg(file, addr.Offseted(int64(types.Ptr_Size)), types.I32_Size, asm.RegGroup(1))
+        asm.MovDerefReg(file, dst, types.Ptr_Size, asm.RegGroup(0))
+        asm.MovDerefReg(file, dst.Offseted(int64(types.Ptr_Size)), types.I32_Size, asm.RegGroup(1))
 
     case types.StructType:
         if types.IsBigStruct(t) {
-            DerefSetBigStruct(file, addr, val)
+            DerefSetBigStruct(file, dst, val)
         } else {
             GenExpr(file, val)
             if t.Size() > uint(8) {
-                asm.MovDerefReg(file, addr, types.Ptr_Size, asm.RegGroup(0))
-                asm.MovDerefReg(file, addr.Offseted(int64(types.Ptr_Size)), t.Size() - 8, asm.RegGroup(1))
+                asm.MovDerefReg(file, dst, types.Ptr_Size, asm.RegGroup(0))
+                asm.MovDerefReg(file, dst.Offseted(int64(types.Ptr_Size)), t.Size() - 8, asm.RegGroup(1))
             } else {
-                asm.MovDerefReg(file, addr, t.Size(), asm.RegGroup(0))
+                asm.MovDerefReg(file, dst, t.Size(), asm.RegGroup(0))
             }
         }
 
-    case types.IntType, types.UintType, types.BoolType, types.PtrType, types.ArrType, types.CharType:
+    case types.IntType, types.UintType, types.BoolType, types.PtrType, types.CharType:
         GenExpr(file, val)
-        asm.MovDerefReg(file, addr, t.Size(), asm.RegGroup(0))
+        asm.MovDerefReg(file, dst, t.Size(), asm.RegGroup(0))
+
+    case types.ArrType:
+        if lit,ok := val.(*ast.ArrayLit); ok {
+            arrAddr := addr.Addr{ BaseAddr: fmt.Sprintf("_arr%d", lit.Idx) }
+            for i, v := range array.GetValues(lit.Idx) {
+                if v == nil {
+                    DerefSetExpr(file, arrAddr.Offseted(int64(i) * int64(t.BaseType.Size())), t.BaseType, lit.Values[i])
+                }
+            }
+            asm.MovDerefVal(file, dst, types.Arr_Size, arrAddr.BaseAddr)
+        } else {
+            GenExpr(file, val)
+            asm.MovDerefReg(file, dst, t.Size(), asm.RegGroup(0))
+        }
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (DerefSetExpr)\n", t)

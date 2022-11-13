@@ -248,7 +248,7 @@ func prsArrayLit(tokens *token.Tokens) *ast.ArrayLit {
 
     lit.BraceRPos = tokens.Cur().Pos
 
-    lit.Idx = array.Add(constEvalExprs(lit.Values), lit.Type)
+    lit.Idx = array.Add(lit.Type, constEvalExprs(lit.Values))
 
     return &lit
 }
@@ -377,13 +377,7 @@ func constEvalExprs(values []ast.Expr) []constVal.ConstVal {
     res := make([]constVal.ConstVal, len(values))
 
     for i,v := range values {
-        constVal := cmpTime.ConstEval(v)
-        if constVal == nil {
-            fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")
-            fmt.Fprintln(os.Stderr, "\t" + v.At())
-            os.Exit(1)
-        }
-        res[i] = constVal
+        res[i] = cmpTime.ConstEval(v)
     }
 
     return res

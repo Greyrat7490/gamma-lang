@@ -100,6 +100,17 @@ fn constArr() {
     printInt(2 * arr[1] / 8) printStr("\n")
 }
 
+fn nonConstElems() {
+    i := 420
+    i2 := 64
+
+    arr := [3]i32{ i, i2, -64 }
+
+    printInt(arr[0]) printStr("\n")
+    printInt(arr[1]) printStr("\n")
+    printInt(arr[2]) printStr("\n")
+}
+
 fn main() {
     printStr("global ---------\n")
     globalArr()
@@ -115,4 +126,15 @@ fn main() {
 
     printStr("\nconst ---------\n")
     constArr()
+
+    printStr("\nnon const elems ---------\n")
+    nonConstElems()
+    i := 1
+    i2 := 420
+    i3 := 64
+    arr := [2][2][2]i32{
+        { { 0, i }, { i2, 3 } },
+        { { 4, 5 }, { 6, i3 } }
+    }
+    printArr(arr)
 }

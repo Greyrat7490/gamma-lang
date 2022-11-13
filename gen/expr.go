@@ -565,8 +565,7 @@ func GenFnCall(file *os.File, e *ast.FnCall) {
             PassVar(file, regIdx, t, ident.Obj.(vars.Var))
 
         } else {
-            GenExpr(file, e.Values[i])
-            PassReg(file, regIdx, t, e.Values[i].GetType().Size())
+            PassExpr(file, regIdx, t, e.Values[i].GetType().Size(), e.Values[i])
         }
     }
 

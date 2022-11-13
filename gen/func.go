@@ -7,6 +7,7 @@ import (
     "gamma/types"
     "gamma/types/str"
     "gamma/types/addr"
+    "gamma/types/array"
     "gamma/ast"
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
@@ -128,13 +129,15 @@ func PassVar(file *os.File, regIdx uint, t types.Type, otherVar vars.Var) {
     }
 }
 
-func PassReg(file *os.File, regIdx uint, argType types.Type, regSize uint) {
+func PassExpr(file *os.File, regIdx uint, argType types.Type, regSize uint, expr ast.Expr) {
     switch t := argType.(type) {
     case types.StrType:
+        GenExpr(file, expr)
         asm.MovRegReg(file, regs[regIdx],   asm.RegGroup(0), types.Ptr_Size)
         asm.MovRegReg(file, regs[regIdx+1], asm.RegGroup(1), types.U32_Size)
 
     case types.StructType:
+        GenExpr(file, expr)
         if t.Size() > uint(8) {
             asm.MovRegReg(file, regs[regIdx], asm.RegGroup(0), types.Ptr_Size)
             asm.MovRegReg(file, regs[regIdx+1], asm.RegGroup(1), t.Size() - 8)
@@ -143,9 +146,25 @@ func PassReg(file *os.File, regIdx uint, argType types.Type, regSize uint) {
         }
 
     case types.IntType:
+        GenExpr(file, expr)
         asm.MovRegRegExtend(file, regs[regIdx], t.Size(), asm.RegGroup(0), regSize, true)
 
+    case types.ArrType:
+        if lit,ok := expr.(*ast.ArrayLit); ok {
+            arrAddr := addr.Addr{ BaseAddr: fmt.Sprintf("_arr%d", lit.Idx) }
+            for i, v := range array.GetValues(lit.Idx) {
+                if v == nil {
+                    DerefSetExpr(file, arrAddr.Offseted(int64(i) * int64(t.BaseType.Size())), t.BaseType, lit.Values[i])
+                }
+            }
+            asm.MovRegVal(file, regs[regIdx], regSize, fmt.Sprint(arrAddr))
+        } else {
+            GenExpr(file, expr)
+            asm.MovRegRegExtend(file, regs[regIdx], t.Size(), asm.RegGroup(0), regSize, false)
+        }
+
     default:
+        GenExpr(file, expr)
         asm.MovRegRegExtend(file, regs[regIdx], t.Size(), asm.RegGroup(0), regSize, false)
     }
 }

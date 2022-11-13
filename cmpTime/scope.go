@@ -9,6 +9,7 @@ import (
     "gamma/token"
     "gamma/types"
     "gamma/types/addr"
+    "gamma/types/array"
     "gamma/cmpTime/constVal"
 )
 
@@ -181,7 +182,7 @@ func readStack(idx uint, t types.Type) constVal.ConstVal {
 
     case types.ArrType:
         idx := getByteOrder().Uint64(curScope.stack[idx:])
-        return (*constVal.ArrConst)(&idx)
+        return &constVal.ArrConst{ Idx: idx, Elems: array.GetValues(idx), Type: t }
 
     case types.StructType:
         c := constVal.StructConst{ Fields: make([]constVal.ConstVal, len(t.Types)) }
@@ -238,7 +239,7 @@ func writeStack(idx uint, typ types.Type, val constVal.ConstVal) {
         getByteOrder().PutUint64(curScope.stack[idx:], uint64(c.Addr.Offset))
 
     case *constVal.ArrConst:
-        getByteOrder().PutUint64(curScope.stack[idx:], uint64(*c))
+        getByteOrder().PutUint64(curScope.stack[idx:], c.Idx)
 
     case *constVal.StructConst:
         for i,field := range c.Fields {

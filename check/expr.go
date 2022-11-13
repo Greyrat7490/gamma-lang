@@ -184,12 +184,6 @@ func typeCheckArrayLit(o *ast.ArrayLit) {
             fmt.Fprintln(os.Stderr, "\t" + v.At())
             os.Exit(1)
         }
-
-        if cmpTime.ConstEval(v) == nil {
-            fmt.Fprintln(os.Stderr, "[ERROR] all values in the ArrayLit should be const")
-            fmt.Fprintln(os.Stderr, "\t" + v.At())
-            os.Exit(1)
-        }
     }
 }
 
