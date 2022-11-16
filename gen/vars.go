@@ -216,7 +216,10 @@ func DerefSetExpr(file *os.File, dst addr.Addr, t types.Type, val ast.Expr) {
         }
 
     case types.IntType, types.UintType, types.BoolType, types.PtrType, types.CharType:
+        // TODO only push rcx for return structLit
+        asm.PushReg(file, asm.RegC)
         GenExpr(file, val)
+        asm.PopReg(file, asm.RegC)
         asm.MovDerefReg(file, dst, t.Size(), asm.RegGroup(0))
 
     case types.ArrType:

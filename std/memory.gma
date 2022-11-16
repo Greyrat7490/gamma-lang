@@ -1,0 +1,55 @@
+import "syscall.gma"
+
+// mmap prot
+PROT_NONE           :: 0            // cannot be accessed
+PROT_READ           :: 1            // allow read
+PROT_WRITE          :: 2            // allow write
+PROT_EXEC           :: 4            // allow execute
+PROT_GROWSDOWN      :: 0x01000000
+PROT_GROWSUP        :: 0x02000000
+
+// mmap flags
+MAP_FILE            :: 0
+MAP_SHARED          :: 1            // Share changes
+MAP_PRIVATE         :: 2            // Changes are private
+MAP_SHARED_VALIDATE :: 3            // Share changes and validate
+MAP_TYPE            :: 0x0f         // Mask for type of mapping
+MAP_FIXED           :: 0x10         // Interpret addr exactly
+MAP_ANONYMOUS       :: 0x20         // Don't use a file
+MAP_ANON            :: MAP_ANONYMOUS
+MAP_HUGE_SHIFT      :: 26
+MAP_HUGE_MASK       :: 0x3f
+MAP_GROWSDOWN       :: 0x00100      // Stack-like segment
+MAP_DENYWRITE       :: 0x00800      // ETXTBSY
+MAP_EXECUTABLE      :: 0x01000      // Mark it as an executable
+MAP_LOCKED          :: 0x02000      // Lock the mapping
+MAP_NORESERVE       :: 0x04000      // Don't check for reservations
+MAP_POPULATE        :: 0x08000      // Populate (prefault) pagetables
+MAP_NONBLOCK        :: 0x10000      // Do not block on IO
+MAP_STACK           :: 0x20000      // Allocation is for a stack
+MAP_HUGETLB         :: 0x40000      // Create huge page mapping
+MAP_SYNC            :: 0x80000      // Perform synchronous page faults for the mapping
+MAP_FIXED_NOREPLACE :: 0x100000     // MAP_FIXED but do not unmap underlying mapping
+
+
+fn mmap(addr u64, len u64, prot i32, flags i32, fd i32, offset i64) -> u64 {
+    _asm("mov r10, rcx")
+    ret _syscall(SYS_MMAP) as u64
+}
+
+
+fn malloc(size u64) -> u64 {
+    ret mmap(0x0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)
+}
+
+fn memcpy(dst_addr u64, src_addr u64, size u64) {
+    for i u64, size {
+        *(dst_addr+i as *i8) = *(src_addr+i as *i8)
+    }
+}
+
+fn memzero(addr u64, size u64) {
+    for i u64, size {
+        *(addr+i as *i8) = 0
+    }
+}

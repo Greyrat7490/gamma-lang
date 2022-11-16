@@ -345,13 +345,19 @@ func typeCheckCast(e *ast.Cast) {
             os.Exit(1)
         }
 
+    case types.Arr:
+        if t.GetKind() != types.Ptr {
+            fmt.Fprintf(os.Stderr, "[ERROR] you can only cast a pointer into an array (got %v)\n", t)
+            fmt.Fprintln(os.Stderr, "\t" + e.Expr.At())
+            os.Exit(1)
+        }
 
     case types.Struct:
         fmt.Fprintf(os.Stderr, "[ERROR] casting to a struct(%v) is not allowed\n", e.DestType)
         fmt.Fprintln(os.Stderr, "\t" + e.AsPos.At())
         os.Exit(1)
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] typeCheckCast for %v is not implemente yet\n", reflect.TypeOf(e))
+        fmt.Fprintf(os.Stderr, "[ERROR] typeCheckCast for %v is not implemente yet\n", e.DestType)
         os.Exit(1)
     }
 }
