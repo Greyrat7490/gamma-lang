@@ -299,20 +299,22 @@ func derefSetStructVal(file *os.File, t types.StructType, addr addr.Addr, offset
     for i,val := range val.Fields {
         switch val := val.(type) {
         case *constVal.StrConst:
-            derefSetStrVal(file, addr, offset + t.GetOffset(uint(i)), val)
+            derefSetStrVal(file, addr, offset, val)
 
         case *constVal.StructConst:
-            derefSetStructVal(file, t.Types[i].(types.StructType), addr, offset + t.GetOffset(uint(i)), val)
+            derefSetStructVal(file, t.Types[i].(types.StructType), addr, offset, val)
 
         case *constVal.ArrConst, *constVal.IntConst, *constVal.UintConst, *constVal.BoolConst, *constVal.CharConst:
-            derefSetBasicVal(file, addr, offset + t.GetOffset(uint(i)), t.Types[i].Size(), val.GetVal())
+            derefSetBasicVal(file, addr, offset, t.Types[i].Size(), val.GetVal())
 
         case *constVal.PtrConst:
-            derefSetPtrVal(file, addr, offset + t.GetOffset(uint(i)), val)
+            derefSetPtrVal(file, addr, offset, val)
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (derefSetStructVal)\n", t.Types[i])
             os.Exit(1)
         }
+
+        offset += int(t.Types[i].Size())
     }
 }

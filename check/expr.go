@@ -8,9 +8,7 @@ import (
     "gamma/types"
     "gamma/cmpTime"
     "gamma/ast"
-    "gamma/ast/identObj"
     "gamma/ast/identObj/func"
-    "gamma/ast/identObj/struct"
 )
 
 func typeCheckExpr(e ast.Expr) {
@@ -127,14 +125,9 @@ func typeCheckField(e *ast.Field) {
             os.Exit(1)
         }
     } else {
-        if s,ok := identObj.Get(e.StructType.Name).(*structDec.Struct); ok {
-            if _,b := s.GetFieldNum(e.FieldName.Str); !b {
-                fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName.Str)
-                fmt.Fprintln(os.Stderr, "\t" + e.At())
-                os.Exit(1)
-            }
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not declared\n", e.StructType.Name)
+        if e.StructType.GetFieldNum(e.FieldName.Str) == -1 {
+            fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName.Str)
+            fmt.Fprintf(os.Stderr, "\tfields: %v\n", e.StructType.GetFields())
             fmt.Fprintln(os.Stderr, "\t" + e.At())
             os.Exit(1)
         }

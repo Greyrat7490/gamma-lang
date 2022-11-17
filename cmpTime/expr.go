@@ -9,10 +9,8 @@ import (
     "gamma/gen/asm/x86_64"
     "gamma/cmpTime/constVal"
     "gamma/ast"
-    "gamma/ast/identObj"
     "gamma/ast/identObj/vars"
     "gamma/ast/identObj/consts"
-    "gamma/ast/identObj/struct"
 )
 
 func ConstEvalInt(e ast.Expr) (int64, bool) {
@@ -160,15 +158,13 @@ func ConstEvalField(e *ast.Field) constVal.ConstVal {
     } else {
         if c := ConstEval(e.Obj); c != nil {
             if strct,ok := c.(*constVal.StructConst); ok {
-                obj := identObj.Get(e.StructType.Name)
-                if s,ok := obj.(*structDec.Struct); ok {
-                    if i,ok := s.GetFieldNum(e.FieldName.Str); ok {
-                        return strct.Fields[i]
-                    } else {
-                        fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName)
-                        fmt.Fprintln(os.Stderr, "\t" + e.At())
-                        os.Exit(1)
-                    }
+                if i := e.StructType.GetFieldNum(e.FieldName.Str); i != -1 {
+                    return strct.Fields[i]
+                } else {
+                    fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName)
+                    fmt.Fprintf(os.Stderr, "\tfields: %v\n", e.StructType.GetFields())
+                    fmt.Fprintln(os.Stderr, "\t" + e.At())
+                    os.Exit(1)
                 }
             } else {
                 fmt.Fprintf(os.Stderr, "[ERROR] expected a *constVal.StructConst but got %v\n", reflect.TypeOf(c))

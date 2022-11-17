@@ -131,11 +131,11 @@ func evalAssign(s *ast.Assign) {
         case *ast.Field:
             switch o := dst.Obj.(type) {
             case *ast.Ident:
-                setVarField(o.Name, uint(dst.StructType.GetOffset(dst.FieldNum)), dst.GetType(), dst.DotPos, val)
+                setVarField(o.Name, uint(dst.StructType.GetOffset(dst.FieldName.Str)), dst.GetType(), dst.DotPos, val)
 
             case *ast.Field:
                 ident := getIdentOfField(dst)
-                setVarField(ident.Name, uint(dst.StructType.GetOffset(dst.FieldNum)), dst.GetType(), dst.DotPos, val)
+                setVarField(ident.Name, uint(dst.StructType.GetOffset(dst.FieldName.Str)), dst.GetType(), dst.DotPos, val)
 
             default:
                 fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet (evalAssign)")

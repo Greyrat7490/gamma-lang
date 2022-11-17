@@ -64,6 +64,7 @@ type StrType  struct {
 type StructType struct {
     Name string
     Types []Type
+    names map[string]int
     isBigStruct bool
     isAligned bool
     size uint
@@ -112,7 +113,12 @@ func CreateStr() StrType {
     return StrType{ ptr: PtrType{ BaseType: CharType{} }, size: UintType{ size: 4 } }
 }
 
-func CreateStructType(name string, types []Type) StructType {
+func CreateStructType(name string, types []Type, names []string) StructType {
+    ns := map[string]int{}
+    for i, n := range names {
+        ns[n] = i
+    }
+
     size := uint(0)
     for _,t := range types {
         size += t.Size()
@@ -128,15 +134,44 @@ func CreateStructType(name string, types []Type) StructType {
         isBigStruct = true
     }
 
-    return StructType{ Name: name, Types: types, isBigStruct: isBigStruct, isAligned: aligned, size: size }
+    return StructType{ Name: name, Types: types, isBigStruct: isBigStruct, isAligned: aligned, size: size, names: ns }
 }
 
-func (t StructType) GetOffset(fieldNum uint) (offset int) {
-    for i := uint(0); i < fieldNum; i++ {
-        offset += int(t.Types[i].Size())
+func (t *StructType) GetOffset(field string) (offset int) {
+    if fieldNum, ok := t.names[field]; ok {
+        for i := 0; i < fieldNum; i++ {
+            offset += int(t.Types[i].Size())
+        }
+        return
     }
 
-    return
+    return -1
+}
+
+func (t *StructType) GetType(field string) Type {
+    if i, ok := t.names[field]; ok {
+        return t.Types[i]
+    }
+
+    return nil
+}
+
+func (t *StructType) GetFieldNum(field string) int {
+    if i, ok := t.names[field]; ok {
+        return i
+    }
+
+    return -1
+}
+
+func (t *StructType) GetFields() []string {
+    fields := make([]string, len(t.Types))
+
+    for name, idx := range t.names {
+        fields[idx] = name
+    }
+
+    return fields
 }
 
 func IsBigStruct(t Type) bool {

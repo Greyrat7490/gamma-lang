@@ -302,7 +302,7 @@ func prsStructLit(tokens *token.Tokens) *ast.StructLit {
     if !omitNames {
         orderedFields := make([]ast.FieldLit, len(fields))
         for _,f := range fields {
-            if idx, b := s.GetFieldNum(f.Name.Str); !b {
+            if idx := t.GetFieldNum(f.Name.Str); idx == -1 {
                 fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" has no field called \"%s\"\n", name.Str, f.Name.Str)
                 fmt.Fprintf(os.Stderr, "\tfields: %v\n", s.GetNames())
                 fmt.Fprintln(os.Stderr, "\t" + f.At())
@@ -480,11 +480,22 @@ func prsField(tokens *token.Tokens, obj ast.Expr) *ast.Field {
     }
 
     field := ast.Field{ Obj: obj, DotPos: dot.Pos, FieldName: fieldName }
-    if obj.GetType().GetKind() == types.Arr {
+    switch t := obj.GetType().(type) {
+    case types.ArrType:
         field.Type = types.CreateUint(types.Ptr_Size)
-    } else {
-        field.StructType, field.Type, field.FieldNum = GetFieldInfo(&field)
+    case types.StructType:
+        field.StructType = t
+        field.Type = field.StructType.GetType(fieldName.Str)
+
+        if field.Type == nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" has no field called \"%s\"\n", field.StructType.Name, fieldName.Str)
+            fmt.Fprintf(os.Stderr, "\tfields: %v\n", t.GetFields())
+            fmt.Fprintln(os.Stderr, "\t" + obj.At())
+            os.Exit(1)
+        }
+    default:
     }
+
     return &field
 }
 

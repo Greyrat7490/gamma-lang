@@ -9,8 +9,6 @@ import (
     "gamma/cmpTime"
     "gamma/cmpTime/constVal"
     "gamma/ast"
-    "gamma/ast/identObj"
-    "gamma/ast/identObj/struct"
 )
 
 func GetTypeUnary(e *ast.Unary) types.Type {
@@ -195,23 +193,4 @@ func GetTypeIndexed(e *ast.Indexed) types.ArrType {
         os.Exit(1)
         return types.ArrType{}
     }
-}
-
-func GetFieldInfo(e *ast.Field) (types.StructType, types.Type, uint) {
-    if sType,ok := e.Obj.GetType().(types.StructType); ok {
-        if s,ok := identObj.Get(sType.Name).(*structDec.Struct); ok {
-            t, idx := s.GetField(e.FieldName.Str)
-            return sType, t, idx
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not declared\n", sType.Name)
-            fmt.Fprintln(os.Stderr, "\t" + e.At())
-            os.Exit(1)
-        }
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a struct type but got %v\n", reflect.TypeOf(e.Obj.GetType()))
-        fmt.Fprintln(os.Stderr, "\t" + e.At())
-        os.Exit(1)
-    }
-
-    return types.StructType{}, nil, 0
 }

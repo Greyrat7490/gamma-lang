@@ -11,10 +11,8 @@ import (
     "gamma/cmpTime"
     "gamma/cmpTime/constVal"
     "gamma/ast"
-    "gamma/ast/identObj"
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
-    "gamma/ast/identObj/struct"
     "gamma/ast/identObj/consts"
     "gamma/gen/asm/x86_64"
     "gamma/gen/asm/x86_64/conditions"
@@ -215,28 +213,15 @@ func FieldAddrToReg(file *os.File, e *ast.Field, r asm.RegGroup) {
 }
 
 func FieldToOffset(f *ast.Field) int {
-    if s,ok := identObj.Get(f.StructType.Name).(*structDec.Struct); ok {
-        if i,b := s.GetFieldNum(f.FieldName.Str); b {
-            switch o := f.Obj.(type) {
-            case *ast.Ident:
-                return f.StructType.GetOffset(uint(i))
+    switch o := f.Obj.(type) {
+    case *ast.Ident:
+        return f.StructType.GetOffset(f.FieldName.Str)
 
-            case *ast.Field:
-                return f.StructType.GetOffset(uint(i)) + FieldToOffset(o)
+    case *ast.Field:
+        return f.StructType.GetOffset(f.FieldName.Str) + FieldToOffset(o)
 
-            default:
-                fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
-                fmt.Fprintln(os.Stderr, "\t" + f.At())
-                os.Exit(1)
-            }
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", f.StructType.Name, f.FieldName)
-            fmt.Fprintln(os.Stderr, "\t" + f.At())
-            os.Exit(1)
-        }
-
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not declared\n", f.StructType.Name)
+    default:
+        fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
         fmt.Fprintln(os.Stderr, "\t" + f.At())
         os.Exit(1)
     }
@@ -248,103 +233,95 @@ func GenField(file *os.File, e *ast.Field) {
     if t,ok := e.Obj.GetType().(types.ArrType); ok {
         asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprint(t.Lens[0]))
     } else {
-        if s,ok := identObj.Get(e.StructType.Name).(*structDec.Struct); ok {
-            if i,b := s.GetFieldNum(e.FieldName.Str); b {
-                switch o := e.Obj.(type) {
-                case *ast.Ident:
-                    offset := int64(e.StructType.GetOffset(i))
+        switch o := e.Obj.(type) {
+        case *ast.Ident:
+            offset := int64(e.StructType.GetOffset(e.FieldName.Str))
 
-                    switch t := s.GetTypes()[i].(type) {
-                    case types.StrType:
-                        asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr().Offseted(offset), types.Ptr_Size, false)
-                        asm.MovRegDeref(
-                            file,
-                            asm.RegGroup(1),
-                            o.Obj.Addr().Offseted(offset + int64(types.Ptr_Size)),
-                            types.U32_Size,
-                            false,
-                        )
+            switch t := e.Type.(type) {
+            case types.StrType:
+                asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr().Offseted(offset), types.Ptr_Size, false)
+                asm.MovRegDeref(
+                    file,
+                    asm.RegGroup(1),
+                    o.Obj.Addr().Offseted(offset + int64(types.Ptr_Size)),
+                    types.U32_Size,
+                    false,
+                )
 
-                    case types.StructType:
-                        if t.Size() > uint(8) {
-                            asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr().Offseted(offset), types.Ptr_Size, false)
-                            asm.MovRegDeref(
-                                file,
-                                asm.RegGroup(1),
-                                o.Obj.Addr().Offseted(offset + int64(types.Ptr_Size)),
-                                t.Size() - 8,
-                                false,
-                            )
-                        } else {
-                            asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr().Offseted(offset), t.Size(), false)
-                        }
-
-                    case types.IntType:
-                        asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr().Offseted(offset), t.Size(), true)
-
-                    default:
-                        asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr().Offseted(offset), t.Size(), false)
-                    }
-
-                case *ast.Field:
-                    FieldAddrToReg(file, o, asm.RegC)
-                    addr := asm.RegAsAddr(asm.RegC)
-
-                    offset := FieldToOffset(e)
-                    switch t := s.GetTypes()[i].(type) {
-                    case types.StrType:
-                        asm.MovRegDeref(
-                            file,
-                            asm.RegGroup(0),
-                            addr.Offseted(int64(offset)),
-                            types.Ptr_Size,
-                            false,
-                        )
-                        asm.MovRegDeref(
-                            file,
-                            asm.RegGroup(1),
-                            addr.Offseted(int64(offset + int(types.Ptr_Size))),
-                            types.I32_Size,
-                            false,
-                        )
-
-                    case types.StructType:
-                        if t.Size() > uint(8) {
-                            asm.MovRegDeref(
-                                file,
-                                asm.RegGroup(0),
-                                addr.Offseted(int64(offset)),
-                                types.Ptr_Size,
-                                false,
-                            )
-                            asm.MovRegDeref(
-                                file,
-                                asm.RegGroup(1),
-                                addr.Offseted(int64(offset + int(types.Ptr_Size))),
-                                t.Size() - 8,
-                                false,
-                            )
-                        } else {
-                            asm.MovRegDeref(file, asm.RegGroup(0), addr.Offseted(int64(offset)), t.Size(), false)
-                        }
-
-                    case types.IntType:
-                        asm.MovRegDeref(file, asm.RegGroup(0), addr.Offseted(int64(offset)), t.Size(), true)
-
-                    default:
-                        asm.MovRegDeref(file, asm.RegGroup(0), addr.Offseted(int64(offset)), t.Size(), false)
-                    }
-
-                default:
-                    fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
-                    fmt.Fprintln(os.Stderr, "\t" + e.At())
-                    os.Exit(1)
+            case types.StructType:
+                if t.Size() > uint(8) {
+                    asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr().Offseted(offset), types.Ptr_Size, false)
+                    asm.MovRegDeref(
+                        file,
+                        asm.RegGroup(1),
+                        o.Obj.Addr().Offseted(offset + int64(types.Ptr_Size)),
+                        t.Size() - 8,
+                        false,
+                    )
+                } else {
+                    asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr().Offseted(offset), t.Size(), false)
                 }
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName)
-                fmt.Fprintln(os.Stderr, "\t" + e.At())
-                os.Exit(1)
+
+            case types.IntType:
+                asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr().Offseted(offset), t.Size(), true)
+
+            default:
+                asm.MovRegDeref(file, asm.RegGroup(0), o.Obj.Addr().Offseted(offset), t.Size(), false)
             }
+
+        case *ast.Field:
+            FieldAddrToReg(file, o, asm.RegC)
+            addr := asm.RegAsAddr(asm.RegC)
+
+            offset := FieldToOffset(e)
+            switch t := e.Type.(type) {
+            case types.StrType:
+                asm.MovRegDeref(
+                    file,
+                    asm.RegGroup(0),
+                    addr.Offseted(int64(offset)),
+                    types.Ptr_Size,
+                    false,
+                )
+                asm.MovRegDeref(
+                    file,
+                    asm.RegGroup(1),
+                    addr.Offseted(int64(offset + int(types.Ptr_Size))),
+                    types.I32_Size,
+                    false,
+                )
+
+            case types.StructType:
+                if t.Size() > uint(8) {
+                    asm.MovRegDeref(
+                        file,
+                        asm.RegGroup(0),
+                        addr.Offseted(int64(offset)),
+                        types.Ptr_Size,
+                        false,
+                    )
+                    asm.MovRegDeref(
+                        file,
+                        asm.RegGroup(1),
+                        addr.Offseted(int64(offset + int(types.Ptr_Size))),
+                        t.Size() - 8,
+                        false,
+                    )
+                } else {
+                    asm.MovRegDeref(file, asm.RegGroup(0), addr.Offseted(int64(offset)), t.Size(), false)
+                }
+
+            case types.IntType:
+                asm.MovRegDeref(file, asm.RegGroup(0), addr.Offseted(int64(offset)), t.Size(), true)
+
+            default:
+                asm.MovRegDeref(file, asm.RegGroup(0), addr.Offseted(int64(offset)), t.Size(), false)
+            }
+
+        default:
+            fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
+            fmt.Fprintln(os.Stderr, "\t" + e.At())
+            os.Exit(1)
         }
     }
 }
@@ -638,16 +615,16 @@ func DerefSetBigStruct(file *os.File, address addr.Addr, e ast.Expr) {
         os.Exit(1)
     }
 
-
     switch e := e.(type) {
     case *ast.StructLit:
+        a := addr.Addr{ BaseAddr: address.BaseAddr, Offset: address.Offset }
         for i,f := range e.Fields {
-            a := addr.Addr{ BaseAddr: address.BaseAddr, Offset: address.Offset + int64(e.StructType.GetOffset(uint(i))) }
             if c := cmpTime.ConstEval(f.Value); c != nil {
                 DerefSetVal(file, a, e.StructType.Types[i], c)
             } else {
                 DerefSetExpr(file, a, e.StructType.Types[i], f.Value)
             }
+            a.Offset += int64(e.StructType.Types[i].Size())
         }
 
     case *ast.Indexed:
