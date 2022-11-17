@@ -154,22 +154,27 @@ func ConstEvalStructLit(e *ast.StructLit) constVal.ConstVal {
 }
 
 func ConstEvalField(e *ast.Field) constVal.ConstVal {
-    if c := ConstEval(e.Obj); c != nil {
-        if strct,ok := c.(*constVal.StructConst); ok {
-            obj := identObj.Get(e.StructType.Name)
-            if s,ok := obj.(*structDec.Struct); ok {
-                if i,ok := s.GetFieldNum(e.FieldName.Str); ok {
-                    return strct.Fields[i]
-                } else {
-                    fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName)
-                    fmt.Fprintln(os.Stderr, "\t" + e.At())
-                    os.Exit(1)
+    if t,ok := e.Obj.GetType().(types.ArrType); ok {
+        l := t.Lens[0]
+        return (*constVal.UintConst)(&l)
+    } else {
+        if c := ConstEval(e.Obj); c != nil {
+            if strct,ok := c.(*constVal.StructConst); ok {
+                obj := identObj.Get(e.StructType.Name)
+                if s,ok := obj.(*structDec.Struct); ok {
+                    if i,ok := s.GetFieldNum(e.FieldName.Str); ok {
+                        return strct.Fields[i]
+                    } else {
+                        fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName)
+                        fmt.Fprintln(os.Stderr, "\t" + e.At())
+                        os.Exit(1)
+                    }
                 }
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected a *constVal.StructConst but got %v\n", reflect.TypeOf(c))
+                fmt.Fprintln(os.Stderr, "\t" + e.At())
+                os.Exit(1)
             }
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected a *constVal.StructConst but got %v\n", reflect.TypeOf(c))
-            fmt.Fprintln(os.Stderr, "\t" + e.At())
-            os.Exit(1)
         }
     }
 

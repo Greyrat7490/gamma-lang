@@ -88,6 +88,10 @@ func prsExpr(tokens *token.Tokens) ast.Expr {
         expr = prsIndexExpr(tokens, expr)
     }
 
+    for tokens.Peek().Type == token.Dot {
+        expr = prsField(tokens, expr)
+    }
+
     for tokens.Peek().Type == token.As {
         tokens.Next()
         expr = prsCast(tokens, expr)
@@ -476,7 +480,11 @@ func prsField(tokens *token.Tokens, obj ast.Expr) *ast.Field {
     }
 
     field := ast.Field{ Obj: obj, DotPos: dot.Pos, FieldName: fieldName }
-    field.StructType, field.Type, field.FieldNum = GetFieldInfo(&field)
+    if obj.GetType().GetKind() == types.Arr {
+        field.Type = types.CreateUint(types.Ptr_Size)
+    } else {
+        field.StructType, field.Type, field.FieldNum = GetFieldInfo(&field)
+    }
     return &field
 }
 

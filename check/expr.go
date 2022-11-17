@@ -120,16 +120,24 @@ func typeCheckIndexed(e *ast.Indexed) {
 }
 
 func typeCheckField(e *ast.Field) {
-    if s,ok := identObj.Get(e.StructType.Name).(*structDec.Struct); ok {
-        if _,b := s.GetFieldNum(e.FieldName.Str); !b {
-            fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName.Str)
-            fmt.Fprintln(os.Stderr, "\t" + e.At())
+    if e.Obj.GetType().GetKind() == types.Arr {
+        if e.FieldName.Str != "len" {
+            fmt.Fprintf(os.Stderr, "[ERROR] array has no field \"%s\" (only len)\n", e.FieldName.Str)
+            fmt.Fprintln(os.Stderr, "\t" + e.FieldName.At())
             os.Exit(1)
         }
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not declared\n", e.StructType.Name)
-        fmt.Fprintln(os.Stderr, "\t" + e.At())
-        os.Exit(1)
+        if s,ok := identObj.Get(e.StructType.Name).(*structDec.Struct); ok {
+            if _,b := s.GetFieldNum(e.FieldName.Str); !b {
+                fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName.Str)
+                fmt.Fprintln(os.Stderr, "\t" + e.At())
+                os.Exit(1)
+            }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not declared\n", e.StructType.Name)
+            fmt.Fprintln(os.Stderr, "\t" + e.At())
+            os.Exit(1)
+        }
     }
 }
 
