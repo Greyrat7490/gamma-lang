@@ -4,11 +4,11 @@ import (
     "os"
     "fmt"
     "reflect"
+    "gamma/ast"
     "gamma/token"
     "gamma/types"
     "gamma/cmpTime"
     "gamma/cmpTime/constVal"
-    "gamma/ast"
 )
 
 func GetTypeUnary(e *ast.Unary) types.Type {
@@ -182,8 +182,8 @@ func GetTypeBinary(e *ast.Binary) types.Type {
     return nil
 }
 
-func GetTypeIndexed(e *ast.Indexed) types.ArrType {
-    t := e.ArrExpr.GetType()
+func GetTypeIndexed(e ast.Expr) types.ArrType {
+    t := e.GetType()
 
     if arrType,ok := t.(types.ArrType); ok {
         return arrType

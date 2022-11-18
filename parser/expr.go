@@ -435,11 +435,10 @@ func prsArrayLitExprs(tokens *token.Tokens, lenghts []uint64) (exprs []ast.Expr)
 }
 
 func prsIndexExpr(tokens *token.Tokens, e ast.Expr) *ast.Indexed {
-    res := ast.Indexed{ ArrExpr: e, BrackLPos: tokens.Cur().Pos }
-    res.ArrType = GetTypeIndexed(&res)
+    res := ast.Indexed{ ArrExpr: e, BrackLPos: tokens.Cur().Pos, ArrType: GetTypeIndexed(e) }
 
     tokens.Next()
-    res.Indices = append(res.Indices, prsExpr(tokens))
+    res.Index = prsExpr(tokens)
 
     posR := tokens.Next()
     if posR.Type != token.BrackR {
@@ -448,17 +447,10 @@ func prsIndexExpr(tokens *token.Tokens, e ast.Expr) *ast.Indexed {
         os.Exit(1)
     }
 
-    for tokens.Peek().Type == token.BrackL {
-        tokens.Next()
-        tokens.Next()
-        res.Indices = append(res.Indices, prsExpr(tokens))
-
-        posR := tokens.Next()
-        if posR.Type != token.BrackR {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected \"]\" but got %v\n", posR)
-            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-            os.Exit(1)
-        }
+    if len(res.ArrType.Lens) == 1 {
+        res.Type = res.ArrType.BaseType
+    } else {
+        res.Type = types.ArrType{ BaseType: res.ArrType.BaseType, Lens: res.ArrType.Lens[1:] }
     }
 
     return &res

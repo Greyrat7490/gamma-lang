@@ -133,8 +133,16 @@ func GenArrayLit(file *os.File, e *ast.ArrayLit) {
     asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprintf("_arr%d", e.Idx))
 }
 
+func indexedBaseAddrToReg(file *os.File, e *ast.Indexed) {
+    if indexed,ok := e.ArrExpr.(*ast.Indexed); ok {
+        indexedBaseAddrToReg(file, indexed)
+    } else {
+        GenExpr(file, e.ArrExpr)
+    }
+}
+
 func IndexedAddrToReg(file *os.File, e *ast.Indexed, r asm.RegGroup) {
-    GenExpr(file, e.ArrExpr)
+    indexedBaseAddrToReg(file, e)
 
     baseTypeSize := uint64(e.ArrType.BaseType.Size())
 

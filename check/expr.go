@@ -110,14 +110,28 @@ func checkTypeExpr(destType types.Type, e ast.Expr) bool {
 }
 
 func typeCheckIndexed(e *ast.Indexed) {
-    if len(e.ArrType.Lens) < len(e.Indices){
-        fmt.Fprintf(os.Stderr, "[ERROR] dimension of the array is %d but got %d\n", len(e.ArrType.Lens), len(e.Indices))
-        fmt.Fprintln(os.Stderr, "\t" + e.At())
+    typeCheckExpr(e.ArrExpr)
+
+    switch e.Index.GetType().GetKind() {
+    case types.Uint, types.Int:
+        if c,ok := cmpTime.ConstEvalUint(e.Index); ok {
+            if c >= e.ArrType.Lens[0] || c < 0 {
+                fmt.Fprintf(os.Stderr, "[ERROR] index %d is out of bounds [%d]\n", c, e.ArrType.Lens[0])
+                fmt.Fprintf(os.Stderr, "\tarray type: %v\n", e.ArrType)
+                fmt.Fprintln(os.Stderr, "\t" + e.Index.At())
+                os.Exit(1)
+            }
+        }
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] expected an int/uint as index but got %v\n", e.Index.GetType())
+        fmt.Fprintln(os.Stderr, "\t" + e.Index.At())
         os.Exit(1)
     }
 }
 
 func typeCheckField(e *ast.Field) {
+    typeCheckExpr(e.Obj)
+
     if e.Obj.GetType().GetKind() == types.Arr {
         if e.FieldName.Str != "len" {
             fmt.Fprintf(os.Stderr, "[ERROR] array has no field \"%s\" (only len)\n", e.FieldName.Str)

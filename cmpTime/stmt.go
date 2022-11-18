@@ -190,11 +190,7 @@ func setIndexed(dst *ast.Indexed, val constVal.ConstVal) {
             os.Exit(1)
         }
     } else {
-        if len(dst.Indices) == 1 {
-            fmt.Fprintln(os.Stderr, "[ERROR] cannot const eval index")
-        } else {
-            fmt.Fprintln(os.Stderr, "[ERROR] cannot const eval indices")
-        }
+        fmt.Fprintln(os.Stderr, "[ERROR] cannot const eval index")
         fmt.Fprintln(os.Stderr, "\t" + dst.BrackLPos.At())
         os.Exit(1)
     }

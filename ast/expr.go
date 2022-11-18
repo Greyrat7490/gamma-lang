@@ -86,9 +86,10 @@ type FieldLit struct {
 
 type Indexed struct {
     ArrType types.ArrType
+    Type types.Type
     ArrExpr Expr
     BrackLPos token.Pos
-    Indices []Expr
+    Index Expr
     BrackRPos token.Pos
 }
 
@@ -201,11 +202,7 @@ func (o *ArrayLit) Readable(indent int) string {
 
 func (o *Indexed) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "INDEXED:\n" +
-        o.ArrExpr.Readable(indent+1)
-
-    for _, idx := range o.Indices {
-        res += idx.Readable(indent+1)
-    }
+        o.ArrExpr.Readable(indent+1) + o.Index.Readable(indent+1)
 
     return res
 }
@@ -289,53 +286,24 @@ func (o *BadExpr) Readable(indent int) string {
     return ""
 }
 
-
 func (e *Indexed) Flatten() Expr {
-    // for dim = 1 (no need to flatten)
-    if len(e.Indices) == 1 {
-        return e.Indices[0]
-    }
+    idxType := types.CreateUint(types.Ptr_Size)
 
-    res := Binary{
-        Operator: token.Token{ Str: "+", Type: token.Plus },
-        OperandR: e.Indices[len(e.Indices)-1],
-        Type: types.CreateUint(types.Ptr_Size),
-    }
-    expr := &res.OperandL
-
-    // for dim > 3
-    var innerLen uint64 = e.ArrType.Lens[0]
-    for i := 1; i < len(e.Indices)-1; i++ {
-        b := Binary{
-            Operator: token.Token{ Str: "+", Type: token.Plus }, OperandR: &Binary{
+    if i,ok := e.ArrExpr.(*Indexed); ok {
+        return &Binary{
+            Type: idxType,
+            Operator: token.Token{ Str: "+", Type: token.Plus },
+            OperandR: e.Index,
+            OperandL: &Binary{
+                Type: idxType,
                 Operator: token.Token{ Str: "*", Type: token.Mul },
-                OperandL: e.Indices[len(e.Indices)-1-i],
-                OperandR: &UintLit{
-                    Repr: innerLen,
-                    Type: types.CreateUint(types.Ptr_Size),
-                },
-                Type: types.CreateUint(types.Ptr_Size),
+                OperandL: i.Flatten(),
+                OperandR: &UintLit{ Repr: e.ArrType.Lens[0], Type: idxType },
             },
-            Type: types.CreateUint(types.Ptr_Size),
         }
-
-        *expr = &b
-        expr = &b.OperandL
-
-        innerLen *= e.ArrType.Lens[i]
+    } else {
+        return e.Index
     }
-
-    *expr = &Binary{
-        Operator: token.Token{ Str: "*", Type: token.Mul },
-        OperandL: e.Indices[0],
-        OperandR: &UintLit{
-            Repr: innerLen,
-            Type: types.CreateUint(types.Ptr_Size),
-        },
-        Type: types.CreateUint(types.Ptr_Size),
-    }
-
-    return &res
 }
 
 
@@ -350,7 +318,7 @@ func (e *FieldLit)  GetType() types.Type { return e.Value.GetType() }
 func (e *StructLit) GetType() types.Type { return e.StructType }
 func (e *ArrayLit)  GetType() types.Type { return e.Type }
 func (e *FnCall)    GetType() types.Type { return e.F.GetRetType() }
-func (e *Indexed)   GetType() types.Type { return e.ArrType.BaseType }
+func (e *Indexed)   GetType() types.Type { return e.Type }
 func (e *Field)     GetType() types.Type { return e.Type }
 func (e *Ident)     GetType() types.Type { return e.Obj.GetType() }
 func (e *Unary)     GetType() types.Type { return e.Type }

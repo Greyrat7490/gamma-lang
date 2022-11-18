@@ -1,6 +1,39 @@
+fn printArr2x3x3(arr [2][3][3]i32) {
+    for i i32, 2 {
+        printStr("{ ")
+        for j i32, 3 {
+            printStr("{ ")
+            for k i32, 3 {
+                printInt(arr[i][j][k]) printChar(' ')
+            }
+            printStr("} ")
+        }
+        printStr("}\n")
+    }
+}
+
 fn main() {
     arr := [3][2]i32{ { 0, 1 }, { 2, 3 }, { 4, 5 } }
 
-    printStr("arr.len: ")
-    printUint(arr.len) printChar('\n')
+    printStr("arr dim: ")
+    printUint(arr.len) printChar('x') printUint(arr[0].len)
+    printChar('\n')
+
+    for i i32, 3 {
+        for j i32, 2 {
+            printInt(arr[i][j]) printChar(' ')
+        }
+        printChar('\n')
+    }
+
+    arr2 := [2][3][3]i32{
+        { { 0, 1, 2 }, { 3, 4, 5 }, { 6, 7, 8 } },
+        { { 9, 10, 11 }, { 12, 13, 14 }, { 15, 16, 17 } },
+    }
+
+    printStr("arr2 dim: ")
+    printUint(arr2.len) printChar('x') printUint(arr2[0].len) printChar('x') printUint(arr2[0][0].len)
+    printChar('\n')
+    printArr2x3x3(arr2)
 }
+
