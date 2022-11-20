@@ -3,6 +3,7 @@ package gen
 import (
     "os"
     "fmt"
+    "bufio"
     "reflect"
     "gamma/token"
     "gamma/types"
@@ -16,7 +17,7 @@ import (
     "gamma/gen/asm/x86_64/conditions"
 )
 
-func GenStmt(file *os.File, s ast.Stmt) {
+func GenStmt(file *bufio.Writer, s ast.Stmt) {
     switch s := s.(type) {
     case *ast.Assign:
         GenAssign(file, s)
@@ -68,7 +69,7 @@ func GenStmt(file *os.File, s ast.Stmt) {
     }
 }
 
-func GenAssign(file *os.File, s *ast.Assign) {
+func GenAssign(file *bufio.Writer, s *ast.Assign) {
     t := s.Dest.GetType()
 
     switch dest := s.Dest.(type) {
@@ -97,13 +98,13 @@ func GenAssign(file *os.File, s *ast.Assign) {
     }
 }
 
-func GenBlock(file *os.File, s *ast.Block) {
+func GenBlock(file *bufio.Writer, s *ast.Block) {
     for _,stmt := range s.Stmts {
         GenStmt(file, stmt)
     }
 }
 
-func GenIf(file *os.File, s *ast.If) {
+func GenIf(file *bufio.Writer, s *ast.If) {
     if val,ok := cmpTime.ConstEval(s.Cond).(*constVal.BoolConst); ok {
         if bool(*val) {
             GenBlock(file, &s.Block)
@@ -141,15 +142,15 @@ func GenIf(file *os.File, s *ast.If) {
     cond.IfEnd(file, count)
 }
 
-func GenElif(file *os.File, s *ast.Elif) {
+func GenElif(file *bufio.Writer, s *ast.Elif) {
     GenIf(file, (*ast.If)(s))
 }
 
-func GenElse(file *os.File, s *ast.Else) {
+func GenElse(file *bufio.Writer, s *ast.Else) {
     GenBlock(file, &s.Block)
 }
 
-func GenCase(file *os.File, s *ast.Case, switchCount uint) {
+func GenCase(file *bufio.Writer, s *ast.Case, switchCount uint) {
     if s.Cond == nil {
         cond.CaseStart(file)
         cond.CaseBody(file)
@@ -187,7 +188,7 @@ func GenCase(file *os.File, s *ast.Case, switchCount uint) {
     cond.CaseBodyEnd(file, switchCount)
 }
 
-func GenSwitch(file *os.File, s *ast.Switch) {
+func GenSwitch(file *bufio.Writer, s *ast.Switch) {
     count := cond.StartSwitch()
 
     // TODO: detect unreachable code and throw error
@@ -202,11 +203,11 @@ func GenSwitch(file *os.File, s *ast.Switch) {
     cond.EndSwitch(file)
 }
 
-func GenThrough(file *os.File, s *ast.Through) {
+func GenThrough(file *bufio.Writer, s *ast.Through) {
     cond.Through(file, s.Pos)
 }
 
-func GenWhile(file *os.File, s *ast.While) {
+func GenWhile(file *bufio.Writer, s *ast.While) {
     if s.Def != nil {
         GenDefVar(file, s.Def)
     }
@@ -233,7 +234,7 @@ func GenWhile(file *os.File, s *ast.While) {
     loops.WhileEnd(file, count)
 }
 
-func GenFor(file *os.File, s *ast.For) {
+func GenFor(file *bufio.Writer, s *ast.For) {
     GenDefVar(file, &s.Def)
 
     count := loops.ForStart(file)
@@ -259,7 +260,7 @@ func GenFor(file *os.File, s *ast.For) {
     loops.ForEnd(file, count)
 }
 
-func GenBreak(file *os.File, s *ast.Break) {
+func GenBreak(file *bufio.Writer, s *ast.Break) {
     if loops.InLoop() {
         loops.Break(file)
     } else if cond.InSwitch() {
@@ -271,11 +272,11 @@ func GenBreak(file *os.File, s *ast.Break) {
     }
 }
 
-func GenContinue(file *os.File, s *ast.Continue) {
+func GenContinue(file *bufio.Writer, s *ast.Continue) {
     loops.Continue(file)
 }
 
-func GenRet(file *os.File, s *ast.Ret) {
+func GenRet(file *bufio.Writer, s *ast.Ret) {
     if s.RetExpr != nil {
         if types.IsBigStruct(s.RetExpr.GetType()) {
             asm.MovRegDeref(file, asm.RegC, addr.Addr{ BaseAddr: "rbp", Offset: -int64(types.Ptr_Size) }, types.Ptr_Size, false)

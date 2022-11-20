@@ -1,40 +1,40 @@
 package asm
 
 import (
-    "os"
     "fmt"
+    "bufio"
 )
 
-func Eql(file *os.File, lhs string, rhs string) {
+func Eql(file *bufio.Writer, lhs string, rhs string) {
     file.WriteString(fmt.Sprintf("cmp %s, %s\nsete al\n", lhs, rhs))
 }
-func Neq(file *os.File, lhs string, rhs string) {
+func Neq(file *bufio.Writer, lhs string, rhs string) {
     file.WriteString(fmt.Sprintf("cmp %s, %s\nsetne al\n", lhs, rhs))
 }
-func Lss(file *os.File, lhs string, rhs string) {
+func Lss(file *bufio.Writer, lhs string, rhs string) {
     file.WriteString(fmt.Sprintf("cmp %s, %s\nsetl al\n", lhs, rhs))
 }
-func Grt(file *os.File, lhs string, rhs string) {
+func Grt(file *bufio.Writer, lhs string, rhs string) {
     file.WriteString(fmt.Sprintf("cmp %s, %s\nsetg al\n", lhs, rhs))
 }
-func Leq(file *os.File, lhs string, rhs string) {
+func Leq(file *bufio.Writer, lhs string, rhs string) {
     file.WriteString(fmt.Sprintf("cmp %s, %s\nsetle al\n", lhs, rhs))
 }
-func Geq(file *os.File, lhs string, rhs string) {
+func Geq(file *bufio.Writer, lhs string, rhs string) {
     file.WriteString(fmt.Sprintf("cmp %s, %s\nsetge al\n", lhs, rhs))
 }
 
 
-func Neg(file *os.File, size uint) {
+func Neg(file *bufio.Writer, size uint) {
     file.WriteString(fmt.Sprintf("neg %s\n", GetReg(RegA, size)))
 }
-func Add(file *os.File, src string, size uint) {
+func Add(file *bufio.Writer, src string, size uint) {
     file.WriteString(fmt.Sprintf("add %s, %s\n", GetReg(RegA, size), src))
 }
-func Sub(file *os.File, src string, size uint) {
+func Sub(file *bufio.Writer, src string, size uint) {
     file.WriteString(fmt.Sprintf("sub %s, %s\n", GetReg(RegA, size), src))
 }
-func Mul(file *os.File, src string, size uint, signed bool) {
+func Mul(file *bufio.Writer, src string, size uint, signed bool) {
     PushReg(file, RegD)
 
     file.WriteString(fmt.Sprintf("mov %s, %s\n", GetReg(RegB, size), src))
@@ -46,7 +46,7 @@ func Mul(file *os.File, src string, size uint, signed bool) {
 
     PopReg(file, RegD)
 }
-func Div(file *os.File, src string, size uint, signed bool) {
+func Div(file *bufio.Writer, src string, size uint, signed bool) {
     PushReg(file, RegD)
 
     file.WriteString(fmt.Sprintf("mov %s, %s\n", GetReg(RegB, size), src))
@@ -64,7 +64,7 @@ func Div(file *os.File, src string, size uint, signed bool) {
 
     PopReg(file, RegD)
 }
-func Mod(file *os.File, src string, size uint, signed bool) {
+func Mod(file *bufio.Writer, src string, size uint, signed bool) {
     PushReg(file, RegD)
     file.WriteString(fmt.Sprintf("mov %s, %s\n", GetReg(RegB, size), src))
 
@@ -85,21 +85,21 @@ func Mod(file *os.File, src string, size uint, signed bool) {
     PopReg(file, RegD)
 }
 
-func Not(file *os.File, size uint) {
+func Not(file *bufio.Writer, size uint) {
     file.WriteString(fmt.Sprintf("not %s\n", GetReg(RegA, size)))
 }
-func And(file *os.File, src string, size uint) {
+func And(file *bufio.Writer, src string, size uint) {
     file.WriteString(fmt.Sprintf("and %s, %s\n", GetReg(RegA, size), src))
 }
-func Or(file *os.File, src string, size uint) {
+func Or(file *bufio.Writer, src string, size uint) {
     file.WriteString(fmt.Sprintf("or %s, %s\n", GetReg(RegA, size), src))
 }
-func Xor(file *os.File, src string, size uint) {
+func Xor(file *bufio.Writer, src string, size uint) {
     file.WriteString(fmt.Sprintf("xor %s, %s\n", GetReg(RegA, size), src))
 }
-func Shl(file *os.File, src string, size uint) {
+func Shl(file *bufio.Writer, src string, size uint) {
     file.WriteString(fmt.Sprintf("shl %s, %s\n", GetReg(RegA, size), src))
 }
-func Shr(file *os.File, src string, size uint) {
+func Shr(file *bufio.Writer, src string, size uint) {
     file.WriteString(fmt.Sprintf("shr %s, %s\n", GetReg(RegA, size), src))
 }

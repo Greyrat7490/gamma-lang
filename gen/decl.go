@@ -3,6 +3,7 @@ package gen
 import (
     "os"
     "fmt"
+    "bufio"
     "reflect"
     "gamma/ast"
     "gamma/cmpTime"
@@ -13,7 +14,7 @@ import (
     "gamma/types/addr"
 )
 
-func GenDecl(file *os.File, d ast.Decl) {
+func GenDecl(file *bufio.Writer, d ast.Decl) {
     switch d := d.(type) {
     case *ast.Import:
         GenImport(file, d)
@@ -36,13 +37,13 @@ func GenDecl(file *os.File, d ast.Decl) {
     }
 }
 
-func GenImport(file *os.File, d *ast.Import) {
+func GenImport(file *bufio.Writer, d *ast.Import) {
     for _, d := range d.Decls {
         GenDecl(file, d)
     }
 }
 
-func GenDefVar(file *os.File, d *ast.DefVar) {
+func GenDefVar(file *bufio.Writer, d *ast.DefVar) {
     if val := cmpTime.ConstEval(d.Value); val != nil {
         VarDefVal(file, d.V, val)
     } else {
@@ -50,7 +51,7 @@ func GenDefVar(file *os.File, d *ast.DefVar) {
     }
 }
 
-func GenDefFn(file *os.File, d *ast.DefFn) {
+func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
     Define(file, d.F)
 
     regIdx := uint(0)

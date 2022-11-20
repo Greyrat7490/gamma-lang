@@ -3,6 +3,7 @@ package gen
 import (
     "os"
     "fmt"
+    "bufio"
     "reflect"
     "gamma/types"
     "gamma/types/str"
@@ -38,7 +39,7 @@ System V AMD64 ABI calling convention
 
 var regs []asm.RegGroup = []asm.RegGroup{ asm.RegDi, asm.RegSi, asm.RegD, asm.RegC, asm.RegR8, asm.RegR9 }
 
-func Define(file *os.File, f *fn.Func) {
+func Define(file *bufio.Writer, f *fn.Func) {
     file.WriteString(f.GetName() + ":\n")
     file.WriteString("push rbp\nmov rbp, rsp\n")
     if f.GetFrameSize() > 0 {
@@ -46,16 +47,16 @@ func Define(file *os.File, f *fn.Func) {
     }
 }
 
-func FnEnd(file *os.File) {
+func FnEnd(file *bufio.Writer) {
     file.WriteString("leave\n")
     file.WriteString("ret\n")
 }
 
-func CallFn(file *os.File, f *fn.Func) {
+func CallFn(file *bufio.Writer, f *fn.Func) {
     file.WriteString("call " + f.GetName() + "\n")
 }
 
-func DefArg(file *os.File, regIdx uint, v vars.Var) {
+func DefArg(file *bufio.Writer, regIdx uint, v vars.Var) {
     switch t := v.GetType().(type) {
     case types.StrType:
         asm.MovDerefReg(file, v.Addr(), types.Ptr_Size, regs[regIdx])
@@ -75,7 +76,7 @@ func DefArg(file *os.File, regIdx uint, v vars.Var) {
 }
 
 
-func PassVal(file *os.File, regIdx uint, value constVal.ConstVal, valtype types.Type) {
+func PassVal(file *bufio.Writer, regIdx uint, value constVal.ConstVal, valtype types.Type) {
     switch v := value.(type) {
     case *constVal.StrConst:
         asm.MovRegVal(file, regs[regIdx], types.Ptr_Size, fmt.Sprintf("_str%d", uint64(*v)))
@@ -108,7 +109,7 @@ func PassVal(file *os.File, regIdx uint, value constVal.ConstVal, valtype types.
     }
 }
 
-func PassVar(file *os.File, regIdx uint, t types.Type, otherVar vars.Var) {
+func PassVar(file *bufio.Writer, regIdx uint, t types.Type, otherVar vars.Var) {
     switch t := t.(type) {
     case types.StrType:
         asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(), types.Ptr_Size, false)
@@ -130,7 +131,7 @@ func PassVar(file *os.File, regIdx uint, t types.Type, otherVar vars.Var) {
     }
 }
 
-func PassExpr(file *os.File, regIdx uint, argType types.Type, regSize uint, expr ast.Expr) {
+func PassExpr(file *bufio.Writer, regIdx uint, argType types.Type, regSize uint, expr ast.Expr) {
     switch t := argType.(type) {
     case types.StrType:
         GenExpr(file, expr)
@@ -170,7 +171,7 @@ func PassExpr(file *os.File, regIdx uint, argType types.Type, regSize uint, expr
     }
 }
 
-func PassValStack(file *os.File, value constVal.ConstVal, valtype types.Type) {
+func PassValStack(file *bufio.Writer, value constVal.ConstVal, valtype types.Type) {
     switch v := value.(type) {
     case *constVal.StrConst:
         asm.PushVal(file, fmt.Sprint(str.GetSize(uint64(*v))))
@@ -202,7 +203,7 @@ func PassValStack(file *os.File, value constVal.ConstVal, valtype types.Type) {
     }
 }
 
-func PassVarStack(file *os.File, otherVar vars.Var) {
+func PassVarStack(file *bufio.Writer, otherVar vars.Var) {
     switch t := otherVar.GetType().(type) {
     case types.StrType:
         asm.PushDeref(file, otherVar.Addr().Offseted(int64(types.Ptr_Size)))
@@ -219,7 +220,7 @@ func PassVarStack(file *os.File, otherVar vars.Var) {
     }
 }
 
-func PassRegStack(file *os.File, argType types.Type) {
+func PassRegStack(file *bufio.Writer, argType types.Type) {
     switch t := argType.(type) {
     case types.StrType:
         asm.PushReg(file, asm.RegGroup(1))
@@ -236,7 +237,7 @@ func PassRegStack(file *os.File, argType types.Type) {
     }
 }
 
-func passBigStructLit(file *os.File, t types.StructType, value constVal.StructConst, dstAddr addr.Addr) {
+func passBigStructLit(file *bufio.Writer, t types.StructType, value constVal.StructConst, dstAddr addr.Addr) {
     for i,f := range value.Fields {
         switch f := f.(type) {
         case *constVal.StrConst:
@@ -254,11 +255,11 @@ func passBigStructLit(file *os.File, t types.StructType, value constVal.StructCo
     }
 }
 
-func PassBigStructLit(file *os.File, t types.StructType, value constVal.StructConst) {
+func PassBigStructLit(file *bufio.Writer, t types.StructType, value constVal.StructConst) {
     passBigStructLit(file, t, value, asm.RegAsAddr(asm.RegC))
 }
 
-func PassBigStructVar(file *os.File, t types.StructType, v vars.Var, offset int64) {
+func PassBigStructVar(file *bufio.Writer, t types.StructType, v vars.Var, offset int64) {
     dstAddr := asm.RegAsAddr(asm.RegC).Offseted(offset)
     srcAddr := v.Addr().Offseted(offset)
 
@@ -274,19 +275,19 @@ func PassBigStructVar(file *os.File, t types.StructType, v vars.Var, offset int6
     }
 }
 
-func PassBigStructReg(file *os.File, addr addr.Addr, e ast.Expr) {
+func PassBigStructReg(file *bufio.Writer, addr addr.Addr, e ast.Expr) {
     DerefSetBigStruct(file, addr, e)
 }
 
-func RetBigStructLit(file *os.File, t types.StructType, val constVal.StructConst) {
+func RetBigStructLit(file *bufio.Writer, t types.StructType, val constVal.StructConst) {
     PassBigStructLit(file, t, val)
 }
 
-func RetBigStructVar(file *os.File, t types.StructType, v vars.Var) {
+func RetBigStructVar(file *bufio.Writer, t types.StructType, v vars.Var) {
     PassBigStructVar(file, t, v, 0)
 }
 
-func RetBigStructExpr(file *os.File, address addr.Addr, e ast.Expr) {
+func RetBigStructExpr(file *bufio.Writer, address addr.Addr, e ast.Expr) {
     if lit, ok := e.(*ast.StructLit); ok && types.IsBigStruct(e.GetType()) {
         a := addr.Addr{ BaseAddr: address.BaseAddr, Offset: address.Offset }
         for i,f := range lit.Fields {
@@ -322,7 +323,7 @@ func PackValues(types []types.Type, values []constVal.ConstVal) []string {
     return packValues(types, values, nil, 0)
 }
 
-func PackFields(file *os.File, typ types.StructType, fields []ast.FieldLit) {
+func PackFields(file *bufio.Writer, typ types.StructType, fields []ast.FieldLit) {
     if len(fields) > 1 {
         addr := addr.Addr{ BaseAddr: "rsp", Offset: -8 }
         if typ.Size() > 8 {

@@ -3,6 +3,7 @@ package gen
 import (
     "os"
     "fmt"
+    "bufio"
     "gamma/ast"
     "gamma/std"
     "gamma/types/str"
@@ -18,18 +19,21 @@ func GenAsm(Ast ast.Ast) {
         fmt.Fprintln(os.Stderr, "[ERROR] could not create \"output.asm\"")
         os.Exit(1)
     }
-    defer asm.Close()
+    writer := bufio.NewWriter(asm)
 
-    nasm.Header(asm)
+    nasm.Header(writer)
 
-    std.Define(asm)
+    std.Define(writer)
 
     for _,d := range Ast.Decls {
-        GenDecl(asm, d)
+        GenDecl(writer, d)
     }
 
     str.Gen()
     array.Gen()
 
-    nasm.Footer(asm)
+    nasm.Footer(writer)
+
+    writer.Flush()
+    asm.Close()
 }

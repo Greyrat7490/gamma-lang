@@ -3,6 +3,7 @@ package gen
 import (
     "os"
     "fmt"
+    "bufio"
     "reflect"
     "gamma/token"
     "gamma/types"
@@ -18,7 +19,7 @@ import (
     "gamma/gen/asm/x86_64/conditions"
 )
 
-func GenExpr(file *os.File, e ast.Expr) {
+func GenExpr(file *bufio.Writer, e ast.Expr) {
     switch e := e.(type) {
     case *ast.IntLit:
         GenIntLit(file, e.Type.Size(), e)
@@ -78,19 +79,19 @@ func GenExpr(file *os.File, e ast.Expr) {
     }
 }
 
-func GenIntLit(file *os.File, size uint, e *ast.IntLit) {
+func GenIntLit(file *bufio.Writer, size uint, e *ast.IntLit) {
     asm.MovRegVal(file, asm.RegGroup(0), e.Type.Size(), fmt.Sprint(e.Repr))
 }
 
-func GenUintLit(file *os.File, size uint, e *ast.UintLit) {
+func GenUintLit(file *bufio.Writer, size uint, e *ast.UintLit) {
     asm.MovRegVal(file, asm.RegGroup(0), e.Type.Size(), fmt.Sprint(e.Repr))
 }
 
-func GenCharLit(file *os.File, e *ast.CharLit) {
+func GenCharLit(file *bufio.Writer, e *ast.CharLit) {
     asm.MovRegVal(file, asm.RegGroup(0), types.Char_Size, fmt.Sprint(e.Repr))
 }
 
-func GenPtrLit(file *os.File, e *ast.PtrLit) {
+func GenPtrLit(file *bufio.Writer, e *ast.PtrLit) {
     if e.Local {
         file.WriteString(fmt.Sprintf("lea %s, [%s]\n", asm.GetReg(asm.RegA, types.Ptr_Size), e.Addr))
         asm.MovRegReg(file, asm.RegGroup(0), asm.RegA, types.Ptr_Size)
@@ -99,7 +100,7 @@ func GenPtrLit(file *os.File, e *ast.PtrLit) {
     }
 }
 
-func GenBoolLit(file *os.File, e *ast.BoolLit) {
+func GenBoolLit(file *bufio.Writer, e *ast.BoolLit) {
     if e.Repr {
         asm.MovRegVal(file, asm.RegGroup(0), types.Bool_Size, "1")
     } else {
@@ -107,12 +108,12 @@ func GenBoolLit(file *os.File, e *ast.BoolLit) {
     }
 }
 
-func GenStrLit(file *os.File, e *ast.StrLit) {
+func GenStrLit(file *bufio.Writer, e *ast.StrLit) {
     asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprintf("_str%d", e.Idx))
     asm.MovRegVal(file, asm.RegGroup(1), types.I32_Size, fmt.Sprintf("%d", str.GetSize(e.Idx)))
 }
 
-func GenStructLit(file *os.File, e *ast.StructLit) {
+func GenStructLit(file *bufio.Writer, e *ast.StructLit) {
     if types.IsBigStruct(e.StructType) {
         fmt.Fprintf(os.Stderr, "[ERROR] (internal) called GenStructLit with a big struct type %v\n", e.StructType)
         os.Exit(1)
@@ -129,11 +130,11 @@ func GenStructLit(file *os.File, e *ast.StructLit) {
     }
 }
 
-func GenArrayLit(file *os.File, e *ast.ArrayLit) {
+func GenArrayLit(file *bufio.Writer, e *ast.ArrayLit) {
     asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprintf("_arr%d", e.Idx))
 }
 
-func indexedBaseAddrToReg(file *os.File, e *ast.Indexed) {
+func indexedBaseAddrToReg(file *bufio.Writer, e *ast.Indexed) {
     if indexed,ok := e.ArrExpr.(*ast.Indexed); ok {
         indexedBaseAddrToReg(file, indexed)
     } else {
@@ -141,7 +142,7 @@ func indexedBaseAddrToReg(file *os.File, e *ast.Indexed) {
     }
 }
 
-func IndexedAddrToReg(file *os.File, e *ast.Indexed, r asm.RegGroup) {
+func IndexedAddrToReg(file *bufio.Writer, e *ast.Indexed, r asm.RegGroup) {
     indexedBaseAddrToReg(file, e)
 
     baseTypeSize := uint64(e.ArrType.BaseType.Size())
@@ -162,7 +163,7 @@ func IndexedAddrToReg(file *os.File, e *ast.Indexed, r asm.RegGroup) {
     }
 }
 
-func GenIndexed(file *os.File, e *ast.Indexed) {
+func GenIndexed(file *bufio.Writer, e *ast.Indexed) {
     IndexedAddrToReg(file, e, asm.RegC)
     addr := asm.RegAsAddr(asm.RegC)
 
@@ -205,7 +206,7 @@ func GenIndexed(file *os.File, e *ast.Indexed) {
     }
 }
 
-func FieldAddrToReg(file *os.File, e *ast.Field, r asm.RegGroup) {
+func FieldAddrToReg(file *bufio.Writer, e *ast.Field, r asm.RegGroup) {
     switch o := e.Obj.(type) {
     case *ast.Ident:
         file.WriteString(fmt.Sprintf("lea %s, [%s]\n", asm.GetReg(r, types.Ptr_Size), o.Obj.Addr()))
@@ -237,7 +238,7 @@ func FieldToOffset(f *ast.Field) int {
     return 0
 }
 
-func GenField(file *os.File, e *ast.Field) {
+func GenField(file *bufio.Writer, e *ast.Field) {
     if t,ok := e.Obj.GetType().(types.ArrType); ok {
         asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprint(t.Lens[0]))
     } else {
@@ -334,7 +335,7 @@ func GenField(file *os.File, e *ast.Field) {
     }
 }
 
-func GenIdent(file *os.File, e *ast.Ident) {
+func GenIdent(file *bufio.Writer, e *ast.Ident) {
     if c,ok := e.Obj.(*consts.Const); ok {
         GenConstVal(file, e.GetType(), c.GetVal())
         return
@@ -374,11 +375,11 @@ func GenIdent(file *os.File, e *ast.Ident) {
     os.Exit(1)
 }
 
-func GenParen(file *os.File, e *ast.Paren) {
+func GenParen(file *bufio.Writer, e *ast.Paren) {
     GenExpr(file, e.Expr)
 }
 
-func GenUnary(file *os.File, e *ast.Unary) {
+func GenUnary(file *bufio.Writer, e *ast.Unary) {
     if c := cmpTime.ConstEval(e); c != nil {
         asm.MovRegVal(file, asm.RegA, e.Operand.GetType().Size(), c.GetVal())
         return
@@ -399,7 +400,7 @@ func GenUnary(file *os.File, e *ast.Unary) {
     }
 }
 
-func GenBinary(file *os.File, e *ast.Binary) {
+func GenBinary(file *bufio.Writer, e *ast.Binary) {
     // compile time evaluation (constEval whole expr)
     if c := cmpTime.ConstEval(e); c != nil {
         asm.MovRegVal(file, asm.RegA, e.GetType().Size(), c.GetVal())
@@ -465,7 +466,7 @@ func GenBinary(file *os.File, e *ast.Binary) {
     }
 }
 
-func GenFnCall(file *os.File, e *ast.FnCall) {
+func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
     regIdx := uint(0)
     if types.IsBigStruct(e.F.GetRetType()) { // rdi contains addr to return big struct to
         regIdx++
@@ -566,7 +567,7 @@ func GenFnCall(file *os.File, e *ast.FnCall) {
     }
 }
 
-func GenXCase(file *os.File, e *ast.XCase, switchCount uint) {
+func GenXCase(file *bufio.Writer, e *ast.XCase, switchCount uint) {
     cond.CaseStart(file)
 
     if e.Cond == nil {
@@ -597,7 +598,7 @@ func GenXCase(file *os.File, e *ast.XCase, switchCount uint) {
     cond.CaseBodyEnd(file, switchCount)
 }
 
-func GenXSwitch(file *os.File, e *ast.XSwitch) {
+func GenXSwitch(file *bufio.Writer, e *ast.XSwitch) {
     if c := cmpTime.ConstEval(e); c != nil {
         GenConstVal(file, e.GetType(), c)
         return
@@ -616,7 +617,7 @@ func GenXSwitch(file *os.File, e *ast.XSwitch) {
 
 
 
-func DerefSetBigStruct(file *os.File, address addr.Addr, e ast.Expr) {
+func DerefSetBigStruct(file *bufio.Writer, address addr.Addr, e ast.Expr) {
     if !types.IsBigStruct(e.GetType()) {
         fmt.Fprintln(os.Stderr, "[ERROR] expected expr to be a big struct")
         fmt.Fprintln(os.Stderr, "\t" + e.At())
@@ -676,7 +677,7 @@ func DerefSetBigStruct(file *os.File, address addr.Addr, e ast.Expr) {
     }
 }
 
-func bigStructXSwitchToStack(file *os.File, addr addr.Addr, e *ast.XSwitch) {
+func bigStructXSwitchToStack(file *bufio.Writer, addr addr.Addr, e *ast.XSwitch) {
     if c := cmpTime.ConstEval(e); c != nil {
         GenConstVal(file, e.GetType(), c)
         return
@@ -693,7 +694,7 @@ func bigStructXSwitchToStack(file *os.File, addr addr.Addr, e *ast.XSwitch) {
     cond.EndSwitch(file)
 }
 
-func bigStructXCaseToStack(file *os.File, addr addr.Addr, e *ast.XCase, switchCount uint) {
+func bigStructXCaseToStack(file *bufio.Writer, addr addr.Addr, e *ast.XCase, switchCount uint) {
     cond.CaseStart(file)
 
     if e.Cond == nil {
@@ -724,7 +725,7 @@ func bigStructXCaseToStack(file *os.File, addr addr.Addr, e *ast.XCase, switchCo
     cond.CaseBodyEnd(file, switchCount)
 }
 
-func GenSyscall(file *os.File, val ast.Expr) {
+func GenSyscall(file *bufio.Writer, val ast.Expr) {
     if v := cmpTime.ConstEval(val); v != nil {
         asm.MovRegVal(file, asm.RegA, types.Ptr_Size, v.GetVal())
     } else {
@@ -736,7 +737,7 @@ func GenSyscall(file *os.File, val ast.Expr) {
     file.WriteString("syscall\n")
 }
 
-func GenInlineAsm(file *os.File, val ast.Expr) {
+func GenInlineAsm(file *bufio.Writer, val ast.Expr) {
     if str,ok := val.(*ast.StrLit); ok {
         file.WriteString(str.Val.Str[1:len(str.Val.Str)-1] + "\n")
     } else {
@@ -746,7 +747,7 @@ func GenInlineAsm(file *os.File, val ast.Expr) {
     }
 }
 
-func GenConstVal(file *os.File, t types.Type, val constVal.ConstVal) {
+func GenConstVal(file *bufio.Writer, t types.Type, val constVal.ConstVal) {
     switch c := val.(type) {
     case *constVal.StrConst:
         asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprintf("_str%d", uint64(*c)))
@@ -760,7 +761,7 @@ func GenConstVal(file *os.File, t types.Type, val constVal.ConstVal) {
     }
 }
 
-func PtrConstToAddr(file *os.File, c constVal.PtrConst) string {
+func PtrConstToAddr(file *bufio.Writer, c constVal.PtrConst) string {
     if c.Local {
         file.WriteString(fmt.Sprintf("lea %s, [%s]\n", asm.GetReg(asm.RegA, types.Ptr_Size), c.Addr))
         return asm.GetReg(asm.RegA, types.Ptr_Size)

@@ -1,8 +1,8 @@
 package std
 
 import (
-    "os"
     "fmt"
+    "bufio"
     "gamma/types"
     "gamma/ast/identObj"
 )
@@ -28,7 +28,7 @@ func Declare() {
     identObj.AddBuildIn("_syscall", types.CreateInt(types.I64_Size), types.CreateInt(types.I64_Size))
 }
 
-func Define(file *os.File) {
+func Define(file *bufio.Writer) {
     defineItoS(file)
     defineBtoS(file)
 
@@ -45,12 +45,12 @@ func Define(file *os.File) {
 
 
 // linux syscall calling convention like System V AMD64 ABI
-func syscall(file *os.File, syscallNum uint) {
+func syscall(file *bufio.Writer, syscallNum uint) {
     file.WriteString(fmt.Sprintf("mov rax, %d\n", syscallNum))
     file.WriteString("syscall\n")
 }
 
-func definePrintStr(asm *os.File) {
+func definePrintStr(asm *bufio.Writer) {
     asm.WriteString("printStr:\n")
 
     asm.WriteString("mov rdx, rsi\n")
@@ -61,7 +61,7 @@ func definePrintStr(asm *os.File) {
     asm.WriteString("ret\n")
 }
 
-func definePrintChar(asm *os.File) {
+func definePrintChar(asm *bufio.Writer) {
     asm.WriteString("printChar:\n")
     asm.WriteString("mov byte [_intBuf], dil\n")
     asm.WriteString("mov rdx, 1\n")
@@ -72,7 +72,7 @@ func definePrintChar(asm *os.File) {
     asm.WriteString("ret\n")
 }
 
-func definePrintInt(asm *os.File) {
+func definePrintInt(asm *bufio.Writer) {
     asm.WriteString("printInt:\n")
     asm.WriteString("mov rax, rdi\n")
     asm.WriteString("call _int_to_str\n")
@@ -85,7 +85,7 @@ func definePrintInt(asm *os.File) {
     asm.WriteString("ret\n")
 }
 
-func definePrintUint(asm *os.File) {
+func definePrintUint(asm *bufio.Writer) {
     asm.WriteString("printUint:\n")
     asm.WriteString("mov rax, rdi\n")
     asm.WriteString("call _uint_to_str\n")
@@ -98,7 +98,7 @@ func definePrintUint(asm *os.File) {
     asm.WriteString("ret\n")
 }
 
-func definePrintPtr(asm *os.File) {
+func definePrintPtr(asm *bufio.Writer) {
     asm.WriteString("printPtr:\n")
     asm.WriteString("mov rax, rdi\n")
     asm.WriteString("call _int_to_str\n")
@@ -111,7 +111,7 @@ func definePrintPtr(asm *os.File) {
     asm.WriteString("ret\n")
 }
 
-func definePrintBool(asm *os.File) {
+func definePrintBool(asm *bufio.Writer) {
     asm.WriteString("printBool:\n")
 
     asm.WriteString("mov eax, edi\n")
@@ -125,7 +125,7 @@ func definePrintBool(asm *os.File) {
     asm.WriteString("ret\n")
 }
 
-func defineBtoS(asm *os.File) {
+func defineBtoS(asm *bufio.Writer) {
     asm.WriteString(
 `_bool_to_str:
     test eax, eax
@@ -140,7 +140,7 @@ func defineBtoS(asm *os.File) {
 `)
 }
 
-func defineItoS(asm *os.File) {
+func defineItoS(asm *bufio.Writer) {
     asm.WriteString(
 `; rax = input int
 ; rbx = output string pointer
@@ -181,7 +181,7 @@ _int_to_str:
 `)
 }
 
-func defineExit(file *os.File) {
+func defineExit(file *bufio.Writer) {
     file.WriteString("exit:\n")
     syscall(file, SYS_EXIT)
 }

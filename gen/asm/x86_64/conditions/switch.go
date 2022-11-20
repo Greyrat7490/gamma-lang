@@ -3,6 +3,7 @@ package cond
 import (
     "os"
     "fmt"
+    "bufio"
     "gamma/token"
     "gamma/types/addr"
 )
@@ -23,7 +24,7 @@ func StartSwitch() uint {
     return switchCount
 }
 
-func EndSwitch(file *os.File) {
+func EndSwitch(file *bufio.Writer) {
     inSwitch = false
     inLastCase = false
     file.WriteString(fmt.Sprintf(".switch%dEnd:\n", switchCount))
@@ -33,38 +34,38 @@ func InLastCase() {
     inLastCase = true
 }
 
-func CaseStart(file *os.File) {
+func CaseStart(file *bufio.Writer) {
     caseCount++
     file.WriteString(fmt.Sprintf(".case%d:\n", caseCount))
 }
 
-func CaseVar(file *os.File, addr addr.Addr) {
+func CaseVar(file *bufio.Writer, addr addr.Addr) {
     file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", addr))
     if !inLastCase {
         file.WriteString(fmt.Sprintf("jne .case%d\n", caseCount+1))
     }
 }
 
-func CaseExpr(file *os.File) {
+func CaseExpr(file *bufio.Writer) {
     file.WriteString("cmp al, 1\n")
     if !inLastCase {
         file.WriteString(fmt.Sprintf("jne .case%d\n", caseCount+1))
     }
 }
 
-func CaseBody(file *os.File) {
+func CaseBody(file *bufio.Writer) {
     file.WriteString(fmt.Sprintf(".case%dBody:\n", caseCount))
 }
 
-func CaseBodyEnd(file *os.File, count uint) {
+func CaseBodyEnd(file *bufio.Writer, count uint) {
     file.WriteString(fmt.Sprintf("jmp .switch%dEnd\n", count))
 }
 
-func Break(file *os.File) {
+func Break(file *bufio.Writer) {
     file.WriteString(fmt.Sprintf("jmp .switch%dEnd\n", switchCount))
 }
 
-func Through(file *os.File, pos token.Pos) {
+func Through(file *bufio.Writer, pos token.Pos) {
     if !inSwitch {
         fmt.Fprintln(os.Stderr, "[ERROR] through can only be used inside a switch")
         fmt.Fprintln(os.Stderr, "\t" + pos.At())

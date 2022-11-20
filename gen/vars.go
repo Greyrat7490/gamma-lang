@@ -3,6 +3,7 @@ package gen
 import (
     "os"
     "fmt"
+    "bufio"
     "reflect"
     "gamma/token"
     "gamma/types"
@@ -19,7 +20,7 @@ import (
 
 // Define variable ----------------------------------------------------------
 
-func VarDefVal(file *os.File, v vars.Var, val constVal.ConstVal) {
+func VarDefVal(file *bufio.Writer, v vars.Var, val constVal.ConstVal) {
     switch v := v.(type) {
     case *vars.GlobalVar:
         globalVarDefVal(file, v, val)
@@ -33,7 +34,7 @@ func VarDefVal(file *os.File, v vars.Var, val constVal.ConstVal) {
     }
 }
 
-func VarDefExpr(file *os.File, v vars.Var, e ast.Expr) {
+func VarDefExpr(file *bufio.Writer, v vars.Var, e ast.Expr) {
     if _,ok := v.(*vars.GlobalVar); ok {
         fmt.Fprintln(os.Stderr, "[ERROR] defining a global variable with a non const expr is not allowed")
         fmt.Fprintln(os.Stderr, "\t" + v.GetPos().At())
@@ -43,7 +44,7 @@ func VarDefExpr(file *os.File, v vars.Var, e ast.Expr) {
     DerefSetExpr(file, v.Addr(), v.GetType(), e)
 }
 
-func globalVarDefVal(file *os.File, v *vars.GlobalVar, val constVal.ConstVal) {
+func globalVarDefVal(file *bufio.Writer, v *vars.GlobalVar, val constVal.ConstVal) {
     nasm.AddData(fmt.Sprintf("%s:", v.GetName()))
 
     switch c := val.(type) {
@@ -97,7 +98,7 @@ func defStr(val *constVal.StrConst) {
 
 // Assign -------------------------------------------------------------------
 
-func AssignVar(file *os.File, v vars.Var, val ast.Expr) {
+func AssignVar(file *bufio.Writer, v vars.Var, val ast.Expr) {
     if value := cmpTime.ConstEval(val); value != nil {
         DerefSetVal(file, v.Addr(), v.GetType(), value)
 
@@ -121,7 +122,7 @@ func AssignVar(file *os.File, v vars.Var, val ast.Expr) {
     }
 }
 
-func AssignDeref(file *os.File, t types.Type, dest *ast.Unary, val ast.Expr) {
+func AssignDeref(file *bufio.Writer, t types.Type, dest *ast.Unary, val ast.Expr) {
     if dest.Operator.Type != token.Mul {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"*\" but got \"%v\"\n", dest.Operator)
         fmt.Fprintln(os.Stderr, "\t" + dest.At())
@@ -148,24 +149,24 @@ func AssignDeref(file *os.File, t types.Type, dest *ast.Unary, val ast.Expr) {
     }
 }
 
-func AssignField(file *os.File, t types.Type, dest *ast.Field, val ast.Expr) {
+func AssignField(file *bufio.Writer, t types.Type, dest *ast.Field, val ast.Expr) {
     FieldAddrToReg(file, dest, asm.RegC)
     file.WriteString(fmt.Sprintf("lea rcx, [rcx+%d]\n", FieldToOffset(dest)))
 
     DerefSetExpr(file, asm.RegAsAddr(asm.RegC), t, val)
 }
 
-func AssignIndexed(file *os.File, t types.Type, dest *ast.Indexed, val ast.Expr) {
+func AssignIndexed(file *bufio.Writer, t types.Type, dest *ast.Indexed, val ast.Expr) {
     IndexedAddrToReg(file, dest, asm.RegC)
 
     DerefSetExpr(file, asm.RegAsAddr(asm.RegC), t, val)
 }
 
-func DerefSetVar(file *os.File, addr addr.Addr, other vars.Var) {
+func DerefSetVar(file *bufio.Writer, addr addr.Addr, other vars.Var) {
     DerefSetDeref(file, addr, other.GetType(), other.Addr())
 }
 
-func DerefSetDeref(file *os.File, addr addr.Addr, t types.Type, otherAddr addr.Addr) {
+func DerefSetDeref(file *bufio.Writer, addr addr.Addr, t types.Type, otherAddr addr.Addr) {
     switch t := t.(type) {
     case types.StrType:
         asm.MovDerefDeref(file, addr, otherAddr, types.Ptr_Size, asm.RegB, false)
@@ -195,7 +196,7 @@ func DerefSetDeref(file *os.File, addr addr.Addr, t types.Type, otherAddr addr.A
     }
 }
 
-func DerefSetExpr(file *os.File, dst addr.Addr, t types.Type, val ast.Expr) {
+func DerefSetExpr(file *bufio.Writer, dst addr.Addr, t types.Type, val ast.Expr) {
     switch t := t.(type) {
     case types.StrType:
         GenExpr(file, val)
@@ -239,7 +240,7 @@ func DerefSetExpr(file *os.File, dst addr.Addr, t types.Type, val ast.Expr) {
     }
 }
 
-func derefSetBigStructLit(file *os.File, t types.StructType, val constVal.StructConst, offset int) {
+func derefSetBigStructLit(file *bufio.Writer, t types.StructType, val constVal.StructConst, offset int) {
     addr := asm.RegAsAddr(asm.RegC).Offseted(int64(offset))
 
     for _,field := range val.Fields {
@@ -259,7 +260,7 @@ func derefSetBigStructLit(file *os.File, t types.StructType, val constVal.Struct
     }
 }
 
-func DerefSetVal(file *os.File, addr addr.Addr, typ types.Type, val constVal.ConstVal) {
+func DerefSetVal(file *bufio.Writer, addr addr.Addr, typ types.Type, val constVal.ConstVal) {
     switch val := val.(type) {
     case *constVal.StrConst:
         derefSetStrVal(file, addr, 0, val)
@@ -279,20 +280,20 @@ func DerefSetVal(file *os.File, addr addr.Addr, typ types.Type, val constVal.Con
     }
 }
 
-func derefSetBasicVal(file *os.File, addr addr.Addr, offset int, size uint, val string) {
+func derefSetBasicVal(file *bufio.Writer, addr addr.Addr, offset int, size uint, val string) {
     asm.MovDerefVal(file, addr.Offseted(int64(offset)), size, val)
 }
 
-func derefSetPtrVal(file *os.File, addr addr.Addr, offset int, val *constVal.PtrConst) {
+func derefSetPtrVal(file *bufio.Writer, addr addr.Addr, offset int, val *constVal.PtrConst) {
     asm.MovDerefVal(file, addr.Offseted(int64(offset)), types.Ptr_Size, PtrConstToAddr(file, *val))
 }
 
-func derefSetStrVal(file *os.File, addr addr.Addr, offset int, val *constVal.StrConst) {
+func derefSetStrVal(file *bufio.Writer, addr addr.Addr, offset int, val *constVal.StrConst) {
     asm.MovDerefVal(file, addr.Offseted(int64(offset)), types.Ptr_Size, fmt.Sprintf("_str%d", uint64(*val)))
     asm.MovDerefVal(file, addr.Offseted(int64(offset) + int64(types.Ptr_Size)), types.I32_Size, fmt.Sprint(str.GetSize(uint64(*val))))
 }
 
-func derefSetStructVal(file *os.File, t types.StructType, addr addr.Addr, offset int, val *constVal.StructConst) {
+func derefSetStructVal(file *bufio.Writer, t types.StructType, addr addr.Addr, offset int, val *constVal.StructConst) {
     for i,val := range val.Fields {
         switch val := val.(type) {
         case *constVal.StrConst:

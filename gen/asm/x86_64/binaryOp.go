@@ -3,12 +3,13 @@ package asm
 import (
     "os"
     "fmt"
+    "bufio"
     "gamma/token"
     "gamma/cmpTime/constVal"
 )
 
 // results in A-register
-func BinaryOp(file *os.File, opType token.TokenType, src string, size uint, signed bool) {
+func BinaryOp(file *bufio.Writer, opType token.TokenType, src string, size uint, signed bool) {
     switch opType {
     case token.Eql:
         Eql(file, GetReg(RegA, size), src)
@@ -51,7 +52,7 @@ func BinaryOp(file *os.File, opType token.TokenType, src string, size uint, sign
     }
 }
 
-func BinaryOpReg(file *os.File, opType token.TokenType, reg RegGroup, size uint, signed bool) {
+func BinaryOpReg(file *bufio.Writer, opType token.TokenType, reg RegGroup, size uint, signed bool) {
     BinaryOp(file, opType, GetReg(reg, size), size, signed)
 }
 

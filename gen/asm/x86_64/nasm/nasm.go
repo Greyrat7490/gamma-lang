@@ -2,8 +2,9 @@ package nasm
 
 import (
     "os"
-    "fmt"
     "os/exec"
+    "fmt"
+    "bufio"
     "strings"
 )
 
@@ -21,32 +22,32 @@ func AddBss(s string) {
     bss += s + "\n"
 }
 
-func writeRodata(file *os.File) {
+func writeRodata(file *bufio.Writer) {
     file.WriteString("\nsection .rodata\n")
     file.WriteString("_true: db \"true\"\n")
     file.WriteString("_false: db \"false\"\n")
     file.WriteString(rodata)
 }
 
-func writeBss(file *os.File) {
+func writeBss(file *bufio.Writer) {
     file.WriteString("\nsection .bss\n")
     file.WriteString("\tresb 1024 * 1024\n_stack_top:\n") // 1MiB
     file.WriteString("_intBuf: resb 21\n") // max 64bit -> 20 digits max + sign -> 21 char string max
     file.WriteString(bss)
 }
 
-func writeData(file *os.File) {
+func writeData(file *bufio.Writer) {
     file.WriteString("\nsection .data\n")
     file.WriteString(data)
 }
 
-func Header(file *os.File) {
+func Header(file *bufio.Writer) {
     file.WriteString("[BITS 64]\n")
     file.WriteString("section .text\n")
     file.WriteString("global _start\n")
 }
 
-func Footer(file *os.File) {
+func Footer(file *bufio.Writer) {
     file.WriteString("\n_start:\n")
     file.WriteString("mov rsp, _stack_top\n\n")
 

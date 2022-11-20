@@ -1,14 +1,15 @@
 package cond
 
 import (
-	"os"
-	"fmt"
-	"gamma/token"
+    "os"
+    "fmt"
+    "bufio"
+    "gamma/token"
 )
 
 var logCount int = 0
 
-func LogicalOp(file *os.File, t token.Token) int {
+func LogicalOp(file *bufio.Writer, t token.Token) int {
     logCount++
 
     if t.Type == token.And {
@@ -26,6 +27,6 @@ func LogicalOp(file *os.File, t token.Token) int {
     return logCount
 }
 
-func LogicalOpEnd(file *os.File, count int) {
+func LogicalOpEnd(file *bufio.Writer, count int) {
     file.WriteString(fmt.Sprintf(".cond%d:\n", count))
 }

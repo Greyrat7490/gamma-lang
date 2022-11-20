@@ -1,8 +1,8 @@
 package cond
 
 import (
-    "os"
     "fmt"
+    "bufio"
     "gamma/types/addr"
 )
 
@@ -15,7 +15,7 @@ func ResetCount() {
     switchCount = 0
 }
 
-func IfVar(file *os.File, addr addr.Addr, hasElse bool) uint {
+func IfVar(file *bufio.Writer, addr addr.Addr, hasElse bool) uint {
     ifCount++
 
     file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", addr))
@@ -28,7 +28,7 @@ func IfVar(file *os.File, addr addr.Addr, hasElse bool) uint {
     return ifCount
 }
 
-func IfExpr(file *os.File, hasElse bool) uint {
+func IfExpr(file *bufio.Writer, hasElse bool) uint {
     ifCount++
     file.WriteString("cmp al, 1\n")
     if hasElse {
@@ -39,15 +39,15 @@ func IfExpr(file *os.File, hasElse bool) uint {
     return ifCount
 }
 
-func IfEnd(file *os.File, count uint) {
+func IfEnd(file *bufio.Writer, count uint) {
     file.WriteString(fmt.Sprintf(".if%dEnd:\n", count))
 }
 
-func ElseStart(file *os.File, count uint) {
+func ElseStart(file *bufio.Writer, count uint) {
     file.WriteString(fmt.Sprintf("jmp .else%dEnd\n", count))
     file.WriteString(fmt.Sprintf(".else%d:\n", count))
 }
 
-func ElseEnd(file *os.File, count uint) {
+func ElseEnd(file *bufio.Writer, count uint) {
     file.WriteString(fmt.Sprintf(".else%dEnd:\n", count))
 }

@@ -1,8 +1,8 @@
 package loops
 
 import (
-    "os"
     "fmt"
+    "bufio"
     "gamma/types/addr"
 )
 
@@ -22,30 +22,30 @@ func ResetCount() {
     forCount   = 0
 }
 
-func WhileStart(file *os.File) uint {
+func WhileStart(file *bufio.Writer) uint {
     inWhileLoop = true
     whileCount++
     file.WriteString(fmt.Sprintf(".while%d:\n", whileCount))
     return whileCount
 }
 
-func WhileVar(file *os.File, addr addr.Addr) {
+func WhileVar(file *bufio.Writer, addr addr.Addr) {
     file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", addr))
     file.WriteString(fmt.Sprintf("jne .while%dEnd\n", whileCount))
 }
 
-func WhileExpr(file *os.File) {
+func WhileExpr(file *bufio.Writer) {
     file.WriteString(fmt.Sprintf("cmp al, 1\njne .while%dEnd\n", whileCount))
 }
 
-func WhileEnd(file *os.File, count uint) {
+func WhileEnd(file *bufio.Writer, count uint) {
     inWhileLoop = false
     file.WriteString(fmt.Sprintf("jmp .while%d\n", count))
     file.WriteString(fmt.Sprintf(".while%dEnd:\n", count))
 }
 
 
-func ForStart(file *os.File) uint {
+func ForStart(file *bufio.Writer) uint {
     inForLoop = true
 
     forCount++
@@ -53,21 +53,21 @@ func ForStart(file *os.File) uint {
     return forCount
 }
 
-func ForExpr(file *os.File) {
+func ForExpr(file *bufio.Writer) {
     file.WriteString(fmt.Sprintf("cmp al, 1\njne .for%dEnd\n", forCount))
 }
 
-func ForBlockEnd(file *os.File, count uint) {
+func ForBlockEnd(file *bufio.Writer, count uint) {
     file.WriteString(fmt.Sprintf(".for%dBlockEnd:\n", count))
 }
-func ForEnd(file *os.File, count uint) {
+func ForEnd(file *bufio.Writer, count uint) {
     file.WriteString(fmt.Sprintf("jmp .for%d\n", count))
     file.WriteString(fmt.Sprintf(".for%dEnd:\n", count))
 
     inForLoop = false
 }
 
-func Break(file *os.File) {
+func Break(file *bufio.Writer) {
     if inForLoop {
         file.WriteString(fmt.Sprintf("jmp .for%dEnd\n", forCount))
     } else {
@@ -75,7 +75,7 @@ func Break(file *os.File) {
     }
 }
 
-func Continue(file *os.File) {
+func Continue(file *bufio.Writer) {
     if inForLoop {
         file.WriteString(fmt.Sprintf("jmp .for%dBlockEnd\n", forCount))
     } else {
