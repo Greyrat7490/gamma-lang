@@ -239,21 +239,11 @@ func prsArrayLit(tokens *token.Tokens) *ast.ArrayLit {
 
     lit.Type = prsArrType(tokens)
 
-    pos := tokens.Next()
-    if pos.Type != token.BraceL {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", tokens.Cur())
-        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-        os.Exit(1)
-    }
-    lit.BraceLPos = pos.Pos
-
-    tokens.Next()
-    lit.Values = prsArrayLitExprs(tokens, lit.Type.Lens)
-
+    lit.BraceLPos = tokens.Next().Pos
+    lit.Values = prsArrayLitExprs(tokens, lit.Type, 0)
     lit.BraceRPos = tokens.Cur().Pos
 
     lit.Idx = array.Add(lit.Type, constEvalExprs(lit.Values))
-
     return &lit
 }
 
@@ -387,42 +377,66 @@ func constEvalExprs(values []ast.Expr) []constVal.ConstVal {
     return res
 }
 
-func prsArrayLitExprs(tokens *token.Tokens, lenghts []uint64) (exprs []ast.Expr) {
-    // TODO test len of parsed []expr
-    switch tokens.Cur().Type {
-        case token.BraceL:
-            if len(lenghts) == 1 {
-                // TODO better error
-                fmt.Fprintln(os.Stderr, "[ERROR] unexpected \"{\" maybe a missing \"}\" or one \"{\" too much")
-                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-                os.Exit(1)
-            }
+func prsArrayLitExprs(tokens *token.Tokens, t types.ArrType, depth int) (exprs []ast.Expr) {
+    parsedLen := uint64(1)
 
-            tokens.Next()
-            es := prsArrayLitExprs(tokens, lenghts[1:])
-            for _,e := range es {
-                exprs = append(exprs, e)
-            }
-
-        case token.BraceR:
-            return
-
-        default:
-            if len(lenghts) == 1 {
-                exprs = append(exprs, prsExpr(tokens))
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", tokens.Cur())
-                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-                os.Exit(1)
-            }
+    if tokens.Cur().Type != token.BraceL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
     }
 
-    if tokens.Next().Type == token.Comma {
+    if tokens.Peek().Type == token.BraceR {
         tokens.Next()
-        es := prsArrayLitExprs(tokens, lenghts)
-        for _,e := range es {
+        return
+    }
+
+    if len(t.Lens) - depth == 1 {
+        tokens.Next()
+        exprs = append(exprs, prsExpr(tokens))
+
+        for tokens.Next().Type == token.Comma {
+            if tokens.Next().Type == token.BraceR { break } // trailing comma
+            exprs = append(exprs, prsExpr(tokens))
+            parsedLen++
+        }
+
+    } else {
+        tokens.Next()
+        es := prsArrayLitExprs(tokens, t, depth+1)
+        for _, e := range es {
             exprs = append(exprs, e)
         }
+
+        for tokens.Next().Type == token.Comma {
+            if tokens.Next().Type == token.BraceR { break } // trailing comma
+            es := prsArrayLitExprs(tokens, t, depth+1)
+            for _, e := range es {
+                exprs = append(exprs, e)
+            }
+            parsedLen++
+        }
+    }
+
+    // check literal length and missing characters
+    if parsedLen != t.Lens[depth] {
+        if parsedLen > t.Lens[depth] {
+            fmt.Fprintf(os.Stderr, "[ERROR] too big array literal (expected len %d, but got %d)\n", t.Lens[depth], parsedLen)
+            fmt.Fprintf(os.Stderr, "\tarray type: %v\n", t)
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        } else {
+            switch tokens.Cur().Type {
+            case token.Comma, token.BraceR:
+                fmt.Fprintf(os.Stderr, "[ERROR] too small array literal (expected len %d, but got %d)\n", t.Lens[depth], parsedLen)
+                fmt.Fprintf(os.Stderr, "\tarray type: %v\n", t)
+                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+            default:
+                fmt.Fprintln(os.Stderr, "[ERROR] missing \",\"")
+                fmt.Fprintf(os.Stderr, "\tarray type: %v\n", t)
+                fmt.Fprintln(os.Stderr, "\t" + tokens.Last().At())
+            }
+        }
+        os.Exit(1)
     }
 
     if tokens.Cur().Type != token.BraceR {
