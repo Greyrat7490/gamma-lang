@@ -11,6 +11,7 @@ import (
     "gamma/ast"
     "gamma/ast/identObj/func"
     "gamma/ast/identObj/vars"
+    "gamma/cmpTime"
     "gamma/cmpTime/constVal"
     "gamma/gen/asm/x86_64"
 )
@@ -285,8 +286,34 @@ func RetBigStructVar(file *os.File, t types.StructType, v vars.Var) {
     PassBigStructVar(file, t, v, 0)
 }
 
-func RetBigStructExpr(file *os.File, addr addr.Addr, e ast.Expr) {
-    PassBigStructReg(file, addr, e)
+func RetBigStructExpr(file *os.File, address addr.Addr, e ast.Expr) {
+    if lit, ok := e.(*ast.StructLit); ok && types.IsBigStruct(e.GetType()) {
+        a := addr.Addr{ BaseAddr: address.BaseAddr, Offset: address.Offset }
+        for i,f := range lit.Fields {
+            if c := cmpTime.ConstEval(f.Value); c != nil {
+                DerefSetVal(file, a, lit.StructType.Types[i], c)
+            } else {
+                if _, ok := f.Value.(*ast.Cast); !ok {
+                    DerefSetExpr(file, a, lit.StructType.Types[i], f.Value)
+                } else {
+                    // TODO: opimize and clean up
+                    size := (int64(f.GetType().Size()) + 7) & ^7
+                    stackAddr := addr.Addr{ BaseAddr: "rsp" }
+                    file.WriteString(fmt.Sprintf("sub rsp, %d\n", size))
+
+                    DerefSetExpr(file, stackAddr, lit.StructType.Types[i], f.Value)
+
+                    asm.MovRegDeref(file, asm.RegC, addr.Addr{ BaseAddr: "rbp", Offset: -8 }, types.Ptr_Size, false)
+                    DerefSetDeref(file, a, f.GetType(), stackAddr)
+
+                    file.WriteString(fmt.Sprintf("add rsp, %d\n", size))
+                }
+            }
+            a.Offset += int64(lit.StructType.Types[i].Size())
+        }
+    } else {
+        PassBigStructReg(file, address, e)
+    }
 }
 
 

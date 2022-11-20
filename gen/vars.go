@@ -184,10 +184,10 @@ func DerefSetDeref(file *os.File, addr addr.Addr, t types.Type, otherAddr addr.A
         }
 
     case types.IntType:
-        asm.MovDerefDeref(file, asm.RegAsAddr(asm.RegA), otherAddr, t.Size(), asm.RegB, true)
+        asm.MovDerefDeref(file, addr, otherAddr, t.Size(), asm.RegB, true)
 
     case types.UintType, types.BoolType, types.PtrType, types.ArrType, types.CharType:
-        asm.MovDerefDeref(file, asm.RegAsAddr(asm.RegA), otherAddr, t.Size(), asm.RegB, false)
+        asm.MovDerefDeref(file, addr, otherAddr, t.Size(), asm.RegB, false)
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (DerefSetVar)\n", t)
@@ -216,10 +216,7 @@ func DerefSetExpr(file *os.File, dst addr.Addr, t types.Type, val ast.Expr) {
         }
 
     case types.IntType, types.UintType, types.BoolType, types.PtrType, types.CharType:
-        // TODO only push rcx for return structLit
-        asm.PushReg(file, asm.RegC)
         GenExpr(file, val)
-        asm.PopReg(file, asm.RegC)
         asm.MovDerefReg(file, dst, t.Size(), asm.RegGroup(0))
 
     case types.ArrType:
