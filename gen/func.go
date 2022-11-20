@@ -294,21 +294,9 @@ func RetBigStructExpr(file *bufio.Writer, address addr.Addr, e ast.Expr) {
             if c := cmpTime.ConstEval(f.Value); c != nil {
                 DerefSetVal(file, a, lit.StructType.Types[i], c)
             } else {
-                if _, ok := f.Value.(*ast.Cast); !ok {
-                    DerefSetExpr(file, a, lit.StructType.Types[i], f.Value)
-                } else {
-                    // TODO: opimize and clean up
-                    size := (int64(f.GetType().Size()) + 7) & ^7
-                    stackAddr := addr.Addr{ BaseAddr: "rsp" }
-                    file.WriteString(fmt.Sprintf("sub rsp, %d\n", size))
-
-                    DerefSetExpr(file, stackAddr, lit.StructType.Types[i], f.Value)
-
-                    asm.MovRegDeref(file, asm.RegC, addr.Addr{ BaseAddr: "rbp", Offset: -8 }, types.Ptr_Size, false)
-                    DerefSetDeref(file, a, f.GetType(), stackAddr)
-
-                    file.WriteString(fmt.Sprintf("add rsp, %d\n", size))
-                }
+                preserveRegC = true
+                DerefSetExpr(file, a, lit.StructType.Types[i], f.Value)
+                preserveRegC = false
             }
             a.Offset += int64(lit.StructType.Types[i].Size())
         }

@@ -19,7 +19,13 @@ import (
     "gamma/gen/asm/x86_64/conditions"
 )
 
+var preserveRegC bool = false
+
 func GenExpr(file *bufio.Writer, e ast.Expr) {
+    if preserveRegC {
+        asm.PushReg(file, asm.RegC)
+    }
+
     switch e := e.(type) {
     case *ast.IntLit:
         GenIntLit(file, e.Type.Size(), e)
@@ -76,6 +82,10 @@ func GenExpr(file *bufio.Writer, e ast.Expr) {
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] GenExpr for %v is not implemente yet\n", reflect.TypeOf(e))
         os.Exit(1)
+    }
+
+    if preserveRegC {
+        asm.PopReg(file, asm.RegC)
     }
 }
 
@@ -522,17 +532,15 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
                 bigArgsSize += size
 
                 file.WriteString(fmt.Sprintf("sub rsp, %d\n", size))
+                file.WriteString("mov rcx, rsp\n")
 
                 if v := cmpTime.ConstEval(e.Values[i]); v != nil {
-                    file.WriteString("mov rcx, rsp\n")
                     PassBigStructLit(file, t, *v.(*constVal.StructConst))
 
                 } else if ident,ok := e.Values[i].(*ast.Ident); ok {
-                    file.WriteString("mov rcx, rsp\n")
                     PassBigStructVar(file, t, ident.Obj.(vars.Var), 0)
 
                 } else {
-                    file.WriteString("mov rcx, rsp\n")
                     PassBigStructReg(file, asm.RegAsAddr(asm.RegC), e.Values[i])
                 }
             }
