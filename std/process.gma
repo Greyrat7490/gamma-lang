@@ -25,7 +25,7 @@ fn system(cmd str) -> i32 {
     // in child process
     0:
         exe :: "/bin/sh\0"
-        args := [3]*char{ exe as *char, "-c\0", cmd as *char, 0x0 as *char }
+        args := [4]*char{ exe as *char, "-c\0", cmd as *char, 0x0 as *char }
 
         _ := execve(exe as *char, args as **char, 0x0 as **char)
         exit(127)   // could not execute shell
