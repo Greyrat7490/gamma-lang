@@ -20,7 +20,7 @@ import (
 )
 
 var preserveRegC bool = false
-
+                                            // TODO to a specific reg
 func GenExpr(file *bufio.Writer, e ast.Expr) {
     if preserveRegC {
         asm.PushReg(file, asm.RegC)
@@ -205,8 +205,8 @@ func IndexedAddrToReg(file *bufio.Writer, e *ast.Indexed, r asm.RegGroup) {
 }
 
 func GenIndexed(file *bufio.Writer, e *ast.Indexed) {
-    IndexedAddrToReg(file, e, asm.RegC)
-    addr := asm.RegAsAddr(asm.RegC)
+    IndexedAddrToReg(file, e, asm.RegA)
+    addr := asm.RegAsAddr(asm.RegA)
 
     var baseType types.Type
     switch t := e.ArrType.(type) {
@@ -222,12 +222,11 @@ func GenIndexed(file *bufio.Writer, e *ast.Indexed) {
 
     switch t := baseType.(type) {
     case types.StrType:
-        asm.MovRegDeref(file, asm.RegGroup(0), addr, types.Ptr_Size, false)
         asm.MovRegDeref(file, asm.RegGroup(1), addr.Offseted(int64(types.Ptr_Size)), types.U32_Size, false)
+        asm.MovRegDeref(file, asm.RegGroup(0), addr, types.Ptr_Size, false)
 
     case types.StructType:
         if t.Size() > uint(8) {
-            asm.MovRegDeref(file, asm.RegGroup(0), addr, types.Ptr_Size, false)
             asm.MovRegDeref(
                 file,
                 asm.RegGroup(1),
@@ -235,6 +234,7 @@ func GenIndexed(file *bufio.Writer, e *ast.Indexed) {
                 t.Size() - 8,
                 false,
             )
+            asm.MovRegDeref(file, asm.RegGroup(0), addr, types.Ptr_Size, false)
         } else {
             asm.MovRegDeref(file, asm.RegGroup(0), addr, t.Size(), false)
         }

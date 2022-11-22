@@ -53,8 +53,7 @@ fn retTest(arr [3]i32) -> [$]i32 {
     vec := [$]i32{ cap: arr.len, len: arr.len }
 
     for i u64, vec.len {
-        tmp := arr[i]
-        vec[i] = tmp
+        vec[i] = arr[i]
     }
 
     ret vec
