@@ -14,6 +14,7 @@ const (
     Bool   TypeKind = iota
     Ptr    TypeKind = iota
     Arr    TypeKind = iota
+    Vec    TypeKind = iota
     Str    TypeKind = iota
     Struct TypeKind = iota
 )
@@ -34,6 +35,7 @@ const (
     Ptr_Size  uint = 8
     Arr_Size  uint = 8
     Str_Size  uint = Ptr_Size + U32_Size
+    Vec_Size  uint = Ptr_Size + U64_Size + U64_Size
 )
 
 type Type interface {
@@ -56,6 +58,9 @@ type PtrType struct {
 type ArrType  struct {
     BaseType Type
     Lens []uint64
+}
+type VecType struct {
+    BaseType Type
 }
 type StrType  struct {
     ptr  PtrType
@@ -80,6 +85,9 @@ func isAligned(types []Type, size uint) (aligned bool, rest uint)  {
             }
             size += r
 
+        case VecType:
+            return false, 0
+            
         case StrType:
             a,r := isAligned([]Type{ PtrType{}, UintType{ size: U32_Size } }, size)
             if !a {
@@ -175,6 +183,10 @@ func (t *StructType) GetFields() []string {
 }
 
 func IsBigStruct(t Type) bool {
+    if _,ok := t.(VecType); ok {
+        return true
+    }
+
     if t,ok := t.(StructType); ok {
         return t.isBigStruct
     }
@@ -186,6 +198,9 @@ func RegCount(t Type) uint {
     switch t.GetKind() {
     case Str:
         return 2
+
+    case Vec:
+        return 3
 
     case Struct:
         if IsBigStruct(t) {
@@ -210,6 +225,7 @@ func (t BoolType)   GetKind() TypeKind { return Bool }
 func (t StrType)    GetKind() TypeKind { return Str  }
 func (t PtrType)    GetKind() TypeKind { return Ptr  }
 func (t ArrType)    GetKind() TypeKind { return Arr  }
+func (t VecType)    GetKind() TypeKind { return Vec  }
 func (t StructType) GetKind() TypeKind { return Struct }
 
 func (t IntType)    Size() uint { return t.size }
@@ -219,6 +235,7 @@ func (t BoolType)   Size() uint { return Bool_Size }
 func (t StrType)    Size() uint { return t.ptr.Size() + t.size.Size() }
 func (t PtrType)    Size() uint { return Ptr_Size }
 func (t ArrType)    Size() uint { return Arr_Size }
+func (t VecType)    Size() uint { return Vec_Size }
 func (t StructType) Size() uint { return t.size }
 
 func (t IntType)  String() string {
@@ -269,6 +286,9 @@ func (t ArrType)  String() string {
     }
 
     return res + t.BaseType.String()
+}
+func (t VecType) String() string {
+    return "[$]" + t.BaseType.String()
 }
 func (t StructType) String() string { return t.Name }
 

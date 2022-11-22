@@ -1,4 +1,4 @@
-package std
+package buildin
 
 import (
     "fmt"
@@ -7,10 +7,16 @@ import (
     "gamma/ast/identObj"
 )
 
+const SYS_WRITE = 1
+const SYS_MMAP  = 9
+const SYS_EXIT  = 60
+
 const STDOUT = 1
 
-const SYS_WRITE = 1
-const SYS_EXIT = 60
+const PROT_READ     = 1
+const PROT_WRITE    = 2
+const MAP_ANONYMOUS = 0x20
+const MAP_PRIVATE   = 2
 
 
 func Declare() {
@@ -39,6 +45,9 @@ func Define(file *bufio.Writer) {
     definePrintPtr(file)
     definePrintBool(file)
 
+    defineAppend(file)
+    defineAllocVec(file)
+    
     defineExit(file)
     file.WriteString("\n")
 }
@@ -184,4 +193,25 @@ _int_to_str:
 func defineExit(file *bufio.Writer) {
     file.WriteString("exit:\n")
     syscall(file, SYS_EXIT)
+}
+
+func defineAppend(file *bufio.Writer) {
+    
+}
+
+// TODO: rather use std/memory malloc
+func defineAllocVec(file *bufio.Writer) {
+    file.WriteString(fmt.Sprintf(`
+; rax = input size
+; rax = output pointer
+_alloc_vec:
+mov rdi, 0
+mov rsi, rax
+mov rdx, %d
+mov r10, %d
+mov r8, -1
+mov r9, 0
+`, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE))
+    syscall(file, SYS_MMAP)
+    file.WriteString("ret\n")
 }

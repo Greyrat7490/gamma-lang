@@ -37,7 +37,11 @@ func prsExpr(tokens *token.Tokens) ast.Expr {
         expr = prsStrLit(tokens)
 
     case token.BrackL:
-        return prsArrayLit(tokens)
+        if tokens.Peek().Type == token.XSwitch {
+            return prsVecLit(tokens)
+        } else {
+            return prsArrayLit(tokens)
+        }
 
     case token.Name:
         switch tokens.Peek().Type {
@@ -247,6 +251,55 @@ func prsArrayLit(tokens *token.Tokens) *ast.ArrayLit {
     return &lit
 }
 
+func prsVecLit(tokens *token.Tokens) *ast.VectorLit {
+    lit := ast.VectorLit{ Pos: tokens.Cur().Pos }
+    lit.Type = prsVecType(tokens)
+
+    lit.BraceLPos = tokens.Next().Pos
+    if tokens.Cur().Type != token.BraceL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+
+    tokens.Next()
+    if tokens.Cur().Type == token.Name && tokens.Peek().Type == token.Colon {
+        prsVecLitField(tokens, &lit)
+        if tokens.Peek().Type == token.Comma {
+            tokens.Next()
+            tokens.Next()
+            prsVecLitField(tokens, &lit)
+        }
+    } else if tokens.Cur().Type != token.BraceR {
+        lit.Cap = prsExpr(tokens)
+    }
+
+    lit.BraceRPos = tokens.Next().Pos
+    if tokens.Cur().Type != token.BraceR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"}\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+    return &lit
+}
+
+func prsVecLitField(tokens *token.Tokens, lit *ast.VectorLit) {
+    switch tokens.Cur().Str {
+    case "cap":
+        tokens.Next()
+        tokens.Next()
+        lit.Cap = prsExpr(tokens)
+    case "len":
+        tokens.Next()
+        tokens.Next()
+        lit.Len = prsExpr(tokens)
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] vec has no field \"%s\" (only len and cap)\n", tokens.Cur().Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+}
+
 func prsStructLit(tokens *token.Tokens) *ast.StructLit {
     name := tokens.Cur()
     if name.Type != token.Name {
@@ -449,7 +502,7 @@ func prsArrayLitExprs(tokens *token.Tokens, t types.ArrType, depth int) (exprs [
 }
 
 func prsIndexExpr(tokens *token.Tokens, e ast.Expr) *ast.Indexed {
-    res := ast.Indexed{ ArrExpr: e, BrackLPos: tokens.Cur().Pos, ArrType: GetTypeIndexed(e) }
+    res := ast.Indexed{ ArrExpr: e, BrackLPos: tokens.Cur().Pos, ArrType: e.GetType() }
 
     tokens.Next()
     res.Index = prsExpr(tokens)
@@ -461,10 +514,19 @@ func prsIndexExpr(tokens *token.Tokens, e ast.Expr) *ast.Indexed {
         os.Exit(1)
     }
 
-    if len(res.ArrType.Lens) == 1 {
-        res.Type = res.ArrType.BaseType
-    } else {
-        res.Type = types.ArrType{ BaseType: res.ArrType.BaseType, Lens: res.ArrType.Lens[1:] }
+    switch t := res.ArrType.(type) {
+    case types.ArrType:
+        if len(t.Lens) == 1 {
+            res.Type = t.BaseType
+        } else {
+            res.Type = types.ArrType{ BaseType: t.BaseType, Lens: t.Lens[1:] }
+        }
+    case types.VecType:
+        res.Type = t.BaseType
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] you cannot index %v", t)
+        fmt.Fprintln(os.Stderr, "\t" + e.At())
+        os.Exit(1)
     }
 
     return &res
@@ -489,6 +551,8 @@ func prsField(tokens *token.Tokens, obj ast.Expr) *ast.Field {
     switch t := obj.GetType().(type) {
     case types.ArrType:
         field.Type = types.CreateUint(types.Ptr_Size)
+    case types.VecType:
+        field.Type = types.CreateUint(types.Ptr_Size)
     case types.StructType:
         field.StructType = t
         field.Type = field.StructType.GetType(fieldName.Str)
@@ -500,6 +564,9 @@ func prsField(tokens *token.Tokens, obj ast.Expr) *ast.Field {
             os.Exit(1)
         }
     default:
+        fmt.Fprintf(os.Stderr, "[ERROR] type %s has no fields\n", t)
+        fmt.Fprintln(os.Stderr, "\t" + obj.At())
+        os.Exit(1)
     }
 
     return &field

@@ -288,17 +288,56 @@ func RetBigStructVar(file *bufio.Writer, t types.StructType, v vars.Var) {
 }
 
 func RetBigStructExpr(file *bufio.Writer, address addr.Addr, e ast.Expr) {
-    if lit, ok := e.(*ast.StructLit); ok && types.IsBigStruct(e.GetType()) {
-        a := addr.Addr{ BaseAddr: address.BaseAddr, Offset: address.Offset }
-        for i,f := range lit.Fields {
-            if c := cmpTime.ConstEval(f.Value); c != nil {
-                DerefSetVal(file, a, lit.StructType.Types[i], c)
+    if types.IsBigStruct(e.GetType()) {
+        switch lit := e.(type) {
+        case *ast.StructLit:
+            a := addr.Addr{ BaseAddr: address.BaseAddr, Offset: address.Offset }
+            for i,f := range lit.Fields {
+                if c := cmpTime.ConstEval(f.Value); c != nil {
+                    DerefSetVal(file, a, lit.StructType.Types[i], c)
+                } else {
+                    preserveRegC = true
+                    DerefSetExpr(file, a, lit.StructType.Types[i], f.Value)
+                    preserveRegC = false
+                }
+                a.Offset += int64(lit.StructType.Types[i].Size())
+            }
+        case *ast.VectorLit:
+            if lit.Len != nil {
+                if c := cmpTime.ConstEval(lit.Len); c != nil {
+                    DerefSetVal(file, address.Offseted(int64(2*types.Ptr_Size)), types.CreateUint(types.U64_Size), c)
+                } else {
+                    preserveRegC = true
+                    DerefSetExpr(file, address.Offseted(int64(2*types.Ptr_Size)), types.CreateUint(types.U64_Size), lit.Len)
+                    preserveRegC = false
+                }
+            } else {
+                asm.MovDerefVal(file, address.Offseted(int64(2*types.Ptr_Size)), types.U64_Size, "0")
+            }
+
+            if lit.Cap == nil {
+                asm.MovRegDeref(file, asm.RegA, address.Offseted(int64(2*types.Ptr_Size)), types.U64_Size, false)
+                file.WriteString(fmt.Sprintf("lea %s, [%s*%d]\n", asm.GetReg(asm.RegA, types.Ptr_Size),
+                    asm.GetReg(asm.RegA, types.Ptr_Size), lit.Type.BaseType.Size()))
             } else {
                 preserveRegC = true
-                DerefSetExpr(file, a, lit.StructType.Types[i], f.Value)
+                GenExpr(file, lit.Cap)
                 preserveRegC = false
+                if c := cmpTime.ConstEval(lit.Cap); c != nil {
+                    asm.MovDerefVal(file, address.Offseted(int64(types.Ptr_Size)), types.U64_Size, c.GetVal())
+                    asm.MovRegVal(file, asm.RegA, types.U64_Size, fmt.Sprintf("%s*%d", c.GetVal(), lit.Type.BaseType.Size()))
+                } else {
+                    asm.MovDerefReg(file, address.Offseted(int64(types.Ptr_Size)), types.U64_Size, asm.RegGroup(0))
+                    file.WriteString(fmt.Sprintf("lea %s, [%s*%d]\n", asm.GetReg(asm.RegA, types.Ptr_Size), 
+                        asm.GetReg(asm.RegA, types.Ptr_Size), lit.Type.BaseType.Size()))
+                }
             }
-            a.Offset += int64(lit.StructType.Types[i].Size())
+
+            file.WriteString("call _alloc_vec\n")
+            asm.MovDerefReg(file, address, types.Ptr_Size, asm.RegGroup(0))
+
+        default:
+            PassBigStructReg(file, address, e)
         }
     } else {
         PassBigStructReg(file, address, e)

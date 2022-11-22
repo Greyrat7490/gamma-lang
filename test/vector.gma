@@ -1,0 +1,86 @@
+fn test1() {
+    vec := [$]i32{ cap: 10, len: 1 }
+
+    // vec[1024] no segfault because mmap maps a whole page (4KB -> 4 * 1024)
+    // TODO restrict to actual cap
+    for i i32, 10 {
+        vec[i] = i+1
+    }
+
+    for i i32, 10 {
+        printInt(vec[i]) printChar(' ')
+    } 
+    printChar('\n')
+
+    printStr("vec.len: ") printUint(vec.len) printChar('\n')
+    printStr("vec.cap: ") printUint(vec.cap) printChar('\n')
+}
+
+fn test2() {
+    vec2 := [$]i32{ 1 }
+    printStr("vec2.len: ") printUint(vec2.len) printChar('\n')
+    printStr("vec2.cap: ") printUint(vec2.cap) printChar('\n')
+
+    printInt(vec2[0]) printStr(" -> ")
+    vec2[0] = 86
+    printInt(vec2[0]) printChar('\n')
+}
+
+fn printVec(v [$]i32) {
+    printStr("[ ")
+    for i u64, v.cap {
+        printInt(v[i]) printChar(' ')
+    } 
+    printStr("]\n")
+}
+
+fn setVec(v [$]i32, val i32) {
+    for i u64, v.cap {
+        v[i] = val
+    }
+}
+
+fn test3() {
+    vec := [$]i32{ 3 }
+    printVec(vec)
+    setVec(vec, -64)
+    printVec(vec)
+    setVec(vec, 86)
+    printVec(vec)
+}
+
+fn retTest(arr [3]i32) -> [$]i32 {
+    vec := [$]i32{ cap: arr.len, len: arr.len }
+
+    for i u64, vec.len {
+        tmp := arr[i]
+        vec[i] = tmp
+    }
+
+    ret vec
+}
+
+fn main() {
+    test1()
+
+    printStr("----\n")
+
+    test2()
+
+    printStr("----\n")
+
+    test3()
+
+    printStr("----\n")
+
+    vec := retTest([3]i32{ 0, 1, 2 })
+    printVec(vec)
+}
+
+/*
+    vec.reserve()   // update cap
+    vec.resize()    // update len
+
+    vec ++ [2]i32{ 2, 3 }    // concat
+    vec << 2                 // append elem
+*/

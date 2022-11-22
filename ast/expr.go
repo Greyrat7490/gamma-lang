@@ -70,6 +70,15 @@ type ArrayLit struct {
     BraceRPos token.Pos
 }
 
+type VectorLit struct {
+    Pos token.Pos
+    Type types.VecType
+    BraceLPos token.Pos
+    Cap Expr
+    Len Expr
+    BraceRPos token.Pos
+}
+
 type StructLit struct {
     Pos token.Pos
     StructType types.StructType
@@ -85,7 +94,7 @@ type FieldLit struct {
 }
 
 type Indexed struct {
-    ArrType types.ArrType
+    ArrType types.Type
     Type types.Type
     ArrExpr Expr
     BrackLPos token.Pos
@@ -200,6 +209,18 @@ func (o *ArrayLit) Readable(indent int) string {
     return res
 }
 
+func (e *VectorLit) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) + "VECTOR_LIT:\n"
+    if e.Cap != nil {
+        res += strings.Repeat("   ", indent+1) + "cap: " + e.Cap.Readable(0)
+    }
+    if e.Len != nil {
+        res += strings.Repeat("   ", indent+1) + "len: " + e.Len.Readable(0)   
+    }
+
+    return res
+}
+
 func (o *Indexed) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "INDEXED:\n" +
         o.ArrExpr.Readable(indent+1) + o.Index.Readable(indent+1)
@@ -287,23 +308,25 @@ func (o *BadExpr) Readable(indent int) string {
 }
 
 func (e *Indexed) Flatten() Expr {
-    idxType := types.CreateUint(types.Ptr_Size)
+    if t,ok := e.ArrType.(types.ArrType); ok {
+        idxType := types.CreateUint(types.Ptr_Size)
 
-    if i,ok := e.ArrExpr.(*Indexed); ok {
-        return &Binary{
-            Type: idxType,
-            Operator: token.Token{ Str: "+", Type: token.Plus },
-            OperandR: e.Index,
-            OperandL: &Binary{
+        if i,ok := e.ArrExpr.(*Indexed); ok {
+            return &Binary{
                 Type: idxType,
-                Operator: token.Token{ Str: "*", Type: token.Mul },
-                OperandL: i.Flatten(),
-                OperandR: &UintLit{ Repr: e.ArrType.Lens[0], Type: idxType },
-            },
+                Operator: token.Token{ Str: "+", Type: token.Plus },
+                OperandR: e.Index,
+                OperandL: &Binary{
+                    Type: idxType,
+                    Operator: token.Token{ Str: "*", Type: token.Mul },
+                    OperandL: i.Flatten(),
+                    OperandR: &UintLit{ Repr: t.Lens[0], Type: idxType },
+                },
+            }
         }
-    } else {
-        return e.Index
     }
+
+    return e.Index
 }
 
 
@@ -317,6 +340,7 @@ func (e *StrLit)    GetType() types.Type { return types.CreateStr() }
 func (e *FieldLit)  GetType() types.Type { return e.Value.GetType() }
 func (e *StructLit) GetType() types.Type { return e.StructType }
 func (e *ArrayLit)  GetType() types.Type { return e.Type }
+func (e *VectorLit) GetType() types.Type { return e.Type }
 func (e *FnCall)    GetType() types.Type { return e.F.GetRetType() }
 func (e *Indexed)   GetType() types.Type { return e.Type }
 func (e *Field)     GetType() types.Type { return e.Type }
@@ -339,6 +363,7 @@ func (e *StrLit)    expr() {}
 func (e *FieldLit)  expr() {}
 func (e *StructLit) expr() {}
 func (e *ArrayLit)  expr() {}
+func (e *VectorLit) expr() {}
 func (e *FnCall)    expr() {}
 func (e *Indexed)   expr() {}
 func (e *Field)     expr() {}
@@ -360,6 +385,7 @@ func (e *StrLit)    At() string { return e.Val.At() }
 func (e *FieldLit)  At() string { return e.Pos.At() }
 func (e *StructLit) At() string { return e.Pos.At() }
 func (e *ArrayLit)  At() string { return e.Pos.At() }
+func (e *VectorLit) At() string { return e.Pos.At() }
 func (e *FnCall)    At() string { return e.Ident.At() }
 func (e *Indexed)   At() string { return e.ArrExpr.At() }
 func (e *Field)     At() string { return e.Obj.At() }
@@ -381,6 +407,7 @@ func (e *StrLit)    End() string { return e.Val.At() }
 func (e *FieldLit)  End() string { return e.Value.End() }
 func (e *StructLit) End() string { return e.BraceRPos.At() }
 func (e *ArrayLit)  End() string { return e.BraceRPos.At() }
+func (e *VectorLit) End() string { return e.BraceRPos.At() }
 func (e *FnCall)    End() string { return e.ParenRPos.At() }
 func (e *Indexed)   End() string { return e.BrackRPos.At() }
 func (e *Field)     End() string { return e.FieldName.At() }

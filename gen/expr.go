@@ -153,22 +153,53 @@ func indexedBaseAddrToReg(file *bufio.Writer, e *ast.Indexed) {
 }
 
 func IndexedAddrToReg(file *bufio.Writer, e *ast.Indexed, r asm.RegGroup) {
-    indexedBaseAddrToReg(file, e)
+    switch t := e.ArrType.(type) {
+    case types.ArrType:
+        indexedBaseAddrToReg(file, e)
 
-    baseTypeSize := uint64(e.ArrType.BaseType.Size())
+        baseTypeSize := uint64(t.BaseType.Size())
 
-    idxExpr := e.Flatten()
-    if idx,ok := cmpTime.ConstEvalUint(idxExpr); ok {
-        file.WriteString(fmt.Sprintf("lea %s, [rax+%d]\n", asm.GetReg(r, types.Ptr_Size), idx * baseTypeSize))
-    } else {
-        asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
-        GenExpr(file, idxExpr)
+        idxExpr := e.Flatten()
+        if idx,ok := cmpTime.ConstEvalUint(idxExpr); ok {
+            file.WriteString(fmt.Sprintf("lea %s, [rax+%d]\n", asm.GetReg(r, types.Ptr_Size), idx * baseTypeSize))
+        } else {
+            asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
+            GenExpr(file, idxExpr)
 
-        asm.Mul(file, fmt.Sprint(baseTypeSize), types.Ptr_Size, false)
-        asm.Add(file, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size)
+            file.WriteString(fmt.Sprintf("lea rax, [rax*%d]\n", baseTypeSize))
 
-        if r != asm.RegA {
-            asm.MovRegReg(file, r, asm.RegA, types.Ptr_Size)
+            asm.Add(file, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size)
+
+            if r != asm.RegA {
+                asm.MovRegReg(file, r, asm.RegA, types.Ptr_Size)
+            }
+        }
+    case types.VecType:
+        if indexed, ok := e.ArrExpr.(*ast.Indexed); ok {
+            IndexedAddrToReg(file, indexed, r)
+        } else {
+            if ident, ok := e.ArrExpr.(*ast.Ident); ok {
+                asm.MovRegDeref(file, asm.RegA, ident.Obj.Addr(), types.Ptr_Size, false)
+            } else {
+                fmt.Fprintln(os.Stderr, "[ERROR] TODO in work IndexedAddrToReg")
+                os.Exit(1)
+            }
+        }
+
+        baseTypeSize := uint64(t.BaseType.Size())
+
+        if idx,ok := cmpTime.ConstEvalUint(e.Index); ok {
+            file.WriteString(fmt.Sprintf("lea %s, [rax+%d]\n", asm.GetReg(r, types.Ptr_Size), idx * baseTypeSize))
+        } else {
+            asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
+            GenExpr(file, e.Index)
+
+            file.WriteString(fmt.Sprintf("lea rax, [rax*%d]\n", baseTypeSize))
+            asm.Add(file, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size)
+
+            if r != asm.RegA {
+                asm.MovRegReg(file, r, asm.RegA, types.Ptr_Size)
+            }
         }
     }
 }
@@ -177,7 +208,19 @@ func GenIndexed(file *bufio.Writer, e *ast.Indexed) {
     IndexedAddrToReg(file, e, asm.RegC)
     addr := asm.RegAsAddr(asm.RegC)
 
-    switch t := e.ArrType.BaseType.(type) {
+    var baseType types.Type
+    switch t := e.ArrType.(type) {
+    case types.ArrType:
+        baseType = t.BaseType
+    case types.VecType:
+        baseType = t.BaseType
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] you cannot index %v", e.ArrType)
+        fmt.Fprintln(os.Stderr, "\t" + e.At())
+        os.Exit(1)
+    }
+
+    switch t := baseType.(type) {
     case types.StrType:
         asm.MovRegDeref(file, asm.RegGroup(0), addr, types.Ptr_Size, false)
         asm.MovRegDeref(file, asm.RegGroup(1), addr.Offseted(int64(types.Ptr_Size)), types.U32_Size, false)
@@ -201,7 +244,7 @@ func GenIndexed(file *bufio.Writer, e *ast.Indexed) {
             file,
             asm.RegGroup(0),
             addr,
-            e.ArrType.BaseType.Size(),
+            t.Size(),
             true,
         )
 
@@ -210,7 +253,7 @@ func GenIndexed(file *bufio.Writer, e *ast.Indexed) {
             file,
             asm.RegGroup(0),
             addr,
-            e.ArrType.BaseType.Size(),
+            t.Size(),
             false,
         )
     }
@@ -249,9 +292,19 @@ func FieldToOffset(f *ast.Field) int {
 }
 
 func GenField(file *bufio.Writer, e *ast.Field) {
-    if t,ok := e.Obj.GetType().(types.ArrType); ok {
+    switch t := e.Obj.GetType().(type) {
+    case types.ArrType:
         asm.MovRegVal(file, asm.RegGroup(0), types.Ptr_Size, fmt.Sprint(t.Lens[0]))
-    } else {
+    case types.VecType:
+        FieldAddrToReg(file, e, asm.RegC)
+        addr := asm.RegAsAddr(asm.RegC)
+        offset := int64(8)
+        if e.FieldName.Str == "len" {
+            offset += 8
+        }
+        asm.MovRegDeref(file, asm.RegGroup(0), addr.Offseted(offset), types.U64_Size, false)
+
+    case types.StructType:
         switch o := e.Obj.(type) {
         case *ast.Ident:
             offset := int64(e.StructType.GetOffset(e.FieldName.Str))
@@ -342,6 +395,11 @@ func GenField(file *bufio.Writer, e *ast.Field) {
             fmt.Fprintln(os.Stderr, "\t" + e.At())
             os.Exit(1)
         }
+
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] %v has no fields\n", t)
+            fmt.Fprintln(os.Stderr, "\t" + e.At())
+            os.Exit(1)
     }
 }
 
@@ -526,14 +584,16 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
 
     // pass big struct args -----------------------------------------
     for i := len(e.F.GetArgs())-1; i >= 0; i-- {
-        if t,ok := e.F.GetArgs()[i].(types.StructType); ok {
-            if types.IsBigStruct(t) {
-                size := (t.Size() + 7) & ^uint(7)
-                bigArgsSize += size
+        t := e.F.GetArgs()[i]
+        if types.IsBigStruct(t) {
+            size := (t.Size() + 7) & ^uint(7)
+            bigArgsSize += size
 
-                file.WriteString(fmt.Sprintf("sub rsp, %d\n", size))
-                file.WriteString("mov rcx, rsp\n")
+            file.WriteString(fmt.Sprintf("sub rsp, %d\n", size))
+            file.WriteString("mov rcx, rsp\n")
 
+            switch t := t.(type) {
+            case types.StructType:
                 if v := cmpTime.ConstEval(e.Values[i]); v != nil {
                     PassBigStructLit(file, t, *v.(*constVal.StructConst))
 
@@ -543,6 +603,12 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
                 } else {
                     PassBigStructReg(file, asm.RegAsAddr(asm.RegC), e.Values[i])
                 }
+            case types.VecType:
+                PassBigStructReg(file, asm.RegAsAddr(asm.RegC), e.Values[i])
+
+            default:
+                fmt.Fprintln(os.Stderr, "[ERROR] (internal) unreachable GenFnCall")
+                os.Exit(1)
             }
         }
     }
@@ -626,12 +692,6 @@ func GenXSwitch(file *bufio.Writer, e *ast.XSwitch) {
 
 
 func DerefSetBigStruct(file *bufio.Writer, address addr.Addr, e ast.Expr) {
-    if !types.IsBigStruct(e.GetType()) {
-        fmt.Fprintln(os.Stderr, "[ERROR] expected expr to be a big struct")
-        fmt.Fprintln(os.Stderr, "\t" + e.At())
-        os.Exit(1)
-    }
-
     switch e := e.(type) {
     case *ast.StructLit:
         a := addr.Addr{ BaseAddr: address.BaseAddr, Offset: address.Offset }
@@ -643,6 +703,34 @@ func DerefSetBigStruct(file *bufio.Writer, address addr.Addr, e ast.Expr) {
             }
             a.Offset += int64(e.StructType.Types[i].Size())
         }
+
+    case *ast.VectorLit:
+        if e.Len != nil {
+            if c := cmpTime.ConstEval(e.Len); c != nil {
+                DerefSetVal(file, address.Offseted(int64(2*types.Ptr_Size)), types.CreateUint(types.U64_Size), c)
+            } else {
+                DerefSetExpr(file, address.Offseted(int64(2*types.Ptr_Size)), types.CreateUint(types.U64_Size), e.Len)
+            }
+        } else {
+            asm.MovDerefVal(file, address.Offseted(int64(2*types.Ptr_Size)), types.U64_Size, "0")
+        }
+
+        if e.Cap == nil {
+            asm.MovRegDeref(file, asm.RegA, address.Offseted(int64(2*types.Ptr_Size)), types.U64_Size, false)
+            file.WriteString(fmt.Sprintf("lea %s, [%s*%d]\n", asm.GetReg(asm.RegA, types.Ptr_Size), asm.GetReg(asm.RegA, types.Ptr_Size), e.Type.BaseType.Size()))
+        } else {
+            GenExpr(file, e.Cap)
+            if c := cmpTime.ConstEval(e.Cap); c != nil {
+                asm.MovDerefVal(file, address.Offseted(int64(types.Ptr_Size)), types.U64_Size, c.GetVal())
+                asm.MovRegVal(file, asm.RegA, types.U64_Size, fmt.Sprintf("%s*%d", c.GetVal(), e.Type.BaseType.Size()))
+            } else {
+                asm.MovDerefReg(file, address.Offseted(int64(types.Ptr_Size)), types.U64_Size, asm.RegGroup(0))
+                file.WriteString(fmt.Sprintf("lea %s, [%s*%d]\n", asm.GetReg(asm.RegA, types.Ptr_Size), asm.GetReg(asm.RegA, types.Ptr_Size), e.Type.BaseType.Size()))
+            }
+        }
+
+        file.WriteString("call _alloc_vec\n")
+        asm.MovDerefReg(file, address, types.Ptr_Size, asm.RegGroup(0))
 
     case *ast.Indexed:
         IndexedAddrToReg(file, e, asm.RegA)

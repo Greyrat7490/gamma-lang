@@ -61,7 +61,11 @@ func prsType(tokens *token.Tokens) types.Type {
         return types.PtrType{ BaseType: prsType(tokens) }
 
     case token.BrackL:
-        return prsArrType(tokens)
+        if tokens.Peek().Type == token.XSwitch {
+            return prsVecType(tokens)
+        } else {
+            return prsArrType(tokens)
+        }
 
     case token.Name:
         if obj := identObj.Get(tokens.Cur().Str); obj != nil {
@@ -84,6 +88,26 @@ func prsType(tokens *token.Tokens) types.Type {
         }
         return t
     }
+}
+
+func prsVecType(tokens *token.Tokens) types.VecType {
+    if tokens.Cur().Type != token.BrackL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"[\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+    if tokens.Next().Type != token.XSwitch {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"$\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+    if tokens.Next().Type != token.BrackR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"]\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+    tokens.Next()
+    return types.VecType{ BaseType: prsType(tokens) }
 }
 
 func prsArrType(tokens *token.Tokens) types.ArrType {

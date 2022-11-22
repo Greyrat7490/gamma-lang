@@ -4,9 +4,9 @@ import (
     "os"
     "fmt"
     "gamma/ast"
-    "gamma/std"
     "gamma/token"
     "gamma/import"
+    "gamma/buildin"
 )
 
 var isMainDefined bool = false
@@ -14,7 +14,7 @@ var isMainDefined bool = false
 func Parse(path string) (ast ast.Ast) {
     fmt.Println("[INFO] parsing...")
 
-    std.Declare()
+    buildin.Declare()
 
     tokens := imprt.ImportMain(path)
 

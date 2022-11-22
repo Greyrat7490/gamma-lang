@@ -15,6 +15,8 @@ func typeCheckExpr(e ast.Expr) {
     switch e := e.(type) {
     case *ast.ArrayLit:
         typeCheckArrayLit(e)
+    case *ast.VectorLit:
+        typeCheckVecLit(e)
     case *ast.StructLit:
         typeCheckStructLit(e)
 
@@ -112,33 +114,56 @@ func checkTypeExpr(destType types.Type, e ast.Expr) bool {
 func typeCheckIndexed(e *ast.Indexed) {
     typeCheckExpr(e.ArrExpr)
 
-    switch e.Index.GetType().GetKind() {
-    case types.Uint, types.Int:
-        if c,ok := cmpTime.ConstEvalUint(e.Index); ok {
-            if c >= e.ArrType.Lens[0] || c < 0 {
-                fmt.Fprintf(os.Stderr, "[ERROR] index %d is out of bounds [%d]\n", c, e.ArrType.Lens[0])
-                fmt.Fprintf(os.Stderr, "\tarray type: %v\n", e.ArrType)
-                fmt.Fprintln(os.Stderr, "\t" + e.Index.At())
-                os.Exit(1)
+    switch t := e.ArrType.(type) {
+    case types.ArrType:
+        switch e.Index.GetType().GetKind() {
+        case types.Uint, types.Int:
+            if c,ok := cmpTime.ConstEvalUint(e.Index); ok {
+                if c >= t.Lens[0] || c < 0 {
+                    fmt.Fprintf(os.Stderr, "[ERROR] index %d is out of bounds [%d]\n", c, t.Lens[0])
+                    fmt.Fprintf(os.Stderr, "\tarray type: %v\n", e.ArrType)
+                    fmt.Fprintln(os.Stderr, "\t" + e.Index.At())
+                    os.Exit(1)
+                }
             }
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] expected an int/uint as index but got %v\n", e.Index.GetType())
+            fmt.Fprintln(os.Stderr, "\t" + e.Index.At())
+            os.Exit(1)
+        }
+    case types.VecType:
+        switch e.Index.GetType().GetKind() {
+        case types.Uint, types.Int:
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] expected an int/uint as index but got %v\n", e.Index.GetType())
+            fmt.Fprintln(os.Stderr, "\t" + e.Index.At())
+            os.Exit(1)
         }
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] expected an int/uint as index but got %v\n", e.Index.GetType())
-        fmt.Fprintln(os.Stderr, "\t" + e.Index.At())
+        fmt.Fprintf(os.Stderr, "[ERROR] you cannot index %v", t)
+        fmt.Fprintln(os.Stderr, "\t" + e.At())
         os.Exit(1)
     }
+    
 }
 
 func typeCheckField(e *ast.Field) {
     typeCheckExpr(e.Obj)
 
-    if e.Obj.GetType().GetKind() == types.Arr {
+    switch e.Obj.GetType().GetKind() {
+    case types.Arr:
         if e.FieldName.Str != "len" {
             fmt.Fprintf(os.Stderr, "[ERROR] array has no field \"%s\" (only len)\n", e.FieldName.Str)
             fmt.Fprintln(os.Stderr, "\t" + e.FieldName.At())
             os.Exit(1)
         }
-    } else {
+    case types.Vec:
+        if e.FieldName.Str != "len" && e.FieldName.Str != "cap" {
+            fmt.Fprintf(os.Stderr, "[ERROR] vec has no field \"%s\" (only len and cap)\n", e.FieldName.Str)
+            fmt.Fprintln(os.Stderr, "\t" + e.FieldName.At())
+            os.Exit(1)
+        }
+    default:
         if e.StructType.GetFieldNum(e.FieldName.Str) == -1 {
             fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName.Str)
             fmt.Fprintf(os.Stderr, "\tfields: %v\n", e.StructType.GetFields())
@@ -197,6 +222,24 @@ func typeCheckArrayLit(o *ast.ArrayLit) {
         if !checkTypeExpr(t, v) {
             fmt.Fprintf(os.Stderr, "[ERROR] all values in the ArrayLit should be of type %v but got a value of %v\n", o.Type.BaseType, t)
             fmt.Fprintln(os.Stderr, "\t" + v.At())
+            os.Exit(1)
+        }
+    }
+}
+
+func typeCheckVecLit(e *ast.VectorLit) {
+    if e.Cap != nil {
+        if !checkTypeExpr(types.CreateUint(types.U64_Size), e.Cap) {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected an u64 as cap for the vector but got %v\n", e.Cap.GetType())
+            fmt.Fprintln(os.Stderr, "\t" + e.Cap.At())
+            os.Exit(1)
+        }
+    }
+
+    if e.Len != nil {
+        if !checkTypeExpr(types.CreateUint(types.U64_Size), e.Len) {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected an u64 as len for the vector but got %v\n", e.Len.GetType())
+            fmt.Fprintln(os.Stderr, "\t" + e.Len.At())
             os.Exit(1)
         }
     }

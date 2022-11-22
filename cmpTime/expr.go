@@ -67,6 +67,8 @@ func ConstEval(e ast.Expr) constVal.ConstVal {
         }
 
         return &constVal.ArrConst{ Idx: e.Idx, Elems: elems, Type: e.Type }
+    case *ast.VectorLit:
+        return nil
     case *ast.StructLit:
         return ConstEvalStructLit(e)
     case *ast.FieldLit:

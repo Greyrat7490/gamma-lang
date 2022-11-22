@@ -5,7 +5,7 @@ import (
     "fmt"
     "bufio"
     "gamma/ast"
-    "gamma/std"
+    "gamma/buildin"
     "gamma/types/str"
     "gamma/types/array"
     "gamma/gen/asm/x86_64/nasm"
@@ -23,7 +23,7 @@ func GenAsm(Ast ast.Ast) {
 
     nasm.Header(writer)
 
-    std.Define(writer)
+    buildin.Define(writer)
 
     for _,d := range Ast.Decls {
         GenDecl(writer, d)

@@ -278,17 +278,27 @@ func GenContinue(file *bufio.Writer, s *ast.Continue) {
 
 func GenRet(file *bufio.Writer, s *ast.Ret) {
     if s.RetExpr != nil {
-        if types.IsBigStruct(s.RetExpr.GetType()) {
-            asm.MovRegDeref(file, asm.RegC, addr.Addr{ BaseAddr: "rbp", Offset: -int64(types.Ptr_Size) }, types.Ptr_Size, false)
+        t := s.F.GetRetType()
 
-            t := s.RetExpr.GetType().(types.StructType)
+        if types.IsBigStruct(t) {
+            asm.MovRegDeref(file,
+                asm.RegC, addr.Addr{ BaseAddr: "rbp", Offset: -int64(types.Ptr_Size) },
+                types.Ptr_Size, false)
 
-            if val := cmpTime.ConstEval(s.RetExpr); val != nil {
-                RetBigStructLit(file, t, *val.(*constVal.StructConst))
-            } else if ident,ok := s.RetExpr.(*ast.Ident); ok {
-                RetBigStructVar(file, t, ident.Obj.(vars.Var))
-            } else {
+            switch t := t.(type) {
+            case types.StructType:
+                if val := cmpTime.ConstEval(s.RetExpr); val != nil {
+                    RetBigStructLit(file, t, *val.(*constVal.StructConst))
+                } else if ident,ok := s.RetExpr.(*ast.Ident); ok {
+                    RetBigStructVar(file, t, ident.Obj.(vars.Var))
+                } else {
+                    RetBigStructExpr(file, asm.RegAsAddr(asm.RegC), s.RetExpr)
+                }
+            case types.VecType:
                 RetBigStructExpr(file, asm.RegAsAddr(asm.RegC), s.RetExpr)
+            default:
+                fmt.Fprintln(os.Stderr, "[ERROR] (internal) unreachable GenRet")
+                os.Exit(1)
             }
 
             asm.MovRegReg(file, asm.RegA, asm.RegC, types.Ptr_Size)

@@ -156,6 +156,7 @@ func AssignField(file *bufio.Writer, t types.Type, dest *ast.Field, val ast.Expr
     DerefSetExpr(file, asm.RegAsAddr(asm.RegC), t, val)
 }
 
+// TODO assign indexed with indexed
 func AssignIndexed(file *bufio.Writer, t types.Type, dest *ast.Indexed, val ast.Expr) {
     IndexedAddrToReg(file, dest, asm.RegC)
 
@@ -184,6 +185,17 @@ func DerefSetDeref(file *bufio.Writer, addr addr.Addr, t types.Type, otherAddr a
             asm.MovDerefDeref(file, addr, otherAddr, size, asm.RegB, false)
         }
 
+    case types.VecType:
+        asm.MovDerefDeref(file, addr, otherAddr, types.Ptr_Size, asm.RegB, false)
+        asm.MovDerefDeref(file, 
+            addr.Offseted(int64(types.Ptr_Size)),
+            otherAddr.Offseted(int64(types.Ptr_Size)),
+            types.Ptr_Size, asm.RegB, false)
+        asm.MovDerefDeref(file,
+            addr.Offseted(int64(2*types.Ptr_Size)),
+            otherAddr.Offseted(int64(2*types.Ptr_Size)),
+            types.Ptr_Size, asm.RegB, false)
+        
     case types.IntType:
         asm.MovDerefDeref(file, addr, otherAddr, t.Size(), asm.RegB, true)
 
@@ -233,6 +245,9 @@ func DerefSetExpr(file *bufio.Writer, dst addr.Addr, t types.Type, val ast.Expr)
             GenExpr(file, val)
             asm.MovDerefReg(file, dst, t.Size(), asm.RegGroup(0))
         }
+
+    case types.VecType:
+        DerefSetBigStruct(file, dst, val)
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (DerefSetExpr)\n", t)
