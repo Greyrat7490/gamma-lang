@@ -41,9 +41,10 @@ var regs []asm.RegGroup = []asm.RegGroup{ asm.RegDi, asm.RegSi, asm.RegD, asm.Re
 
 func Define(file *bufio.Writer, f *fn.Func) {
     file.WriteString(f.GetName() + ":\n")
-    file.WriteString("push rbp\nmov rbp, rsp\n")
+    asm.PushReg(file, asm.RegBp)
+    asm.MovRegReg(file, asm.RegBp, asm.RegSp, types.Ptr_Size)
     if f.GetFrameSize() > 0 {
-        file.WriteString(fmt.Sprintf("sub rsp, %d\n", f.GetFrameSize()))
+        asm.SubSp(file, int64(f.GetFrameSize()))
     }
 }
 

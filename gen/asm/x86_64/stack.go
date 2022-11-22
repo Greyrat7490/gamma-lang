@@ -29,3 +29,11 @@ func PushDeref(file *bufio.Writer, addr addr.Addr) {
 func PopDeref(file *bufio.Writer, addr addr.Addr) {
     file.WriteString(fmt.Sprintf("pop QWORD [%s]\n", addr))
 }
+
+func AddSp(file *bufio.Writer, offset int64) {
+    file.WriteString(fmt.Sprintf("add %s, %d\n", GetReg(RegSp, 8), offset))
+}
+
+func SubSp(file *bufio.Writer, offset int64) {
+    file.WriteString(fmt.Sprintf("sub %s, %d\n", GetReg(RegSp, 8), offset))
+}

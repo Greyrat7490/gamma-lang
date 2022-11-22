@@ -151,12 +151,11 @@ func AssignDeref(file *bufio.Writer, t types.Type, dest *ast.Unary, val ast.Expr
 
 func AssignField(file *bufio.Writer, t types.Type, dest *ast.Field, val ast.Expr) {
     FieldAddrToReg(file, dest, asm.RegC)
-    file.WriteString(fmt.Sprintf("lea rcx, [rcx+%d]\n", FieldToOffset(dest)))
+    asm.LeaOffset(file, asm.RegC, int64(FieldToOffset(dest)), types.Ptr_Size)
 
     DerefSetExpr(file, asm.RegAsAddr(asm.RegC), t, val)
 }
 
-// TODO assign indexed with indexed
 func AssignIndexed(file *bufio.Writer, t types.Type, dest *ast.Indexed, val ast.Expr) {
     IndexedAddrToReg(file, dest, asm.RegC)
 

@@ -18,6 +18,9 @@ var regs [][]string = [][]string{
     { "r9l",  "r9w",  "r9d",  "r9" },
     { "r10l", "r10w", "r10d", "r10" },
     { "r11l", "r11w", "r11d", "r11" },
+
+    { "spl", "sp", "esp", "rsp" },
+    { "bpl", "bp", "ebp", "rbp" },
 }
 
 var words     []string = []string{ "BYTE", "WORD", "DWORD", "QWORD" }
@@ -38,6 +41,9 @@ const (
     RegR9  RegGroup = iota
     RegR10 RegGroup = iota
     RegR11 RegGroup = iota
+
+    RegSp RegGroup = iota
+    RegBp RegGroup = iota
 )
 
 func GetWord(bytes uint) string {
