@@ -193,7 +193,7 @@ func PassValStack(file *bufio.Writer, value constVal.ConstVal, valtype types.Typ
 
     case *constVal.PtrConst:
         if v.Local {
-            file.WriteString(fmt.Sprintf("lea %s, [%s]\n", asm.GetReg(asm.RegA, types.Ptr_Size), v.Addr))
+            asm.Lea(file, asm.RegA, v.Addr.String(), types.Ptr_Size)
             asm.PushReg(file, asm.RegA)
         } else {
             asm.PushVal(file, v.GetVal())
@@ -316,21 +316,21 @@ func RetBigStructExpr(file *bufio.Writer, address addr.Addr, e ast.Expr) {
                 asm.MovDerefVal(file, address.Offseted(int64(2*types.Ptr_Size)), types.U64_Size, "0")
             }
 
+            baseTypeSize := uint64(lit.Type.BaseType.Size())
+
             if lit.Cap == nil {
                 asm.MovRegDeref(file, asm.RegA, address.Offseted(int64(2*types.Ptr_Size)), types.U64_Size, false)
-                file.WriteString(fmt.Sprintf("lea %s, [%s*%d]\n", asm.GetReg(asm.RegA, types.Ptr_Size),
-                    asm.GetReg(asm.RegA, types.Ptr_Size), lit.Type.BaseType.Size()))
+                asm.Lea(file, asm.RegA, fmt.Sprintf("%s*%d", asm.GetReg(asm.RegA, types.Ptr_Size), baseTypeSize), types.Ptr_Size)
             } else {
                 preserveRegC = true
                 GenExpr(file, lit.Cap)
                 preserveRegC = false
                 if c := cmpTime.ConstEval(lit.Cap); c != nil {
                     asm.MovDerefVal(file, address.Offseted(int64(types.Ptr_Size)), types.U64_Size, c.GetVal())
-                    asm.MovRegVal(file, asm.RegA, types.U64_Size, fmt.Sprintf("%s*%d", c.GetVal(), lit.Type.BaseType.Size()))
+                    asm.MovRegVal(file, asm.RegA, types.U64_Size, fmt.Sprintf("%s*%d", c.GetVal(), baseTypeSize ))
                 } else {
                     asm.MovDerefReg(file, address.Offseted(int64(types.Ptr_Size)), types.U64_Size, asm.RegGroup(0))
-                    file.WriteString(fmt.Sprintf("lea %s, [%s*%d]\n", asm.GetReg(asm.RegA, types.Ptr_Size), 
-                        asm.GetReg(asm.RegA, types.Ptr_Size), lit.Type.BaseType.Size()))
+                    asm.Lea(file, asm.RegA, fmt.Sprintf("%s*%d", asm.GetReg(asm.RegA, types.Ptr_Size), baseTypeSize ), types.Ptr_Size)
                 }
             }
 
