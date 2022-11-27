@@ -59,6 +59,29 @@ fn retTest(arr [3]i32) -> [$]i32 {
     ret vec
 }
 
+fn ptrTest() {
+    vec := [$]i32{ 3 }
+    printVec(vec)
+
+    ptr := &vec
+
+    for i u64, 3 {
+        *ptr[i] = 64
+    }
+
+    printVec(*ptr)
+}
+
+fn xswitchTest(i u32) {
+    vec := [$]i32{ 1 }
+    vec2 := [$]i32{ 2 }
+
+    $ i == { 0: vec; _: vec2 }[i] = 420
+
+    printVec(vec)
+    printVec(vec2)
+}
+
 fn main() {
     test1()
 
@@ -74,9 +97,20 @@ fn main() {
 
     vec := retTest([3]i32{ 0, 1, 2 })
     printVec(vec)
+
+    printStr("----\n")
+
+    ptrTest()
+
+    printStr("----\n")
+
+    xswitchTest(0)
+    printStr("--\n")
+    xswitchTest(1)
 }
 
 /*
+ * TODO
     vec.reserve()   // update cap
     vec.resize()    // update len
 

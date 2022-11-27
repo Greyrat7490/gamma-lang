@@ -72,6 +72,17 @@ fn boolTest2(a1 i32) {
     printBool(b) printStr("\n")
 }
 
+fn assign(i i32) {
+    v1 := 0
+    v2 := 0
+
+    // assign to one of vars depending on a condition
+    $ i <= { 1: v1; _: v2 } = i
+
+    printStr("v1: ")   printInt(v1)
+    printStr("\nv2: ") printInt(v2) printChar('\n')
+}
+
 fn main() {
     printStr("simple -----------\n")
     simple(69)
@@ -128,4 +139,9 @@ fn main() {
     boolTest2(86)
     boolTest2(-86)
     boolTest2(-420)
+
+    printStr("assign to xswitch -----------\n")
+    assign(64)
+    assign(-69)
+    assign(1)
 }

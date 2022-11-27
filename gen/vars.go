@@ -4,15 +4,12 @@ import (
     "os"
     "fmt"
     "bufio"
-    "reflect"
-    "gamma/token"
     "gamma/types"
     "gamma/types/str"
     "gamma/types/addr"
     "gamma/types/array"
     "gamma/ast"
     "gamma/ast/identObj/vars"
-    "gamma/cmpTime"
     "gamma/cmpTime/constVal"
     "gamma/gen/asm/x86_64"
     "gamma/gen/asm/x86_64/nasm"
@@ -96,72 +93,7 @@ func defStr(val *constVal.StrConst) {
 }
 
 
-// Assign -------------------------------------------------------------------
-
-func AssignVar(file *bufio.Writer, v vars.Var, val ast.Expr) {
-    if value := cmpTime.ConstEval(val); value != nil {
-        DerefSetVal(file, v.Addr(), v.GetType(), value)
-
-    } else if e,ok := val.(*ast.Ident); ok {
-        if other,ok := e.Obj.(vars.Var); ok {
-            if v.GetName() == other.GetName() {
-                fmt.Fprintln(os.Stderr, "[WARNING] assigning a variable to itself is redundant")
-                fmt.Fprintln(os.Stderr, "\t" + v.GetPos().At())
-                return
-            }
-
-            DerefSetVar(file, v.Addr(), other)
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected identifier %s to be a variable but got %v\n", e.Name, reflect.TypeOf(e.Obj))
-            fmt.Fprintln(os.Stderr, "\t" + e.At())
-            os.Exit(1)
-        }
-
-    } else {
-        DerefSetExpr(file, v.Addr(), v.GetType(), val)
-    }
-}
-
-func AssignDeref(file *bufio.Writer, t types.Type, dest *ast.Unary, val ast.Expr) {
-    if dest.Operator.Type != token.Mul {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"*\" but got \"%v\"\n", dest.Operator)
-        fmt.Fprintln(os.Stderr, "\t" + dest.At())
-        os.Exit(1)
-    }
-
-    GenExpr(file, dest.Operand)
-
-    if value := cmpTime.ConstEval(val); value != nil {
-        DerefSetVal(file, asm.RegAsAddr(asm.RegA), t, value)
-
-    } else if e,ok := val.(*ast.Ident); ok {
-        if v,ok := e.Obj.(vars.Var); ok {
-            DerefSetVar(file, asm.RegAsAddr(asm.RegA), v)
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected identifier %s to be a variable but got %v\n", val, reflect.TypeOf(e.Obj))
-            fmt.Fprintln(os.Stderr, "\t" + dest.At())
-            os.Exit(1)
-        }
-
-    } else {
-        asm.MovRegReg(file, asm.RegC, asm.RegA, types.Ptr_Size)
-        DerefSetExpr(file, asm.RegAsAddr(asm.RegC), t, val)
-    }
-}
-
-func AssignField(file *bufio.Writer, t types.Type, dest *ast.Field, val ast.Expr) {
-    FieldAddrToReg(file, dest, asm.RegC)
-    asm.LeaOffset(file, asm.RegC, int64(FieldToOffset(dest)), types.Ptr_Size)
-
-    DerefSetExpr(file, asm.RegAsAddr(asm.RegC), t, val)
-}
-
-func AssignIndexed(file *bufio.Writer, t types.Type, dest *ast.Indexed, val ast.Expr) {
-    IndexedAddrToReg(file, dest, asm.RegC)
-
-    DerefSetExpr(file, asm.RegAsAddr(asm.RegC), t, val)
-}
-
+// Deref -------------------------------------------------------------------
 func DerefSetVar(file *bufio.Writer, addr addr.Addr, other vars.Var) {
     DerefSetDeref(file, addr, other.GetType(), other.Addr())
 }

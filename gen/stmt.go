@@ -71,30 +71,33 @@ func GenStmt(file *bufio.Writer, s ast.Stmt) {
 
 func GenAssign(file *bufio.Writer, s *ast.Assign) {
     t := s.Dest.GetType()
+    var addr addr.Addr
 
-    switch dest := s.Dest.(type) {
-    case *ast.Indexed:
-        AssignIndexed(file, t, dest, s.Value)
-
-    case *ast.Field:
-        AssignField(file, t, dest, s.Value)
-
-    case *ast.Unary:
-        AssignDeref(file, t, dest, s.Value)
-
-    case *ast.Ident:
-        if v,ok := dest.Obj.(vars.Var); ok {
-            AssignVar(file, v, s.Value)
+    if ident, ok := s.Dest.(*ast.Ident); ok {
+        if v,ok := ident.Obj.(vars.Var); ok {
+            addr = v.Addr()
         } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected identifier %s to be a variable but got %v\n", dest.Name, reflect.TypeOf(dest.Obj))
-            fmt.Fprintln(os.Stderr, "\t" + dest.At())
+            fmt.Fprintf(os.Stderr, "[ERROR] expected identifier %s to be a variable but got %v\n", ident.Name, reflect.TypeOf(ident.Obj))
+            fmt.Fprintln(os.Stderr, "\t" + ident.At())
             os.Exit(1)
         }
+    } else {
+        ExprAddrToReg(file, s.Dest, asm.RegC)
+        addr = asm.RegAsAddr(asm.RegC)
+    }
 
-    default:
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a variable or a dereferenced pointer but got %v\n", reflect.TypeOf(dest))
-        fmt.Fprintln(os.Stderr, "\t" + s.Pos.At())
-        os.Exit(1)
+    if c := cmpTime.ConstEval(s.Value); c != nil {
+        DerefSetVal(file, addr, t, c)
+    } else if ident,ok := s.Value.(*ast.Ident); ok {
+        if v,ok := ident.Obj.(vars.Var); ok {
+            DerefSetVar(file, addr, v)
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected identifier %s to be a variable but got %v\n", ident.Name, reflect.TypeOf(ident.Obj))
+            fmt.Fprintln(os.Stderr, "\t" + ident.At())
+            os.Exit(1)
+        }
+    } else {
+        DerefSetExpr(file, addr, t, s.Value)
     }
 }
 
