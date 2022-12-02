@@ -31,6 +31,7 @@ func writeRodata(file *bufio.Writer) {
 
 func writeBss(file *bufio.Writer) {
     file.WriteString("\nsection .bss\n")
+    file.WriteString("align 16\n")
     file.WriteString("\tresb 1024 * 1024\n_stack_top:\n") // 1MiB
     file.WriteString("_intBuf: resb 21\n") // max 64bit -> 20 digits max + sign -> 21 char string max
     file.WriteString(bss)
@@ -47,14 +48,26 @@ func Header(file *bufio.Writer) {
     file.WriteString("global _start\n")
 }
 
-func Footer(file *bufio.Writer) {
+func Footer(file *bufio.Writer, noMainArg bool) {
     file.WriteString("\n_start:\n")
-    file.WriteString("mov rsp, _stack_top\n\n")
 
-    file.WriteString("call main\n")
+    if !noMainArg {
+        file.WriteString(
+            "lea rdi, [rsp+8]\n" +
+            "mov rsi, [rsp]\n" +
+            "mov rsp, _stack_top\n" +
+            "sub rsp, 24\n" +
+            "mov [rsp], rdi\n" +
+            "mov [rsp+8], rsi\n" +
+            "mov [rsp+16], rsi\n")
+    } else {
+        file.WriteString("mov rsp, _stack_top\n")
+    }
 
-    file.WriteString("\nmov rdi, 0\n")
-    file.WriteString("call exit\n")
+    file.WriteString(
+        "call main\n" +
+        "mov rdi, 0\n" +
+        "call exit\n")
 
     writeRodata(file)
     writeData(file)

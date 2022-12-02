@@ -28,6 +28,7 @@ func Declare() {
     identObj.AddBuildIn("printBool", types.BoolType{}, nil)
     identObj.AddBuildIn("printChar", types.CharType{}, nil)
     identObj.AddBuildIn("exit",      types.CreateInt(types.I32_Size), nil)
+    identObj.AddBuildIn("from_cstr", types.PtrType{ BaseType: types.CharType{} }, types.StrType{})
 
     // basic inline assembly
     identObj.AddBuildIn("_asm", types.CreateStr(), nil)
@@ -37,6 +38,7 @@ func Declare() {
 func Define(file *bufio.Writer) {
     defineItoS(file)
     defineBtoS(file)
+    defineAllocVec(file)
 
     definePrintStr(file)
     definePrintChar(file)
@@ -44,9 +46,7 @@ func Define(file *bufio.Writer) {
     definePrintUint(file)
     definePrintPtr(file)
     definePrintBool(file)
-
-    defineAppend(file)
-    defineAllocVec(file)
+    defineFromCStr(file)
     
     defineExit(file)
     file.WriteString("\n")
@@ -62,8 +62,8 @@ func syscall(file *bufio.Writer, syscallNum uint) {
 func definePrintStr(asm *bufio.Writer) {
     asm.WriteString("printStr:\n")
 
-    asm.WriteString("mov rdx, rsi\n")
-    asm.WriteString("mov esi, edi\n")
+    asm.WriteString("mov edx, esi\n")
+    asm.WriteString("mov rsi, rdi\n")
     asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
     syscall(asm, SYS_WRITE)
 
@@ -195,8 +195,18 @@ func defineExit(file *bufio.Writer) {
     syscall(file, SYS_EXIT)
 }
 
-func defineAppend(file *bufio.Writer) {
-    
+func defineFromCStr(file *bufio.Writer) {
+    file.WriteString(fmt.Sprintf(`from_cstr:
+lea rdx, [rdi-1]
+.l1:
+inc rdx
+cmp BYTE [rdx], 0
+jne .l1
+inc rdx
+sub rdx, rdi
+mov rax, rdi
+ret
+`))
 }
 
 // TODO: rather use std/memory malloc

@@ -32,7 +32,7 @@ func GenAsm(Ast ast.Ast) {
     str.Gen()
     array.Gen()
 
-    nasm.Footer(writer)
+    nasm.Footer(writer, Ast.NoMainArg)
 
     writer.Flush()
     asm.Close()

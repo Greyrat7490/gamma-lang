@@ -12,6 +12,7 @@ type Node interface {
 
 type Ast struct {
     Decls []Decl // only declaring/defining variables/functions allowed in global scope
+    NoMainArg bool
 }
 
 func (ast *Ast) ShowAst() {
