@@ -116,6 +116,12 @@ func hasRet(s ast.Stmt) bool {
     case *ast.Ret, *ast.Through:
         return true
 
+    case *ast.ExprStmt:
+        if f,ok := s.Expr.(*ast.FnCall); ok {
+            return f.Ident.Name == "exit"
+        }
+        return false
+        
     case *ast.For:
         return hasRet(&s.Block)
 

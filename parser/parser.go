@@ -10,6 +10,7 @@ import (
 )
 
 var isMainDefined bool = false
+var noMainArg bool = true
 
 func Parse(path string) (ast ast.Ast) {
     fmt.Println("[INFO] parsing...")
@@ -27,6 +28,8 @@ func Parse(path string) (ast ast.Ast) {
         fmt.Fprintln(os.Stderr, "[ERROR] no \"main\" function was defined")
         os.Exit(1)
     }
+
+    ast.NoMainArg = noMainArg
 
     return
 }

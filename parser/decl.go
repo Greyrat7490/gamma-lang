@@ -349,13 +349,15 @@ func prsDefFn(tokens *token.Tokens, isConst bool) ast.DefFn {
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
-    if name.Str == "main" {
-        isMainDefined = true
-    }
 
     identObj.StartScope()
     tokens.Next()
     argNames, argTypes := prsDecArgs(tokens)
+
+    if name.Str == "main" {
+        isMainDefined = true
+        noMainArg = len(argNames) == 0
+    }
 
     var retType types.Type = nil
     if tokens.Peek().Type == token.Arrow {

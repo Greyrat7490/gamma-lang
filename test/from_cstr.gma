@@ -1,0 +1,8 @@
+fn main(args [$]*char) {
+    printUint(args.len) printChar('\n')
+
+    printStr("args:\n")
+    for i u64, args.len {
+        printStr(from_cstr(args[i])) printChar('\n')
+    }
+}
