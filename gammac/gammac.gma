@@ -1,0 +1,38 @@
+import "io.gma"
+
+fn read_src_file(path str) -> str {
+    READ_BUF_SIZE :: 1024 * 1024
+
+    file := open(path as *char, O_RDONLY)
+    if file != -1 {
+        printStr("opened: ") printStr(path) printChar('\n')
+    } else {
+        printStr("[ERROR] could not open: ") printStr(path) printChar('\n')
+        exit(1)
+    }
+
+    buffer := [READ_BUF_SIZE]char{}
+    sz := read(file, buffer as *char, READ_BUF_SIZE) 
+    if sz == {
+        0:
+            printStr("[ERROR] file is too big (TODO handle bigger files)\n")
+            exit(1)
+        -1:
+            printStr("[ERROR] could not read file\n")
+            exit(1)
+        _:
+            // TODO fix no default case
+            ret from_cstr(buffer as *char)
+    }
+}
+
+fn main(args [$]*char) {
+    if args.len < 2 {
+        printStr("[ERROR] no source file provided\n")
+        exit(1)
+    }
+    src_path := from_cstr(args[1])
+
+    src_file_content := read_src_file(src_path)
+    printStr(src_file_content)
+}
