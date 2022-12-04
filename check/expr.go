@@ -390,6 +390,16 @@ func typeCheckCast(e *ast.Cast) {
                 os.Exit(1)
             }
 
+        case types.Vec:
+            dstTyp := e.DestType.(types.PtrType).BaseType
+            srcTyp := t.(types.VecType).BaseType
+
+            if dstTyp.GetKind() != srcTyp.GetKind() {
+                fmt.Fprintf(os.Stderr, "[ERROR] you can only cast a vector into a pointer with the same baseType (got %v)\n", t)
+                fmt.Fprintln(os.Stderr, "\t" + e.Expr.At())
+                os.Exit(1)
+            }
+
         case types.Int, types.Uint:
             if !checkTypeExpr(types.CreateUint(types.Ptr_Size), e.Expr) {
                 fmt.Fprintf(os.Stderr, "[ERROR] you can only cast an u64 into a pointer (got %v)\n", t)

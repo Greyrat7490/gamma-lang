@@ -221,7 +221,8 @@ mov rdx, %d
 mov r10, %d
 mov r8, -1
 mov r9, 0
+push rcx
 `, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE))
     syscall(file, SYS_MMAP)
-    file.WriteString("ret\n")
+    file.WriteString("pop rcx\nret\n")
 }

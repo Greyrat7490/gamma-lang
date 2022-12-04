@@ -327,7 +327,11 @@ func GenField(file *bufio.Writer, e *ast.Field) {
             asm.MovRegDeref(file, asm.RegA, addr, t.Size(), true)
 
         default:
-            asm.MovRegDeref(file, asm.RegA, addr, t.Size(), false)
+            if t.Size() > types.Ptr_Size {
+                asm.MovRegDeref(file, asm.RegA, addr, types.Ptr_Size, false)
+            } else {
+                asm.MovRegDeref(file, asm.RegA, addr, t.Size(), false)
+            }
         }
 
     default:
