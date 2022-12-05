@@ -548,28 +548,36 @@ func prsField(tokens *token.Tokens, obj ast.Expr) *ast.Field {
     }
 
     field := ast.Field{ Obj: obj, DotPos: dot.Pos, FieldName: fieldName }
-    switch t := obj.GetType().(type) {
-    case types.ArrType:
-        field.Type = types.CreateUint(types.Ptr_Size)
-    case types.VecType:
-        field.Type = types.CreateUint(types.Ptr_Size)
-    case types.StructType:
-        field.StructType = t
-        field.Type = field.StructType.GetType(fieldName.Str)
-
-        if field.Type == nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" has no field called \"%s\"\n", field.StructType.Name, fieldName.Str)
-            fmt.Fprintf(os.Stderr, "\tfields: %v\n", t.GetFields())
-            fmt.Fprintln(os.Stderr, "\t" + obj.At())
-            os.Exit(1)
-        }
-    default:
-        fmt.Fprintf(os.Stderr, "[ERROR] type %s has no fields\n", t)
-        fmt.Fprintln(os.Stderr, "\t" + obj.At())
-        os.Exit(1)
-    }
+    setFieldType(&field)
 
     return &field
+}
+
+func setFieldType(field *ast.Field) {
+    switch t := field.Obj.GetType().(type) {
+    case types.ArrType:
+        field.Type = types.CreateUint(types.U64_Size)
+    case types.VecType:
+        field.Type = types.CreateUint(types.U64_Size)
+    case types.StructType:
+        field.StructType = t
+        field.Type = field.StructType.GetType(field.FieldName.Str)
+
+        if field.Type == nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" has no field called \"%s\"\n", field.StructType.Name, field.FieldName.Str)
+            fmt.Fprintf(os.Stderr, "\tfields: %v\n", t.GetFields())
+            fmt.Fprintln(os.Stderr, "\t" + field.Obj.At())
+            os.Exit(1)
+        }
+    // auto deref
+    case types.PtrType:
+        field.Obj = &ast.Unary{ Type: t.BaseType, Operator: token.Token{ Type: token.Mul, Str: "*" }, Operand: field.Obj }
+        setFieldType(field)
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] type %s has no fields\n", t)
+        fmt.Fprintln(os.Stderr, "\t" + field.Obj.At())
+        os.Exit(1)
+    }
 }
 
 func prsParenExpr(tokens *token.Tokens) *ast.Paren {
