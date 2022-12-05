@@ -336,7 +336,7 @@ func (e *UintLit)   GetType() types.Type { return e.Type }
 func (e *BoolLit)   GetType() types.Type { return types.BoolType{} }
 func (e *CharLit)   GetType() types.Type { return types.CharType{} }
 func (e *PtrLit)    GetType() types.Type { return e.Type }
-func (e *StrLit)    GetType() types.Type { return types.CreateStr() }
+func (e *StrLit)    GetType() types.Type { return types.StrType{} }
 func (e *FieldLit)  GetType() types.Type { return e.Value.GetType() }
 func (e *StructLit) GetType() types.Type { return e.StructType }
 func (e *ArrayLit)  GetType() types.Type { return e.Type }

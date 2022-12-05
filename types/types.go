@@ -55,17 +55,14 @@ type IntType struct {
 type PtrType struct {
     BaseType Type
 }
-type ArrType  struct {
+type ArrType struct {
     BaseType Type
     Lens []uint64
 }
 type VecType struct {
     BaseType Type
 }
-type StrType  struct {
-    ptr  PtrType
-    size UintType
-}
+type StrType struct {}
 type StructType struct {
     Name string
     Types []Type
@@ -115,10 +112,6 @@ func CreateInt(intSize uint) IntType {
 
 func CreateUint(uintSize uint) UintType {
     return UintType{ size: uintSize }
-}
-
-func CreateStr() StrType {
-    return StrType{ ptr: PtrType{ BaseType: CharType{} }, size: UintType{ size: 4 } }
 }
 
 func CreateStructType(name string, types []Type, names []string) StructType {
@@ -232,7 +225,7 @@ func (t IntType)    Size() uint { return t.size }
 func (t UintType)   Size() uint { return t.size }
 func (t CharType)   Size() uint { return Char_Size }
 func (t BoolType)   Size() uint { return Bool_Size }
-func (t StrType)    Size() uint { return t.ptr.Size() + t.size.Size() }
+func (t StrType)    Size() uint { return Str_Size }
 func (t PtrType)    Size() uint { return Ptr_Size }
 func (t ArrType)    Size() uint { return Arr_Size }
 func (t VecType)    Size() uint { return Vec_Size }
@@ -315,7 +308,7 @@ func ToBaseType(s string) Type {
     case "bool":
         return BoolType{}
     case "str":
-        return CreateStr()
+        return StrType{}
     default:
         return nil
     }
@@ -324,7 +317,7 @@ func ToBaseType(s string) Type {
 func TypeOfVal(val string) Type {
     switch {
     case val[0] == '"' && val[len(val) - 1] == '"':
-        return StrType{ ptr: PtrType{ BaseType: CharType{} }, size: UintType{ size: 4 } }
+        return StrType{}
     case val[0] == '\'' && val[len(val) - 1] == '\'':
         return CharType{}
     case val == "true" || val == "false":

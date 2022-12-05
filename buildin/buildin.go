@@ -21,7 +21,7 @@ const MAP_PRIVATE   = 2
 
 func Declare() {
     // build-in funcs
-    identObj.AddBuildIn("printStr",  types.CreateStr(), nil)
+    identObj.AddBuildIn("printStr",  types.StrType{}, nil)
     identObj.AddBuildIn("printInt",  types.CreateInt(types.I64_Size), nil)
     identObj.AddBuildIn("printUint", types.CreateUint(types.U64_Size), nil)
     identObj.AddBuildIn("printPtr",  types.PtrType{}, nil)
@@ -31,7 +31,7 @@ func Declare() {
     identObj.AddBuildIn("from_cstr", types.PtrType{ BaseType: types.CharType{} }, types.StrType{})
 
     // basic inline assembly
-    identObj.AddBuildIn("_asm", types.CreateStr(), nil)
+    identObj.AddBuildIn("_asm", types.StrType{}, nil)
     identObj.AddBuildIn("_syscall", types.CreateInt(types.I64_Size), types.CreateInt(types.I64_Size))
 }
 
