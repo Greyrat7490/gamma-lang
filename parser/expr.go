@@ -381,7 +381,7 @@ func prsStructLit(tokens *token.Tokens) *ast.StructLit {
 }
 
 func omitNames(tokens *token.Tokens) bool {
-    return tokens.Peek().Type != token.Name && tokens.Peek2().Type != token.Colon
+    return tokens.Peek().Type != token.Name || tokens.Peek2().Type != token.Colon
 }
 
 func fieldsToTypes(fields []ast.FieldLit) []types.Type {
