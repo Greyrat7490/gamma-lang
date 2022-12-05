@@ -245,24 +245,22 @@ func GenIndexed(file *bufio.Writer, e *ast.Indexed) {
 }
 
 func FieldAddrToReg(file *bufio.Writer, e *ast.Field, r asm.RegGroup) {
-    addr := fieldBaseAddr(e)
-    offset := int64(fieldToOffset(e))
-    asm.Lea(file, r, addr.Offseted(offset).String(), types.Ptr_Size)
+    fieldAddrToReg(file, e, r, int64(fieldToOffset(e)))
 }
 
-func fieldBaseAddr(e *ast.Field) addr.Addr {
-    switch o := e.Obj.(type) {
+func fieldAddrToReg(file *bufio.Writer, e *ast.Field, r asm.RegGroup, offset int64) {
+    switch obj := e.Obj.(type) {
     case *ast.Ident:
-        return o.Obj.Addr()
+        asm.Lea(file, r, obj.Obj.Addr().Offseted(offset).String(), types.Ptr_Size)
 
     case *ast.Field:
-        return fieldBaseAddr(o)
+        fieldAddrToReg(file, obj, r, offset)
 
     default:
-        fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
-        fmt.Fprintln(os.Stderr, "\t" + e.At())
-        os.Exit(1)
-        return addr.Addr{}
+        ExprAddrToReg(file, e.Obj, r)
+        if offset != 0 {
+            asm.Lea(file, r, asm.RegAsAddr(r).Offseted(offset).String(), types.Ptr_Size)
+        }
     }
 }
 
@@ -281,20 +279,13 @@ func fieldToOffset(f *ast.Field) int {
         }
     default:
         switch o := f.Obj.(type) {
-        case *ast.Ident:
-            return f.StructType.GetOffset(f.FieldName.Str)
-
         case *ast.Field:
             return f.StructType.GetOffset(f.FieldName.Str) + fieldToOffset(o)
 
         default:
-            fmt.Fprintln(os.Stderr, "[ERROR] only ident and field expr supported yet")
-            fmt.Fprintln(os.Stderr, "\t" + f.At())
-            os.Exit(1)
+            return f.StructType.GetOffset(f.FieldName.Str)
         }
     }
-
-    return 0
 }
 
 func GenField(file *bufio.Writer, e *ast.Field) {
@@ -396,7 +387,9 @@ func UnaryAddrToReg(file *bufio.Writer, e *ast.Unary, reg asm.RegGroup) {
     }
 
     GenExpr(file, e.Operand)
-    asm.MovRegReg(file, reg, asm.RegA, types.Ptr_Size)
+    if reg != asm.RegA {
+        asm.MovRegReg(file, reg, asm.RegA, types.Ptr_Size)
+    }
 }
 
 func GenUnary(file *bufio.Writer, e *ast.Unary) {
