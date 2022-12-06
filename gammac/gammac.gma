@@ -1,29 +1,14 @@
 import "io.gma"
 
 fn read_src_file(path str) -> str {
-    READ_BUF_SIZE :: 1024 * 1024
-
-    file := open(path as *char, O_RDONLY)
-    if file != -1 {
-        printStr("opened: ") printStr(path) printChar('\n')
-    } else {
-        printStr("[ERROR] could not open: ") printStr(path) printChar('\n')
+    reader := create_reader(path)
+    res := read_file(&reader)
+    if close_reader(&reader) < 0 {
+        printStr("[ERROR] could not close file correctly\n")
         exit(1)
     }
 
-    buffer := [READ_BUF_SIZE]char{}
-    sz := read(file, buffer as *char, READ_BUF_SIZE) 
-    if sz == {
-        0:
-            printStr("[ERROR] file is too big (TODO handle bigger files)\n")
-            exit(1)
-        -1:
-            printStr("[ERROR] could not read file\n")
-            exit(1)
-        _:
-            // TODO fix no default case
-            ret from_cstr(buffer as *char)
-    }
+    ret res
 }
 
 fn main(args [$]*char) {
@@ -31,8 +16,24 @@ fn main(args [$]*char) {
         printStr("[ERROR] no source file provided\n")
         exit(1)
     }
-    src_path := from_cstr(args[1])
 
+    src_path := from_cstr(args[1])
     src_file_content := read_src_file(src_path)
-    printStr(src_file_content)
+    // printStr(src_file_content)
+
+    reader := create_reader(src_path)
+
+    printChar('"') printStr(read_line(&reader)) printStr("\"\n")
+    printChar('"') printStr(read_line(&reader)) printStr("\"\n")
+    printChar('"') printStr(read_line(&reader)) printStr("\"\n")
+    printChar('"') printStr(read_line(&reader)) printStr("\"\n")
+    printChar('"') printStr(read_line(&reader)) printStr("\"\n")
+    printChar('"') printStr(read_line(&reader)) printStr("\"\n")
+    printChar('"') printStr(read_line(&reader)) printStr("\"\n")
+    printChar('"') printStr(read_line(&reader)) printStr("\"\n")
+
+    if close_reader(&reader) < 0 {
+        printStr("[ERROR] could not close file correctly\n")
+        exit(1)
+    }
 }

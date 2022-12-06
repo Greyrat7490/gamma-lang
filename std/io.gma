@@ -1,4 +1,5 @@
 import "syscall.gma"
+import "memory.gma"
 
 // std stream file descriptors
 STDIN  :: 0
@@ -26,7 +27,7 @@ O_NOATIME   :: 01000000                 // do not modify last access time of fil
 O_TMPFILE   :: 020000000 | O_DIRECTORY  // created unnamed tmp file
 
 
-AT_FDCWD    :: -100
+AT_FDCWD :: -100
 
 PATH_MAX :: 0x1000
 
@@ -68,4 +69,145 @@ fn close(fd i32) -> i32 {
 
 fn getcwd(buf *char, size u64) -> bool {
     ret _syscall(SYS_GETCWD) != 0
+}
+
+
+fn from_pchar(size u32, cstr *char) -> str {
+    ret *(&cstr as u64 as *str)
+}
+
+
+READER_BUF_SIZE :: 4 * 1024
+
+struct Reader {
+    fd i32,
+    pos u64,
+    buffer [$]char
+}
+
+fn create_reader(path str) -> Reader {
+    fd := open(path as *char, O_RDONLY)
+    if fd != -1 {
+        printStr("opened: ") printStr(path) printChar('\n')
+    } else {
+        printStr("[ERROR] could not open: ") printStr(path) printChar('\n')
+        exit(1)
+    }
+
+    ret Reader{ fd, 0, [$]char{ READER_BUF_SIZE } }
+}
+
+fn close_reader(reader *Reader) -> i32 {
+    // TODO free buffer
+    ret close(reader.fd)
+}
+
+fn read_file(reader *Reader) -> str {
+    // TODO use fstat to get size of file
+
+    while true {
+        sz := reader.buffer.cap - reader.buffer.len
+        if sz as i64 <= 0 {
+            old_ptr := reader.buffer as *char
+            old_cap := reader.buffer.cap
+
+            reader.buffer = [$]char{ cap: old_cap + old_cap/2, len: reader.buffer.len }
+            memcpy(reader.buffer as *char as u64, old_ptr as u64, old_cap)
+
+            // TODO free old_ptr
+            sz = reader.buffer.cap - reader.buffer.len
+        }
+
+        pos := read(reader.fd, (reader.buffer as *char)+reader.buffer.len, sz)
+        if pos == {
+            -1:
+                printStr("[ERROR] could not read file\n")
+                exit(1)
+            0:
+                break
+            _:
+                reader.buffer.len = reader.buffer.len + (pos as u64)
+        }
+    }
+
+    reader.pos = reader.buffer.len
+    ret from_cstr(reader.buffer as *char)
+}
+
+fn read_line(reader *Reader) -> str {
+    cstr := reader.buffer as *char + reader.pos
+
+    // find line break
+    for i u64, reader.buffer.len, reader.pos {
+        c := reader.buffer[i]
+        if c == {
+        '\r':
+            size := i - reader.pos
+            if i+1 < reader.buffer.cap && (reader.buffer[i+1] == '\n') {
+                i = i + 1
+            }
+            reader.pos = i + 1
+            ret from_pchar(size as u32, cstr)
+        '\n':
+            size = i - reader.pos
+            reader.pos = i + 1
+            // TODO fix type checking no error (size(u64) expected u32)
+            ret from_pchar(size as u32, cstr)
+        _:
+            continue
+        }
+    }
+
+    // extend buffer until line break found
+    while true {
+        // resize buffer if needed
+        sz := reader.buffer.cap - reader.buffer.len
+        if sz as i64 <= 0 {
+            old_ptr := reader.buffer as *char
+            old_cap := reader.buffer.cap
+
+            reader.buffer = [$]char{ cap: old_cap + old_cap/2, len: reader.buffer.len }
+            memcpy(reader.buffer as *char as u64, old_ptr as u64, old_cap)
+
+            // TODO free old_ptr
+            sz = reader.buffer.cap - reader.buffer.len
+        }
+
+        // read from file
+        old_len := reader.buffer.len
+        pos := read(reader.fd, (reader.buffer as *char)+reader.buffer.len, sz)
+        if pos == {
+        -1:
+            printStr("[ERROR] could not read file\n")
+            exit(1)
+        0:
+            ret from_pchar(reader.buffer.len as u32, cstr)
+        _:
+            reader.buffer.len = reader.buffer.len + (pos as u64)
+        }
+
+        // find line break
+        for i u64, reader.buffer.len, old_len {
+            c := reader.buffer[i]
+            if c == {
+            '\r':
+                size := i - reader.pos
+                if i+1 < reader.buffer.cap && (reader.buffer[i+1] == '\n') {
+                    i = i + 1
+                }
+                reader.pos = i + 1
+                ret from_pchar(size as u32, cstr)
+            '\n':
+                size = i - reader.pos
+                reader.pos = i + 1
+                // TODO fix type checking no error (size(u64) expected u32)
+                ret from_pchar(size as u32, cstr)
+            _:
+                // TODO fix no default causing unexpected behavior
+                continue
+            }
+        }
+    }
+
+    ret from_pchar(reader.buffer.len as u32, cstr)
 }
