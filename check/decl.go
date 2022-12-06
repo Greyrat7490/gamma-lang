@@ -121,7 +121,7 @@ func hasRet(s ast.Stmt) bool {
             return f.Ident.Name == "exit"
         }
         return false
-        
+
     case *ast.For:
         return hasRet(&s.Block)
 

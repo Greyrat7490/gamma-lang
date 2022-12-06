@@ -236,7 +236,7 @@ func GenIndexed(file *bufio.Writer, e *ast.Indexed) {
             asm.MovRegDeref(file, asm.RegA, addr, t.Size(), false)
         }
 
-    case types.IntType: 
+    case types.IntType:
         asm.MovRegDeref(file, asm.RegA, addr, t.Size(), true)
 
     default:

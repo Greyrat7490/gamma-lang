@@ -47,7 +47,7 @@ func Define(file *bufio.Writer) {
     definePrintPtr(file)
     definePrintBool(file)
     defineFromCStr(file)
-    
+
     defineExit(file)
     file.WriteString("\n")
 }

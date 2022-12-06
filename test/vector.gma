@@ -9,7 +9,7 @@ fn test1() {
 
     for i i32, 10 {
         printInt(vec[i]) printChar(' ')
-    } 
+    }
     printChar('\n')
 
     printStr("vec.len: ") printUint(vec.len) printChar('\n')
@@ -30,7 +30,7 @@ fn printVec(v [$]i32) {
     printStr("[ ")
     for i u64, v.cap {
         printInt(v[i]) printChar(' ')
-    } 
+    }
     printStr("]\n")
 }
 

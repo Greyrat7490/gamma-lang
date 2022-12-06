@@ -84,7 +84,7 @@ func isAligned(types []Type, size uint) (aligned bool, rest uint)  {
 
         case VecType:
             return false, 0
-            
+
         case StrType:
             a,r := isAligned([]Type{ PtrType{}, UintType{ size: U32_Size } }, size)
             if !a {

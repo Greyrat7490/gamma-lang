@@ -144,7 +144,6 @@ func typeCheckIndexed(e *ast.Indexed) {
         fmt.Fprintln(os.Stderr, "\t" + e.At())
         os.Exit(1)
     }
-    
 }
 
 func typeCheckField(e *ast.Field) {

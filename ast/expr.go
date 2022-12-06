@@ -215,7 +215,7 @@ func (e *VectorLit) Readable(indent int) string {
         res += strings.Repeat("   ", indent+1) + "cap: " + e.Cap.Readable(0)
     }
     if e.Len != nil {
-        res += strings.Repeat("   ", indent+1) + "len: " + e.Len.Readable(0)   
+        res += strings.Repeat("   ", indent+1) + "len: " + e.Len.Readable(0)
     }
 
     return res
