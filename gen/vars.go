@@ -231,7 +231,7 @@ func derefSetBasicVal(file *bufio.Writer, addr addr.Addr, offset int, size uint,
 }
 
 func derefSetPtrVal(file *bufio.Writer, addr addr.Addr, offset int, val *constVal.PtrConst) {
-    asm.MovDerefVal(file, addr.Offseted(int64(offset)), types.Ptr_Size, PtrConstToAddr(file, *val))
+    PtrConstToAddr(file, *val, addr.Offseted(int64(offset)))
 }
 
 func derefSetStrVal(file *bufio.Writer, addr addr.Addr, offset int, val *constVal.StrConst) {

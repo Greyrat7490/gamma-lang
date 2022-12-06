@@ -566,12 +566,12 @@ func setFieldType(field *ast.Field) {
         if field.Type == nil {
             fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" has no field called \"%s\"\n", field.StructType.Name, field.FieldName.Str)
             fmt.Fprintf(os.Stderr, "\tfields: %v\n", t.GetFields())
-            fmt.Fprintln(os.Stderr, "\t" + field.Obj.At())
+            fmt.Fprintln(os.Stderr, "\t" + field.At())
             os.Exit(1)
         }
     // auto deref
     case types.PtrType:
-        field.Obj = &ast.Unary{ Type: t.BaseType, Operator: token.Token{ Type: token.Mul, Str: "*" }, Operand: field.Obj }
+        field.Obj = &ast.Unary{ Type: t.BaseType, Operator: token.Token{ Pos: field.FieldName.Pos, Type: token.Mul, Str: "*" }, Operand: field.Obj }
         setFieldType(field)
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] type %s has no fields\n", t)

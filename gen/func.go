@@ -102,7 +102,7 @@ func PassVal(file *bufio.Writer, regIdx uint, value constVal.ConstVal, valtype t
         asm.MovRegVal(file, regs[regIdx], valtype.Size(), value.GetVal())
 
     case *constVal.PtrConst:
-        asm.MovRegVal(file, regs[regIdx], valtype.Size(), PtrConstToAddr(file, *v))
+        PtrConstToReg(file, *v, regs[regIdx])
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] cannot pass %v yet\n", reflect.TypeOf(value))

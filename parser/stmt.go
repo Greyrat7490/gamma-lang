@@ -49,7 +49,7 @@ func prsStmt(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
         r := prsRet(tokens)
         return &r
 
-    case token.Number, token.Str, token.Boolean, token.ParenL:
+    case token.Number, token.Str, token.Char, token.Boolean, token.ParenL:
         e := prsExpr(tokens)
         if !ignoreUnusedExpr && e.GetType() != nil {
             fmt.Fprintln(os.Stderr, "[ERROR] unused expr")

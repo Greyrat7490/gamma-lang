@@ -265,27 +265,26 @@ func fieldAddrToReg(file *bufio.Writer, e *ast.Field, r asm.RegGroup, offset int
 }
 
 func fieldToOffset(f *ast.Field) int {
+    offset := 0
+
     switch f.Obj.GetType().(type) {
     case types.ArrType:
-        return 0
     case types.VecType:
         switch f.FieldName.Str {
         case "cap":
-            return int(types.Ptr_Size)
+            offset = int(types.Ptr_Size)
         case "len":
-            return int(types.Ptr_Size + types.U64_Size)
-        default:
-            return 0
+            offset = int(types.Ptr_Size + types.U64_Size)
         }
     default:
-        switch o := f.Obj.(type) {
-        case *ast.Field:
-            return f.StructType.GetOffset(f.FieldName.Str) + fieldToOffset(o)
-
-        default:
-            return f.StructType.GetOffset(f.FieldName.Str)
-        }
+        offset = f.StructType.GetOffset(f.FieldName.Str)
     }
+
+    if obj,ok := f.Obj.(*ast.Field); ok {
+        offset += fieldToOffset(obj)
+    }
+
+    return offset
 }
 
 func GenField(file *bufio.Writer, e *ast.Field) {
@@ -394,7 +393,7 @@ func UnaryAddrToReg(file *bufio.Writer, e *ast.Unary, reg asm.RegGroup) {
 
 func GenUnary(file *bufio.Writer, e *ast.Unary) {
     if c := cmpTime.ConstEval(e); c != nil {
-        asm.MovRegVal(file, asm.RegA, e.Operand.GetType().Size(), c.GetVal())
+        GenConstVal(file, e.Operand.GetType(), c)
         return
     }
 
@@ -410,6 +409,9 @@ func GenUnary(file *bufio.Writer, e *ast.Unary) {
     case token.Mul:
         t := e.GetType()
         if t.Size() > 8 {
+            if t.GetKind() == types.Str {
+                asm.MovRegDeref(file, asm.RegD, asm.RegAsAddr(asm.RegA).Offseted(int64(types.Ptr_Size)), types.U32_Size, false)
+            }
             asm.DerefRax(file, types.Ptr_Size, false)
         } else {
             asm.DerefRax(file, t.Size(), t.GetKind() == types.Int)
@@ -420,7 +422,7 @@ func GenUnary(file *bufio.Writer, e *ast.Unary) {
 func GenBinary(file *bufio.Writer, e *ast.Binary) {
     // compile time evaluation (constEval whole expr)
     if c := cmpTime.ConstEval(e); c != nil {
-        asm.MovRegVal(file, asm.RegA, e.GetType().Size(), c.GetVal())
+        GenConstVal(file, e.GetType(), c)
         return
     }
 
@@ -428,7 +430,7 @@ func GenBinary(file *bufio.Writer, e *ast.Binary) {
     if e.Operator.Type != token.And && e.Operator.Type != token.Or {
         // compile time evaluation (constEval only left expr)
         if c := cmpTime.ConstEval(e.OperandL); c != nil {
-            asm.MovRegVal(file, asm.RegA, e.OperandR.GetType().Size(), c.GetVal())
+            GenConstVal(file, e.OperandR.GetType(), c)
         } else {
             GenExpr(file, e.OperandL)
 
@@ -841,18 +843,26 @@ func GenConstVal(file *bufio.Writer, t types.Type, val constVal.ConstVal) {
         asm.MovRegVal(file, asm.RegD, types.I32_Size, fmt.Sprintf("%d", str.GetSize(uint64(*c))))
 
     case *constVal.PtrConst:
-        asm.MovRegVal(file, asm.RegA, types.Ptr_Size, PtrConstToAddr(file, *c))
+        PtrConstToReg(file, *c, asm.RegA)
 
     default:
         asm.MovRegVal(file, asm.RegA, t.Size(), c.GetVal())
     }
 }
 
-func PtrConstToAddr(file *bufio.Writer, c constVal.PtrConst) string {
+func PtrConstToReg(file *bufio.Writer, c constVal.PtrConst, reg asm.RegGroup) {
+    if c.Local {
+        asm.Lea(file, reg, c.Addr.String(), types.Ptr_Size)
+    } else {
+        asm.MovRegVal(file, reg, types.Ptr_Size, c.Addr.String())
+    }
+}
+
+func PtrConstToAddr(file *bufio.Writer, c constVal.PtrConst, dst addr.Addr) {
     if c.Local {
         asm.Lea(file, asm.RegA, c.Addr.String(), types.Ptr_Size)
-        return asm.GetReg(asm.RegA, types.Ptr_Size)
+        asm.MovDerefReg(file, dst, types.Ptr_Size, asm.RegA)
     } else {
-        return c.Addr.String()
+        asm.MovDerefVal(file, dst, types.Ptr_Size, c.Addr.String())
     }
 }
