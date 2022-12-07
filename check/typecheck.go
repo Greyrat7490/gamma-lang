@@ -25,6 +25,11 @@ func CheckTypes(destType types.Type, srcType types.Type) bool {
     }
 
     switch t := destType.(type) {
+    case types.VecType:
+        if t2,ok := srcType.(types.VecType); ok {
+            return CheckTypes(t.BaseType, t2.BaseType)
+        }
+
     case types.ArrType:
         if t2,ok := srcType.(types.ArrType); ok {
             if CheckTypes(t.BaseType, t2.BaseType) {
