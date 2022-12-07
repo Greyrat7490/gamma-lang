@@ -431,8 +431,10 @@ func Tokenize(path string, src *os.File) (tokens Tokens) {
     strLit := false
     escape := false
 
-    for lineNum := 1; scanner.Scan(); lineNum++ {
-        line := scanner.Text()
+    line := ""
+    lineNum := 0
+    for lineNum = 1; scanner.Scan(); lineNum++ {
+        line = scanner.Text()
 
         start := 0
         comment = false
@@ -530,9 +532,7 @@ func Tokenize(path string, src *os.File) (tokens Tokens) {
         }
     }
 
-    pos := tokens.tokens[len(tokens.tokens)-1].Pos
-    pos.Col += len(tokens.tokens[len(tokens.tokens)-1].Str)
-    tokens.tokens = append(tokens.tokens, Token{EOF, "EOF", pos})
+    tokens.tokens = append(tokens.tokens, Token{EOF, "EOF", Pos{ Line: lineNum, Col: len(line), File: path }})
 
     if strLit {
         fmt.Fprintln(os.Stderr, "string literal not terminated (missing '\"')")

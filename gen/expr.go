@@ -163,19 +163,21 @@ func GenStrLit(file *bufio.Writer, e *ast.StrLit) {
 }
 
 func GenStructLit(file *bufio.Writer, e *ast.StructLit) {
-    if types.IsBigStruct(e.StructType) {
-        fmt.Fprintf(os.Stderr, "[ERROR] (internal) called GenStructLit with a big struct type %v\n", e.StructType)
-        os.Exit(1)
-    }
-
-    if c,ok := cmpTime.ConstEvalStructLit(e).(*constVal.StructConst); ok {
-        vs := PackValues(e.StructType.Types, c.Fields)
-        asm.MovRegVal(file, asm.RegA, types.Ptr_Size, vs[0])
-        if len(vs) == 2 {
-            asm.MovRegVal(file, asm.RegD, e.StructType.Size() - 8, vs[1])
+    if len(e.StructType.Types) != 0 {
+        if types.IsBigStruct(e.StructType) {
+            fmt.Fprintf(os.Stderr, "[ERROR] (internal) called GenStructLit with a big struct type %v\n", e.StructType)
+            os.Exit(1)
         }
-    } else {
-        PackFields(file, e.StructType, e.Fields)
+
+        if c,ok := cmpTime.ConstEvalStructLit(e).(*constVal.StructConst); ok {
+            vs := PackValues(e.StructType.Types, c.Fields)
+            asm.MovRegVal(file, asm.RegA, types.Ptr_Size, vs[0])
+            if len(vs) == 2 {
+                asm.MovRegVal(file, asm.RegD, e.StructType.Size() - 8, vs[1])
+            }
+        } else {
+            PackFields(file, e.StructType, e.Fields)
+        }
     }
 }
 

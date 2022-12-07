@@ -327,6 +327,15 @@ func prsStructLit(tokens *token.Tokens) *ast.StructLit {
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
+    if tokens.Peek().Type == token.BraceR {
+        return &ast.StructLit{
+            Pos: name.Pos,
+            StructType: t,
+            BraceLPos: braceL.Pos,
+            BraceRPos: tokens.Next().Pos,
+            Fields: []ast.FieldLit{},
+        }
+    }
 
     omitNames := omitNames(tokens)
 

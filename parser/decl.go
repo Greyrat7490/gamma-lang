@@ -421,6 +421,7 @@ func prsDecFields(tokens *token.Tokens) (fields []ast.DecField) {
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
+    if tokens.Peek().Type == token.BraceR { tokens.Next(); return }    // empty struct
 
     if tokens.Next().Type != token.ParenR {
         fields = append(fields, prsDecField(tokens))
