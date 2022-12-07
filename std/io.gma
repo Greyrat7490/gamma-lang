@@ -151,10 +151,7 @@ fn read_line(reader *Reader) -> str {
         '\n':
             size = i - reader.pos
             reader.pos = i + 1
-            // TODO fix type checking no error (size(u64) expected u32)
             ret from_pchar(size as u32, cstr)
-        _:
-            continue
         }
     }
 
@@ -200,11 +197,7 @@ fn read_line(reader *Reader) -> str {
             '\n':
                 size = i - reader.pos
                 reader.pos = i + 1
-                // TODO fix type checking no error (size(u64) expected u32)
                 ret from_pchar(size as u32, cstr)
-            _:
-                // TODO fix no default causing unexpected behavior
-                continue
             }
         }
     }

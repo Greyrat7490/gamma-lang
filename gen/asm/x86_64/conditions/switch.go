@@ -43,6 +43,8 @@ func CaseVar(file *bufio.Writer, addr addr.Addr) {
     file.WriteString(fmt.Sprintf("cmp BYTE [%s], 1\n", addr))
     if !inLastCase {
         file.WriteString(fmt.Sprintf("jne .case%d\n", caseCount+1))
+    } else {
+        file.WriteString(fmt.Sprintf("jne .switch%dEnd\n", switchCount))
     }
 }
 
@@ -50,6 +52,8 @@ func CaseExpr(file *bufio.Writer) {
     file.WriteString("cmp al, 1\n")
     if !inLastCase {
         file.WriteString(fmt.Sprintf("jne .case%d\n", caseCount+1))
+    } else {
+        file.WriteString(fmt.Sprintf("jne .switch%dEnd\n", switchCount))
     }
 }
 
