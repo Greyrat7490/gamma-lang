@@ -568,6 +568,8 @@ func setFieldType(field *ast.Field) {
         field.Type = types.CreateUint(types.U64_Size)
     case types.VecType:
         field.Type = types.CreateUint(types.U64_Size)
+    case types.StrType:
+        field.Type = types.CreateUint(types.U32_Size)
     case types.StructType:
         field.StructType = t
         field.Type = field.StructType.GetType(field.FieldName.Str)

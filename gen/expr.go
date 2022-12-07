@@ -267,10 +267,13 @@ func fieldAddrToReg(file *bufio.Writer, e *ast.Field, r asm.RegGroup, offset int
 }
 
 func fieldToOffset(f *ast.Field) int {
-    offset := 0
+    var offset int
 
     switch f.Obj.GetType().(type) {
     case types.ArrType:
+        offset = 0
+    case types.StrType:
+        offset = int(types.Ptr_Size)
     case types.VecType:
         switch f.FieldName.Str {
         case "cap":
@@ -278,8 +281,11 @@ func fieldToOffset(f *ast.Field) int {
         case "len":
             offset = int(types.Ptr_Size + types.U64_Size)
         }
-    default:
+    case types.StructType:
         offset = f.StructType.GetOffset(f.FieldName.Str)
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot get field offset of type %v\n", f.Obj.GetType())
+        os.Exit(1)
     }
 
     if obj,ok := f.Obj.(*ast.Field); ok {
@@ -297,6 +303,10 @@ func GenField(file *bufio.Writer, e *ast.Field) {
     case types.VecType:
         FieldAddrToReg(file, e, asm.RegA)
         asm.MovRegDeref(file, asm.RegA, asm.RegAsAddr(asm.RegA), types.U64_Size, false)
+
+    case types.StrType:
+        FieldAddrToReg(file, e, asm.RegA)
+        asm.MovRegDeref(file, asm.RegA, asm.RegAsAddr(asm.RegA), types.U32_Size, false)
 
     case types.StructType:
         FieldAddrToReg(file, e, asm.RegA)

@@ -162,6 +162,12 @@ func typeCheckField(e *ast.Field) {
             fmt.Fprintln(os.Stderr, "\t" + e.FieldName.At())
             os.Exit(1)
         }
+    case types.Str:
+        if e.FieldName.Str != "len" {
+            fmt.Fprintf(os.Stderr, "[ERROR] str has no field \"%s\" (only len)\n", e.FieldName.Str)
+            fmt.Fprintln(os.Stderr, "\t" + e.FieldName.At())
+            os.Exit(1)
+        }
     default:
         if e.StructType.GetFieldNum(e.FieldName.Str) == -1 {
             fmt.Fprintf(os.Stderr, "[ERROR] struct %s has no %s field\n", e.StructType.Name, e.FieldName.Str)
