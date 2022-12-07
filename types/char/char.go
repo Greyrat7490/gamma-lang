@@ -14,6 +14,8 @@ func Escape(r rune) (uint8, bool) {
         return uint8('"'), true
     case '\\':
         return uint8('\\'), true
+    case '\'':
+        return uint8('\''), true
     default:
         return 0, false
     }
@@ -33,6 +35,8 @@ func EscapeByte(c byte) (uint8, bool) {
         return uint8('"'), true
     case '\\':
         return uint8('\\'), true
+    case '\'':
+        return uint8('\''), true
     default:
         return 0, false
     }

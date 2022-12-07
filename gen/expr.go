@@ -668,7 +668,7 @@ func GenXSwitch(file *bufio.Writer, e *ast.XSwitch) {
     cond.InLastCase()
     GenXCase(file, &e.Cases[len(e.Cases)-1], count)
 
-    cond.EndSwitch(file)
+    cond.EndSwitch(file, count)
 }
 
 
@@ -794,7 +794,7 @@ func XSwitchAddrToReg(file *bufio.Writer, e *ast.XSwitch, reg asm.RegGroup) {
     cond.InLastCase()
     XCaseAddrToReg(file, &e.Cases[len(e.Cases)-1], count, reg)
 
-    cond.EndSwitch(file)
+    cond.EndSwitch(file, count)
 }
 
 func bigStructXSwitchToStack(file *bufio.Writer, addr addr.Addr, e *ast.XSwitch) {
@@ -811,7 +811,7 @@ func bigStructXSwitchToStack(file *bufio.Writer, addr addr.Addr, e *ast.XSwitch)
     cond.InLastCase()
     bigStructXCaseToStack(file, addr, &e.Cases[len(e.Cases)-1], count)
 
-    cond.EndSwitch(file)
+    cond.EndSwitch(file, count)
 }
 
 func bigStructXCaseToStack(file *bufio.Writer, addr addr.Addr, e *ast.XCase, switchCount uint) {

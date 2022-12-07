@@ -24,10 +24,10 @@ func StartSwitch() uint {
     return switchCount
 }
 
-func EndSwitch(file *bufio.Writer) {
+func EndSwitch(file *bufio.Writer, count uint) {
     inSwitch = false
     inLastCase = false
-    file.WriteString(fmt.Sprintf(".switch%dEnd:\n", switchCount))
+    file.WriteString(fmt.Sprintf(".switch%dEnd:\n", count))
 }
 
 func InLastCase() {

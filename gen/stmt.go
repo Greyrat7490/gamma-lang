@@ -203,7 +203,7 @@ func GenSwitch(file *bufio.Writer, s *ast.Switch) {
     cond.InLastCase()
     GenCase(file, &s.Cases[len(s.Cases)-1], count)
 
-    cond.EndSwitch(file)
+    cond.EndSwitch(file, count)
 }
 
 func GenThrough(file *bufio.Writer, s *ast.Through) {
