@@ -73,3 +73,11 @@ func escape(s token.Token) strLit {
 
     return strLit{ s.Str, size }
 }
+
+func CmpStrLits(idx1 uint64, idx2 uint64) bool {
+    if idx1 == idx2 {
+        return true
+    }
+
+    return strLits[idx1].repr == strLits[idx2].repr
+}

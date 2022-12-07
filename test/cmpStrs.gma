@@ -1,0 +1,51 @@
+fn testConst() {
+    if "test" == "test" {
+        printStr("test == test\n")
+    } else {
+        printStr("test != test (unexpected)\n")
+    }
+
+    if "test" == "test2" {
+        printStr("test == test2 (unexpected)\n")
+    } else {
+        printStr("test != test2\n")
+    }
+}
+
+fn testOneConst(s2 str) {
+    s1 :: "string"
+
+    printStr(s1)
+
+    if s1 == s2 {
+        printStr(" == ")
+    } else {
+        printStr(" != ")
+    }
+
+    printStr(s2)
+    printChar('\n')
+}
+
+fn cmpStrs(s1 str, s2 str) {
+    printStr(s1)
+
+    if s1 == s2 {
+        printStr(" == ")
+    } else {
+        printStr(" != ")
+    }
+
+    printStr(s2)
+    printChar('\n')
+}
+
+fn main() {
+    testConst()
+
+    cmpStrs("test", "tes")
+    cmpStrs("test1", "test1")
+
+    testOneConst("test1")
+    testOneConst("string")
+}

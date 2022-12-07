@@ -39,6 +39,7 @@ func Define(file *bufio.Writer) {
     defineItoS(file)
     defineBtoS(file)
     defineAllocVec(file)
+    defineStrCmp(file)
 
     definePrintStr(file)
     definePrintChar(file)
@@ -225,4 +226,31 @@ push rcx
 `, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE))
     syscall(file, SYS_MMAP)
     file.WriteString("pop rcx\nret\n")
+}
+
+func defineStrCmp(file *bufio.Writer) {
+    file.WriteString(fmt.Sprintf(`
+; rax = ptr1
+; edx = size1
+; rbx = ptr2
+; ecx = size2
+; eax = output bool
+_str_cmp:
+cmp edx, ecx
+jne .unequ
+.l1:
+movzx ecx, BYTE [rax]
+cmp BYTE [rbx], cl
+jne .unequ
+inc rax
+inc rbx
+dec edx
+cmp edx, 0
+jge .l1
+mov eax, 1
+ret
+.unequ:
+mov eax, 0
+ret
+`))
 }

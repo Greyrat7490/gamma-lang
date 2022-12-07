@@ -338,6 +338,10 @@ func ConstEvalBinary(e *ast.Binary) constVal.ConstVal {
             if r, ok := r.(*constVal.BoolConst); ok {
                 return asm.BinaryOpEvalBools(e.Operator, bool(*l), bool(*r))
             }
+        case *constVal.StrConst:
+            if r, ok := r.(*constVal.StrConst); ok {
+                return asm.BinaryOpEvalStrs(e.Operator, uint64(*l), uint64(*r))
+            }
         }
     }
 

@@ -803,6 +803,8 @@ func prsBinary(tokens *token.Tokens, expr ast.Expr, min_precedence precedence) a
             default:
                 b.OperandR = prsIdentExpr(tokens)
             }
+        case tokens.Cur().Type == token.Str:
+            b.OperandR = prsStrLit(tokens)
         default:
             b.OperandR = prsBasicLit(tokens)
         }

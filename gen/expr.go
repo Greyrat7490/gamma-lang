@@ -210,7 +210,7 @@ func IndexedAddrToReg(file *bufio.Writer, e *ast.Indexed, r asm.RegGroup) {
         asm.MovRegReg(file, asm.RegD, asm.RegA, types.Ptr_Size)
         GenExpr(file, idxExpr)
 
-        asm.Lea(file, asm.RegA, fmt.Sprintf("%s*%d", asm.GetReg(asm.RegA, types.Ptr_Size), baseTypeSize), types.Ptr_Size)
+        asm.Mul(file, fmt.Sprint(baseTypeSize), types.Ptr_Size, false)
         asm.Add(file, asm.GetReg(asm.RegD, types.Ptr_Size), types.Ptr_Size)
 
         if r != asm.RegA {
@@ -419,68 +419,87 @@ func GenUnary(file *bufio.Writer, e *ast.Unary) {
     }
 }
 
+func GenCmpStrs(file *bufio.Writer, e *ast.Binary) {
+    if c,ok := cmpTime.ConstEval(e.OperandL).(*constVal.StrConst); ok {
+        GenExpr(file, e.OperandR)
+        asm.BinaryOpStrsLit(file, e.Operator.Type, uint64(*c))
+
+    } else if c,ok := cmpTime.ConstEval(e.OperandR).(*constVal.StrConst); ok {
+        GenExpr(file, e.OperandL)
+        asm.BinaryOpStrsLit(file, e.Operator.Type, uint64(*c))
+
+    } else {
+        GenExpr(file, e.OperandR)
+        asm.MovRegReg(file, asm.RegB, asm.RegA, types.Ptr_Size)
+        asm.MovRegReg(file, asm.RegC, asm.RegD, types.U32_Size)
+
+        GenExpr(file, e.OperandL)
+        asm.BinaryOpStrs(file, e.Operator.Type)
+    }
+}
+
+func GenLogical(file *bufio.Writer, e *ast.Binary) {
+    if b,ok := cmpTime.ConstEval(e.OperandL).(*constVal.BoolConst); ok {
+        if e.Operator.Type == token.And && !bool(*b) {
+            asm.MovRegVal(file, asm.RegA, types.Bool_Size, "0")
+            return
+        }
+        if e.Operator.Type == token.Or && bool(*b) {
+            asm.MovRegVal(file, asm.RegA, types.Bool_Size, "1")
+            return
+        }
+
+        GenExpr(file, e.OperandR)
+    } else {
+        GenExpr(file, e.OperandL)
+
+        count := cond.LogicalOp(file, e.Operator)
+        GenExpr(file, e.OperandR)
+        cond.LogicalOpEnd(file, count)
+    }
+}
+
+func GenArith(file *bufio.Writer, e *ast.Binary) {
+    if c := cmpTime.ConstEval(e.OperandL); c != nil {
+        GenConstVal(file, e.OperandR.GetType(), c)
+    } else {
+        GenExpr(file, e.OperandL)
+
+        if c := cmpTime.ConstEval(e.OperandR); c != nil {
+            asm.BinaryOp(file, e.Operator.Type, c.GetVal(), e.OperandL.GetType())
+            return
+        }
+    }
+
+    if ident,ok := e.OperandR.(*ast.Ident); ok {
+        if v,ok := ident.Obj.(vars.Var); ok {
+            t := v.GetType()
+            asm.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), v.Addr().String()), t)
+        }
+    } else {
+        asm.PushReg(file, asm.RegA)
+
+        GenExpr(file, e.OperandR)
+        asm.MovRegReg(file, asm.RegB, asm.RegA, e.OperandR.GetType().Size())
+
+        asm.PopReg(file, asm.RegA)
+        asm.BinaryOpReg(file, e.Operator.Type, asm.RegB, e.OperandR.GetType())
+    }
+}
+
 func GenBinary(file *bufio.Writer, e *ast.Binary) {
-    // compile time evaluation (constEval whole expr)
     if c := cmpTime.ConstEval(e); c != nil {
         GenConstVal(file, e.GetType(), c)
         return
     }
 
-
-    if e.Operator.Type != token.And && e.Operator.Type != token.Or {
-        // compile time evaluation (constEval only left expr)
-        if c := cmpTime.ConstEval(e.OperandL); c != nil {
-            GenConstVal(file, e.OperandR.GetType(), c)
-        } else {
-            GenExpr(file, e.OperandL)
-
-            // compile time evaluation (constEval only right expr)
-            if c := cmpTime.ConstEval(e.OperandR); c != nil {
-                asm.BinaryOp(file, e.Operator.Type, c.GetVal(), e.OperandL.GetType().Size(), e.GetType().GetKind() == types.Int)
-                return
-            }
-        }
-
-        if ident,ok := e.OperandR.(*ast.Ident); ok {
-            if v,ok := ident.Obj.(vars.Var); ok {
-                t := v.GetType()
-
-                asm.BinaryOp(file,
-                    e.Operator.Type,
-                    fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), v.Addr().String()),
-                    t.Size(),
-                    t.GetKind() == types.Int)
-            }
-        } else {
-            asm.PushReg(file, asm.RegA)
-
-            GenExpr(file, e.OperandR)
-            asm.MovRegReg(file, asm.RegB, asm.RegA, e.OperandR.GetType().Size())
-
-            asm.PopReg(file, asm.RegA)
-            asm.BinaryOpReg(file, e.Operator.Type, asm.RegB, e.OperandR.GetType().Size(), e.GetType().GetKind() == types.Int)
-        }
-
-    // &&, ||
+    if e.OperandL.GetType().GetKind() == types.Str {
+        GenCmpStrs(file, e)
     } else {
-        // compile time evaluation
-        if b,ok := cmpTime.ConstEval(e.OperandL).(*constVal.BoolConst); ok {
-            if e.Operator.Type == token.And && !bool(*b) {
-                asm.MovRegVal(file, asm.RegA, types.Bool_Size, "0")
-                return
-            }
-            if e.Operator.Type == token.Or && bool(*b) {
-                asm.MovRegVal(file, asm.RegA, types.Bool_Size, "1")
-                return
-            }
-
-            GenExpr(file, e.OperandR)
+        if e.Operator.Type == token.And || e.Operator.Type == token.Or {
+            GenLogical(file, e)
         } else {
-            GenExpr(file, e.OperandL)
-
-            count := cond.LogicalOp(file, e.Operator)
-            GenExpr(file, e.OperandR)
-            cond.LogicalOpEnd(file, count)
+            GenArith(file, e)
         }
     }
 }
