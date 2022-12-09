@@ -246,7 +246,7 @@ inc rax
 inc rbx
 dec edx
 cmp edx, 0
-jge .l1
+jg .l1
 mov eax, 1
 ret
 .unequ:

@@ -566,6 +566,8 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
             asm.SubSp(file, int64(size))
             asm.MovRegReg(file, asm.RegC, asm.RegSp, types.Ptr_Size)
 
+            asm.UseReg(asm.RegC)
+            
             switch t := t.(type) {
             case types.StructType:
                 if v := cmpTime.ConstEval(e.Values[i]); v != nil {
@@ -584,6 +586,8 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
                 fmt.Fprintln(os.Stderr, "[ERROR] (internal) unreachable GenFnCall")
                 os.Exit(1)
             }
+
+            asm.FreeReg(asm.RegC)
         }
     }
 
@@ -603,11 +607,7 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
             PassVar(file, regIdx, t, ident.Obj.(vars.Var))
 
         } else {
-            if regIdx <= uint(asm.RegC) {
-                asm.UseReg(asm.RegC)
-            }
             PassExpr(file, regIdx, t, e.Values[i].GetType().Size(), e.Values[i])
-            asm.FreeReg(asm.RegC)
         }
     }
 
