@@ -1,0 +1,30 @@
+import "import/import.gma"
+
+isMainDefined := false
+noMainArg := false
+
+fn Parse(path str) {
+    printStr("[INFO] parsing ...\n")
+
+    // declare buildin
+
+    // tokenize/import main
+    imports := InitImports()
+    tokens := ImportMain(path, &imports)
+
+/*
+    while Peek().Type != EOF {
+        // tokenizer set last import
+        // append Decls (prsDecl)
+    }
+*/
+
+    if isMainDefined != false {
+        printStr("[ERROR] no \"main\" function was defined")
+        exit(1)
+    }
+
+    // ast set noMainArg
+
+    // ret ast
+}

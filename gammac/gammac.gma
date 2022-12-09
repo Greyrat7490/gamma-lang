@@ -1,39 +1,24 @@
 import "io.gma"
-
-fn read_src_file(path str) -> str {
-    reader := create_reader(path)
-    res := read_file(&reader)
-    if close_reader(&reader) < 0 {
-        printStr("[ERROR] could not close file correctly\n")
-        exit(1)
-    }
-
-    ret res
-}
+import "parse/parse.gma"
 
 fn main(args [$]*char) {
     if args.len < 2 {
         printStr("[ERROR] no source file provided\n")
         exit(1)
     }
-
     src_path := from_cstr(args[1])
-    src_file_content := read_src_file(src_path)
-    // printStr(src_file_content)
 
-    reader := create_reader(src_path)
+    // set import dir
 
-    printChar('"') printStr(read_line(&reader)) printStr("\"\n")
-    printChar('"') printStr(read_line(&reader)) printStr("\"\n")
-    printChar('"') printStr(read_line(&reader)) printStr("\"\n")
-    printChar('"') printStr(read_line(&reader)) printStr("\"\n")
-    printChar('"') printStr(read_line(&reader)) printStr("\"\n")
-    printChar('"') printStr(read_line(&reader)) printStr("\"\n")
-    printChar('"') printStr(read_line(&reader)) printStr("\"\n")
-    printChar('"') printStr(read_line(&reader)) printStr("\"\n")
+    Parse(src_path)
 
-    if close_reader(&reader) < 0 {
-        printStr("[ERROR] could not close file correctly\n")
-        exit(1)
-    }
+    // show AST
+
+    // type check
+
+    // gen asm
+
+    // gen exe
+
+    // run
 }

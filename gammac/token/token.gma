@@ -1,0 +1,332 @@
+import "io.gma"
+
+Unknown_Token   u8 :: 0
+EOF_Token       u8 :: 1    // end of file
+
+Name_Token      u8 :: 2    // var/func name
+Typename_Token  u8 :: 3    // i32, str, bool
+Str_Token       u8 :: 4    // "string"
+Char_Token      u8 :: 5    // 'a'
+Number_Token    u8 :: 6    // 1234, 0xffff
+Boolean_Token   u8 :: 7    // true/false
+
+Plus_Token      u8 :: 8    // +
+Minus_Token     u8 :: 9    // -
+Mul_Token       u8 :: 10   // *
+Div_Token       u8 :: 11   // /
+Mod_Token       u8 :: 12   // %
+
+Shl_Token       u8 :: 13   // <<
+Shr_Token       u8 :: 14   // >>
+Xor_Token       u8 :: 15   // ^
+BitOr_Token     u8 :: 16   // |
+BitNot_Token    u8 :: 17   // ~
+
+And_Token       u8 :: 18   // &&
+Or_Token        u8 :: 19   // ||
+
+Amp_Token       u8 :: 21   // &
+
+Eql_Token       u8 :: 22   // ==
+Neq_Token       u8 :: 23   // !=
+Geq_Token       u8 :: 24   // >=
+Leq_Token       u8 :: 25   // <=
+Lss_Token       u8 :: 26   // <
+Grt_Token       u8 :: 27   // >
+Not_Token       u8 :: 28   // !
+
+ParenL_Token    u8 :: 29   // (
+ParenR_Token    u8 :: 30   // )
+BrackL_Token    u8 :: 31   // [
+BrackR_Token    u8 :: 32   // ]
+BraceL_Token    u8 :: 33   // {
+BraceR_Token    u8 :: 34   // }
+UndScr_Token    u8 :: 35   // _
+
+Arrow_Token     u8 :: 36   // ->
+
+Dot_Token       u8 :: 37   // .
+Comma_Token     u8 :: 38   // ,
+Colon_Token     u8 :: 39   // :
+SemiCol_Token   u8 :: 40   // ;
+
+Comment_Token   u8 :: 41   // // ..., /* ... */
+
+DefVar_Token    u8 :: 42   // :=
+DefConst_Token  u8 :: 43   // ::
+Assign_Token    u8 :: 44   // =
+Fn_Token        u8 :: 45   // fn
+ConstFn_Token   u8 :: 46   // cfn
+Ret_Token       u8 :: 47   // ret
+If_Token        u8 :: 48   // if
+Elif_Token      u8 :: 49   // elif
+Else_Token      u8 :: 50   // else
+While_Token     u8 :: 51   // while
+For_Token       u8 :: 52   // for
+Break_Token     u8 :: 53   // break
+Continue_Token  u8 :: 54   // continue
+Through_Token   u8 :: 55   // through
+Struct_Token    u8 :: 56   // struct
+Import_Token    u8 :: 57   // import
+XSwitch_Token   u8 :: 58   // $
+As_Token        u8 :: 59   // as
+
+
+struct Pos {
+    Line u32,
+    Col u32,
+    File str
+}
+
+fn str_at(s str, idx u32) -> char {
+    ret *(s as *char + (idx as u64))
+}
+
+fn substr(s str, from u32, to u32) -> str {
+    ret from_pchar(to - from, s as *char + (from as u64))
+}
+
+fn ToTokenType(s str, pos Pos) -> u8 {
+    ret $ s == {
+    "true", "false": Boolean_Token
+    "+": Plus_Token
+    "-": Minus_Token
+    "*": Mul_Token
+    "/": Div_Token
+    "%": Mod_Token
+
+    "<<": Shl_Token
+    ">>": Shr_Token
+    "|": BitOr_Token
+    "^": Xor_Token
+    "~": BitNot_Token
+
+    "&&": And_Token
+    "||": Or_Token
+
+    "&": Amp_Token
+
+    "==": Eql_Token
+    "!=": Neq_Token
+    ">=": Geq_Token
+    "<=": Leq_Token
+    ">": Grt_Token
+    "<": Lss_Token
+    "!": Not_Token
+
+    "(": ParenL_Token
+    ")": ParenR_Token
+    "[": BrackL_Token
+    "]": BrackR_Token
+    "{": BraceL_Token
+    "}": BraceR_Token
+    "_": UndScr_Token
+
+    "->": Arrow_Token
+
+    ".": Dot_Token
+    ",": Comma_Token
+    ";": SemiCol_Token
+    ":": Colon_Token
+
+    "//", "/*", "*/": Comment_Token
+
+    ":=": DefVar_Token
+    "::": DefConst_Token
+    "=": Assign_Token
+    "fn": Fn_Token
+    "cfn": ConstFn_Token
+    "ret": Ret_Token
+    "if": If_Token
+    "elif": Elif_Token
+    "else": Else_Token
+    "while": While_Token
+    "for": For_Token
+    "break": Break_Token
+    "continue": Continue_Token
+    "through": Through_Token
+    "struct": Struct_Token
+    "import": Import_Token
+    "$": XSwitch_Token
+    "as": As_Token
+
+    _: $ {
+        // types.ToBaseType(s) != nil: Typename_Token       // TODO
+
+        str_at(s, 0) == '"' && str_at(s, s.len-1) == '"':
+            Str_Token
+
+        str_at(s, 0) == '\'' && str_at(s, s.len-1) == '\'':
+            Char_Token
+
+        _:
+            // TODO parse uint otherwise name
+            Name_Token
+        }
+    }
+}
+
+struct Token {
+    pos Pos,
+    Str str,
+    Type u8
+}
+
+TOKENS_BUF_SIZE :: 4 * 1024
+
+struct Tokens {
+    tokens [$]Token,
+    idx u64,
+    savedIdx u64,
+    path str,
+    lastImport bool
+}
+
+fn append_Token(tokens *Tokens, token Token) {
+    tokens.tokens[tokens.tokens.len] = token
+    tokens.tokens.len = tokens.tokens.len + 1
+}
+
+fn tokenize_split(tokens *Tokens, s str, startIdx u32, endIdx u32, lineNum u32, file str) {
+    if startIdx != endIdx {
+        pos := Pos{ lineNum, startIdx+1, file }
+        token_str := substr(s, startIdx, endIdx)
+        typ := ToTokenType(token_str, pos)
+
+        append_Token(tokens, Token{ pos, token_str, typ })
+    }
+}
+
+fn tokenize_line(tokens *Tokens, line str, comment *bool, lineNum u32, path str) {
+    start u32 := 0
+
+    escape := false
+    strLit := false
+    
+    for i u32, line.len {
+        // in multiline comment
+        if *comment {
+            if i+2 <= line.len && substr(line, i, i+2) == "*/" {
+                *comment = false
+                start = i+2
+                i = i + 1
+            }
+            continue
+        }
+
+        // in string literal
+        if strLit {
+            if escape {
+                escape = false
+            } else {
+                if str_at(line, i) == '"' {
+                    strLit = false
+                    tokenize_split(tokens, line, start, i+1, lineNum, path)
+                    start = i+1
+                } elif str_at(line, i) == '\\' {
+                    escape = true
+                }
+            }
+            continue
+        }
+
+        c := str_at(line, i)
+        if c == {
+        // start string literal
+        '"':
+            strLit = true
+
+        // char literal
+        '\'':
+            if str_at(line, start+1) == '\\' {
+                i = i + 1
+            }
+            tokenize_split(tokens, line, start, i+3, lineNum, path)
+            start = i+3
+            i = i + 2
+
+        // split at space
+        ' ', '\t':
+            tokenize_split(tokens, line, start, i, lineNum, path)
+            start = i+1
+        
+        // split at //, /*, :=, ::, <=, >=, ==, !=, &&, ->, <<, >> (and keep)
+        '/', ':', '<', '>', '=', '-', '!', '&', '|':
+            if i+2 <= line.len {
+                keysign := substr(line, i, i+2)
+                if keysign == {
+                "//":
+                    tokenize_split(tokens, line, start, i, lineNum, path)
+                    ret
+                "/*":
+                    tokenize_split(tokens, line, start, i, lineNum, path)
+                    *comment = true
+                    i = i + 1
+                    continue
+                "&&", "||", ":=", "::", "!=", "==", "<=", ">=", "->", "<<", ">>":
+                    tokenize_split(tokens, line, start, i, lineNum, path)
+                    pos := Pos{ lineNum, i+1, path }
+                    append_Token(tokens, Token{ pos, keysign, ToTokenType(keysign, pos) })
+                    start = i+2
+                    i = i + 1
+                    continue
+                }
+            }
+
+            through
+
+        // split at special char (and keep)
+        '(', ')', '{', '}', '[', ']', '+', '*', '%', '.', ',', ';', '$', '^', '~':
+            tokenize_split(tokens, line, start, i, lineNum, path)
+            pos := Pos{ lineNum, i+1, path }
+            specialChar := substr(line, i, i+1)
+            append_Token(tokens, Token{ pos, specialChar, ToTokenType(specialChar, pos) })
+            start = i + 1
+        }
+    }
+
+    if *comment == false && line.len > start {
+        tokenize_split(tokens, line, start, line.len, lineNum, path)
+    }
+
+    if strLit {
+        printStr("string literal not terminated (missing '\"')\n")
+        exit(1)
+    }
+}
+
+SHOW_TOKENS :: true
+
+fn Tokenize(path str) -> Tokens {
+    tokens := Tokens{ [$]Token{ TOKENS_BUF_SIZE }, 0, 0, path, false }
+
+    lineNum u32 := 1
+    comment := false
+
+    reader := create_reader(path)
+    while reader.isEOF == false {
+        tokenize_line(&tokens, read_line(&reader), &comment, lineNum, path)
+        lineNum = lineNum + 1
+    }
+
+    if comment {
+        printStr("comment not terminated (missing \"*/\")\n")
+        exit(1)
+    }
+
+    if SHOW_TOKENS {
+        for i u64, tokens.tokens.len {
+            printStr(tokens.tokens[i].Str) printChar(' ') printUint(tokens.tokens[i].Type) printChar(' ')
+            printUint(tokens.tokens[i].pos.Line) printChar(':') printUint(tokens.tokens[i].pos.Col) printChar('\n')
+        }
+    }
+
+    // append EOF
+
+    if close_reader(&reader) < 0 {
+        printStr("[ERROR] could not close file correctly\n")
+        exit(1)
+    }
+
+    ret tokens
+}

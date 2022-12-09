@@ -82,7 +82,8 @@ READER_BUF_SIZE :: 4 * 1024
 struct Reader {
     fd i32,
     pos u64,
-    buffer [$]char
+    buffer [$]char,
+    isEOF bool
 }
 
 fn create_reader(path str) -> Reader {
@@ -94,7 +95,7 @@ fn create_reader(path str) -> Reader {
         exit(1)
     }
 
-    ret Reader{ fd, 0, [$]char{ READER_BUF_SIZE } }
+    ret Reader{ fd, 0, [$]char{ READER_BUF_SIZE }, false }
 }
 
 fn close_reader(reader *Reader) -> i32 {
@@ -131,6 +132,7 @@ fn read_file(reader *Reader) -> str {
     }
 
     reader.pos = reader.buffer.len
+    reader.isEOF = true
     ret from_cstr(reader.buffer as *char)
 }
 
@@ -178,7 +180,8 @@ fn read_line(reader *Reader) -> str {
             printStr("[ERROR] could not read file\n")
             exit(1)
         0:
-            ret from_pchar(reader.buffer.len as u32, cstr)
+            reader.isEOF = true
+            ret ""
         _:
             reader.buffer.len = reader.buffer.len + (pos as u64)
         }
