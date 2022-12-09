@@ -141,14 +141,13 @@ func typeCheckRet(s *ast.Ret) {
 }
 
 func typeCheckCase(s *ast.Case) {
-    // skip default case
-    if s.Cond == nil { return }
-
-    typeCheckExpr(s.Cond)
-    if t := s.Cond.GetType(); t.GetKind() != types.Bool {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a condition of type bool but got \"%v\"\n", t)
-        fmt.Fprintln(os.Stderr, "\t" + s.ColonPos.At())
-        os.Exit(1)
+    if s.Cond != nil {
+        typeCheckExpr(s.Cond)
+        if t := s.Cond.GetType(); t.GetKind() != types.Bool {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a condition of type bool but got \"%v\"\n", t)
+            fmt.Fprintln(os.Stderr, "\t" + s.ColonPos.At())
+            os.Exit(1)
+        }
     }
 
     for _,s := range s.Stmts {

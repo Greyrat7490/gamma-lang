@@ -286,21 +286,40 @@ func typeCheckBinary(o *ast.Binary) {
     os.Exit(1)
 }
 
+func typeCheckXCase(s *ast.XCase) {
+    if s.Cond != nil {
+        typeCheckExpr(s.Cond)
+        if t := s.Cond.GetType(); t.GetKind() != types.Bool {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a condition of type bool but got \"%v\"\n", t)
+            fmt.Fprintln(os.Stderr, "\t" + s.ColonPos.At())
+            os.Exit(1)
+        }
+    }
+
+    typeCheckExpr(s.Expr)
+}
+
 func typeCheckXSwitch(o *ast.XSwitch) {
-    if len(o.Cases) > 1 {
-        t1 := o.Cases[0].Expr.GetType()
+    if len(o.Cases) <= 0 {
+        fmt.Fprintln(os.Stderr, "[ERROR] empty XSwitch")
+        fmt.Fprintln(os.Stderr, "\t" + o.At())
+        os.Exit(1)
+    }
 
-        for _,c := range o.Cases[1:] {
-            t2 := c.Expr.GetType()
-            if !CheckTypes(t1, t2) {
-                fmt.Fprintln(os.Stderr, "[ERROR] expected every case body to return the same type but got:")
-                for i,c := range o.Cases {
-                    fmt.Fprintf(os.Stderr, "\tcase%d: %v\n", i, c.Expr.GetType())
-                }
-                fmt.Fprintln(os.Stderr, "\t" + o.At())
+    t1 := o.Cases[0].Expr.GetType()
+    typeCheckXCase(&o.Cases[0])
 
-                os.Exit(1)
+    for _,c := range o.Cases[1:] {
+        typeCheckXCase(&c)
+
+        t2 := c.Expr.GetType()
+        if !CheckTypes(t1, t2) {
+            fmt.Fprintln(os.Stderr, "[ERROR] expected every case body to return the same type but got:")
+            for i,c := range o.Cases {
+                fmt.Fprintf(os.Stderr, "\tcase%d: %v\n", i, c.Expr.GetType())
             }
+            fmt.Fprintln(os.Stderr, "\t" + o.At())
+            os.Exit(1)
         }
     }
 }
