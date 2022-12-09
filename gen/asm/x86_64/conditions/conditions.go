@@ -11,7 +11,6 @@ var ifCount uint = 0
 func ResetCount() {
     ifCount = 0
     logCount = 0
-    caseCount = 0
     switchCount = 0
 }
 

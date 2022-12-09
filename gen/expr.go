@@ -19,8 +19,6 @@ import (
     "gamma/gen/asm/x86_64/conditions"
 )
 
-var preserveRegC bool = false
-
 // TODO vister pattern
 func ExprAddrToReg(file *bufio.Writer, e ast.Expr, reg asm.RegGroup) {
     switch e := e.(type) {
@@ -62,10 +60,6 @@ func ExprAddrToReg(file *bufio.Writer, e ast.Expr, reg asm.RegGroup) {
 
 // TODO to a specific reg
 func GenExpr(file *bufio.Writer, e ast.Expr) {
-    if preserveRegC {
-        asm.PushReg(file, asm.RegC)
-    }
-
     switch e := e.(type) {
     case *ast.IntLit:
         GenIntLit(file, e.Type.Size(), e)
@@ -94,6 +88,7 @@ func GenExpr(file *bufio.Writer, e ast.Expr) {
         GenIdent(file, e)
 
     case *ast.FnCall:
+        asm.SaveReg(file, asm.RegC)
         switch e.Ident.Name {
         case "_syscall":
             GenSyscall(file, e.Values[0])
@@ -102,6 +97,7 @@ func GenExpr(file *bufio.Writer, e ast.Expr) {
         default:
             GenFnCall(file, e)
         }
+        asm.RestoreReg(file, asm.RegC)
 
     case *ast.Unary:
         GenUnary(file, e)
@@ -122,10 +118,6 @@ func GenExpr(file *bufio.Writer, e ast.Expr) {
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] GenExpr for %v is not implemente yet\n", reflect.TypeOf(e))
         os.Exit(1)
-    }
-
-    if preserveRegC {
-        asm.PopReg(file, asm.RegC)
     }
 }
 
@@ -611,7 +603,11 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
             PassVar(file, regIdx, t, ident.Obj.(vars.Var))
 
         } else {
+            if regIdx <= uint(asm.RegC) {
+                asm.UseReg(asm.RegC)
+            }
             PassExpr(file, regIdx, t, e.Values[i].GetType().Size(), e.Values[i])
+            asm.FreeReg(asm.RegC)
         }
     }
 
@@ -623,7 +619,7 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
     }
 }
 
-func GenXCase(file *bufio.Writer, e *ast.XCase, switchCount uint) {
+func GenXCase(file *bufio.Writer, e *ast.XCase) {
     cond.CaseStart(file)
 
     if e.Cond == nil {
@@ -636,7 +632,7 @@ func GenXCase(file *bufio.Writer, e *ast.XCase, switchCount uint) {
         if bool(*val) {
             cond.CaseBody(file)
             GenExpr(file, e.Expr)
-            cond.CaseBodyEnd(file, switchCount)
+            cond.CaseBodyEnd(file)
         }
 
         return
@@ -651,7 +647,7 @@ func GenXCase(file *bufio.Writer, e *ast.XCase, switchCount uint) {
 
     cond.CaseBody(file)
     GenExpr(file, e.Expr)
-    cond.CaseBodyEnd(file, switchCount)
+    cond.CaseBodyEnd(file)
 }
 
 func GenXSwitch(file *bufio.Writer, e *ast.XSwitch) {
@@ -660,15 +656,15 @@ func GenXSwitch(file *bufio.Writer, e *ast.XSwitch) {
         return
     }
 
-    count := cond.StartSwitch()
+    cond.StartSwitch()
 
     for i := 0; i < len(e.Cases)-1; i++ {
-        GenXCase(file, &e.Cases[i], count)
+        GenXCase(file, &e.Cases[i])
     }
     cond.InLastCase()
-    GenXCase(file, &e.Cases[len(e.Cases)-1], count)
+    GenXCase(file, &e.Cases[len(e.Cases)-1])
 
-    cond.EndSwitch(file, count)
+    cond.EndSwitch(file)
 }
 
 
@@ -754,7 +750,7 @@ func DerefSetBigStruct(file *bufio.Writer, address addr.Addr, e ast.Expr) {
     }
 }
 
-func XCaseAddrToReg(file *bufio.Writer, e *ast.XCase, switchCount uint, reg asm.RegGroup) {
+func XCaseAddrToReg(file *bufio.Writer, e *ast.XCase, reg asm.RegGroup) {
     cond.CaseStart(file)
 
     if e.Cond == nil {
@@ -767,7 +763,7 @@ func XCaseAddrToReg(file *bufio.Writer, e *ast.XCase, switchCount uint, reg asm.
         if bool(*val) {
             cond.CaseBody(file)
             ExprAddrToReg(file, e.Expr, reg)
-            cond.CaseBodyEnd(file, switchCount)
+            cond.CaseBodyEnd(file)
         }
 
         return
@@ -782,19 +778,19 @@ func XCaseAddrToReg(file *bufio.Writer, e *ast.XCase, switchCount uint, reg asm.
 
     cond.CaseBody(file)
     ExprAddrToReg(file, e.Expr, reg)
-    cond.CaseBodyEnd(file, switchCount)
+    cond.CaseBodyEnd(file)
 }
 
 func XSwitchAddrToReg(file *bufio.Writer, e *ast.XSwitch, reg asm.RegGroup) {
-    count := cond.StartSwitch()
+    cond.StartSwitch()
 
     for i := 0; i < len(e.Cases)-1; i++ {
-        XCaseAddrToReg(file, &e.Cases[i], count, reg)
+        XCaseAddrToReg(file, &e.Cases[i], reg)
     }
     cond.InLastCase()
-    XCaseAddrToReg(file, &e.Cases[len(e.Cases)-1], count, reg)
+    XCaseAddrToReg(file, &e.Cases[len(e.Cases)-1], reg)
 
-    cond.EndSwitch(file, count)
+    cond.EndSwitch(file)
 }
 
 func bigStructXSwitchToStack(file *bufio.Writer, addr addr.Addr, e *ast.XSwitch) {
@@ -803,18 +799,18 @@ func bigStructXSwitchToStack(file *bufio.Writer, addr addr.Addr, e *ast.XSwitch)
         return
     }
 
-    count := cond.StartSwitch()
+    cond.StartSwitch()
 
     for i := 0; i < len(e.Cases)-1; i++ {
-        bigStructXCaseToStack(file, addr, &e.Cases[i], count)
+        bigStructXCaseToStack(file, addr, &e.Cases[i])
     }
     cond.InLastCase()
-    bigStructXCaseToStack(file, addr, &e.Cases[len(e.Cases)-1], count)
+    bigStructXCaseToStack(file, addr, &e.Cases[len(e.Cases)-1])
 
-    cond.EndSwitch(file, count)
+    cond.EndSwitch(file)
 }
 
-func bigStructXCaseToStack(file *bufio.Writer, addr addr.Addr, e *ast.XCase, switchCount uint) {
+func bigStructXCaseToStack(file *bufio.Writer, addr addr.Addr, e *ast.XCase) {
     cond.CaseStart(file)
 
     if e.Cond == nil {
@@ -827,7 +823,7 @@ func bigStructXCaseToStack(file *bufio.Writer, addr addr.Addr, e *ast.XCase, swi
         if bool(*val) {
             cond.CaseBody(file)
             DerefSetBigStruct(file, addr, e.Expr)
-            cond.CaseBodyEnd(file, switchCount)
+            cond.CaseBodyEnd(file)
         }
 
         return
@@ -842,7 +838,7 @@ func bigStructXCaseToStack(file *bufio.Writer, addr addr.Addr, e *ast.XCase, swi
 
     cond.CaseBody(file)
     DerefSetBigStruct(file, addr, e.Expr)
-    cond.CaseBodyEnd(file, switchCount)
+    cond.CaseBodyEnd(file)
 }
 
 func GenSyscall(file *bufio.Writer, val ast.Expr) {

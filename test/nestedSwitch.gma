@@ -1,0 +1,41 @@
+fn testSwitch(v i32) {
+    if {
+    v < 0:
+        if v == {
+        -1:
+            printStr("-1 case")
+        -2:
+            printStr("-2 case")
+        _:
+            printStr("default neg case")
+        }
+    v == 0:
+        printStr("0 case")
+    _:
+        printStr("default pos case")
+    }
+
+    printStr(" test\n")
+}
+
+fn testXSwitch(v i32) -> i32 {
+    ret $ {
+    v < 0: $ v == {
+        -1: -420
+        -2: -69
+        _:  -64
+    }
+    v == 0: 0
+    _:      64
+    }
+}
+
+fn main() {
+    for i i32, 2, -3 {
+        testSwitch(i)
+    }
+    printStr("-----\n")
+    for i i32, 2, -3 {
+        printInt(testXSwitch(i)) printChar('\n')
+    }
+}

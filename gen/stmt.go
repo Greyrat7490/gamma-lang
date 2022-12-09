@@ -153,7 +153,7 @@ func GenElse(file *bufio.Writer, s *ast.Else) {
     GenBlock(file, &s.Block)
 }
 
-func GenCase(file *bufio.Writer, s *ast.Case, switchCount uint) {
+func GenCase(file *bufio.Writer, s *ast.Case) {
     if s.Cond == nil {
         cond.CaseStart(file)
         cond.CaseBody(file)
@@ -170,7 +170,7 @@ func GenCase(file *bufio.Writer, s *ast.Case, switchCount uint) {
             for _,s := range s.Stmts {
                 GenStmt(file, s)
             }
-            cond.CaseBodyEnd(file, switchCount)
+            cond.CaseBodyEnd(file)
         }
 
         return
@@ -188,22 +188,22 @@ func GenCase(file *bufio.Writer, s *ast.Case, switchCount uint) {
     for _,s := range s.Stmts {
         GenStmt(file, s)
     }
-    cond.CaseBodyEnd(file, switchCount)
+    cond.CaseBodyEnd(file)
 }
 
 func GenSwitch(file *bufio.Writer, s *ast.Switch) {
-    count := cond.StartSwitch()
+    cond.StartSwitch()
 
     // TODO: detect unreachable code and throw error
     // * a1 < but case 420 before 86
     // * cases with same cond
     for i := 0; i < len(s.Cases)-1; i++ {
-        GenCase(file, &s.Cases[i], count)
+        GenCase(file, &s.Cases[i])
     }
     cond.InLastCase()
-    GenCase(file, &s.Cases[len(s.Cases)-1], count)
+    GenCase(file, &s.Cases[len(s.Cases)-1])
 
-    cond.EndSwitch(file, count)
+    cond.EndSwitch(file)
 }
 
 func GenThrough(file *bufio.Writer, s *ast.Through) {

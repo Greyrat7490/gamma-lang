@@ -297,9 +297,9 @@ func RetBigStructExpr(file *bufio.Writer, address addr.Addr, e ast.Expr) {
                 if c := cmpTime.ConstEval(f.Value); c != nil {
                     DerefSetVal(file, a, lit.StructType.Types[i], c)
                 } else {
-                    preserveRegC = true
+                    asm.UseReg(asm.RegC)
                     DerefSetExpr(file, a, lit.StructType.Types[i], f.Value)
-                    preserveRegC = false
+                    asm.FreeReg(asm.RegC)
                 }
                 a.Offset += int64(lit.StructType.Types[i].Size())
             }
@@ -308,9 +308,9 @@ func RetBigStructExpr(file *bufio.Writer, address addr.Addr, e ast.Expr) {
                 if c := cmpTime.ConstEval(lit.Len); c != nil {
                     DerefSetVal(file, address.Offseted(int64(2*types.Ptr_Size)), types.CreateUint(types.U64_Size), c)
                 } else {
-                    preserveRegC = true
+                    asm.UseReg(asm.RegC)
                     DerefSetExpr(file, address.Offseted(int64(2*types.Ptr_Size)), types.CreateUint(types.U64_Size), lit.Len)
-                    preserveRegC = false
+                    asm.FreeReg(asm.RegC)
                 }
             } else {
                 asm.MovDerefVal(file, address.Offseted(int64(2*types.Ptr_Size)), types.U64_Size, "0")
@@ -322,9 +322,9 @@ func RetBigStructExpr(file *bufio.Writer, address addr.Addr, e ast.Expr) {
                 asm.MovRegDeref(file, asm.RegA, address.Offseted(int64(2*types.Ptr_Size)), types.U64_Size, false)
                 asm.Lea(file, asm.RegA, fmt.Sprintf("%s*%d", asm.GetReg(asm.RegA, types.Ptr_Size), baseTypeSize), types.Ptr_Size)
             } else {
-                preserveRegC = true
+                asm.UseReg(asm.RegC)
                 GenExpr(file, lit.Cap)
-                preserveRegC = false
+                asm.FreeReg(asm.RegC)
                 if c := cmpTime.ConstEval(lit.Cap); c != nil {
                     asm.MovDerefVal(file, address.Offseted(int64(types.Ptr_Size)), types.U64_Size, c.GetVal())
                     asm.MovRegVal(file, asm.RegA, types.U64_Size, fmt.Sprintf("%s*%d", c.GetVal(), baseTypeSize ))

@@ -2,6 +2,7 @@ package asm
 
 import (
     "fmt"
+    "bufio"
     "gamma/types/addr"
 )
 
@@ -22,6 +23,9 @@ var regs [][]string = [][]string{
     { "spl", "sp", "esp", "rsp" },
     { "bpl", "bp", "ebp", "rbp" },
 }
+
+var used []bool = make([]bool, RegCount)
+var preserve []bool = make([]bool, RegCount)
 
 var words     []string = []string{ "BYTE", "WORD", "DWORD", "QWORD" }
 var dataSizes []string = []string{ "db", "dw", "dd", "dq" }
@@ -44,6 +48,8 @@ const (
 
     RegSp RegGroup = iota
     RegBp RegGroup = iota
+
+    RegCount RegGroup = iota
 )
 
 func GetWord(bytes uint) string {
@@ -95,4 +101,30 @@ func GetOffsetedReg(g RegGroup, size uint, offset int) string {
 
 func RegAsAddr(reg RegGroup) addr.Addr {
     return addr.Addr{ BaseAddr: GetReg(reg, 8) }
+}
+
+func IsUsed(reg RegGroup) bool {
+    return used[reg]
+}
+
+func UseReg(reg RegGroup) {
+    used[reg] = true
+}
+
+func FreeReg(reg RegGroup) {
+    used[reg] = false
+}
+
+func SaveReg(file *bufio.Writer, reg RegGroup) {
+    if used[reg] {
+        preserve[reg] = true
+        PushReg(file, reg)
+    }
+}
+
+func RestoreReg(file *bufio.Writer, reg RegGroup) {
+    if preserve[reg] {
+        preserve[reg] = false
+        PopReg(file, reg)
+    }
 }
