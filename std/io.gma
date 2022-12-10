@@ -1,5 +1,6 @@
 import "syscall.gma"
 import "memory.gma"
+import "string.gma"
 
 // std stream file descriptors
 STDIN  :: 0
@@ -69,11 +70,6 @@ fn close(fd i32) -> i32 {
 
 fn getcwd(buf *char, size u64) -> bool {
     ret _syscall(SYS_GETCWD) != 0
-}
-
-
-fn from_pchar(size u32, cstr *char) -> str {
-    ret *(&cstr as u64 as *str)
 }
 
 

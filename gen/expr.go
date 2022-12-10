@@ -478,7 +478,12 @@ func GenArith(file *bufio.Writer, e *ast.Binary) {
     if ident,ok := e.OperandR.(*ast.Ident); ok {
         if v,ok := ident.Obj.(vars.Var); ok {
             t := v.GetType()
-            asm.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), v.Addr().String()), t)
+            if t.Size() < types.I32_Size {
+                asm.MovRegDerefExtend(file, asm.RegB, types.I32_Size, v.Addr(), t.Size(), t.GetKind() == types.Int)
+                asm.BinaryOpReg(file, e.Operator.Type, asm.RegB, t)
+            } else {
+                asm.BinaryOp(file, e.Operator.Type, fmt.Sprintf("%s [%s]", asm.GetWord(t.Size()), v.Addr().String()), t)
+            }
         }
     } else {
         asm.PushReg(file, asm.RegA)

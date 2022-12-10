@@ -78,14 +78,6 @@ struct Pos {
     File str
 }
 
-fn str_at(s str, idx u32) -> char {
-    ret *(s as *char + (idx as u64))
-}
-
-fn substr(s str, from u32, to u32) -> str {
-    ret from_pchar(to - from, s as *char + (from as u64))
-}
-
 fn ToTokenType(s str, pos Pos) -> u8 {
     ret $ s == {
     "true", "false": Boolean_Token

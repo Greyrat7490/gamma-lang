@@ -1,0 +1,70 @@
+import "string.gma"
+
+fn test_uint_dec(s str) {
+    valid := true
+    u := parse_uint(s, &valid)
+    if valid {
+        printUint(u) printChar('\n')
+    } else {
+        printStr(s) printStr(" is not a valid uint\n")
+    }
+}
+
+fn test_int_dec(s str) {
+    valid := true
+    i := parse_int(s, &valid)
+    if valid {
+        printInt(i) printChar('\n')
+    } else {
+        printStr(s) printStr(" is not a valid int\n")
+    }
+}
+
+fn test_int_oct(s str) {
+    valid := true
+    u := parse_oct(s, &valid)
+    if valid {
+        printUint(u) printChar('\n')
+    } else {
+        printStr(s) printStr(" is not a valid oct uint\n")
+    }
+}
+
+fn test_int_hex(s str) {
+    valid := true
+    u := parse_hex(s, &valid)
+    if valid {
+        printUint(u) printChar('\n')
+    } else {
+        printStr(s) printStr(" is not a valid hex uint\n")
+    }
+}
+
+fn main() {
+    test_uint_dec("64")
+    test_uint_dec("64!")
+
+    printStr("-----\n")
+
+    test_int_dec("64")
+    test_int_dec("64!")
+    test_int_dec(":64")
+    test_int_dec("-64")
+
+    printStr("-----\n")
+
+    test_int_oct("0100")
+    test_int_oct("064!")
+    test_int_oct("64")
+    test_int_oct("077")
+
+    printStr("-----\n")
+
+    test_int_hex("0xff")
+    test_int_hex("0xaa")
+    test_int_hex("0x10")
+    test_int_hex("0xff!")
+    test_int_hex("0xff;")
+    test_int_hex("ff")
+    test_int_hex("0ff")
+}
