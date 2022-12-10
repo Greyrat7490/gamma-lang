@@ -1,0 +1,60 @@
+Int_Kind     u8 :: 1
+Uint_Kind    u8 :: 2
+Char_Kind    u8 :: 3
+Bool_Kind    u8 :: 4
+Ptr_Kind     u8 :: 5
+Arr_Kind     u8 :: 6
+Vec_Kind     u8 :: 7
+Str_Kind     u8 :: 8
+Struct_Kind  u8 :: 9
+Invalid_Kind u8 :: -1 as u8
+
+
+I8_Size   u8 :: 1
+I16_Size  u8 :: 2
+I32_Size  u8 :: 4
+I64_Size  u8 :: 8
+
+U8_Size   u8 :: 1
+U16_Size  u8 :: 2
+U32_Size  u8 :: 4
+U64_Size  u8 :: 8
+
+Char_Size u8 :: 1
+Bool_Size u8 :: 1
+Ptr_Size  u8 :: 8
+Arr_Size  u8 :: 8
+Str_Size  u8 :: Ptr_Size + U32_Size
+Vec_Size  u8 :: Ptr_Size + U64_Size + U64_Size
+
+
+struct Type {
+    Type_Kind u8
+}
+
+struct CharType {}
+struct BoolType {}
+struct UintType {}
+struct IntType {}
+struct PtrType {}
+struct ArrType {}
+struct VecType {}
+struct StrType {}
+struct StructType {}
+
+fn ToBaseType(s str) -> Type {
+    ret $ s == {
+    "i8":   Type{ Int_Kind }
+    "i16":  Type{ Int_Kind }
+    "i32":  Type{ Int_Kind }
+    "i64":  Type{ Int_Kind }
+    "u8":   Type{ Uint_Kind }
+    "u16":  Type{ Uint_Kind }
+    "u32":  Type{ Uint_Kind }
+    "u64":  Type{ Uint_Kind }
+    "char": Type{ Char_Kind }
+    "bool": Type{ Bool_Kind }
+    "str":  Type{ Str_Kind }
+    _:      Type{ Invalid_Kind }
+    }
+}

@@ -1,4 +1,5 @@
 import "io.gma"
+import "types/types.gma"
 
 Unknown_Token   u8 :: 0
 EOF_Token       u8 :: 1    // end of file
@@ -78,7 +79,40 @@ struct Pos {
     File str
 }
 
+fn isNum(s str) -> bool {
+    valid := true
+    _ := parse_int(s, &valid)
+    if valid {
+        ret true
+    }
+
+    _ := parse_hex(s, &valid)
+    if valid {
+        ret true
+    }
+
+    _ := parse_oct(s, &valid)
+    ret valid
+}
+
+fn isTypename(s str) -> bool {
+    t := ToBaseType(s)              // Field of FnCall
+    ret t.Type_Kind != Invalid_Kind
+}
+
 fn ToTokenType(s str, pos Pos) -> u8 {
+    if isNum(s) {
+        ret Number_Token
+    }
+
+    if str_at(s, 0) == '"' && str_at(s, s.len-1) == '"' {
+        ret Str_Token
+    }
+
+    if str_at(s, 0) == '\'' && str_at(s, s.len-1) == '\'' {
+        ret Char_Token
+    }
+
     ret $ s == {
     "true", "false": Boolean_Token
     "+": Plus_Token
@@ -142,18 +176,9 @@ fn ToTokenType(s str, pos Pos) -> u8 {
     "$": XSwitch_Token
     "as": As_Token
 
-    _: $ {
-        // types.ToBaseType(s) != nil: Typename_Token       // TODO
-
-        str_at(s, 0) == '"' && str_at(s, s.len-1) == '"':
-            Str_Token
-
-        str_at(s, 0) == '\'' && str_at(s, s.len-1) == '\'':
-            Char_Token
-
-        _:
-            // TODO parse uint otherwise name
-            Name_Token
+    _: $ isTypename(s) == {
+        true: Typename_Token
+           _: Name_Token
         }
     }
 }
@@ -277,7 +302,10 @@ fn tokenize_line(tokens *Tokens, line str, comment *bool, lineNum u32, path str)
         }
     }
 
-    if *comment == false && line.len > start {
+    // TODO fix should be false
+    printBool(*comment) printChar('\n')
+
+    if line.len > start {   // && *comment == false
         tokenize_split(tokens, line, start, line.len, lineNum, path)
     }
 
