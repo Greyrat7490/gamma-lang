@@ -612,7 +612,11 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
             PassVar(file, regIdx, t, ident.Obj.(vars.Var))
 
         } else {
+            if regIdx <= uint(asm.RegC) {
+                asm.UseReg(asm.RegC)
+            }
             PassExpr(file, regIdx, t, e.Values[i].GetType().Size(), e.Values[i])
+            asm.FreeReg(asm.RegC)
         }
     }
 

@@ -302,10 +302,7 @@ fn tokenize_line(tokens *Tokens, line str, comment *bool, lineNum u32, path str)
         }
     }
 
-    // TODO fix should be false
-    printBool(*comment) printChar('\n')
-
-    if line.len > start {   // && *comment == false
+    if *comment == false && line.len > start {   
         tokenize_split(tokens, line, start, line.len, lineNum, path)
     }
 
