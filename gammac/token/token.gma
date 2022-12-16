@@ -97,7 +97,7 @@ fn isNum(s str) -> bool {
 
 fn isTypename(s str) -> bool {
     t := ToBaseType(s)              // Field of FnCall
-    ret t.Type_Kind != Invalid_Kind
+    ret t.Kind != Invalid_Kind
 }
 
 fn ToTokenType(s str, pos Pos) -> u8 {
@@ -202,6 +202,7 @@ struct Tokens {
 fn append_Token(tokens *Tokens, token Token) {
     tokens.tokens[tokens.tokens.len] = token
     tokens.tokens.len = tokens.tokens.len + 1
+    // TODO resize if needed
 }
 
 fn tokenize_split(tokens *Tokens, s str, startIdx u32, endIdx u32, lineNum u32, file str) {

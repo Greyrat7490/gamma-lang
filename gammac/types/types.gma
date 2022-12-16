@@ -24,22 +24,29 @@ Char_Size u8 :: 1
 Bool_Size u8 :: 1
 Ptr_Size  u8 :: 8
 Arr_Size  u8 :: 8
-Str_Size  u8 :: Ptr_Size + U32_Size
+Str_Size  u8 :: Ptr_Size + U32_Size // TODO change order (size first -> more alignable)
 Vec_Size  u8 :: Ptr_Size + U64_Size + U64_Size
 
 
 struct Type {
-    Type_Kind u8,
+    Kind u8,
     Info u32    // uint/int size or idx to InfoStruct
 }
 
-struct PtrType {}
-struct ArrType {}
-struct VecType {}
-struct StructType {}
+struct PtrType { BaseType Type }
+struct ArrType { BaseType Type, Lens [$]u64 }
+struct VecType { BaseType Type }
+struct StructType { 
+    Name str,
+    Types [$]Type,
+    FieldNames [$]str,
+    isBigStruct bool,
+    isAligned bool,
+    size u32
+}
 
 
-DEFAULT_TYPES_POOL_SIZE :: 10
+DEFAULT_TYPES_POOL_SIZE :: 30
 
 struct TypesPool {
     ptrInfo [$]PtrType,
@@ -48,14 +55,29 @@ struct TypesPool {
     structInfo [$]StructType
 }
 
+pool := 0x0 as *TypesPool
 
-fn InitTypesPool() -> TypesPool {
+fn CreateTypesPool() -> TypesPool {
     ret TypesPool{ 
-        [$]PtrType{ DEFAULT_TYPES_POOL_SIZE  },
-        [$]ArrType{ DEFAULT_TYPES_POOL_SIZE  },
-        [$]VecType{ DEFAULT_TYPES_POOL_SIZE  },
-        [$]StructType{ DEFAULT_TYPES_POOL_SIZE  }
+        [$]PtrType{ DEFAULT_TYPES_POOL_SIZE },
+        [$]ArrType{ DEFAULT_TYPES_POOL_SIZE },
+        [$]VecType{ DEFAULT_TYPES_POOL_SIZE },
+        [$]StructType{ DEFAULT_TYPES_POOL_SIZE }
     }
+}
+
+fn InitTypesPool(typesPool *TypesPool) {
+    typesPool = pool
+}
+
+fn GetStructType(idx u32) -> StructType {
+    ret pool.structInfo[idx]
+}
+
+fn append_struct_type(t StructType) {
+    pool.structInfo[pool.structInfo.len] = t
+    pool.structInfo.len = pool.structInfo.len + 1
+    // TODO resize if needed
 }
 
 fn ToBaseType(s str) -> Type {
@@ -72,5 +94,129 @@ fn ToBaseType(s str) -> Type {
     "bool": Type{ Bool_Kind, 0 }
     "str":  Type{ Str_Kind, 0 }
     _:      Type{ Invalid_Kind, 0 }
+    }
+}
+
+fn TypeSize(t Type) -> u32 {
+    if t.Kind == {
+    Int_Kind, 
+    Uint_Kind: ret t.Info
+    Char_Kind: ret Char_Size
+    Bool_Kind: ret Bool_Size
+    Ptr_Kind:  ret Ptr_Size
+    Arr_Kind:  ret Ptr_Size
+    Vec_Kind:  ret Vec_Size     
+    Str_Kind:  ret Str_Size
+    Struct_Kind: 
+        t := GetStructType(t.Info)
+        ret t.size
+    }
+}
+
+
+fn isAligned_(types [$]Type, size u32) -> u32 {
+    for i u64, types.len {
+        if types[i].Kind == {
+        Struct_Kind:
+            t := GetStructType(types[i].Info)
+            rest := isAligned_(t.Types, size)
+            if rest == (-1 as u32) {
+                ret rest
+            }
+            size = size + rest
+
+        Str_Kind:
+            if size != 0 { ret -1 as u32 }
+            size = size + U32_Size
+
+        Vec_Kind:
+            ret -1 as u32
+
+        _:
+            size = size + TypeSize(types[i])
+        }
+
+        if size > 8 { ret -1 as u32 } 
+        elif size == 8 { size = 0 }
+    }
+
+    ret size
+}
+
+fn isAligned(types [$]Type) -> bool {
+    ret isAligned_(types, 0) != (-1 as u32)
+}
+
+fn CreateStructType(name str, types [$]Type, fieldNames [$]str) -> Type {
+    size u32 := 0
+    for i u64, types.len {
+        size = size + TypeSize(types[i])
+    }
+
+    isBigStruct := false
+    if size > 16 {
+        isBigStruct = true
+    }
+
+    aligned := isAligned(types)
+    if aligned == false {
+        isBigStruct = true
+    }
+
+    t := StructType{ name, types, fieldNames, isBigStruct, aligned, size }
+    append_struct_type(t)
+    ret Type{ Struct_Kind, pool.structInfo.len-1 as u32 }
+}
+
+fn GetOffsetStruct(t Type, field str) -> i64 {
+    res i64 := 0
+    // TODO allow overshadowing argnames
+    st := GetStructType(t.Info)
+
+    for i u64, st.FieldNames.len {
+        res = res + (TypeSize(st.FieldNames[i]) as i64)
+        if st.FieldNames[i] == field {
+            ret res
+        }
+    }
+
+    ret -1
+}
+
+fn GetTypeStruct(t Type, field str) -> Type {
+    st := GetStructType(t.Info)
+
+    for i u64, st.FieldNames.len {
+        if st.FieldNames[i] == field {
+            ret st.Types[i]
+        }
+    }
+
+    ret Type{ Invalid_Kind, 0 }
+}
+
+fn IsBigStruct(t Type) -> bool {
+    if t.Kind == Vec_Kind {
+        ret true
+    }
+
+    if t.Kind == Struct_Kind {
+        st := GetStructType(t.Info)
+        ret st.isBigStruct
+    }
+
+    ret false
+}
+
+fn GetRegCount(t Type) -> u8 {
+    if t.Kind == {
+    Str_Kind: ret 2
+    Vec_Kind: ret 3
+    Struct_Kind: 
+        if IsBigStruct(t) { ret 0 }
+
+        if TypeSize(t) > 8 { ret 2 } 
+        else { ret 1 }
+    _: ret 1
     }
 }

@@ -12,11 +12,13 @@ fn create_parser(path str) -> Parser {
     imports := InitImports()
     tokens := ImportMain(path, &imports)
 
-    ret Parser{ tokens, imports, InitTypesPool(), false, false }
+    ret Parser{ tokens, imports, CreateTypesPool(), false, false }
 }
 
 fn Parse(p *Parser) {
     printStr("[INFO] parsing ...\n")
+
+    InitTypesPool(&p.typesPool)
 
     // declare buildin
 
