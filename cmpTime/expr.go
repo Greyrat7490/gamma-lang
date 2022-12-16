@@ -6,6 +6,7 @@ import (
     "reflect"
     "gamma/token"
     "gamma/types"
+    "gamma/types/addr"
     "gamma/gen/asm/x86_64"
     "gamma/cmpTime/constVal"
     "gamma/ast"
@@ -221,23 +222,52 @@ func ConstEvalUnary(e *ast.Unary) constVal.ConstVal {
         return nil
 
     case token.Amp:
-        if ident,ok := e.Operand.(*ast.Ident); ok {
-            if v,ok := ident.Obj.(vars.Var); ok {
-                // global vars are lables with optional offset -> constEval for assembler
-                if _,ok := v.(*vars.GlobalVar); ok {
-                    return &constVal.PtrConst{ Addr: v.Addr(), Local: false }
-                // local vars are rbp with a const offset -> not constEval for assembler
-                } else {
-                    return &constVal.PtrConst{ Addr: v.Addr(), Local: true }
-                }
-            } else {
-                fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a var (in constEval.go Unary)")
-                os.Exit(1)
+        ptrConst := constVal.PtrConst{}
+
+        switch op := e.Operand.(type) {
+        case *ast.Field:
+            ptrConst.Addr, ptrConst.Local = fieldAddr(op, int64(op.ToOffset()))
+            if ptrConst.Addr.BaseAddr == "" {
+                return nil
             }
+
+        case *ast.Ident:
+        if v,ok := op.Obj.(vars.Var); ok {
+            // global vars are lables with optional offset -> constEval for assembler
+            // local vars are rbp with a const offset -> not constEval for assembler
+            _,ptrConst.Local = v.(*vars.LocalVar)
+            ptrConst.Addr = v.Addr()
+        } else {
+            fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a var (in constEval.go Unary &)")
+            os.Exit(1)
         }
+
+        default:
+            return nil
+        }
+
+        return &ptrConst 
     }
 
     return nil
+}
+
+func fieldAddr(field *ast.Field, offset int64) (a addr.Addr, isLocal bool) {
+    switch obj := field.Obj.(type) {
+    case *ast.Field:
+        return fieldAddr(obj, offset)
+
+    case *ast.Ident:
+        if v,ok := obj.Obj.(vars.Var); ok {
+            _,isLocal := v.(*vars.LocalVar)
+            return v.Addr().Offseted(offset), isLocal 
+        } else {
+            fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a var (in constEval.go Unary &)")
+            os.Exit(1)
+        }
+    }
+
+    return addr.Addr{}, false
 }
 
 func ConstEvalFnCall(e *ast.FnCall) constVal.ConstVal {
