@@ -239,7 +239,7 @@ func GenIndexed(file *bufio.Writer, e *ast.Indexed) {
 }
 
 func FieldAddrToReg(file *bufio.Writer, e *ast.Field, r asm.RegGroup) {
-    fieldAddrToReg(file, e, r, int64(ast.FieldToOffset(e)))
+    fieldAddrToReg(file, e, r, e.ToOffset())
 }
 
 func fieldAddrToReg(file *bufio.Writer, e *ast.Field, r asm.RegGroup, offset int64) {

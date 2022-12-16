@@ -138,10 +138,10 @@ func CreateStructType(name string, types []Type, names []string) StructType {
     return StructType{ Name: name, Types: types, isBigStruct: isBigStruct, isAligned: aligned, size: size, names: ns }
 }
 
-func (t *StructType) GetOffset(field string) (offset int) {
+func (t *StructType) GetOffset(field string) (offset int64) {
     if fieldNum, ok := t.names[field]; ok {
         for i := 0; i < fieldNum; i++ {
-            offset += int(t.Types[i].Size())
+            offset += int64(t.Types[i].Size())
         }
         return
     }
