@@ -329,6 +329,35 @@ func (e *Indexed) Flatten() Expr {
     return e.Index
 }
 
+func FieldToOffset(f *Field) int {
+    var offset int
+
+    switch f.Obj.GetType().(type) {
+    case types.ArrType:
+        offset = 0
+    case types.StrType:
+        offset = int(types.Ptr_Size)
+    case types.VecType:
+        switch f.FieldName.Str {
+        case "cap":
+            offset = int(types.Ptr_Size)
+        case "len":
+            offset = int(types.Ptr_Size + types.U64_Size)
+        }
+    case types.StructType:
+        offset = f.StructType.GetOffset(f.FieldName.Str)
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot get field offset of type %v\n", f.Obj.GetType())
+        os.Exit(1)
+    }
+
+    if obj,ok := f.Obj.(*Field); ok {
+        offset += FieldToOffset(obj)
+    }
+
+    return offset
+}
+
 
 func (e *BadExpr)   GetType() types.Type { return nil }
 func (e *IntLit)    GetType() types.Type { return e.Type }

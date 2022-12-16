@@ -239,7 +239,7 @@ func GenIndexed(file *bufio.Writer, e *ast.Indexed) {
 }
 
 func FieldAddrToReg(file *bufio.Writer, e *ast.Field, r asm.RegGroup) {
-    fieldAddrToReg(file, e, r, int64(fieldToOffset(e)))
+    fieldAddrToReg(file, e, r, int64(ast.FieldToOffset(e)))
 }
 
 func fieldAddrToReg(file *bufio.Writer, e *ast.Field, r asm.RegGroup, offset int64) {
@@ -256,35 +256,6 @@ func fieldAddrToReg(file *bufio.Writer, e *ast.Field, r asm.RegGroup, offset int
             asm.Lea(file, r, asm.RegAsAddr(r).Offseted(offset).String(), types.Ptr_Size)
         }
     }
-}
-
-func fieldToOffset(f *ast.Field) int {
-    var offset int
-
-    switch f.Obj.GetType().(type) {
-    case types.ArrType:
-        offset = 0
-    case types.StrType:
-        offset = int(types.Ptr_Size)
-    case types.VecType:
-        switch f.FieldName.Str {
-        case "cap":
-            offset = int(types.Ptr_Size)
-        case "len":
-            offset = int(types.Ptr_Size + types.U64_Size)
-        }
-    case types.StructType:
-        offset = f.StructType.GetOffset(f.FieldName.Str)
-    default:
-        fmt.Fprintf(os.Stderr, "[ERROR] cannot get field offset of type %v\n", f.Obj.GetType())
-        os.Exit(1)
-    }
-
-    if obj,ok := f.Obj.(*ast.Field); ok {
-        offset += fieldToOffset(obj)
-    }
-
-    return offset
 }
 
 func GenField(file *bufio.Writer, e *ast.Field) {
@@ -401,16 +372,20 @@ func GenUnary(file *bufio.Writer, e *ast.Unary) {
         return
     }
 
-    GenExpr(file, e.Operand)
-
     switch e.Operator.Type {
+    case token.Amp:
+        ExprAddrToReg(file, e.Operand, asm.RegA)
+
     case token.Minus:
+        GenExpr(file, e.Operand)
         asm.Neg(file, e.Operand.GetType().Size())
 
     case token.BitNot:
+        GenExpr(file, e.Operand)
         asm.Not(file, e.Operand.GetType().Size())
 
     case token.Mul:
+        GenExpr(file, e.Operand)
         t := e.GetType()
         if t.Size() > 8 {
             if t.GetKind() == types.Str {

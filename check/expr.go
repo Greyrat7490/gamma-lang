@@ -202,9 +202,11 @@ func typeCheckUnary(e *ast.Unary) {
 
     case token.Amp:
         if _,ok := e.Operand.(*ast.Ident); !ok {
-            fmt.Fprintln(os.Stderr, "[ERROR] expected a variable after \"&\"")
-            fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
-            os.Exit(1)
+            if _,ok := e.Operand.(*ast.Field); !ok {
+                fmt.Fprintln(os.Stderr, "[ERROR] expected an ident or field after \"&\"")
+                fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
+                os.Exit(1)
+            }
         }
 
     case token.Plus, token.Minus, token.BitNot:

@@ -624,6 +624,12 @@ func prsUnaryExpr(tokens *token.Tokens) *ast.Unary {
     case token.Amp:
         tokens.Next()
         expr.Operand = prsIdentExpr(tokens)
+        if tokens.Peek().Type == token.Dot {
+            expr.Operand = prsField(tokens, expr.Operand)
+            for tokens.Peek().Type == token.Dot {
+                expr.Operand = prsField(tokens, expr.Operand)
+            }
+        }
     case token.BitNot:
         tokens.Next()
         expr.Operand = prsExpr(tokens)
