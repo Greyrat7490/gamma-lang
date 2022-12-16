@@ -29,32 +29,48 @@ Vec_Size  u8 :: Ptr_Size + U64_Size + U64_Size
 
 
 struct Type {
-    Type_Kind u8
+    Type_Kind u8,
+    Info u32    // uint/int size or idx to InfoStruct
 }
 
-struct CharType {}
-struct BoolType {}
-struct UintType {}
-struct IntType {}
 struct PtrType {}
 struct ArrType {}
 struct VecType {}
-struct StrType {}
 struct StructType {}
+
+
+DEFAULT_TYPES_POOL_SIZE :: 10
+
+struct TypesPool {
+    ptrInfo [$]PtrType,
+    arrInfo [$]ArrType,
+    vecInfo [$]VecType,
+    structInfo [$]StructType
+}
+
+
+fn InitTypesPool() -> TypesPool {
+    ret TypesPool{ 
+        [$]PtrType{ DEFAULT_TYPES_POOL_SIZE  },
+        [$]ArrType{ DEFAULT_TYPES_POOL_SIZE  },
+        [$]VecType{ DEFAULT_TYPES_POOL_SIZE  },
+        [$]StructType{ DEFAULT_TYPES_POOL_SIZE  }
+    }
+}
 
 fn ToBaseType(s str) -> Type {
     ret $ s == {
-    "i8":   Type{ Int_Kind }
-    "i16":  Type{ Int_Kind }
-    "i32":  Type{ Int_Kind }
-    "i64":  Type{ Int_Kind }
-    "u8":   Type{ Uint_Kind }
-    "u16":  Type{ Uint_Kind }
-    "u32":  Type{ Uint_Kind }
-    "u64":  Type{ Uint_Kind }
-    "char": Type{ Char_Kind }
-    "bool": Type{ Bool_Kind }
-    "str":  Type{ Str_Kind }
-    _:      Type{ Invalid_Kind }
+    "i8":   Type{ Int_Kind, 1 }
+    "i16":  Type{ Int_Kind, 2 }
+    "i32":  Type{ Int_Kind, 4 }
+    "i64":  Type{ Int_Kind, 8 }
+    "u8":   Type{ Uint_Kind, 1 }
+    "u16":  Type{ Uint_Kind, 2 }
+    "u32":  Type{ Uint_Kind, 4 }
+    "u64":  Type{ Uint_Kind, 8 }
+    "char": Type{ Char_Kind, 0 }
+    "bool": Type{ Bool_Kind, 0 }
+    "str":  Type{ Str_Kind, 0 }
+    _:      Type{ Invalid_Kind, 0 }
     }
 }

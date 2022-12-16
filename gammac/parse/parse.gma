@@ -1,26 +1,39 @@
 import "import/import.gma"
 
-isMainDefined := false
-noMainArg := false
+struct Parser {
+    tokens Tokens,
+    imports Imports,
+    typesPool TypesPool,
+    isMainDefined bool,
+    noMainArg bool
+}
 
-fn Parse(path str) {
+fn create_parser(path str) -> Parser {
+    imports := InitImports()
+    tokens := ImportMain(path, &imports)
+
+    ret Parser{ tokens, imports, InitTypesPool(), false, false }
+}
+
+fn Parse(p *Parser) {
     printStr("[INFO] parsing ...\n")
 
     // declare buildin
 
-    // tokenize/import main
-    imports := InitImports()
-    tokens := ImportMain(path, &imports)
+    t := Peek(&p.tokens)
+    while t.Type != EOF_Token {
+        SetLastImport(&p.tokens)
 
-/*
-    while Peek().Type != EOF {
-        // tokenizer set last import
         // append Decls (prsDecl)
-    }
-*/
 
-    if isMainDefined != false {
-        printStr("[ERROR] no \"main\" function was defined")
+        t = Next(&p.tokens)
+        printStr(t.Str) printChar('\n')
+
+        // t = Peek(&p.tokens)
+    }
+
+    if p.isMainDefined == false {
+        printStr("[ERROR] no \"main\" function was defined\n")
         exit(1)
     }
 

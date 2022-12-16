@@ -10,7 +10,8 @@ fn main(args [$]*char) {
 
     // set import dir
 
-    Parse(src_path)
+    parser := create_parser(src_path)
+    Parse(&parser)
 
     // show AST
 

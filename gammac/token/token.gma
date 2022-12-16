@@ -312,19 +312,21 @@ fn tokenize_line(tokens *Tokens, line str, comment *bool, lineNum u32, path str)
     }
 }
 
-SHOW_TOKENS :: true
+SHOW_TOKENS :: false
 
 fn Tokenize(path str) -> Tokens {
     tokens := Tokens{ [$]Token{ TOKENS_BUF_SIZE }, 0, 0, path, false }
 
-    lineNum u32 := 1
+    lineNum u32 := 0
     comment := false
 
     reader := create_reader(path)
     while reader.isEOF == false {
-        tokenize_line(&tokens, read_line(&reader), &comment, lineNum, path)
         lineNum = lineNum + 1
+        tokenize_line(&tokens, read_line(&reader), &comment, lineNum, path)
     }
+
+    append_Token(&tokens, Token{ Pos{ lineNum, 0, path }, "EOF", EOF_Token })
 
     if comment {
         printStr("comment not terminated (missing \"*/\")\n")
@@ -338,12 +340,93 @@ fn Tokenize(path str) -> Tokens {
         }
     }
 
-    // append EOF
-
     if close_reader(&reader) < 0 {
         printStr("[ERROR] could not close file correctly\n")
         exit(1)
     }
 
     ret tokens
+}
+
+fn Cur(t *Tokens) -> Token {
+    ret t.tokens[t.idx]
+}
+
+fn Next(t *Tokens) -> Token {
+    t.idx = t.idx+1
+
+    if t.idx >= t.tokens.len {
+        printStr("[ERROR] unexpected end of file\n")
+        exit(1)
+    }
+
+    ret t.tokens[t.idx]
+}
+
+fn Peek(t *Tokens) -> Token {
+    if t.idx+1 >= t.tokens.len {
+        printStr("[ERROR] unexpected end of file\n")
+        exit(1)
+    }
+
+    ret t.tokens[t.idx+1]
+}
+
+fn Peek2(t *Tokens) -> Token {
+    if t.idx+2 >= t.tokens.len {
+        printStr("[ERROR] unexpected end of file\n")
+        exit(1)
+    }
+
+    ret t.tokens[t.idx+2]
+}
+
+fn Last(t *Tokens) -> Token {
+    if t.idx < 1 {
+        printStr("[ERROR] unexpected beginning of file (expected at least 2 words in the file)\n")
+        exit(1)
+    }
+
+    ret t.tokens[t.idx-1]
+}
+
+fn Last2(t *Tokens) -> Token {
+    if t.idx < 2 {
+        printStr("[ERROR] unexpected beginning of file (expected at least 3 words in the file)\n")
+        exit(1)
+    }
+
+    ret t.tokens[t.idx-1]
+}
+
+fn SaveIdx(t *Tokens) {
+    t.savedIdx = t.idx
+}
+
+fn ResetIdx(t *Tokens) {
+    if t.savedIdx == (-1 as u64) {
+        printStr("[ERROR] no saved idx\n")
+        exit(1)
+    }
+
+    t.idx = t.savedIdx
+    t.savedIdx = -1 as u64
+}
+
+// returns Pos{ -1 as u32, -1 as u32, "" } if not found
+fn FindNextToken(t *Tokens, token_typ u8) -> Pos {
+    for i u64, t.tokens.len, t.idx+1 {
+        if t.tokens[i].Type == token_typ {
+            ret t.tokens[i].pos
+        }
+    }
+
+    ret Pos{ -1 as u32, -1 as u32, "" }
+}
+
+fn SetLastImport(t *Tokens) {
+    token := Peek(t)
+    if token.Type != Import_Token {
+        t.lastImport = true
+    }
 }
