@@ -97,7 +97,24 @@ func ConstEval(e ast.Expr) constVal.ConstVal {
         return ConstEvalXSwitch(e)
 
     case *ast.Cast:
-        return ConstEval(e.Expr)
+        c := ConstEval(e.Expr)
+        if i,ok := c.(*constVal.IntConst); ok && e.DestType.GetKind() == types.Uint {
+            switch e.DestType.Size() {
+            case 1:
+                c := constVal.UintConst(uint8(*i))
+                return &c
+            case 2:
+                c := constVal.UintConst(uint16(*i))
+                return &c
+            case 4:
+                c := constVal.UintConst(uint32(*i))
+                return &c
+            default:
+                c := constVal.UintConst(*i)
+                return &c
+            }
+        }
+        return c
 
     case *ast.BadExpr:
         fmt.Fprintln(os.Stderr, "[ERROR] bad expression")
