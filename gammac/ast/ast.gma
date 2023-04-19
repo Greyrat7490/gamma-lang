@@ -1,0 +1,6 @@
+import "ast/decl.gma"
+
+struct Ast {
+    Decls [$]Decl,
+    NoMainArg bool
+}

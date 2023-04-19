@@ -1,0 +1,117 @@
+import "ast/expr.gma"
+import "ast/stmt.gma"
+import "ast/identObj/vars.gma"
+import "ast/identObj/funcs.gma"
+import "ast/identObj/consts.gma"
+import "ast/identObj/struct.gma"
+import "types/types.gma"
+
+
+DECL_BAD        u8 :: 0
+DECL_DEC_VAR    u8 :: 1
+DECL_DEC_FIELD  u8 :: 2
+DECL_DEF_VAR    u8 :: 3
+DECL_DEF_CONST  u8 :: 4
+DECL_DEF_FUNC   u8 :: 5
+DECL_DEF_STRUCT u8 :: 6
+DECL_IMPORT     u8 :: 7
+
+
+struct Decl {
+    Kind u8,
+    Idx u64,
+    Pos Pos
+}
+
+struct DecVar {
+    V Var,
+    Type Type,
+    TypePos Pos
+}
+
+struct DecField {
+    Name Token,
+    Type Type,
+    TypePos Pos
+}
+
+struct DefVar {
+    V Var,
+    Type Type,
+    ColPos Pos,
+    Value Expr
+}
+
+struct DefConst {
+    C *Const,
+    Type Type,
+    ColPos Pos,
+    Value Expr
+}
+
+struct DefFn {
+    F *Func,
+    pos Pos,
+    Args [$]DecVar,
+    RetType Type,
+    Block Block,
+    IsConst bool
+}
+
+struct DefStruct {
+    S *StructDec,
+    pos Pos,
+    Name Token,
+    BraceLPos Pos,
+    Fields [$]DecField,
+    BraceRPos Pos
+}
+
+struct Import {
+    pos Pos,
+    Path Token,
+    Decls [$]Decl
+}
+
+
+DECL_POOL_INIT_CAP :: 30
+
+struct DeclPool {
+    decVars [$]DecVar,
+    decFields [$]DecField,
+    defVars [$]DefVar,
+    defConsts [$]DefConst,
+    defFns [$]DefFn,
+    defStructs [$]DefStruct,
+    imports [$]Import
+}
+
+declPool := 0x0 as *DeclPool
+
+fn CreateDeclPool() -> DeclPool {
+    ret DeclPool{
+        [$]DecVar{ DECL_POOL_INIT_CAP },
+        [$]DecField{ DECL_POOL_INIT_CAP },
+        [$]DefVar{ DECL_POOL_INIT_CAP },
+        [$]DefConst{ DECL_POOL_INIT_CAP },
+        [$]DefFn{ DECL_POOL_INIT_CAP },
+        [$]DefStruct{ DECL_POOL_INIT_CAP },
+        [$]Import{ DECL_POOL_INIT_CAP }
+    }
+}
+
+fn InitDeclPool(pool *DeclPool) {
+    declPool = pool
+}
+
+
+fn append_def_var(d DefVar) {
+    declPool.defVars[declPool.defVars.len] = d
+    declPool.defVars.len = declPool.defVars.len + 1
+    // TODO resize if needed
+}
+
+fn CreateDefVar(v Var, typ Type, colPos Pos, val Expr) -> Decl {
+    append_def_var(DefVar{ v, typ, colPos, val })
+    ret Decl{ DECL_DEF_VAR, declPool.defVars.len-1, colPos }
+}

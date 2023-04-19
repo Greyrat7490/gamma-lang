@@ -1,37 +1,48 @@
 import "import/import.gma"
+import "ast/ast.gma"
+import "ast/decl.gma"
+import "parse/decl.gma"
+
+struct NodesPool {
+    declPool DeclPool
+    // exprPool ExprPool,
+    // stmtPool StmtPool
+}
 
 struct Parser {
     tokens Tokens,
     imports Imports,
     typesPool TypesPool,
+    nodesPool NodesPool,
     isMainDefined bool,
     noMainArg bool
 }
 
+
 fn create_parser(path str) -> Parser {
     imports := InitImports()
     tokens := ImportMain(path, &imports)
+    pool := NodesPool{ CreateDeclPool() }
 
-    ret Parser{ tokens, imports, CreateTypesPool(), false, false }
+    ret Parser{ tokens, imports, CreateTypesPool(), pool, false, false }
 }
 
 fn Parse(p *Parser) {
     printStr("[INFO] parsing ...\n")
 
     InitTypesPool(&p.typesPool)
+    InitDeclPool(&p.nodesPool.declPool)
 
     // declare buildin
 
-    t := Peek(&p.tokens)
+    t := Cur(&p.tokens)
     while t.Type != EOF_Token {
         SetLastImport(&p.tokens)
 
         // append Decls (prsDecl)
+        _ := prsDecl(&p.tokens)
 
-        t = Next(&p.tokens)
-        printStr(t.Str) printChar('\n')
-
-        // t = Peek(&p.tokens)
+        t = Peek(&p.tokens)
     }
 
     if p.isMainDefined == false {

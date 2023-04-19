@@ -1,0 +1,92 @@
+import "ast/decl.gma"
+import "token/token.gma"
+import "parse/type.gma"
+
+
+fn prsImport(tokens *Tokens) -> Decl {
+    ret Decl{ DECL_BAD, 0, Pos{0,0,""} }
+}
+fn prsDefFn(tokens *Tokens, isConst bool) -> Decl {
+    ret Decl{ DECL_BAD, 0, Pos{0,0,""} } 
+}
+fn prsStruct(tokens *Tokens) -> Decl {
+    ret Decl{ DECL_BAD, 0, Pos{0,0,""} } 
+}
+
+
+fn prsDefConst(tokens *Tokens, name Token, typ Type) -> Decl {
+    printStr("TODO prsDefConst")
+    exit(1)
+    ret Decl{ DECL_BAD, 0, Pos{0,0,""} } 
+}
+
+fn prsDefConstInfer(tokens *Tokens, name Token) -> Decl {
+    printStr("TODO prsDefConstInfer")
+    exit(1)
+    ret Decl{ DECL_BAD, 0, Pos{0,0,""} } 
+}
+
+fn prsDefVar(tokens *Tokens, name Token, typ Type) -> Decl {
+    v := Var{} // TODO
+
+    col := Cur(tokens)
+    pos := col.Pos
+    _ := Next(tokens)
+    val := Expr{ EXPR_BAD, 0, Pos{0,0,""} } // prsExpr(tokens)
+    ret CreateDefVar(v, typ, pos, val)
+}
+
+fn prsDefVarInfer(tokens *Tokens, name Token) -> Decl {
+    printStr("TODO prsDefVarInfer")
+    exit(1)
+    ret Decl{ DECL_BAD, 0, Pos{0,0,""} } 
+}
+
+fn prsDefine(tokens *Tokens) -> Decl { 
+    name := Cur(tokens)
+
+    t := Next(tokens)
+    if t.Type == {       
+        // infer type
+        DefVar_Token:   ret prsDefVarInfer(tokens, name)
+        DefConst_Token: ret prsDefConstInfer(tokens, name)
+
+        // type is given
+        _:
+            typ := prsType(tokens)
+            t = Next(tokens)
+
+            if t.Type == {       
+                DefVar_Token:   ret prsDefVar(tokens, name, typ)
+                DefConst_Token: ret prsDefConst(tokens, name, typ)
+            }
+    }
+
+    t = Last(tokens)
+    ret Decl{ DECL_BAD, 0, t.Pos }
+}
+
+
+fn prsDecl(tokens *Tokens) -> Decl {
+    // _ := Next(tokens) causes segfault (rdi no set and nothing reserved)
+    t := Cur(tokens)
+
+    if t.Type == {
+    Import_Token:   ret prsImport(tokens)
+    Fn_Token:       ret prsDefFn(tokens, false)
+    ConstFn_Token:  ret prsDefFn(tokens, true)
+    Struct_Token:   ret prsStruct(tokens)
+    Name_Token:
+        d := prsDefine(tokens)
+        if d.Kind == DECL_BAD {
+            printStr("[ERROR] declaring without initializing is not allowed\n")
+            PrintPos(d.Pos)
+            exit(1)
+        }
+        ret d
+    _:
+        printStr("[ERROR] unknown word ") printStr(t.Str) printChar('\n')
+        PrintPos(t.Pos)
+        exit(1)
+    }
+}

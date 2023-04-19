@@ -1,0 +1,46 @@
+fn prsType(tokens *Tokens) -> Type {
+    cur := Cur(tokens)
+    if cur.Type == {
+    Mul_Token:
+        _ := Next(tokens)
+        ret CreatePtrType(prsType(tokens))
+
+    BrackL_Token:
+        /*
+        p := Peek(tokens)
+        if p.Type == XSwitch_Token {
+            ret prsVecType(tokens)
+        } else {
+            ret prsArrType(tokens)
+        }
+        */
+        printStr("[ERROR] TODO prsType array/vector\n")
+        PrintPos(cur.Pos)
+        exit(1)
+
+    Name_Token:
+        /*
+        obj := GetIdentObj(cur.Str)
+        if obj.Kind == Struct_Obj_Kind {
+            strct := GetStructDef(obj.Info)
+            ret strct.Type
+        }
+
+        printStr("[ERROR] ") printStr("unknown struct type ") printStr(cur.Str) printChar('\n')
+        PrintPos(cur.Pos)
+        exit(1)
+        */
+
+        printStr("[ERROR] TODO prsType struct\n")
+        PrintPos(cur.Pos)
+        exit(1)
+    _:
+        t := ToBaseType(cur.Str)
+        if t.Kind == Invalid_Kind {
+            printStr("[ERROR] ") printStr(cur.Str) printStr(" is not a valid type\n")
+            PrintPos(cur.Pos)
+            exit(1)
+        }
+        ret t
+    }
+}

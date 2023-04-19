@@ -1,0 +1,11 @@
+STMT_BAD u8 :: 0
+STMT_BLOCK u8 :: 1
+
+struct Stmt {
+    Kind u8,
+    Idx u64
+}
+
+struct Block {
+    stmts [$]Stmt
+}

@@ -1,0 +1,7 @@
+EXPR_BAD u8 :: 0
+
+struct Expr {
+    Kind u8,
+    Idx u64,
+    Pos Pos
+}

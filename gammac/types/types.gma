@@ -67,7 +67,7 @@ fn CreateTypesPool() -> TypesPool {
 }
 
 fn InitTypesPool(typesPool *TypesPool) {
-    typesPool = pool
+    pool = typesPool
 }
 
 fn GetStructType(idx u32) -> StructType {
@@ -77,6 +77,25 @@ fn GetStructType(idx u32) -> StructType {
 fn append_struct_type(t StructType) {
     pool.structInfo[pool.structInfo.len] = t
     pool.structInfo.len = pool.structInfo.len + 1
+    // TODO resize if needed
+}
+
+fn append_ptr_type(t PtrType) {
+    // fix type check assign
+    pool.ptrInfo[pool.ptrInfo.len] = t
+    pool.ptrInfo.len = pool.ptrInfo.len + 1
+    // TODO resize if needed
+}
+
+fn append_arr_type(t ArrType) {
+    pool.arrInfo[pool.arrInfo.len] = t
+    pool.arrInfo.len = pool.arrInfo.len + 1
+    // TODO resize if needed
+}
+
+fn append_vec_type(t VecType) {
+    pool.vecInfo[pool.vecInfo.len] = t
+    pool.vecInfo.len = pool.vecInfo.len + 1
     // TODO resize if needed
 }
 
@@ -166,6 +185,21 @@ fn CreateStructType(name str, types [$]Type, fieldNames [$]str) -> Type {
     t := StructType{ name, types, fieldNames, isBigStruct, aligned, size }
     append_struct_type(t)
     ret Type{ Struct_Kind, pool.structInfo.len-1 as u32 }
+}
+
+fn CreatePtrType(baseType Type) -> Type {
+    append_ptr_type(PtrType{ baseType })
+    ret Type{ Ptr_Kind, pool.ptrInfo.len-1 as u32 }
+}
+
+fn CreateArrType(baseType Type, lens [$]u64) -> Type {
+    append_arr_type(ArrType{ baseType, lens })
+    ret Type{ Arr_Kind, pool.arrInfo.len-1 as u32 }
+}
+
+fn CreateVecType(baseType Type) -> Type {
+    append_vec_type(VecType{ baseType })
+    ret Type{ Vec_Kind, pool.vecInfo.len-1 as u32 }
 }
 
 fn GetOffsetStruct(t Type, field str) -> i64 {
