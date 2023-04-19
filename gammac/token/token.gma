@@ -79,6 +79,10 @@ struct Pos {
     File str
 }
 
+fn PrintPos(p Pos) {
+    printStr("\tat: ") printStr(p.File) printChar(':') printUint(p.Line) printChar(':') printUint(p.Col) printChar('\n')
+}
+
 fn isNum(s str) -> bool {
     valid := true
     _ := parse_int(s, &valid)
@@ -184,7 +188,7 @@ fn ToTokenType(s str, pos Pos) -> u8 {
 }
 
 struct Token {
-    pos Pos,
+    Pos Pos,
     Str str,
     Type u8
 }
@@ -337,7 +341,7 @@ fn Tokenize(path str) -> Tokens {
     if SHOW_TOKENS {
         for i u64, tokens.tokens.len {
             printStr(tokens.tokens[i].Str) printChar(' ') printUint(tokens.tokens[i].Type) printChar(' ')
-            printUint(tokens.tokens[i].pos.Line) printChar(':') printUint(tokens.tokens[i].pos.Col) printChar('\n')
+            PrintPos(tokens.tokens[i].Pos)
         }
     }
 
@@ -418,7 +422,7 @@ fn ResetIdx(t *Tokens) {
 fn FindNextToken(t *Tokens, token_typ u8) -> Pos {
     for i u64, t.tokens.len, t.idx+1 {
         if t.tokens[i].Type == token_typ {
-            ret t.tokens[i].pos
+            ret t.tokens[i].Pos
         }
     }
 
