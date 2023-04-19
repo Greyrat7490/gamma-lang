@@ -84,9 +84,7 @@ struct Reader {
 
 fn create_reader(path str) -> Reader {
     fd := open(path as *char, O_RDONLY)
-    if fd != -1 {
-        printStr("opened: ") printStr(path) printChar('\n')
-    } else {
+    if fd == -1 {
         printStr("[ERROR] could not open: ") printStr(path) printChar('\n')
         exit(1)
     }
