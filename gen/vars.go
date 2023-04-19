@@ -113,7 +113,30 @@ func DerefSetDeref(file *bufio.Writer, addr addr.Addr, t types.Type, otherAddr a
         }
 
         if size := t.Size() % types.Ptr_Size; size != 0 {
-            asm.MovDerefDeref(file, addr, otherAddr, size, asm.RegB, false)
+            if size == 3 {
+                asm.MovDerefDeref(file, addr, otherAddr, 2, asm.RegB, false)
+                addr.Offset += 2
+                otherAddr.Offset += 2
+                asm.MovDerefDeref(file, addr, otherAddr, size - 2, asm.RegB, false)
+
+            } else if size == 5 || size == 6 {
+                asm.MovDerefDeref(file, addr, otherAddr, 4, asm.RegB, false)
+                addr.Offset += 4
+                otherAddr.Offset += 4
+                asm.MovDerefDeref(file, addr, otherAddr, size - 4, asm.RegB, false)
+
+            } else if size == 7 {
+                asm.MovDerefDeref(file, addr, otherAddr, 4, asm.RegB, false)
+                addr.Offset += 4
+                otherAddr.Offset += 4
+                asm.MovDerefDeref(file, addr, otherAddr, size - 4, asm.RegB, false)
+                addr.Offset += 2
+                otherAddr.Offset += 2
+                asm.MovDerefDeref(file, addr, otherAddr, size - 4 - 2, asm.RegB, false)
+
+            } else {
+                asm.MovDerefDeref(file, addr, otherAddr, size, asm.RegB, false)
+            }
         }
 
     case types.VecType:
