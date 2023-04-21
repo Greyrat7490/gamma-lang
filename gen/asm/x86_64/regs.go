@@ -15,10 +15,10 @@ var regs [][]string = [][]string{
     { "dil", "di", "edi", "rdi" },
     { "sil", "si", "esi", "rsi" },
 
-    { "r8l",  "r8w",  "r8d",  "r8" },
-    { "r9l",  "r9w",  "r9d",  "r9" },
-    { "r10l", "r10w", "r10d", "r10" },
-    { "r11l", "r11w", "r11d", "r11" },
+    { "r8b",  "r8w",  "r8d",  "r8" },
+    { "r9b",  "r9w",  "r9d",  "r9" },
+    { "r10b", "r10w", "r10d", "r10" },
+    { "r11b", "r11w", "r11d", "r11" },
 
     { "spl", "sp", "esp", "rsp" },
     { "bpl", "bp", "ebp", "rbp" },
