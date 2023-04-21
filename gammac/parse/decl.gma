@@ -1,6 +1,7 @@
 import "ast/decl.gma"
 import "token/token.gma"
 import "parse/type.gma"
+import "ast/identObj/scope.gma"
 
 
 fn prsImport(tokens *Tokens) -> Decl {
@@ -27,7 +28,7 @@ fn prsDefConstInfer(tokens *Tokens, name Token) -> Decl {
 }
 
 fn prsDefVar(tokens *Tokens, name Token, typ Type) -> Decl {
-    v := Var{} // TODO
+    v := CreateVar(name, typ)
 
     col := Cur(tokens)
     pos := col.Pos

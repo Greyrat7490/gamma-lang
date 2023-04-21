@@ -2,6 +2,7 @@ import "import/import.gma"
 import "ast/ast.gma"
 import "ast/decl.gma"
 import "parse/decl.gma"
+import "ast/identObj/scope.gma"
 
 struct NodesPool {
     declPool DeclPool
@@ -32,6 +33,7 @@ fn Parse(p *Parser) {
 
     InitTypesPool(&p.typesPool)
     InitDeclPool(&p.nodesPool.declPool)
+    InitGlobalScope()
 
     // declare buildin
 

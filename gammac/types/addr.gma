@@ -1,0 +1,22 @@
+struct Addr {
+    BaseAddr str,
+    Offset i64
+}
+
+fn AddrOffset(a Addr, offset i64) -> Addr {
+    a.Offset = a.Offset + offset
+    ret a
+}
+
+fn AddrToString(a Addr) -> str {
+    printStr("TODO AddrToString")
+    exit(1)
+
+    if a.Offset > 0 {
+        
+    } elif a.Offset < 0 {
+
+    } else {
+        ret a.BaseAddr
+    }
+}

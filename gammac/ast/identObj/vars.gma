@@ -1,1 +1,34 @@
-struct Var {}
+import "types/addr.gma"
+import "types/types.gma"
+import "token/token.gma"
+
+struct Var {
+    decPos Pos,
+    name str,
+    typ Type,
+    isLocal bool,
+    isArg bool,
+    addr Addr
+}
+
+fn calcOffset(t Type, framesize u32, fromStack bool) -> i64 { 
+    if fromStack {
+        ret (Ptr_Size + framesize + 7) as i64 & ~7
+    }
+
+    ret -framesize + (TypeSize(t) as i32)
+}
+
+fn CreateGlobalVar(name Token, t Type) -> Var {
+    ret Var { name.Pos, name.Str, t, false, false, Addr{ name.Str, 0 } }
+}
+
+fn CreateLocalVar(name Token, t Type, framesize u32, isArg bool, fromStack bool) -> Var {
+    ret Var { name.Pos, name.Str, t, true, isArg, Addr{ "rbp", calcOffset(t, framesize, fromStack) } }
+}
+
+fn VarToString(v *Var) -> str {
+    printStr("TODO VarToString")
+    exit(1)
+}
+
