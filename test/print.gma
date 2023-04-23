@@ -1,0 +1,7 @@
+fn main() {
+    print("normal print (stdout)")
+    println("normal print with line break (stdout)")
+
+    eprint("error print (stderr)")
+    eprintln("error print with line break (stderr)")
+}

@@ -12,6 +12,7 @@ const SYS_MMAP  = 9
 const SYS_EXIT  = 60
 
 const STDOUT = 1
+const STDERR = 2
 
 const PROT_READ     = 1
 const PROT_WRITE    = 2
@@ -22,6 +23,9 @@ const MAP_PRIVATE   = 2
 func Declare() {
     // build-in funcs
     identObj.AddBuildIn("print", types.StrType{}, nil)
+    identObj.AddBuildIn("println", types.StrType{}, nil)
+    identObj.AddBuildIn("eprint", types.StrType{}, nil)
+    identObj.AddBuildIn("eprintln", types.StrType{}, nil)
     identObj.AddBuildIn("exit", types.CreateInt(types.I32_Size), nil)
     identObj.AddBuildIn("itos", types.CreateInt(types.I64_Size), types.StrType{})
     identObj.AddBuildIn("utos", types.CreateUint(types.U64_Size), types.StrType{})
@@ -36,6 +40,9 @@ func Declare() {
 
 func Define(file *bufio.Writer) {
     definePrint(file)
+    definePrintln(file)
+    defineEprint(file)
+    defineEprintln(file)
 
     defineAlloc(file)
     defineStrCmp(file)
@@ -65,6 +72,41 @@ func definePrint(asm *bufio.Writer) {
     asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
     syscall(asm, SYS_WRITE)
 
+    asm.WriteString("ret\n")
+}
+
+func defineEprint(asm *bufio.Writer) {
+    asm.WriteString("eprint:\n")
+
+    asm.WriteString("mov edx, esi\n")
+    asm.WriteString("mov rsi, rdi\n")
+    asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDERR))
+    syscall(asm, SYS_WRITE)
+
+    asm.WriteString("ret\n")
+}
+
+func definePrintln(asm *bufio.Writer) {
+    asm.WriteString("println:\n")
+    asm.WriteString("call print\n")
+    asm.WriteString(fmt.Sprintf(
+`mov byte [_intBuf], %d
+mov rdi, _intBuf
+mov esi, 1
+`, int('\n')))
+    asm.WriteString("call print\n")
+    asm.WriteString("ret\n")
+}
+
+func defineEprintln(asm *bufio.Writer) {
+    asm.WriteString("eprintln:\n")
+    asm.WriteString("call eprint\n")
+    asm.WriteString(fmt.Sprintf(
+`mov byte [_intBuf], %d
+mov rdi, _intBuf
+mov esi, 1
+`, int('\n')))
+    asm.WriteString("call eprint\n")
     asm.WriteString("ret\n")
 }
 
