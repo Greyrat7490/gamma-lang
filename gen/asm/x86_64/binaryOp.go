@@ -24,6 +24,8 @@ func BinaryOpStrs(file *bufio.Writer, opType token.TokenType) {
     case token.Neq:
         file.WriteString("call _str_cmp\n")
         file.WriteString("xor al, 1\n")
+    case token.Plus:
+        file.WriteString("call _str_concat\n")
     default:
         fmt.Fprintln(os.Stderr, "[ERROR] unexpected binary operator for str expected (== or !=)")
         os.Exit(1)
@@ -150,6 +152,9 @@ func BinaryOpEvalStrs(op token.Token, lhsIdx uint64, rhsIdx uint64) constVal.Con
         return &c
     case token.Neq:
         c := constVal.BoolConst(!str.CmpStrLits(lhsIdx, rhsIdx))
+        return &c
+    case token.Plus:
+        c := constVal.StrConst(str.ConcatStrLits(op.Pos, lhsIdx, rhsIdx))
         return &c
     default:
         fmt.Fprintln(os.Stderr, "[ERROR] unexpected binary operator for str expected (== or !=)")

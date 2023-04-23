@@ -50,6 +50,16 @@ func GetTypeBinary(e *ast.Binary) types.Type {
     t1 := e.OperandL.GetType()
     t2 := e.OperandR.GetType()
 
+    if t1.GetKind() == types.Str && t2.GetKind() == types.Str {
+        if e.Operator.Type != token.Plus {
+            fmt.Fprintln(os.Stderr, "[ERROR] you can only concat two strs")
+            fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
+            os.Exit(1)
+        }
+
+        return types.StrType{}
+    }
+
     // ptr
     if t1.GetKind() == types.Ptr {
         // check for cases like ptr1 - ptr2

@@ -334,7 +334,7 @@ func RetBigStructExpr(file *bufio.Writer, address addr.Addr, e ast.Expr) {
                 }
             }
 
-            file.WriteString("call _alloc_vec\n")
+            file.WriteString("call _alloc\n")
             asm.MovDerefReg(file, address, types.Ptr_Size, asm.RegGroup(0))
 
         default:

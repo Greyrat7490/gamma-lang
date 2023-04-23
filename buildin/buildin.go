@@ -38,8 +38,9 @@ func Declare() {
 func Define(file *bufio.Writer) {
     defineItoS(file)
     defineBtoS(file)
-    defineAllocVec(file)
+    defineAlloc(file)
     defineStrCmp(file)
+    defineStrConcat(file)
 
     definePrintStr(file)
     definePrintChar(file)
@@ -211,11 +212,11 @@ ret
 }
 
 // TODO: rather use std/memory malloc
-func defineAllocVec(file *bufio.Writer) {
+func defineAlloc(file *bufio.Writer) {
     file.WriteString(fmt.Sprintf(`
 ; rax = input size
 ; rax = output pointer
-_alloc_vec:
+_alloc:
 mov rdi, 0
 mov rsi, rax
 mov rdx, %d
@@ -251,6 +252,59 @@ mov eax, 1
 ret
 .unequ:
 mov eax, 0
+ret
+`))
+}
+
+func defineStrConcat(file *bufio.Writer) {
+    file.WriteString(fmt.Sprintf(`
+; rax = ptr1
+; edx = size1
+; rbx = ptr2
+; ecx = size2
+; rax = res ptr
+; edx = res size
+_str_concat:
+push rbp
+mov rbp, rsp
+sub rsp, 32
+mov QWORD [rbp-8], rax
+mov QWORD [rbp-16], rbx
+mov DWORD [rbp-20], ecx
+mov DWORD [rbp-24], edx
+
+mov eax, edx
+add eax, ecx
+mov DWORD [rbp-28], eax
+
+call _alloc
+
+mov rbx, QWORD [rbp-8]
+mov edx, DWORD [rbp-24]
+.l1:
+movzx ecx, BYTE [rbx]
+mov BYTE [rax], cl
+inc rax
+inc rbx
+dec edx
+cmp edx, 0
+jg .l1
+
+mov ecx, DWORD [rbp-20]
+mov rbx, QWORD [rbp-16]
+.l2:
+movzx edx, BYTE [rbx]
+mov BYTE [rax], dl
+inc rax
+inc rbx
+dec ecx
+cmp ecx, 0
+jg .l2
+
+mov edx, DWORD [rbp-28]
+sub rax, rdx
+
+leave
 ret
 `))
 }

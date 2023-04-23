@@ -1,0 +1,25 @@
+fn constTest() {
+    s := "test " + "string" + "\n"
+    printStr(s)
+
+    s1 :: "test" 
+    s2 :: "string2"
+    printStr(s1 + " " + s2 + "\n")
+}
+
+fn nonConstTest() {
+    s1 := "test " 
+    s2 := "string3\n"
+    printStr(s1 + s2)
+
+    s3 := "test" 
+    s4 := "string4"
+    printStr(s3 + " " + s4 + "\n")
+
+    printStr("'" + s1 + s2 + s3 + s4 + "'" + "\n")
+}
+
+fn main() {
+    constTest()
+    nonConstTest()
+}

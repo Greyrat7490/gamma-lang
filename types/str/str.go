@@ -24,15 +24,7 @@ func GetSize(idx uint64) uint {
 }
 
 func Add(s token.Token) uint64 {
-    if idx,ok := strs[s.Str]; ok {
-        return idx
-    }
-
-    idx := uint64(len(strLits))
-    strLits = append(strLits, escape(s))
-    strs[s.Str] = idx
-
-    return idx
+    return addStrLit(escape(s))
 }
 
 func Gen() {
@@ -80,4 +72,30 @@ func CmpStrLits(idx1 uint64, idx2 uint64) bool {
     }
 
     return strLits[idx1].repr == strLits[idx2].repr
+}
+
+func ConcatStrLits(pos token.Pos, idx1 uint64, idx2 uint64) uint64 {
+    s1 := strLits[idx1].repr
+    s2 := strLits[idx2].repr
+
+    strLit := strLit{ size: strLits[idx1].size + strLits[idx2].size }
+    if s1[len(s1)-1] == '"' && s2[0] == '"' {
+        strLit.repr = s1[:len(s1)-1] + s2[1:]
+    } else {
+        strLit.repr = s1 + "," + s2
+    }
+
+    return addStrLit(strLit)
+}
+
+func addStrLit(s strLit) uint64 {
+    if idx,ok := strs[s.repr]; ok {
+        return idx
+    }
+
+    idx := uint64(len(strLits))
+    strLits = append(strLits, s)
+    strs[s.repr] = idx
+
+    return idx
 }

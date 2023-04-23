@@ -417,6 +417,36 @@ func GenCmpStrs(file *bufio.Writer, e *ast.Binary) {
     }
 }
 
+func GenConcatStrs(file *bufio.Writer, e *ast.Binary) {
+    if c,ok := cmpTime.ConstEval(e.OperandL).(*constVal.StrConst); ok {
+        GenExpr(file, e.OperandR)
+        asm.MovRegReg(file, asm.RegB, asm.RegA, types.Ptr_Size)
+        asm.MovRegReg(file, asm.RegC, asm.RegD, types.U32_Size)
+
+        asm.MovRegVal(file, asm.RegA, types.Ptr_Size, fmt.Sprintf("_str%d", uint64(*c)))
+        asm.MovRegVal(file, asm.RegD, types.U32_Size, fmt.Sprint(str.GetSize(uint64(*c))))
+
+        asm.BinaryOpStrs(file, token.Plus)
+
+    } else if c,ok := cmpTime.ConstEval(e.OperandR).(*constVal.StrConst); ok {
+        GenExpr(file, e.OperandL)
+        asm.BinaryOpStrsLit(file, e.Operator.Type, uint64(*c))
+
+    } else {
+        GenExpr(file, e.OperandL)
+
+        asm.PushReg(file, asm.RegA)
+        asm.PushReg(file, asm.RegD)
+        GenExpr(file, e.OperandR)
+        asm.MovRegReg(file, asm.RegB, asm.RegA, types.Ptr_Size)
+        asm.MovRegReg(file, asm.RegC, asm.RegD, types.U32_Size)
+        asm.PopReg(file, asm.RegD)
+        asm.PopReg(file, asm.RegA)
+
+        asm.BinaryOpStrs(file, token.Plus)
+    }
+}
+
 func GenLogical(file *bufio.Writer, e *ast.Binary) {
     if b,ok := cmpTime.ConstEval(e.OperandL).(*constVal.BoolConst); ok {
         if e.Operator.Type == token.And && !bool(*b) {
@@ -478,7 +508,11 @@ func GenBinary(file *bufio.Writer, e *ast.Binary) {
     }
 
     if e.OperandL.GetType().GetKind() == types.Str {
-        GenCmpStrs(file, e)
+        if e.Operator.Type == token.Plus {
+            GenConcatStrs(file, e)
+        } else {
+            GenCmpStrs(file, e)
+        }
     } else {
         if e.Operator.Type == token.And || e.Operator.Type == token.Or {
             GenLogical(file, e)
@@ -691,7 +725,7 @@ func DerefSetBigStruct(file *bufio.Writer, address addr.Addr, e ast.Expr) {
             }
         }
 
-        file.WriteString("call _alloc_vec\n")
+        file.WriteString("call _alloc\n")
         asm.MovDerefReg(file, address, types.Ptr_Size, asm.RegA)
 
     case *ast.Indexed:
