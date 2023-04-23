@@ -1,8 +1,8 @@
 fn main(args [$]*char) {
-    printUint(args.len) printChar('\n')
+    print(utos(args.len)) print(ctos('\n'))
 
-    printStr("args:\n")
+    print("args:\n")
     for i u64, args.len {
-        printStr(from_cstr(args[i])) printChar('\n')
+        print(from_cstr(args[i])) print(ctos('\n'))
     }
 }

@@ -9,34 +9,34 @@ dummy i32 := 0
 fn main() {
     arr *i32 := &dummy
 
-    printStr("write to \"array\"\n")
+    print("write to \"array\"\n")
 
-    printStr("arr[0] = dummy -> 0\n")
+    print("arr[0] = dummy -> 0\n")
 
-    printStr("arr[1] = -86\n")
+    print("arr[1] = -86\n")
     *(arr+8) = -86
 
-    printStr("arr[2] = 69420\n")
+    print("arr[2] = 69420\n")
     *(arr+16) = 69420
 
 
-    printStr("read from \"array\"\n")
+    print("read from \"array\"\n")
 
-    printStr("arr[0](addr: ")
-    printPtr(arr)
-    printStr("): ")
-    printInt(*arr)
-    printStr("\n")
+    print("arr[0](addr: ")
+    print(utos(arr as u64))
+    print("): ")
+    print(itos(*arr))
+    print("\n")
 
-    printStr("arr[1](addr: ")
-    printPtr(arr+8)
-    printStr("): ")
-    printInt(*(arr+8))
-    printStr("\n")
+    print("arr[1](addr: ")
+    print(utos(arr+8 as u64))
+    print("): ")
+    print(itos(*(arr+8)))
+    print("\n")
 
-    printStr("arr[2](addr: ")
-    printPtr(arr+16)
-    printStr("): ")
-    printInt(*(arr+16))
-    printStr("\n")
+    print("arr[2](addr: ")
+    print(utos(arr+16 as u64))
+    print("): ")
+    print(itos(*(arr+16)))
+    print("\n")
 }

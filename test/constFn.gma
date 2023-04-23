@@ -137,13 +137,13 @@ cfn testDeref2(i i32) -> i32 {
 }
 
 fn printArr(arr [3]i32) {
-    printStr("{ ")
+    print("{ ")
 
-    printInt(arr[0]) printStr(", ")
-    printInt(arr[1]) printStr(", ")
-    printInt(arr[2])
+    print(itos(arr[0])) print(", ")
+    print(itos(arr[1])) print(", ")
+    print(itos(arr[2]))
 
-    printStr(" }\n")
+    print(" }\n")
 }
 
 cfn fib(i u64) -> u64 {
@@ -154,51 +154,51 @@ cfn fib(i u64) -> u64 {
 }
 
 fn main() {
-    printStr("\ntest simple --------\n")
-    printInt(test1()) printChar('\n')
-    printInt(testIf()) printChar('\n')
-    printInt(testSwitch()) printChar('\n')
-    printInt(testThrough()) printChar('\n')
-    printInt(testVar()) printChar('\n')
+    print("\ntest simple --------\n")
+    print(itos(test1())) print(ctos('\n'))
+    print(itos(testIf())) print(ctos('\n'))
+    print(itos(testSwitch())) print(ctos('\n'))
+    print(itos(testThrough())) print(ctos('\n'))
+    print(itos(testVar())) print(ctos('\n'))
 
-    printStr("\ntest args --------\n")
-    printInt(testArgs(0)) printChar('\n')
-    printInt(testArgs(1)) printChar('\n')
-    printInt(testArgs(2)) printChar('\n')
-    printInt(testArgs(69)) printChar('\n')
+    print("\ntest args --------\n")
+    print(itos(testArgs(0))) print(ctos('\n'))
+    print(itos(testArgs(1))) print(ctos('\n'))
+    print(itos(testArgs(2))) print(ctos('\n'))
+    print(itos(testArgs(69))) print(ctos('\n'))
 
-    printStr("\ntest deref --------\n")
-    printBool(testDeref()) printChar('\n')
-    printBool(isBigEndian()) printChar('\n')
-    printBool(testPtr()) printChar('\n')
+    print("\ntest deref --------\n")
+    print(btos(testDeref())) print(ctos('\n'))
+    print(btos(isBigEndian())) print(ctos('\n'))
+    print(btos(testPtr())) print(ctos('\n'))
 
-    printStr("\ntest loops --------\n")
-    printInt(testFor(6)) printChar('\n')
-    printInt(testFor(3)) printChar('\n')
-    printInt(testWhile(3)) printChar('\n')
-    printInt(testWhile(13)) printChar('\n')
+    print("\ntest loops --------\n")
+    print(itos(testFor(6))) print(ctos('\n'))
+    print(itos(testFor(3))) print(ctos('\n'))
+    print(itos(testWhile(3))) print(ctos('\n'))
+    print(itos(testWhile(13))) print(ctos('\n'))
 
-    printStr("\ntest array --------\n")
+    print("\ntest array --------\n")
     printArr(testArr())
     printArr(testArr2())
 
-    printStr("\ntest struct --------\n")
-    printInt(testStruct(64)) printChar('\n')
-    printInt(testStruct(-64)) printChar('\n')
+    print("\ntest struct --------\n")
+    print(itos(testStruct(64))) print(ctos('\n'))
+    print(itos(testStruct(-64))) print(ctos('\n'))
 
-    printStr("\ntest assign deref --------\n")
-    printInt(testDeref2(-64)) printChar('\n')
+    print("\ntest assign deref --------\n")
+    print(itos(testDeref2(-64))) print(ctos('\n'))
 
-    printStr("\ntest recursive --------\n")
-    printUint(fib(0)) printChar('\n')
-    printUint(fib(1)) printChar('\n')
-    printUint(fib(2)) printChar('\n')
-    printUint(fib(3)) printChar('\n')
-    printUint(fib(4)) printChar('\n')
-    printUint(fib(5)) printChar('\n')
+    print("\ntest recursive --------\n")
+    print(utos(fib(0))) print(ctos('\n'))
+    print(utos(fib(1))) print(ctos('\n'))
+    print(utos(fib(2))) print(ctos('\n'))
+    print(utos(fib(3))) print(ctos('\n'))
+    print(utos(fib(4))) print(ctos('\n'))
+    print(utos(fib(5))) print(ctos('\n'))
 
-    printChar('\n')
+    print(ctos('\n'))
     for i u64, 6 {
-        printUint(fib(i)) printChar('\n')
+        print(utos(fib(i))) print(ctos('\n'))
     }
 }

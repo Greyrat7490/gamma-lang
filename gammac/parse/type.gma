@@ -14,7 +14,7 @@ fn prsType(tokens *Tokens) -> Type {
             ret prsArrType(tokens)
         }
         */
-        printStr("[ERROR] TODO prsType array/vector\n")
+        print("[ERROR] TODO prsType array/vector\n")
         PrintPos(cur.Pos)
         exit(1)
 
@@ -26,18 +26,18 @@ fn prsType(tokens *Tokens) -> Type {
             ret strct.Type
         }
 
-        printStr("[ERROR] ") printStr("unknown struct type ") printStr(cur.Str) printChar('\n')
+        print("[ERROR] ") print("unknown struct type ") print(cur.Str) print(ctos('\n'))
         PrintPos(cur.Pos)
         exit(1)
         */
 
-        printStr("[ERROR] TODO prsType struct\n")
+        print("[ERROR] TODO prsType struct\n")
         PrintPos(cur.Pos)
         exit(1)
     _:
         t := ToBaseType(cur.Str)
         if t.Kind == Invalid_Kind {
-            printStr("[ERROR] ") printStr(cur.Str) printStr(" is not a valid type\n")
+            print("[ERROR] ") print(cur.Str) print(" is not a valid type\n")
             PrintPos(cur.Pos)
             exit(1)
         }

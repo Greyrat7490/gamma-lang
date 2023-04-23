@@ -2,67 +2,67 @@ v1 i32 := 420
 
 fn simple() {
     l1 bool := v1 == 86
-    printStr("420 == 86: ")
-    printBool(l1)
-    printStr("\n")
+    print("420 == 86: ")
+    print(btos(l1))
+    print("\n")
 
     l1 = v1 != 86
-    printStr("420 != 86: ")
-    printBool(l1)
-    printStr("\n")
+    print("420 != 86: ")
+    print(btos(l1))
+    print("\n")
 
     l1 = v1 < 86
-    printStr("420 < 86: ")
-    printBool(l1)
-    printStr("\n")
+    print("420 < 86: ")
+    print(btos(l1))
+    print("\n")
 
     l1 = v1 > 86
-    printStr("420 > 86: ")
-    printBool(l1)
-    printStr("\n")
+    print("420 > 86: ")
+    print(btos(l1))
+    print("\n")
 
     l1 = v1 <= 86
-    printStr("420 <= 86: ")
-    printBool(l1)
-    printStr("\n")
+    print("420 <= 86: ")
+    print(btos(l1))
+    print("\n")
 
     l1 = v1 >= 86
-    printStr("420 >= 86: ")
-    printBool(l1)
-    printStr("\n")
+    print("420 >= 86: ")
+    print(btos(l1))
+    print("\n")
 
     l1 = v1 >= 420
-    printStr("420 >= 420: ")
-    printBool(l1)
-    printStr("\n")
+    print("420 >= 420: ")
+    print(btos(l1))
+    print("\n")
 
     l1 = v1 >= v1
-    printStr("v1 >= v1: ")
-    printBool(l1)
-    printStr("\n")
+    print("v1 >= v1: ")
+    print(btos(l1))
+    print("\n")
 }
 
 fn arith() {
-    printStr("410 + 10 == 420: ")
-    printBool(410 + 10 == 420)
-    printStr("\n")
+    print("410 + 10 == 420: ")
+    print(btos(410 + 10 == 420))
+    print("\n")
 
-    printStr("410 + 10 != 420: ")
-    printBool(410 + 10 != 420)
-    printStr("\n")
+    print("410 + 10 != 420: ")
+    print(btos(410 + 10 != 420))
+    print("\n")
 
-    printStr("40 * 10 + 20 > 69: ")
-    printBool(40 * 10 + 20 > 69)
-    printStr("\n")
+    print("40 * 10 + 20 > 69: ")
+    print(btos(40 * 10 + 20 > 69))
+    print("\n")
 
-    printStr("40 * 10 + 20 < 421: ")
-    printBool(40 * 10 + 20 < 421)
-    printStr("\n")
+    print("40 * 10 + 20 < 421: ")
+    print(btos(40 * 10 + 20 < 421))
+    print("\n")
 }
 
 fn main() {
-    printStr("simple\n")
+    print("simple\n")
     simple()
-    printStr("\narith\n")
+    print("\narith\n")
     arith()
 }

@@ -16,13 +16,13 @@ fn prsStruct(tokens *Tokens) -> Decl {
 
 
 fn prsDefConst(tokens *Tokens, name Token, typ Type) -> Decl {
-    printStr("TODO prsDefConst")
+    print("TODO prsDefConst")
     exit(1)
     ret Decl{ DECL_BAD, 0, Pos{0,0,""} } 
 }
 
 fn prsDefConstInfer(tokens *Tokens, name Token) -> Decl {
-    printStr("TODO prsDefConstInfer")
+    print("TODO prsDefConstInfer")
     exit(1)
     ret Decl{ DECL_BAD, 0, Pos{0,0,""} } 
 }
@@ -38,7 +38,7 @@ fn prsDefVar(tokens *Tokens, name Token, typ Type) -> Decl {
 }
 
 fn prsDefVarInfer(tokens *Tokens, name Token) -> Decl {
-    printStr("TODO prsDefVarInfer")
+    print("TODO prsDefVarInfer")
     exit(1)
     ret Decl{ DECL_BAD, 0, Pos{0,0,""} } 
 }
@@ -80,13 +80,13 @@ fn prsDecl(tokens *Tokens) -> Decl {
     Name_Token:
         d := prsDefine(tokens)
         if d.Kind == DECL_BAD {
-            printStr("[ERROR] declaring without initializing is not allowed\n")
+            print("[ERROR] declaring without initializing is not allowed\n")
             PrintPos(d.Pos)
             exit(1)
         }
         ret d
     _:
-        printStr("[ERROR] unknown word ") printStr(t.Str) printChar('\n')
+        print("[ERROR] unknown word ") print(t.Str) print(ctos('\n'))
         PrintPos(t.Pos)
         exit(1)
     }

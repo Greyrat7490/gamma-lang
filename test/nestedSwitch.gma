@@ -3,19 +3,19 @@ fn testSwitch(v i32) {
     v < 0:
         if v == {
         -1:
-            printStr("-1 case")
+            print("-1 case")
         -2:
-            printStr("-2 case")
+            print("-2 case")
         _:
-            printStr("default neg case")
+            print("default neg case")
         }
     v == 0:
-        printStr("0 case")
+        print("0 case")
     _:
-        printStr("default pos case")
+        print("default pos case")
     }
 
-    printStr(" test\n")
+    print(" test\n")
 }
 
 fn testXSwitch(v i32) -> i32 {
@@ -34,8 +34,8 @@ fn main() {
     for i i32, 2, -3 {
         testSwitch(i)
     }
-    printStr("-----\n")
+    print("-----\n")
     for i i32, 2, -3 {
-        printInt(testXSwitch(i)) printChar('\n')
+        print(itos(testXSwitch(i))) print(ctos('\n'))
     }
 }

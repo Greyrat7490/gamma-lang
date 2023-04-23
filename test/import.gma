@@ -10,18 +10,18 @@ import "header/header.gma"
 import "header/header2.gma"
 
 fn main() {
-    printStr("imported const: ")
-    printInt(c) printStr("\n")
+    print("imported const: ")
+    print(itos(c)) print("\n")
 
-    printStr("\nimported var:\n")
-    printInt(v)
-    printStr("\nv = 64\n")
+    print("\nimported var:\n")
+    print(itos(v))
+    print("\nv = 64\n")
     v = 64
-    printInt(v) printStr("\n")
+    print(itos(v)) print("\n")
 
-    printStr("\nimported funcs:\n")
+    print("\nimported funcs:\n")
     exported()
     testPrintErr()
 
-    printStr("\nSOMENUM: ") printInt(SOMENUM) printStr("\n")
+    print("\nSOMENUM: ") print(itos(SOMENUM)) print("\n")
 }

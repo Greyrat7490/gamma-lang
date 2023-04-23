@@ -29,115 +29,115 @@ struct Test2 {
 c1 Coord := Coord{ y: 69, x: 420, z: -64 }
 
 fn test_global() {
-    printStr("x: ") printInt(c1.x) printStr("\n")
-    printStr("y: ") printInt(c1.y) printStr("\n")
-    printStr("z: ") printInt(c1.z) printStr("\n")
+    print("x: ") print(itos(c1.x)) print("\n")
+    print("y: ") print(itos(c1.y)) print("\n")
+    print("z: ") print(itos(c1.z)) print("\n")
 }
 
 fn test_local() {
     c2 := Coord{ z: 69, y: -420, x: 64 }
 
-    printStr("x: ") printInt(c2.x) printStr("\n")
-    printStr("y: ") printInt(c2.y) printStr("\n")
-    printStr("z: ") printInt(c2.z) printStr("\n")
+    print("x: ") print(itos(c2.x)) print("\n")
+    print("y: ") print(itos(c2.y)) print("\n")
+    print("z: ") print(itos(c2.z)) print("\n")
 }
 
 fn testNested() {
     t := Test{ i1: 64, s1: "test string", i2: -69 }
 
-    printStr("i1: ")   printInt(t.i1)
-    printStr("\ns1: ") printStr(t.s1)
-    printStr("\ni2: ") printInt(t.i2)
-    printStr("\n-----\n")
+    print("i1: ")   print(itos(t.i1))
+    print("\ns1: ") print(t.s1)
+    print("\ni2: ") print(itos(t.i2))
+    print("\n-----\n")
 
     t2 := Test2{ i: -64, t: Test{ i1: 64, s1: "test string", i2: -69 }, b: true }
 
-    printStr("i: ")    printInt(t2.i)
-    printStr("\ni1: ") printInt(t2.t.i1)
-    printStr("\ns1: ") printStr(t2.t.s1)
-    printStr("\ni2: ") printInt(t2.t.i2)
-    printStr("\nb: ") printBool(t2.b)
-    printStr("\n-----\nt2.t.s1 = \"new string\"\n")
+    print("i: ")    print(itos(t2.i))
+    print("\ni1: ") print(itos(t2.t.i1))
+    print("\ns1: ") print(t2.t.s1)
+    print("\ni2: ") print(itos(t2.t.i2))
+    print("\nb: ") print(btos(t2.b))
+    print("\n-----\nt2.t.s1 = \"new string\"\n")
 
     t2.t.s1 = "new string"
 
-    printStr("i: ")    printInt(t2.i)
-    printStr("\ni1: ") printInt(t2.t.i1)
-    printStr("\ns1: ") printStr(t2.t.s1)
-    printStr("\ni2: ") printInt(t2.t.i2)
-    printStr("\nb: ") printBool(t2.b)
-    printStr("\n")
+    print("i: ")    print(itos(t2.i))
+    print("\ni1: ") print(itos(t2.t.i1))
+    print("\ns1: ") print(t2.t.s1)
+    print("\ni2: ") print(itos(t2.t.i2))
+    print("\nb: ") print(btos(t2.b))
+    print("\n")
 }
 
 fn assignField() {
     c2 := Coord{ x: 64, y: -420, z: 69 }
 
-    printStr("c1:\n")
-    printStr("x: ") printInt(c1.x) printStr("\n")
-    printStr("y: ") printInt(c1.y) printStr("\n")
-    printStr("z: ") printInt(c1.z) printStr("\n")
+    print("c1:\n")
+    print("x: ") print(itos(c1.x)) print("\n")
+    print("y: ") print(itos(c1.y)) print("\n")
+    print("z: ") print(itos(c1.z)) print("\n")
 
-    printStr("c2:\n")
-    printStr("x: ") printInt(c2.x) printStr("\n")
-    printStr("y: ") printInt(c2.y) printStr("\n")
-    printStr("z: ") printInt(c2.z) printStr("\n")
+    print("c2:\n")
+    print("x: ") print(itos(c2.x)) print("\n")
+    print("y: ") print(itos(c2.y)) print("\n")
+    print("z: ") print(itos(c2.z)) print("\n")
 
-    printStr("-----\n")
+    print("-----\n")
 
-    printStr("c1.y = -69\n")
-    printStr("c2.y = -69\n")
+    print("c1.y = -69\n")
+    print("c2.y = -69\n")
     c1.y = -69
     c2.y = -69
 
-    printStr("c1:\n")
-    printStr("x: ") printInt(c1.x) printStr("\n")
-    printStr("y: ") printInt(c1.y) printStr("\n")
-    printStr("z: ") printInt(c1.z) printStr("\n")
+    print("c1:\n")
+    print("x: ") print(itos(c1.x)) print("\n")
+    print("y: ") print(itos(c1.y)) print("\n")
+    print("z: ") print(itos(c1.z)) print("\n")
 
-    printStr("c2:\n")
-    printStr("x: ") printInt(c2.x) printStr("\n")
-    printStr("y: ") printInt(c2.y) printStr("\n")
-    printStr("z: ") printInt(c2.z) printStr("\n")
+    print("c2:\n")
+    print("x: ") print(itos(c2.x)) print("\n")
+    print("y: ") print(itos(c2.y)) print("\n")
+    print("z: ") print(itos(c2.z)) print("\n")
 }
 
 fn assign() {
     c2 := Coord{ x: 64, y: -420, z: 69 }
 
-    printStr("c1:\n")
-    printStr("x: ") printInt(c1.x) printStr("\n")
-    printStr("y: ") printInt(c1.y) printStr("\n")
-    printStr("z: ") printInt(c1.z) printStr("\n")
+    print("c1:\n")
+    print("x: ") print(itos(c1.x)) print("\n")
+    print("y: ") print(itos(c1.y)) print("\n")
+    print("z: ") print(itos(c1.z)) print("\n")
 
-    printStr("c2:\n")
-    printStr("x: ") printInt(c2.x) printStr("\n")
-    printStr("y: ") printInt(c2.y) printStr("\n")
-    printStr("z: ") printInt(c2.z) printStr("\n")
+    print("c2:\n")
+    print("x: ") print(itos(c2.x)) print("\n")
+    print("y: ") print(itos(c2.y)) print("\n")
+    print("z: ") print(itos(c2.z)) print("\n")
 
-    printStr("c2 = c1\n")
+    print("c2 = c1\n")
     c2 = c1
 
-    printStr("c2:\n")
-    printStr("x: ") printInt(c2.x) printStr("\n")
-    printStr("y: ") printInt(c2.y) printStr("\n")
-    printStr("z: ") printInt(c2.z) printStr("\n")
+    print("c2:\n")
+    print("x: ") print(itos(c2.x)) print("\n")
+    print("y: ") print(itos(c2.y)) print("\n")
+    print("z: ") print(itos(c2.z)) print("\n")
 }
 
 fn const() {
     c2 :: Coord{ x: 64, y: 69, z: -64 }
 
-    printStr("c2:\n")
-    printStr("x: ") printInt(c2.x) printStr("\n")
-    printStr("y: ") printInt(c2.y) printStr("\n")
-    printStr("z: ") printInt(c2.z) printStr("\n")
+    print("c2:\n")
+    print("x: ") print(itos(c2.x)) print("\n")
+    print("y: ") print(itos(c2.y)) print("\n")
+    print("z: ") print(itos(c2.z)) print("\n")
 
-    printStr("2 * c2.x / 8 = ")
-    printInt(2 * c2.x / 8) printStr("\n")
+    print("2 * c2.x / 8 = ")
+    print(itos(2 * c2.x / 8)) print("\n")
 }
 
 fn printCoord(c Coord) {
-    printStr("x: ") printInt(c.x) printStr("\n")
-    printStr("y: ") printInt(c.y) printStr("\n")
-    printStr("z: ") printInt(c.z) printStr("\n")
+    print("x: ") print(itos(c.x)) print("\n")
+    print("y: ") print(itos(c.y)) print("\n")
+    print("z: ") print(itos(c.z)) print("\n")
 }
 
 fn offsetCoord(c Coord, i i32) -> Coord {
@@ -156,13 +156,13 @@ fn scale(v Vec2, scaler i32) -> Vec2 {
 }
 
 fn printVec2(v Vec2) {
-    printStr("x: ") printInt(v.x) printStr("\n")
-    printStr("y: ") printInt(v.y) printStr("\n")
+    print("x: ") print(itos(v.x)) print("\n")
+    print("y: ") print(itos(v.y)) print("\n")
 }
 
 fn test2Structs(c1 Coord, c2 Coord) {
     printCoord(c1)
-    printStr("-----\n")
+    print("-----\n")
 
     c1.x = c1.x + c2.x
     c1.y = c1.y + c2.y
@@ -172,16 +172,16 @@ fn test2Structs(c1 Coord, c2 Coord) {
 }
 
 fn printBigStruct(b BigStruct) {
-    printInt(b.a1) printStr(", ")
-    printInt(b.a2) printStr(", ")
-    printInt(b.a3) printStr(", ")
-    printInt(b.a4) printStr(", ")
-    printInt(b.a5) printStr("\n")
+    print(itos(b.a1)) print(", ")
+    print(itos(b.a2)) print(", ")
+    print(itos(b.a3)) print(", ")
+    print(itos(b.a4)) print(", ")
+    print(itos(b.a5)) print("\n")
 }
 
 fn addBigStruct(b BigStruct, i i32) -> BigStruct {
     printBigStruct(b)
-    printStr("+ ") printInt(i) printStr(" (all)\n")
+    print("+ ") print(itos(i)) print(" (all)\n")
 
     b.a1 = b.a1 + i
     b.a2 = b.a2 + i
@@ -194,9 +194,9 @@ fn addBigStruct(b BigStruct, i i32) -> BigStruct {
 
 fn use2BigStruct(b1 BigStruct, i i32, b2 BigStruct) -> BigStruct {
     printBigStruct(b1)
-    printStr("- ")
+    print("- ")
     printBigStruct(b2)
-    printStr("+ ") printInt(i) printStr(" (all)\n")
+    print("+ ") print(itos(i)) print(" (all)\n")
 
     b1.a1 = b1.a1 - b2.a1 + i
     b1.a2 = b1.a2 - b2.a2 + i
@@ -212,7 +212,7 @@ fn retStructLit() -> BigStruct {
 }
 
 fn testRet() {
-    printStr("--- 8Byte struct\n")
+    print("--- 8Byte struct\n")
     v := Vec2{ x: 2, y: 4 }
     printVec2(v)
     printVec2(scale(v, 4))
@@ -220,21 +220,21 @@ fn testRet() {
     v2 := scale(v, 2)
     printVec2(v2)
 
-    printStr("--- aligned 12Byte struct\n")
+    print("--- aligned 12Byte struct\n")
     printCoord(c1)
     c2 := offsetCoord(c1, 2)
     printCoord(c2)
 
-    printStr("--- aligned 20Byte struct\n")
+    print("--- aligned 20Byte struct\n")
     b := addBigStruct(BigStruct{ a1: 1, a2: 2, a3: 3, a4: 4, a5: 5 }, 68)
-    printInt(b.a1) printStr(", ")
-    printInt(b.a2) printStr(", ")
-    printInt(b.a3) printStr(", ")
-    printInt(b.a4) printStr(", ")
-    printInt(b.a5) printStr("\n")
+    print(itos(b.a1)) print(", ")
+    print(itos(b.a2)) print(", ")
+    print(itos(b.a3)) print(", ")
+    print(itos(b.a4)) print(", ")
+    print(itos(b.a5)) print("\n")
     printBigStruct(b)
 
-    printStr("--- 2x aligned 20Byte struct args\n")
+    print("--- 2x aligned 20Byte struct args\n")
     b2 := BigStruct{ a1: 1, a2: 2, a3: 3, a4: 4, a5: 5 }
     b3 := use2BigStruct(b, 1, b2)
     printBigStruct(b3)
@@ -244,54 +244,54 @@ fn testOmitedNames() {
     c := Coord{ 1, 2, 3 }
     printCoord(c)
 
-    printStr("-----\n")
+    print("-----\n")
 
     t := Test2{ -64, Test{ 64, "test string", -69 }, true }
-    printStr("i: ")    printInt(t.i)
-    printStr("\ni1: ") printInt(t.t.i1)
-    printStr("\ns1: ") printStr(t.t.s1)
-    printStr("\ni2: ") printInt(t.t.i2)
-    printStr("\nb: ") printBool(t.b) printChar('\n')
+    print("i: ")    print(itos(t.i))
+    print("\ni1: ") print(itos(t.t.i1))
+    print("\ns1: ") print(t.t.s1)
+    print("\ni2: ") print(itos(t.t.i2))
+    print("\nb: ") print(btos(t.b)) print(ctos('\n'))
 }
 
 fn main() {
-    printStr("global ---------\n")
+    print("global ---------\n")
     test_global()
 
-    printStr("\nlocal ---------\n")
+    print("\nlocal ---------\n")
     test_local()
 
-    printStr("\nnested struct ---------\n")
+    print("\nnested struct ---------\n")
     testNested()
 
-    printStr("\nomited fieldNames -----\n")
+    print("\nomited fieldNames -----\n")
     testOmitedNames()
 
-    printStr("\nassignField ---------\n")
+    print("\nassignField ---------\n")
     assignField()
 
-    printStr("\nassign ---------\n")
+    print("\nassign ---------\n")
     assign()
 
-    printStr("\nconst ---------\n")
+    print("\nconst ---------\n")
     const()
 
-    printStr("\npass as arg ---------\n")
-    printStr("c1:\n")
+    print("\npass as arg ---------\n")
+    print("c1:\n")
     printCoord(c1)
 
-    printStr("struct literal:\n")
+    print("struct literal:\n")
     printCoord(Coord{ y: 420, x: 64, z: -64 })
 
-    printStr("2 structs\n")
+    print("2 structs\n")
     c2 := Coord{ y: 2, x: 1, z: 3 }
     test2Structs(c1, c2)
 
-    printStr("big structs\n")
+    print("big structs\n")
     b := BigStruct{ a1: 1, a2: 2, a3: 3, a4: 4, a5: 5 }
     printBigStruct(b)
     printBigStruct(BigStruct{ a1: 10, a2: 20, a3: 30, a4: 40, a5: 50 })
 
-    printStr("\nreturn struct -----\n")
+    print("\nreturn struct -----\n")
     testRet()
 }

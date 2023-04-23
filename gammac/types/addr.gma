@@ -9,7 +9,7 @@ fn AddrOffset(a Addr, offset i64) -> Addr {
 }
 
 fn AddrToString(a Addr) -> str {
-    printStr("TODO AddrToString")
+    print("TODO AddrToString")
     exit(1)
 
     if a.Offset > 0 {

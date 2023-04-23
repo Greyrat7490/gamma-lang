@@ -1,7 +1,7 @@
 import "header/header1.gma"
 
 fn testFunc() {
-    printStr("importCycle\n")
+    print("importCycle\n")
     func1()
 }
 

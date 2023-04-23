@@ -1,5 +1,5 @@
 v1 i32 // declaring without initializing is not allowed
 
 fn main() {
-    printInt(v1)
+    print(itos(v1))
 }

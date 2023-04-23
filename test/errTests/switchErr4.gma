@@ -1,8 +1,8 @@
 fn switch(a1 i32) {
     if a1 == {
-        printStr("86\n")
-        86: printStr("86\n")
-         _: printStr("")
+        print("86\n")
+        86: print("86\n")
+         _: print("")
     }
 }
 

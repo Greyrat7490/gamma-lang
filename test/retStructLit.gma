@@ -48,23 +48,23 @@ fn test2(i1 i32, i2 i32, i3 i32, i4 i32) -> Test2 {
 
 
 fn printTest2(t Test2) {
-    printStr("t.i1: ") printInt(t.i1) printChar('\n')
-    printStr("t.i2: ") printInt(t.i2) printChar('\n')
-    printStr("t.t.i1: ") printInt(t.t.i1) printChar('\n')
-    printStr("t.t.i2: ") printInt(t.t.i2) printChar('\n')
-    printStr("t.t.b: ") printBool(t.t.b) printChar('\n')
+    print("t.i1: ") print(itos(t.i1)) print(ctos('\n'))
+    print("t.i2: ") print(itos(t.i2)) print(ctos('\n'))
+    print("t.t.i1: ") print(itos(t.t.i1)) print(ctos('\n'))
+    print("t.t.i2: ") print(itos(t.t.i2)) print(ctos('\n'))
+    print("t.t.b: ") print(btos(t.t.b)) print(ctos('\n'))
 }
 
 fn main() {
     t := test()
     printTest2(t)
-    printStr("---\n")
+    print("---\n")
     printTest2(test())
 
-    printStr("--------\n")
+    print("--------\n")
 
     t2 := test2(1, 2, 3, 4)
     printTest2(t2)
-    printStr("---\n")
+    print("---\n")
     printTest2(test2(1, 2, 3, 4))
 }

@@ -6,21 +6,21 @@ fn main() {
     p2 *str := &s
     p3 *str := &s1
 
-    printStr("pointer to global str\n")
-    printStr(s)
+    print("pointer to global str\n")
+    print(s)
 
     *p2 = "test string\n"
-    printStr(s)
+    print(s)
 
     *p2 = s2
-    printStr(s)
+    print(s)
 
-    printStr("pointer to local str\n")
-    printStr(s1)
+    print("pointer to local str\n")
+    print(s1)
 
     *p3 = "test string2\n"
-    printStr(s1)
+    print(s1)
 
     *p3 = s2
-    printStr(s1)
+    print(s1)
 }

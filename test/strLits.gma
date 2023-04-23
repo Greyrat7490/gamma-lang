@@ -3,12 +3,12 @@ v2 str := "\tsome\\ string"
 v3 str := "86"
 
 fn main() {
-    printStr(v1)
-    printStr("\n")
-    printStr("\" \"")
-    printStr("\n")
-    printStr(v2)
-    printStr("\n")
-    printStr(v3)
-    printStr("\n")
+    print(v1)
+    print("\n")
+    print("\" \"")
+    print("\n")
+    print(v2)
+    print("\n")
+    print(v3)
+    print("\n")
 }

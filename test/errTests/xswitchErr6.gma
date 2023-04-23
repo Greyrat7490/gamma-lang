@@ -2,11 +2,11 @@
 // this would otherwise result in cases with incompatible types
 
 fn test(a1 i32) {
-    printInt(${
+    print(itos(${
         a1 < 0: 86
         a1 == 0: true       // bool instead of i32 (if a1 == 0 -> i32 = bool)
               _: -420
-    })
+    }))
 }
 
 fn main() {

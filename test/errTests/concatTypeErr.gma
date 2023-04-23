@@ -1,4 +1,4 @@
 fn main() {
     s := "test" - "test"
-    printStr(s)
+    print(s)
 }

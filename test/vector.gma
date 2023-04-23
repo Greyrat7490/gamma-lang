@@ -8,30 +8,30 @@ fn test1() {
     }
 
     for i i32, 10 {
-        printInt(vec[i]) printChar(' ')
+        print(itos(vec[i])) print(ctos(' '))
     }
-    printChar('\n')
+    print(ctos('\n'))
 
-    printStr("vec.len: ") printUint(vec.len) printChar('\n')
-    printStr("vec.cap: ") printUint(vec.cap) printChar('\n')
+    print("vec.len: ") print(utos(vec.len)) print(ctos('\n'))
+    print("vec.cap: ") print(utos(vec.cap)) print(ctos('\n'))
 }
 
 fn test2() {
     vec2 := [$]i32{ 1 }
-    printStr("vec2.len: ") printUint(vec2.len) printChar('\n')
-    printStr("vec2.cap: ") printUint(vec2.cap) printChar('\n')
+    print("vec2.len: ") print(utos(vec2.len)) print(ctos('\n'))
+    print("vec2.cap: ") print(utos(vec2.cap)) print(ctos('\n'))
 
-    printInt(vec2[0]) printStr(" -> ")
+    print(itos(vec2[0])) print(" -> ")
     vec2[0] = 86
-    printInt(vec2[0]) printChar('\n')
+    print(itos(vec2[0])) print(ctos('\n'))
 }
 
 fn printVec(v [$]i32) {
-    printStr("[ ")
+    print("[ ")
     for i u64, v.cap {
-        printInt(v[i]) printChar(' ')
+        print(itos(v[i])) print(ctos(' '))
     }
-    printStr("]\n")
+    print("]\n")
 }
 
 fn setVec(v [$]i32, val i32) {
@@ -85,27 +85,27 @@ fn xswitchTest(i u32) {
 fn main() {
     test1()
 
-    printStr("----\n")
+    print("----\n")
 
     test2()
 
-    printStr("----\n")
+    print("----\n")
 
     test3()
 
-    printStr("----\n")
+    print("----\n")
 
     vec := retTest([3]i32{ 0, 1, 2 })
     printVec(vec)
 
-    printStr("----\n")
+    print("----\n")
 
     ptrTest()
 
-    printStr("----\n")
+    print("----\n")
 
     xswitchTest(0)
-    printStr("--\n")
+    print("--\n")
     xswitchTest(1)
 }
 

@@ -100,13 +100,13 @@ fn nameTaken(name str) -> bool {
 
 fn checkName(name Token) {
     if *(name.Str as *char) == '_' {
-        printStr("[ERROR] names starting with \"_\" are reserved for the compiler\n")
+        print("[ERROR] names starting with \"_\" are reserved for the compiler\n")
         PrintPos(name.Pos)
         exit(1)
     }
 
     if nameTaken(name.Str) {
-        printStr("[ERROR] name \"") printStr(name.Str) printStr("\" is already taken in this scope\n")
+        print("[ERROR] name \"") print(name.Str) print("\" is already taken in this scope\n")
         PrintPos(name.Pos)
         exit(1)
     }

@@ -1,11 +1,11 @@
 fn test(a1 i32, a2 i32) {
-    printStr("arg1: ")
-    printInt(a1)
-    printStr("\n")
+    print("arg1: ")
+    print(itos(a1))
+    print("\n")
 
-    printStr("arg2: ")
-    printInt(a2)
-    printStr("\n")
+    print("arg2: ")
+    print(itos(a2))
+    print("\n")
 }
 
 fn main() {

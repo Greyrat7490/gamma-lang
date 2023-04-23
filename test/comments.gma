@@ -2,10 +2,10 @@ v1 i32 := 86
 v2 str := "some string"
 
 fn main() {
-    printInt(v1)  // printStr("this_will_not_be_printed1")
-    printStr(",")/*
-    printStr("this_will_not_be_printed2")
-    printStr("this_will_not_be_printed3")
-    */printStr(v2)
-    printStr("\n")
+    print(itos(v1))  // print("this_will_not_be_printed1")
+    print(",")/*
+    print("this_will_not_be_printed2")
+    print("this_will_not_be_printed3")
+    */print(v2)
+    print("\n")
 }

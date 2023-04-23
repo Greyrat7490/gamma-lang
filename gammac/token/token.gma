@@ -80,7 +80,7 @@ struct Pos {
 }
 
 fn PrintPos(p Pos) {
-    printStr("\tat: ") printStr(p.File) printChar(':') printUint(p.Line) printChar(':') printUint(p.Col) printChar('\n')
+    print("\tat: ") print(p.File) print(ctos(':')) print(utos(p.Line)) print(ctos(':')) print(utos(p.Col)) print(ctos('\n'))
 }
 
 fn isNum(s str) -> bool {
@@ -312,7 +312,7 @@ fn tokenize_line(tokens *Tokens, line str, comment *bool, lineNum u32, path str)
     }
 
     if strLit {
-        printStr("string literal not terminated (missing '\"')\n")
+        print("string literal not terminated (missing '\"')\n")
         exit(1)
     }
 }
@@ -334,19 +334,19 @@ fn Tokenize(path str) -> Tokens {
     append_Token(&tokens, Token{ Pos{ lineNum, 0, path }, "EOF", EOF_Token })
 
     if comment {
-        printStr("comment not terminated (missing \"*/\")\n")
+        print("comment not terminated (missing \"*/\")\n")
         exit(1)
     }
 
     if SHOW_TOKENS {
         for i u64, tokens.tokens.len {
-            printStr(tokens.tokens[i].Str) printChar(' ') printUint(tokens.tokens[i].Type) printChar(' ')
+            print(tokens.tokens[i].Str) print(ctos(' ')) print(utos(tokens.tokens[i].Type)) print(ctos(' '))
             PrintPos(tokens.tokens[i].Pos)
         }
     }
 
     if close_reader(&reader) < 0 {
-        printStr("[ERROR] could not close file correctly\n")
+        print("[ERROR] could not close file correctly\n")
         exit(1)
     }
 
@@ -361,7 +361,7 @@ fn Next(t *Tokens) -> Token {
     t.idx = t.idx+1
 
     if t.idx >= t.tokens.len {
-        printStr("[ERROR] unexpected end of file\n")
+        print("[ERROR] unexpected end of file\n")
         exit(1)
     }
 
@@ -370,7 +370,7 @@ fn Next(t *Tokens) -> Token {
 
 fn Peek(t *Tokens) -> Token {
     if t.idx+1 >= t.tokens.len {
-        printStr("[ERROR] unexpected end of file\n")
+        print("[ERROR] unexpected end of file\n")
         exit(1)
     }
 
@@ -379,7 +379,7 @@ fn Peek(t *Tokens) -> Token {
 
 fn Peek2(t *Tokens) -> Token {
     if t.idx+2 >= t.tokens.len {
-        printStr("[ERROR] unexpected end of file\n")
+        print("[ERROR] unexpected end of file\n")
         exit(1)
     }
 
@@ -388,7 +388,7 @@ fn Peek2(t *Tokens) -> Token {
 
 fn Last(t *Tokens) -> Token {
     if t.idx < 1 {
-        printStr("[ERROR] unexpected beginning of file (expected at least 2 words in the file)\n")
+        print("[ERROR] unexpected beginning of file (expected at least 2 words in the file)\n")
         exit(1)
     }
 
@@ -397,7 +397,7 @@ fn Last(t *Tokens) -> Token {
 
 fn Last2(t *Tokens) -> Token {
     if t.idx < 2 {
-        printStr("[ERROR] unexpected beginning of file (expected at least 3 words in the file)\n")
+        print("[ERROR] unexpected beginning of file (expected at least 3 words in the file)\n")
         exit(1)
     }
 
@@ -410,7 +410,7 @@ fn SaveIdx(t *Tokens) {
 
 fn ResetIdx(t *Tokens) {
     if t.savedIdx == (-1 as u64) {
-        printStr("[ERROR] no saved idx\n")
+        print("[ERROR] no saved idx\n")
         exit(1)
     }
 

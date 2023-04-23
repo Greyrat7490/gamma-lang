@@ -18,15 +18,15 @@ fn addImport(path str, imports *Imports) -> bool {
         if imports.importedPaths[i] == path {
             // detect import cycle
             if imports.importedState[i] == false {
-                printStr("[ERROR] import cycle detected:\n")
+                print("[ERROR] import cycle detected:\n")
                 for i u64, imports.importedPaths.len {
                     if imports.importedState[i] == false {
-                        printChar('\t') printStr(imports.importedPaths[i])
+                        print(ctos('\t')) print(imports.importedPaths[i])
                     }
                 }
                 exit(1)
             }
-            printChar('\t') printStr(path)
+            print(ctos('\t')) print(path)
             ret false
         }
     }

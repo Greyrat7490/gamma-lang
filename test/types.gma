@@ -1,115 +1,115 @@
 fn testChar(c char) {
-    printChar(c) printStr("\n")
+    print(ctos(c)) print("\n")
 
     c2 char := 'a'
-    printChar(c2) printStr("\n")
+    print(ctos(c2)) print("\n")
 }
 
 fn testIntSizes(i i8) {
-    printInt(i) printStr("\n")
+    print(itos(i)) print("\n")
 
     i2 i8 := 69
-    printInt(i2) printStr("\n")
+    print(itos(i2)) print("\n")
 }
 
 fn testUnsigned(u u8) {
-    printUint(u) printStr("\n")
+    print(utos(u)) print("\n")
 
     u1 u8 := 0x10
-    printUint(u1) printStr("\n")
+    print(utos(u1)) print("\n")
 
-    printUint(0x8 + 0x8) printStr("\n")
+    print(utos(0x8 + 0x8)) print("\n")
 
     u2 u32 := 0x10
     u3 u32 := 0x10
-    printUint(u2 * u3) printStr("\n")
+    print(utos(u2 * u3)) print("\n")
 }
 
 fn testConstEval() {
-    printInt(-10 * -10) printStr("\n")
+    print(itos(-10 * -10)) print("\n")
 }
 
 fn testManyInts(a1 i64, a2 i64, a3 i64, a4 i64, a5 i64, a6 i64, i i8) {
-    printInt(a1) printStr("\n")
-    printInt(a2) printStr("\n")
-    printInt(a3) printStr("\n")
-    printInt(a4) printStr("\n")
-    printInt(a5) printStr("\n")
-    printInt(a6) printStr("\n")
-    printInt(i) printStr("\n")
+    print(itos(a1)) print("\n")
+    print(itos(a2)) print("\n")
+    print(itos(a3)) print("\n")
+    print(itos(a4)) print("\n")
+    print(itos(a5)) print("\n")
+    print(itos(a6)) print("\n")
+    print(itos(i)) print("\n")
 }
 
 fn testManyInts2(a1 i64, a2 i64, a3 i64, a4 i64, a5 i64, a6 i64, i i16) {
-    printInt(a1) printStr("\n")
-    printInt(a2) printStr("\n")
-    printInt(a3) printStr("\n")
-    printInt(a4) printStr("\n")
-    printInt(a5) printStr("\n")
-    printInt(a6) printStr("\n")
-    printInt(i) printStr("\n")
+    print(itos(a1)) print("\n")
+    print(itos(a2)) print("\n")
+    print(itos(a3)) print("\n")
+    print(itos(a4)) print("\n")
+    print(itos(a5)) print("\n")
+    print(itos(a6)) print("\n")
+    print(itos(i)) print("\n")
 }
 
 fn testManyUints(a1 u64, a2 u64, a3 u64, a4 u64, a5 u64, a6 u64, u u8) {
-    printUint(a1) printStr("\n")
-    printUint(a2) printStr("\n")
-    printUint(a3) printStr("\n")
-    printUint(a4) printStr("\n")
-    printUint(a5) printStr("\n")
-    printUint(a6) printStr("\n")
-    printUint(u) printStr("\n")
+    print(utos(a1)) print("\n")
+    print(utos(a2)) print("\n")
+    print(utos(a3)) print("\n")
+    print(utos(a4)) print("\n")
+    print(utos(a5)) print("\n")
+    print(utos(a6)) print("\n")
+    print(utos(u)) print("\n")
 }
 
 fn testMul(a1 u64, a2 u64) {
-    printUint(a1) printStr(" * ") printUint(a2) printStr(" = ")
-    printUint(a1 * a2)
-    printStr("\n")
+    print(utos(a1)) print(" * ") print(utos(a2)) print(" = ")
+    print(utos(a1 * a2))
+    print("\n")
 
-    printInt(-a1) printStr(" * ") printInt(-a2) printStr(" = ")
-    printInt(-a1 * -a2)
-    printStr("\n")
+    print(itos(-a1)) print(" * ") print(itos(-a2)) print(" = ")
+    print(itos(-a1 * -a2))
+    print("\n")
 
-    printInt(a1 as i64) printStr(" * ") printInt(-a2) printStr(" = ")
-    printInt(a1 as i64 * -a2)
-    printStr("\n")
+    print(itos(a1 as i64)) print(" * ") print(itos(-a2)) print(" = ")
+    print(itos(a1 as i64 * -a2))
+    print("\n")
 }
 
 fn testDiv(a1 u64, a2 u64) {
-    printUint(a1) printStr(" / ") printUint(a2) printStr(" = ")
-    printUint(a1 / a2)
-    printStr("\n")
+    print(utos(a1)) print(" / ") print(utos(a2)) print(" = ")
+    print(utos(a1 / a2))
+    print("\n")
 }
 
 fn main() {
-    printStr("test char -----\n")
+    print("test char -----\n")
     testChar('x')
 
-    printStr("\ntest int size -----\n")
+    print("\ntest int size -----\n")
     testIntSizes(-128)
 
-    printStr("\ntest unsigned -----\n")
+    print("\ntest unsigned -----\n")
     testUnsigned(255)
 
-    printStr("\ntest ConstEval -----\n")
+    print("\ntest ConstEval -----\n")
     testConstEval()
 
-    printStr("\ntest many args -----\n")
+    print("\ntest many args -----\n")
     testManyInts(-1, -2, -3, -4, -5, -6, -7)
-    printStr("-----\n")
+    print("-----\n")
     testManyInts(0x7fffffffffffffff, 0x7fffffffffffffff, 0x7fffffffffffffff, 0x7fffffffffffffff, 0x7fffffffffffffff, 0x7fffffffffffffff, 0x7f)
-    printStr("-----\n")
+    print("-----\n")
     testManyInts(-0x8000000000000000, -0x8000000000000000, -0x8000000000000000, -0x8000000000000000, -0x8000000000000000, -0x8000000000000000, -0x80)
-    printStr("-----\n")
+    print("-----\n")
     testManyUints(0xffffffffffffffff, 0xfffffffffffffffe, 0xfffffffffffffffd, 0xfffffffffffffffc, 0xfffffffffffffffb, 0xfffffffffffffffa, 0xff)
-    printStr("-----\n")
+    print("-----\n")
     testManyInts2(0xfffffffa, 0xfffffffb, 0xfffffffc, 0xfffffffd, 0xfffffffe, 0xffffffff, 0xfff)
 
-    printStr("\ntest unsigned mul -----\n")
+    print("\ntest unsigned mul -----\n")
     testMul(0x10, 0x10)
     testMul(0x0fffffffffffffff, 0xf)    // some int overflows happen inside here (TODO: runtime errors for int overflows)
     testMul(0x0fffffffffffffff, 0x10)
     testMul(0x1111111111111111, 0xf)
 
-    printStr("\ntest unsigned div -----\n")
+    print("\ntest unsigned div -----\n")
     testDiv(0x100, 0x10)
     testDiv(0xeffffffffffffff1, 0xf)
     testDiv(0xfffffffffffffff0, 0x10)

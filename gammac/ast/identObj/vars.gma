@@ -28,7 +28,7 @@ fn CreateLocalVar(name Token, t Type, framesize u32, isArg bool, fromStack bool)
 }
 
 fn VarToString(v *Var) -> str {
-    printStr("TODO VarToString")
+    print("TODO VarToString")
     exit(1)
 }
 

@@ -3,27 +3,27 @@ fn main() {
     i2:=8
     i3:=11
 
-    printStr("i<<2 = ")
-    printInt(i<<2)
-    printStr(" (1<<2) expected: 4\n")
+    print("i<<2 = ")
+    print(itos(i<<2))
+    print(" (1<<2) expected: 4\n")
 
-    printStr("i2 >> 3 = ")
-    printInt(i2 >> 3)
-    printStr(" (8 >> 3) expected: 1\n")
+    print("i2 >> 3 = ")
+    print(itos(i2 >> 3))
+    print(" (8 >> 3) expected: 1\n")
 
-    printStr("i3&3 = ")
-    printInt(i3&3)
-    printStr(" (11&3) expected: 3\n")
+    print("i3&3 = ")
+    print(itos(i3&3))
+    print(" (11&3) expected: 3\n")
 
-    printStr("i3 | 4 = ")
-    printInt(i3 | 4)
-    printStr(" (11 | 4) expected: 15\n")
+    print("i3 | 4 = ")
+    print(itos(i3 | 4))
+    print(" (11 | 4) expected: 15\n")
 
-    printStr("i3 ^ i3 = ")
-    printInt(i3 ^ i3)
-    printStr(" (11 ^ 11) expected: 0\n")
+    print("i3 ^ i3 = ")
+    print(itos(i3 ^ i3))
+    print(" (11 ^ 11) expected: 0\n")
 
-    printStr("~i = ")
-    printInt(~i)
-    printStr(" (~1) expected: -2\n")
+    print("~i = ")
+    print(itos(~i))
+    print(" (~1) expected: -2\n")
 }

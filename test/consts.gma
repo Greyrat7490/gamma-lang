@@ -2,16 +2,16 @@ c1 i32 :: 420
 c2 :: 69
 
 fn globalConst() {
-    printInt(c1) printStr("\n")
-    printInt(c2) printStr("\n")
+    print(itos(c1)) print("\n")
+    print(itos(c2)) print("\n")
 }
 
 fn local() {
     c1 i32 :: 86
     c2 :: -69
 
-    printInt(c1) printStr("\n")
-    printInt(c2) printStr("\n")
+    print(itos(c1)) print("\n")
+    print(itos(c2)) print("\n")
 }
 
 fn binaryOp() {
@@ -20,10 +20,10 @@ fn binaryOp() {
     c3 :: 11 + 8 * -10 == -69
     c4 :: 11 + 8 * -10 >= (2 + 4) * 10 + 13 * 2
 
-    printInt(c1)  printStr("\n")
-    printInt(c2)  printStr("\n")
-    printBool(c3) printStr("\n")
-    printBool(c4) printStr("\n")
+    print(itos(c1))  print("\n")
+    print(itos(c2))  print("\n")
+    print(btos(c3)) print("\n")
+    print(btos(c4)) print("\n")
 }
 
 fn mix() {
@@ -36,13 +36,13 @@ fn mix() {
     v2 := c2
     v2 = v1 + c2
 
-    printStr("c1 * v1 = ")
-    printInt(v1)
-    printStr(" (expected: -69 * 2 = -138)\n")
+    print("c1 * v1 = ")
+    print(itos(v1))
+    print(" (expected: -69 * 2 = -138)\n")
 
-    printStr("v1 + c2 = ")
-    printInt(v2)
-    printStr(" (expected: -138 + 86 = -52)\n")
+    print("v1 + c2 = ")
+    print(itos(v2))
+    print(" (expected: -138 + 86 = -52)\n")
 }
 
 fn xswitch() {
@@ -69,24 +69,24 @@ fn xswitch() {
                 _: 4
     }
 
-    printInt(c1) printStr("\n")
-    printInt(c2) printStr("\n")
-    printInt(c3) printStr("\n")
+    print(itos(c1)) print("\n")
+    print(itos(c2)) print("\n")
+    print(itos(c3)) print("\n")
 }
 
 fn main() {
-    printStr("global ------\n")
+    print("global ------\n")
     globalConst()
 
-    printStr("local ------\n")
+    print("local ------\n")
     local()
 
-    printStr("binaryOp ------\n")
+    print("binaryOp ------\n")
     binaryOp()
 
-    printStr("var const mix ------\n")
+    print("var const mix ------\n")
     mix()
 
-    printStr("xswitch ------\n")
+    print("xswitch ------\n")
     xswitch()
 }

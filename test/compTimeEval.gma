@@ -4,18 +4,18 @@ fn main() {
     res := 32 * 10 + v1 / (3 * 3 + 1)
     // evaluated to: 320 + v1 / 10
 
-    printInt(res) printStr("\n")
+    print(itos(res)) print("\n")
 
 
     res = v1 / 10 / 10
     // cannot be evaluated to: v1 / 100 because parsed as (v1 / 10) / 10
     // TODO: detect these cases and evaluate like v1 / (10 * 10)
 
-    printInt(res) printStr("\n")
+    print(itos(res)) print("\n")
 
 
     res = v1 / (10 * 10)
     // evaluated to: v1 / 100
 
-    printInt(res) printStr("\n")
+    print(itos(res)) print("\n")
 }

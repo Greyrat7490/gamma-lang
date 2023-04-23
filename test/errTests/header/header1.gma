@@ -1,6 +1,6 @@
 import "header/header2.gma"
 
 fn func1() {
-    printStr("func1\n")
+    print("func1\n")
     func2()
 }

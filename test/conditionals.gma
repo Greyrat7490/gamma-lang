@@ -3,29 +3,29 @@ v1 i32 := 420
 fn test1() {
     l1 bool := v1 == 86
 
-    printStr("before if\n")
+    print("before if\n")
     if l1 {
-        printStr("v1 == 86\n")
+        print("v1 == 86\n")
     }
-    printStr("after if\n")
+    print("after if\n")
 }
 
 fn test2() {
-    printStr("before if\n")
+    print("before if\n")
     if v1 == 420 {
-        printStr("v1 == 420\n")
+        print("v1 == 420\n")
     }
-    printStr("after if\n")
+    print("after if\n")
 }
 
 fn t() {
     if v1 == 86 {
-        printStr("v1 == 86\n")
+        print("v1 == 86\n")
     } else {
-        printStr("v1 != 86\n")
+        print("v1 != 86\n")
 
         if v1 == 420 {
-            printStr("v1 == 420\n")
+            print("v1 == 420\n")
         }
     }
 }
@@ -33,70 +33,70 @@ fn t() {
 fn test3() {
     v1 = 86
     t()
-    printStr("---------\n")
+    print("---------\n")
     v1 = 420
     t()
-    printStr("---------\n")
+    print("---------\n")
     v1 = 69
     t()
 }
 
 fn elifTest() {
     if v1 == 86 {
-        printStr("v1 == 86\n")
+        print("v1 == 86\n")
     } elif v1 == 420 {
-        printStr("v1 == 420\n")
+        print("v1 == 420\n")
     } elif v1 == 69 {
-        printStr("v1 == 69\n")
+        print("v1 == 69\n")
     } else {
-        printStr("v1 somthing else\n")
+        print("v1 somthing else\n")
     }
 }
 
 fn andTest() {
-    printStr("v1 = 69\n")
+    print("v1 = 69\n")
 
     if v1 >= 69 && v1 < 86 {
-        printStr("v1 >= 69 && v1 < 86\n")
+        print("v1 >= 69 && v1 < 86\n")
     }
 
-    printStr("v1 = 86\n")
+    print("v1 = 86\n")
     v1 = 86
 
     if v1 >= 69 && v1 < 86 {
-        printStr("v1 >= 69 && v1 < 86\n")
+        print("v1 >= 69 && v1 < 86\n")
     } else {
-        printStr("v1 >= 69 && v1 < 86 is false\n")
+        print("v1 >= 69 && v1 < 86 is false\n")
     }
 }
 
 fn orTest() {
-    printStr("v1 = 69\n")
+    print("v1 = 69\n")
     v1 = 69
 
     if v1 == 86 || v1 == 69 {
-        printStr("v1 == 86 || v1 == 69\n")
+        print("v1 == 86 || v1 == 69\n")
     }
 
-    printStr("v1 = 86\n")
+    print("v1 = 86\n")
     v1 = 86
 
     if v1 == 86 || v1 == 69 {
-        printStr("v1 == 86 || v1 == 69\n")
+        print("v1 == 86 || v1 == 69\n")
     }
 }
 
 fn main() {
-    printStr("-------- test 1 -------\n")
+    print("-------- test 1 -------\n")
     test1()
-    printStr("-------- test 2 -------\n")
+    print("-------- test 2 -------\n")
     test2()
-    printStr("-------- test 3 -------\n")
+    print("-------- test 3 -------\n")
     test3()
-    printStr("-------- elif ---------\n")
+    print("-------- elif ---------\n")
     elifTest()
-    printStr("-------- && -----------\n")
+    print("-------- && -----------\n")
     andTest()
-    printStr("-------- || -----------\n")
+    print("-------- || -----------\n")
     orTest()
 }

@@ -1,33 +1,33 @@
 fn simple(a1 i32) {
     if a1 == {
-        420: printStr("a1 == 420\n")
-        86:  printStr("a1 == 86\n")
-        -86: printStr("a1 == -86\n")
-        _:   printStr("a1 something else\n")
+        420: print("a1 == 420\n")
+        86:  print("a1 == 86\n")
+        -86: print("a1 == -86\n")
+        _:   print("a1 something else\n")
     }
 }
 
 fn onlyDefault(a1 i32) {
     if a1 == {
-        _:   printStr("default\n")
+        _:   print("default\n")
     }
 }
 
 fn arith(a1 i32) {
     if a1 * 10 + 10 == {
-        420:  printStr("a1 == 420\n")
-        860:  printStr("a1 == 860\n")
-        -860: printStr("a1 == -860\n")
-        _:    printStr("a1 something else\n")
+        420:  print("a1 == 420\n")
+        860:  print("a1 == 860\n")
+        -860: print("a1 == -860\n")
+        _:    print("a1 something else\n")
     }
 }
 
 fn lss(a1 i32) {
     if a1 < {
-        -86: printStr("a1 < -86\n")
-        420: printStr("a1 < 420\n")
-        86:  printStr("a1 < 86\n")          // gets never called because 420 > 86 and goes from top to bottom
-        _:   printStr("a1 something else\n")
+        -86: print("a1 < -86\n")
+        420: print("a1 < 420\n")
+        86:  print("a1 < 86\n")          // gets never called because 420 > 86 and goes from top to bottom
+        _:   print("a1 something else\n")
     }
 }
 
@@ -37,106 +37,106 @@ ptr *i32 := &v1
 fn stmts(a1 i32) {
     if a1 < {
         -86:
-             printInt(a1) printStr(" < -86\n")
+             print(itos(a1)) print(" < -86\n")
         420:
-             printInt(a1) printStr(" < 420\n")
+             print(itos(a1)) print(" < 420\n")
         86:
-             printInt(a1) printStr(" < 86\n")
+             print(itos(a1)) print(" < 86\n")
         _:
-             printStr("-----\n")
-             printInt(a1) printStr(" >= 420\n")
+             print("-----\n")
+             print(itos(a1)) print(" >= 420\n")
              {
-                 printInt(v1) printStr("\n")
+                 print(itos(v1)) print("\n")
                  *ptr = (87 - 1) * 10
-                 printInt(v1) printStr("\n")
+                 print(itos(v1)) print("\n")
              }
-             printStr("-----\n")
+             print("-----\n")
     }
 }
 
 fn semiColTest(a1 i32) {
     if a1 < {
-        86: printStr("< 86\n"); 420: printStr("< 420\n")
-         _: printStr(">= 420\n")
+        86: print("< 86\n"); 420: print("< 420\n")
+         _: print(">= 420\n")
     }
 }
 
 fn commaTest(a1 i32) {
     if a1 == {
-        -86, 43 * 2, 69: printStr("-86, 43*2(86), 69\n") // a1 == -86 || a1 == 43*2 || a1 == 69
-              -420, 420: printStr("420, -420\n")
-                      _: printStr("default\n")
+        -86, 43 * 2, 69: print("-86, 43*2(86), 69\n") // a1 == -86 || a1 == 43*2 || a1 == 69
+              -420, 420: print("420, -420\n")
+                      _: print("default\n")
     }
 }
 
 fn noCondBase(a1 i32) {
     if {
-        a1 == 86, a1 == 69: printStr("86, 69\n")
-                  a1 < 420: printStr("a1 < 420\n")
-                         _: printStr("default\n")
+        a1 == 86, a1 == 69: print("86, 69\n")
+                  a1 < 420: print("a1 < 420\n")
+                         _: print("default\n")
     }
 }
 
 fn throughTest(a1 i32) {
     if {
-        a1 == 86: printStr("through ") through                   // fall through to next case
-        a1 == 69: printStr("69\n")
-               _: printStr("default\n")
+        a1 == 86: print("through ") through                   // fall through to next case
+        a1 == 69: print("69\n")
+               _: print("default\n")
     }
 }
 
 fn main() {
-    printStr("---- simple ----\n")
+    print("---- simple ----\n")
     simple(86)
     simple(-86)
     simple(420)
     simple(69)
 
-    printStr("---- only default ----\n")
+    print("---- only default ----\n")
     onlyDefault(86)
     onlyDefault(-86)
     onlyDefault(420)
     onlyDefault(69)
 
-    printStr("---- arith in base cond ----\n")
+    print("---- arith in base cond ----\n")
     arith(85)
     arith(-87)
     arith(41)
     arith(69)
 
-    printStr("---- lesser ----\n")
+    print("---- lesser ----\n")
     lss(86)
     lss(-87)
     lss(420)
     lss(69)
 
-    printStr("---- multiple stmts ----\n")
+    print("---- multiple stmts ----\n")
     stmts(86)
     stmts(-87)
     stmts(420)
     stmts(69)
 
-    printStr("---- multiple cases per line ----\n")
+    print("---- multiple cases per line ----\n")
     semiColTest(86)
     semiColTest(-86)
     semiColTest(420)
     semiColTest(69)
 
-    printStr("---- multiple conditons ----\n")
+    print("---- multiple conditons ----\n")
     commaTest(86)
     commaTest(-86)
     commaTest(420)
     commaTest(-420)
     commaTest(69)
 
-    printStr("---- no condition base ----\n")
+    print("---- no condition base ----\n")
     noCondBase(86)
     noCondBase(-86)
     noCondBase(420)
     noCondBase(-420)
     noCondBase(69)
 
-    printStr("---- through test ----\n")
+    print("---- through test ----\n")
     throughTest(-86)
     throughTest(86)
     throughTest(69)

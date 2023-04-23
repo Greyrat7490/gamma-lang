@@ -6,13 +6,13 @@ fn simple(a1 i32) {
               _: 420
     }
 
-    printInt(l1) printStr("\n")
+    print(itos(l1)) print("\n")
 }
 
 // only default
 fn onlyDefault(a1 i32) {
-    printInt(${ _: a1 })
-    printStr("\n")
+    print(itos(${ _: a1 }))
+    print("\n")
 }
 
 fn arith(a1 i32) {
@@ -22,18 +22,18 @@ fn arith(a1 i32) {
               _: (a1 - 1) / 10
     }
 
-    printInt(l1) printStr("\n")
+    print(itos(l1)) print("\n")
 }
 
 // test ";", no base cond, "<", inlining xswitch
 fn printAbs(a1 i32) {
-    printInt(${ a1 < 0: -a1;  _: a1 })
-    printStr("\n")
+    print(itos(${ a1 < 0: -a1;  _: a1 }))
+    print("\n")
 }
 
 // test inlined with string
 fn stringTest(a1 i32) {
-    printStr(${
+    print(${
         a1 > 0: "positiv\n"
         a1 < 0: "negativ\n"
         _: "neutral\n"
@@ -48,17 +48,17 @@ fn stringTest2(a1 i32) {
         _: "neutral\n"
     }
 
-    printStr(s)
+    print(s)
 }
 
 // test inlined with bool
 fn boolTest(a1 i32) {
-    printInt(a1) printStr(" > 0: ")
-    printBool(${
+    print(itos(a1)) print(" > 0: ")
+    print(btos(${
         a1 > 0: true
         _: false
-    })
-    printStr("\n")
+    }))
+    print("\n")
 }
 
 // test define bool
@@ -68,8 +68,8 @@ fn boolTest2(a1 i32) {
         _: false
     }
 
-    printInt(a1) printStr(" > 0: ")
-    printBool(b) printStr("\n")
+    print(itos(a1)) print(" > 0: ")
+    print(btos(b)) print("\n")
 }
 
 fn assign(i i32) {
@@ -79,68 +79,68 @@ fn assign(i i32) {
     // assign to one of vars depending on a condition
     $ i <= { 1: v1; _: v2 } = i
 
-    printStr("v1: ")   printInt(v1)
-    printStr("\nv2: ") printInt(v2) printChar('\n')
+    print("v1: ")   print(itos(v1))
+    print("\nv2: ") print(itos(v2)) print(ctos('\n'))
 }
 
 fn main() {
-    printStr("simple -----------\n")
+    print("simple -----------\n")
     simple(69)
     simple(86)
     simple(-69)
     simple(-86)
     simple(0)
 
-    printStr("only default -----\n")
+    print("only default -----\n")
     onlyDefault(69)
     onlyDefault(-69)
     onlyDefault(86)
     onlyDefault(-86)
     onlyDefault(-420)
 
-    printStr("arith ------------\n")
+    print("arith ------------\n")
     arith(690)
     arith(-689)
     arith(861)
     arith(-861)
     arith(-420)
 
-    printStr("printAbs ---------\n")
+    print("printAbs ---------\n")
     printAbs(69)
     printAbs(-69)
     printAbs(86)
     printAbs(-86)
     printAbs(-420)
 
-    printStr("string test (inlined) ---------\n")
+    print("string test (inlined) ---------\n")
     stringTest(69)
     stringTest(-69)
     stringTest(86)
     stringTest(-86)
     stringTest(-420)
 
-    printStr("string test (def var) ---------\n")
+    print("string test (def var) ---------\n")
     stringTest2(69)
     stringTest2(-69)
     stringTest2(86)
     stringTest2(-86)
     stringTest2(-420)
 
-    printStr("bool test (inlined) ---------\n")
+    print("bool test (inlined) ---------\n")
     boolTest(69)
     boolTest(-69)
     boolTest(86)
     boolTest(-86)
     boolTest(-420)
 
-    printStr("bool test (def var) ---------\n")
+    print("bool test (def var) ---------\n")
     boolTest2(69)
     boolTest2(-69)
     boolTest2(86)
     boolTest2(-86)
     boolTest2(-420)
 
-    printStr("assign to xswitch -----------\n")
+    print("assign to xswitch -----------\n")
     assign(64)
     assign(-69)
     assign(1)

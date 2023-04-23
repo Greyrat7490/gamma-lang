@@ -1,9 +1,9 @@
 fn test(a1 i32) {
-    printInt(${
+    print(itos(${
         a1 < 0: -a1
         a1 == 0:
               _: a1
-    })
+    }))
 }
 
 fn main() {

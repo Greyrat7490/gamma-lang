@@ -2,69 +2,69 @@ v1 i32 := 86
 v2 str := "some string\n"
 
 fn test1(a1 i32) {
-    printInt(a1)
-    printStr("\n")
-    printInt(v1)
-    printStr("\n")
-    printInt(a1)
-    printStr("\n")
+    print(itos(a1))
+    print("\n")
+    print(itos(v1))
+    print("\n")
+    print(itos(a1))
+    print("\n")
 }
 
 fn test2(a1 str) {
-    printStr(a1)
-    printStr(v2)
-    printStr(a1)
+    print(a1)
+    print(v2)
+    print(a1)
 }
 
 fn test3() {
-    printStr("40 + 46 = ")
-    printInt(40 + 46)
-    printStr(" (expected: 86)\n")
+    print("40 + 46 = ")
+    print(itos(40 + 46))
+    print(" (expected: 86)\n")
 
-    printStr("2 - (3 + 3) = ")
-    printInt(2 - (3 + 3))
-    printStr(" (expected: -4)\n")
+    print("2 - (3 + 3) = ")
+    print(itos(2 - (3 + 3)))
+    print(" (expected: -4)\n")
 
-    printStr("2 - (3 + 3) + -2 * (-1 + 3) = ")
-    printInt(2 - (3 + 3) + -2 * (-1 + 3))
-    printStr(" (expected: -8)\n")
+    print("2 - (3 + 3) + -2 * (-1 + 3) = ")
+    print(itos(2 - (3 + 3) + -2 * (-1 + 3)))
+    print(" (expected: -8)\n")
 
-    printStr("2 + 3 * (1 + 2 * 3) = ")
-    printInt(2 + 3 * (1 + 2 * 3))
-    printStr(" (expected: 23)\n")
+    print("2 + 3 * (1 + 2 * 3) = ")
+    print(itos(2 + 3 * (1 + 2 * 3)))
+    print(" (expected: 23)\n")
 }
 
 fn test4(a1 i32, a2 i32) {
-    printStr("arg1: ")
-    printInt(a1)
-    printStr("\n")
+    print("arg1: ")
+    print(itos(a1))
+    print("\n")
 
-    printStr("arg2: ")
-    printInt(a2)
-    printStr("\n")
+    print("arg2: ")
+    print(itos(a2))
+    print("\n")
 }
 
 fn test5(a1 str, a2 i32) {
-    printStr("arg1: ")
-    printStr(a1)
+    print("arg1: ")
+    print(a1)
 
-    printStr("arg2: ")
-    printInt(a2)
-    printStr("\n")
+    print("arg2: ")
+    print(itos(a2))
+    print("\n")
 }
 
 fn test6(a1 str, a2 str, a3 str, a4 str) {
-    printStr("arg1: ")
-    printStr(a1)
+    print("arg1: ")
+    print(a1)
 
-    printStr("arg2: ")
-    printStr(a2)
+    print("arg2: ")
+    print(a2)
 
-    printStr("arg3: ")
-    printStr(a3)
+    print("arg3: ")
+    print(a3)
 
-    printStr("arg4: ")
-    printStr(a4)
+    print("arg4: ")
+    print(a4)
 }
 
 fn add(a1 i32, a2 i32) -> i32 {
@@ -81,11 +81,11 @@ fn abs_(a1 i32) -> i32 {
 
 fn printAbs(a1 i32) {
     if a1 >= 0 {
-        printInt(a1)
+        print(itos(a1))
         ret
     }
 
-    printInt(-a1)
+    print(itos(-a1))
 }
 
 fn testRetStr(a1 i32) -> str {
@@ -98,47 +98,47 @@ fn testRetStr(a1 i32) -> str {
 }
 
 fn test7args(a1 i32, a2 i32, a3 i32, a4 i32, a5 i32, a6 i32, a7 i32) {
-    printInt(a1) printStr(" + ")
-    printInt(a2) printStr(" + ")
-    printInt(a3) printStr(" + ")
-    printInt(a4) printStr(" + ")
-    printInt(a5) printStr(" + ")
-    printInt(a6) printStr(" + ")
-    printInt(a7) printStr("\n")
-    printInt(a1 + a2 + a3 + a4 + a5 + a6 + a7) printStr("\n")
+    print(itos(a1)) print(" + ")
+    print(itos(a2)) print(" + ")
+    print(itos(a3)) print(" + ")
+    print(itos(a4)) print(" + ")
+    print(itos(a5)) print(" + ")
+    print(itos(a6)) print(" + ")
+    print(itos(a7)) print("\n")
+    print(itos(a1 + a2 + a3 + a4 + a5 + a6 + a7)) print("\n")
 }
 
 fn test6args(a1 i32, a2 i32, a3 i32, a4 i32, a5 i32, a6 str) {
-    printInt(a1) printStr(" + ")
-    printInt(a2) printStr(" + ")
-    printInt(a3) printStr(" + ")
-    printInt(a4) printStr(" + ")
-    printInt(a5) printStr(" = ")
-    printInt(a1 + a2 + a3 + a4 + a5) printStr("\n")
-    printStr(a6) printStr("\n")
+    print(itos(a1)) print(" + ")
+    print(itos(a2)) print(" + ")
+    print(itos(a3)) print(" + ")
+    print(itos(a4)) print(" + ")
+    print(itos(a5)) print(" = ")
+    print(itos(a1 + a2 + a3 + a4 + a5)) print("\n")
+    print(a6) print("\n")
 }
 
 fn test8args(a1 i32, a2 i32, a3 i32, a4 i32, a5 i32, a6 i32, a7 i32, a8 i32) {
-    printInt(a1) printStr(" + ")
-    printInt(a2) printStr(" + ")
-    printInt(a3) printStr(" + ")
-    printInt(a4) printStr(" + ")
-    printInt(a5) printStr(" + ")
-    printInt(a6) printStr(" + ")
-    printInt(a7) printStr(" + ")
-    printInt(a8) printStr(" = ")
-    printInt(a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8) printStr("\n")
+    print(itos(a1)) print(" + ")
+    print(itos(a2)) print(" + ")
+    print(itos(a3)) print(" + ")
+    print(itos(a4)) print(" + ")
+    print(itos(a5)) print(" + ")
+    print(itos(a6)) print(" + ")
+    print(itos(a7)) print(" + ")
+    print(itos(a8)) print(" = ")
+    print(itos(a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8)) print("\n")
 }
 
 fn test7args2(a1 i32, a2 i32, a3 i32, a4 i32, a5 i32, a6 str, a7 i32) {
-    printInt(a1) printStr(" + ")
-    printInt(a2) printStr(" + ")
-    printInt(a3) printStr(" + ")
-    printInt(a4) printStr(" + ")
-    printInt(a5) printStr(" + ")
-    printInt(a7) printStr(" = ")
-    printInt(a1 + a2 + a3 + a4 + a5 + a7) printStr("\n")
-    printStr(a6) printStr("\n")
+    print(itos(a1)) print(" + ")
+    print(itos(a2)) print(" + ")
+    print(itos(a3)) print(" + ")
+    print(itos(a4)) print(" + ")
+    print(itos(a5)) print(" + ")
+    print(itos(a7)) print(" = ")
+    print(itos(a1 + a2 + a3 + a4 + a5 + a7)) print("\n")
+    print(a6) print("\n")
 }
 
 struct BigStruct {
@@ -150,72 +150,72 @@ struct BigStruct {
 }
 
 fn test8argsWithStruct(a1 i32, a2 i32, a3 i32, a4 i32, a5 i32, b BigStruct, a6 i32, a7 str) {
-    printInt(a1) printStr(" + ")
-    printInt(a2) printStr(" + ")
-    printInt(a3) printStr(" + ")
-    printInt(a4) printStr(" + ")
-    printInt(a5) printStr(" + ")
-    printInt(b.i1) printStr(" + ")
-    printInt(b.i2) printStr(" + ")
-    printInt(b.i3) printStr(" + ")
-    printInt(b.i4) printStr(" + ")
-    printInt(b.i5) printStr(" + ")
-    printInt(a6) printStr(" = ")
-    printInt(a1 + a2 + a3 + a4 + a5 + b.i1 + b.i2 + b.i3 + b.i4 + b.i5 + a6) printStr("\n")
-    printStr(a7) printStr("\n")
+    print(itos(a1)) print(" + ")
+    print(itos(a2)) print(" + ")
+    print(itos(a3)) print(" + ")
+    print(itos(a4)) print(" + ")
+    print(itos(a5)) print(" + ")
+    print(itos(b.i1)) print(" + ")
+    print(itos(b.i2)) print(" + ")
+    print(itos(b.i3)) print(" + ")
+    print(itos(b.i4)) print(" + ")
+    print(itos(b.i5)) print(" + ")
+    print(itos(a6)) print(" = ")
+    print(itos(a1 + a2 + a3 + a4 + a5 + b.i1 + b.i2 + b.i3 + b.i4 + b.i5 + a6)) print("\n")
+    print(a7) print("\n")
 }
 
 fn main() {
     test1(420)
 
-    printStr("------------\n")
+    print("------------\n")
 
     test2("some arg\n")
 
-    printStr("------------\n")
+    print("------------\n")
 
     test3()
 
-    printStr("------------\n")
+    print("------------\n")
 
     test4(-69, 86)
     test5("test string arg1\n", 8)
     test6("test string arg1\n", "arg2\n", "string arg3\n", "str4\n")
 
-    printStr("------------\n")
+    print("------------\n")
 
-    printStr("69 + -69 = ")
-    printInt(add(69, -69))
+    print("69 + -69 = ")
+    print(itos(add(69, -69)))
 
-    printStr("\n34 + 30 = ")
-    printInt(add(34, 30))
+    print("\n34 + 30 = ")
+    print(itos(add(34, 30)))
 
-    printStr("\nabs(-69) = ")
-    printInt(abs_(-69))
+    print("\nabs(-69) = ")
+    print(itos(abs_(-69)))
 
-    printStr("\nabs(64) = ")
-    printInt(abs_(64))
+    print("\nabs(64) = ")
+    print(itos(abs_(64)))
 
-    printStr("\nprintAbs(64) = ")
-    printAbs(64) printStr("\n")
+    print("\nprintAbs(64) = ")
+    printAbs(64) print("\n")
 
-    printStr(testRetStr(420))
-    printStr(testRetStr(64))
-    printStr(testRetStr(-69))
+    print(testRetStr(420))
+    print(testRetStr(64))
+    print(testRetStr(-69))
 
-    printStr("\n7 args\n")
+    print("\n7 args\n")
     test7args(1, 2, 3, 4, 5, 6, 7)
 
-    printStr("\n8 args\n")
+    print("\n8 args\n")
     test8args(1, 2, 3, 4, 5, 6, 7, 8)
 
-    printStr("\n6 args (one string)\n")
+    print("\n6 args (one string)\n")
     test6args(1, 2, 3, 4, 5, "arg 6 (string)")
 
-    printStr("\n7 args (one string)\n")
+    print("\n7 args (one string)\n")
     test7args2(1, 2, 3, 4, 5, "arg 6 (string)", 6)
 
-    printStr("\n8 args with struct\n")
+    print("\n8 args with struct\n")
     b := BigStruct{ i1: 1, i2: 2, i3: 3, i4: 4, i5: 5 }
     test8argsWithStruct(1, 2, 3, 4, 5, b, 6, "test string")
 }

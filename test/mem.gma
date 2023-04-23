@@ -37,24 +37,24 @@ fn set(v vector, idx u64, val i32) {
 }
 
 fn printVec(v vector) {
-    printStr("vec: { ")
+    print("vec: { ")
     for i u64, v.len {
-        printInt(get(v, i)) printChar(' ')
+        print(itos(get(v, i))) print(" ")
     }
-    printStr("} (len: ") printUint(v.len) printChar(')')
+    print("} (len: ") print(utos(v.len)) print(")")
 }
 
 fn main() {
     vec := new_vec(1)
-    printVec(vec) printChar('\n')
+    printVec(vec) print(ctos('\n'))
 
     vec = append(vec, 1)
     vec = append(vec, 2)
     vec = append(vec, 3)
-    printVec(vec) printChar('\n')
+    printVec(vec) print(ctos('\n'))
 
     for i i32, 100, 4 {
         vec = append(vec, i)
     }
-    printVec(vec) printChar('\n')
+    printVec(vec) print(ctos('\n'))
 }

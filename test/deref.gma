@@ -3,57 +3,57 @@ v2 i32 := 420
 p1 *i32 := &v1
 
 fn test_deref_global() {
-    printStr("*p1 = ")
-    printInt(*p1)
-    printStr(" (expected: -86 (v1))\n")
+    print("*p1 = ")
+    print(itos(*p1))
+    print(" (expected: -86 (v1))\n")
 
-    printStr("v1 = 86 \n*p1 = ")
+    print("v1 = 86 \n*p1 = ")
     v1 = 86
-    printInt(*p1)
-    printStr(" (expected: 86 (v1))\n")
+    print(itos(*p1))
+    print(" (expected: 86 (v1))\n")
 
-    printStr("*p1 = 2 * *p1 \n*p1 = ")
+    print("*p1 = 2 * *p1 \n*p1 = ")
               *p1 = 2 * *p1
-    printInt(*p1)
-    printStr(" (expected: 172 (2 * 86))\n")
+    print(itos(*p1))
+    print(" (expected: 172 (2 * 86))\n")
 
-    printStr("*p1 = *p1 / 2 \n*p1 = ")
+    print("*p1 = *p1 / 2 \n*p1 = ")
               *p1 = *p1 / 2
-    printInt(*p1)
-    printStr(" (expected: 86 (172 / 2))\n")
+    print(itos(*p1))
+    print(" (expected: 86 (172 / 2))\n")
 
-    printStr("*p1 = 2 * *p1 + 10 * 2 \n*p1 = ")
+    print("*p1 = 2 * *p1 + 10 * 2 \n*p1 = ")
               *p1 = 2 * *p1 + 10 * 2
-    printInt(*p1)
-    printStr(" (expected: 192 (2 * 86 + 10 * 2))\n")
+    print(itos(*p1))
+    print(" (expected: 192 (2 * 86 + 10 * 2))\n")
 }
 
 fn test_deref_local() {
     p2 *i32 := &v2
 
-    printStr("*p2 = ")
-    printInt(*p2)
-    printStr(" (expected: 420 (v2))\n")
+    print("*p2 = ")
+    print(itos(*p2))
+    print(" (expected: 420 (v2))\n")
 
-    printStr("v2 = 86 \n*p2 = ")
+    print("v2 = 86 \n*p2 = ")
     v2 = 86
-    printInt(*p2)
-    printStr(" (expected: 86 (v2))\n")
+    print(itos(*p2))
+    print(" (expected: 86 (v2))\n")
 
-    printStr("*p2 = 2 * *p2 \n*p2 = ")
+    print("*p2 = 2 * *p2 \n*p2 = ")
               *p2 = 2 * *p2
-    printInt(*p2)
-    printStr(" (expected: 172 (2 * 86))\n")
+    print(itos(*p2))
+    print(" (expected: 172 (2 * 86))\n")
 
-    printStr("*p2 = *p2 / 2 \n*p2 = ")
+    print("*p2 = *p2 / 2 \n*p2 = ")
               *p2 = *p2 / 2
-    printInt(*p2)
-    printStr(" (expected: 86 (172 / 2))\n")
+    print(itos(*p2))
+    print(" (expected: 86 (172 / 2))\n")
 
-    printStr("*p2 = 2 * *p2 + 10 * 2 \n*p2 = ")
+    print("*p2 = 2 * *p2 + 10 * 2 \n*p2 = ")
               *p2 = 2 * *p2 + 10 * 2
-    printInt(*p2)
-    printStr(" (expected: 192 (2 * 86 + 10 * 2))\n")
+    print(itos(*p2))
+    print(" (expected: 192 (2 * 86 + 10 * 2))\n")
 }
 
 fn test_deref_deref() {
@@ -61,24 +61,24 @@ fn test_deref_deref() {
     ptr := &var
     ptr2 := &ptr
 
-    printInt(var) printChar('\n')
-    printInt(*ptr) printChar('\n')
-    printInt(**ptr2) printChar('\n')
+    print(itos(var)) print(ctos('\n'))
+    print(itos(*ptr)) print(ctos('\n'))
+    print(itos(**ptr2)) print(ctos('\n'))
 
     **ptr2 = -69
 
-    printInt(var) printChar('\n')
-    printInt(*ptr) printChar('\n')
-    printInt(**ptr2) printChar('\n')
+    print(itos(var)) print(ctos('\n'))
+    print(itos(*ptr)) print(ctos('\n'))
+    print(itos(**ptr2)) print(ctos('\n'))
 }
 
 fn main() {
-    printStr("global pointer\n")
+    print("global pointer\n")
     test_deref_global()
 
-    printStr("\nlocal pointer\n")
+    print("\nlocal pointer\n")
     test_deref_local()
 
-    printStr("\ntest **var\n")
+    print("\ntest **var\n")
     test_deref_deref()
 }

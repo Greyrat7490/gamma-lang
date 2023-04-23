@@ -3,111 +3,111 @@ v2 i32 := 420
 p1 *i32 := &v1
 
 fn global_test() {
-    printStr("v1: ")
-    printInt(v1)
-    printStr("\n")
+    print("v1: ")
+    print(itos(v1))
+    print("\n")
 
-    printStr("v2: ")
-    printInt(v2)
-    printStr("\n")
+    print("v2: ")
+    print(itos(v2))
+    print("\n")
 
 
-    printStr("p1 = &v1\n")
+    print("p1 = &v1\n")
 
-    printInt(v1)
-    printStr("\n")
+    print(itos(v1))
+    print("\n")
 
-    printStr("*p1 = -69\n")
+    print("*p1 = -69\n")
     *p1 = -69
 
-    printInt(v1)
-    printStr("\n")
+    print(itos(v1))
+    print("\n")
 
-    printStr("*p1 = v2\n")
+    print("*p1 = v2\n")
     *p1 = v2
 
-    printInt(v1)
-    printStr("\n")
+    print(itos(v1))
+    print("\n")
 
 
-    printStr("\np1 = &v2\n")
+    print("\np1 = &v2\n")
     p1 = &v2
 
-    printInt(v2)
-    printStr("\n")
+    print(itos(v2))
+    print("\n")
 
-    printStr("*p1 = -13\n")
+    print("*p1 = -13\n")
     *p1 = -13
 
-    printInt(v2)
-    printStr("\n")
+    print(itos(v2))
+    print("\n")
 
-    printStr("*p1 = v1\n")
+    print("*p1 = v1\n")
     *p1 = v1
 
-    printInt(v2)
-    printStr("\n")
+    print(itos(v2))
+    print("\n")
 
-    printStr("p1 = &v1\n")
+    print("p1 = &v1\n")
     p1 = &v1
-    printStr("\n")
+    print("\n")
 }
 
 fn local_test() {
     i1 i32 := 86
     i2 i32 := -69
 
-    printStr("i1: ")
-    printInt(i1)
-    printStr("\n")
+    print("i1: ")
+    print(itos(i1))
+    print("\n")
 
-    printStr("i2: ")
-    printInt(i2)
-    printStr("\n")
+    print("i2: ")
+    print(itos(i2))
+    print("\n")
 
 
-    printStr("lp1 = &i1\n")
+    print("lp1 = &i1\n")
     lp1 *i32 := &i1
 
-    printInt(i1)
-    printStr("\n")
+    print(itos(i1))
+    print("\n")
 
-    printStr("*lp1 = 420\n")
+    print("*lp1 = 420\n")
     *lp1 = 420
 
-    printInt(i1)
-    printStr("\n")
+    print(itos(i1))
+    print("\n")
 
-    printStr("*lp1 = i2\n")
+    print("*lp1 = i2\n")
     *lp1 = i2
 
-    printInt(i1)
-    printStr("\n")
+    print(itos(i1))
+    print("\n")
 
-    printStr("\nlp1 = &i2\n")
+    print("\nlp1 = &i2\n")
     lp1 = &i2
 
-    printInt(i2)
-    printStr("\n")
+    print(itos(i2))
+    print("\n")
 
-    printStr("*lp1 = -420\n")
+    print("*lp1 = -420\n")
     *lp1 = -420
 
-    printInt(i2)
-    printStr("\n")
+    print(itos(i2))
+    print("\n")
 
-    printStr("*lp1 = i1\n")
+    print("*lp1 = i1\n")
     *lp1 = i1
 
-    printInt(i2)
-    printStr("\n")
+    print(itos(i2))
+    print("\n")
 }
 
 
 fn main() {
-    printStr("global pointer ----------\n")
+    print("global pointer ----------\n")
     global_test()
 
-    printStr("local pointer ----------\n")
+    print("local pointer ----------\n")
     local_test()
 }

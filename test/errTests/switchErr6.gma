@@ -4,20 +4,20 @@ cases should always start in a new line or after a ";"
 * less likely to happen:
     // similar to condSwitchErr3
      if a1 == {
-         86: printStr("86\n")
-             printStr("86\n") : printStr("-86\n")    // missing condition before
+         86: print("86\n")
+             print("86\n") : print("-86\n")    // missing condition before
                               |
                               +--- accidentally no expr before ":" / accidentally put ":" there
-                                    -> compiler thinks printStr is the cond
-         _: printStr("default\n")
+                                    -> compiler thinks print is the cond
+         _: print("default\n")
      }
 */
 
 fn switch(a1 i32) {
     if a1 < {
-        86: printStr("a1 ")
-            printStr("< 86\n") 420: printStr("< 420\n")
-         _: printStr(">= 420\n")
+        86: print("a1 ")
+            print("< 86\n") 420: print("< 420\n")
+         _: print(">= 420\n")
     }
 }
 

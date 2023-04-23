@@ -11,14 +11,14 @@ I32_SIZE :: 4
 SOCKADDR_IN_SIZE :: 16
 
 fn testSwapEndians() {
-    printStr("swap endian tests\n")
-    printUint(6969) printStr("\n")
-    printUint(htons(6969)) printStr("\n")
-    printUint(ntohs(htons(6969))) printStr("\n")
+    print("swap endian tests\n")
+    print(utos(6969)) print("\n")
+    print(utos(htons(6969))) print("\n")
+    print(utos(ntohs(htons(6969)))) print("\n")
 
-    printUint(69696969) printStr("\n")
-    printUint(htonl(69696969)) printStr("\n")
-    printUint(ntohl(htonl(69696969))) printStr("\n\n")
+    print(utos(69696969)) print("\n")
+    print(utos(htonl(69696969))) print("\n")
+    print(utos(ntohl(htonl(69696969)))) print("\n\n")
 }
 
 fn main() {
@@ -28,10 +28,10 @@ fn main() {
     // create ipv4/tcp socket --------------------------------------------------------
     fd := socket(AF_INET, SOCK_STREAM, 0)
     if fd == -1 {
-        printStr("error: could not create socket file descriptor\n")
+        print("error: could not create socket file descriptor\n")
         exit(1)
     }
-    printStr("created socket file descriptor: ") printInt(fd) printStr("\n")
+    print("created socket file descriptor: ") print(itos(fd)) print("\n")
 
 
     // test getsockopt ---------------------------------------------------------------
@@ -39,20 +39,20 @@ fn main() {
     optlen := I32_SIZE
     err := getsockopt(fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, &optlen)
     if err != 0 {
-        printInt(err) printStr(" getsockopt error\n")
+        print(itos(err)) print(" getsockopt error\n")
         exit(1)
     }
-    printStr("reuseable port/addr: ") printInt(opt) printStr("\n")
+    print("reuseable port/addr: ") print(itos(opt)) print("\n")
 
 
     // make addr and port reusable ---------------------------------------------------
     opt = 1
     err = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, optlen)
     if err != 0 {
-        printInt(err) printStr(" setsockopt error\n")
+        print(itos(err)) print(" setsockopt error\n")
         exit(1)
     }
-    printStr("set port/addr as reuseable\n")
+    print("set port/addr as reuseable\n")
 
 
     // prepare socket for connections ------------------------------------------------
@@ -60,20 +60,20 @@ fn main() {
 
     err = bind(fd, &addr, SOCKADDR_IN_SIZE)
     if err != 0 {
-        printInt(err) printStr(" bind error\n")
+        print(itos(err)) print(" bind error\n")
         exit(1)
     }
 
     err = listen(fd, MAX_PENDING_CON)
     if err != 0 {
-        printInt(err) printStr(" listen error\n")
+        print(itos(err)) print(" listen error\n")
         exit(1)
     }
 
     sockaddr_in_size u32 := SOCKADDR_IN_SIZE
     client_fd := accept(fd, &addr, &sockaddr_in_size)
     if client_fd == -1 {
-        printInt(client_fd) printStr(" accept error\n")
+        print(itos(client_fd)) print(" accept error\n")
         exit(1)
     }
 
@@ -82,15 +82,15 @@ fn main() {
     buffer := [MSG_SIZE]char {}
     readSize := read(client_fd, buffer as *char, MSG_SIZE)
 
-    printChar('\n')
+    print(ctos('\n'))
     for i i64, readSize {
-        printChar(buffer[i])
+        print(ctos(buffer[i]))
     }
-    printChar('\n')
+    print(ctos('\n'))
 
     bytes := send(client_fd, HTML, 0)
     if bytes == -1 {
-        printInt(bytes) printStr(" send error\n")
+        print(itos(bytes)) print(" send error\n")
         exit(1)
     }
 
@@ -98,13 +98,13 @@ fn main() {
     // shutdown and close sockets ----------------------------------------------------
     err = close(client_fd)
     if err != 0 {
-        printInt(err) printStr(" close client_fd error\n")
+        print(itos(err)) print(" close client_fd error\n")
         exit(1)
     }
 
     err = shutdown(fd, SHUT_RDWR)
     if err != 0 {
-        printInt(err) printStr(" socket shutdown error\n")
+        print(itos(err)) print(" socket shutdown error\n")
         exit(1)
     }
 }

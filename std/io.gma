@@ -85,7 +85,7 @@ struct Reader {
 fn create_reader(path str) -> Reader {
     fd := open(path as *char, O_RDONLY)
     if fd == -1 {
-        printStr("[ERROR] could not open: ") printStr(path) printChar('\n')
+        print("[ERROR] could not open: ") print(path) print(ctos('\n'))
         exit(1)
     }
 
@@ -116,7 +116,7 @@ fn read_file(reader *Reader) -> str {
         pos := read(reader.fd, (reader.buffer as *char)+reader.buffer.len, sz)
         if pos == {
             -1:
-                printStr("[ERROR] could not read file\n")
+                print("[ERROR] could not read file\n")
                 exit(1)
             0:
                 break
@@ -171,7 +171,7 @@ fn read_line(reader *Reader) -> str {
         pos := read(reader.fd, (reader.buffer as *char)+reader.buffer.len, sz)
         if pos == {
         -1:
-            printStr("[ERROR] could not read file\n")
+            print("[ERROR] could not read file\n")
             exit(1)
         0:
             reader.isEOF = true

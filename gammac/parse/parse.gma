@@ -29,7 +29,7 @@ fn create_parser(path str) -> Parser {
 }
 
 fn Parse(p *Parser) {
-    printStr("[INFO] parsing ...\n")
+    print("[INFO] parsing ...\n")
 
     InitTypesPool(&p.typesPool)
     InitDeclPool(&p.nodesPool.declPool)
@@ -48,7 +48,7 @@ fn Parse(p *Parser) {
     }
 
     if p.isMainDefined == false {
-        printStr("[ERROR] no \"main\" function was defined\n")
+        print("[ERROR] no \"main\" function was defined\n")
         exit(1)
     }
 

@@ -1,29 +1,29 @@
 fn printArr2x3x3(arr [2][3][3]i32) {
     for i i32, 2 {
-        printStr("{ ")
+        print("{ ")
         for j i32, 3 {
-            printStr("{ ")
+            print("{ ")
             for k i32, 3 {
-                printInt(arr[i][j][k]) printChar(' ')
+                print(itos(arr[i][j][k])) print(ctos(' '))
             }
-            printStr("} ")
+            print("} ")
         }
-        printStr("}\n")
+        print("}\n")
     }
 }
 
 fn main() {
     arr := [3][2]i32{ { 0, 1 }, { 2, 3 }, { 4, 5 } }
 
-    printStr("arr dim: ")
-    printUint(arr.len) printChar('x') printUint(arr[0].len)
-    printChar('\n')
+    print("arr dim: ")
+    print(utos(arr.len)) print(ctos('x')) print(utos(arr[0].len))
+    print(ctos('\n'))
 
     for i i32, 3 {
         for j i32, 2 {
-            printInt(arr[i][j]) printChar(' ')
+            print(itos(arr[i][j])) print(ctos(' '))
         }
-        printChar('\n')
+        print(ctos('\n'))
     }
 
     arr2 := [2][3][3]i32{
@@ -31,9 +31,9 @@ fn main() {
         { { 9, 10, 11 }, { 12, 13, 14 }, { 15, 16, 17 } },
     }
 
-    printStr("arr2 dim: ")
-    printUint(arr2.len) printChar('x') printUint(arr2[0].len) printChar('x') printUint(arr2[0][0].len)
-    printChar('\n')
+    print("arr2 dim: ")
+    print(utos(arr2.len)) print(ctos('x')) print(utos(arr2[0].len)) print(ctos('x')) print(utos(arr2[0][0].len))
+    print(ctos('\n'))
     printArr2x3x3(arr2)
 }
 

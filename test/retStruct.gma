@@ -27,11 +27,11 @@ struct Test4 {
 }
 
 fn printTest(t Test) {
-    printStr("Test:")
-    printStr("\nb: ") printBool(t.b)
-    printStr("\ni: ") printInt(t.i)
-    printStr("\ns: ") printStr(t.s)
-    printStr("\n")
+    print("Test:")
+    print("\nb: ") print(btos(t.b))
+    print("\ni: ") print(itos(t.i))
+    print("\ns: ") print(t.s)
+    print("\n")
 }
 
 fn test1(i i32) -> Test {
@@ -107,41 +107,41 @@ fn testNonConst3(i i32) -> Test4 {
 }
 
 fn main() {
-    printStr("ret simple ------\n")
+    print("ret simple ------\n")
     s := testSimple()
-    printStr(s.s)
-    printInt(s.i) printStr("\n")
-    printStr(testStr())
+    print(s.s)
+    print(itos(s.i)) print("\n")
+    print(testStr())
 
-    printStr("\nret xswitch ------\n")
+    print("\nret xswitch ------\n")
     printTest(test1(69))
     printTest(test1(-69))
 
-    printStr("\nret deref ------\n")
+    print("\nret deref ------\n")
     printTest(test2())
 
-    printStr("\nret field ------\n")
+    print("\nret field ------\n")
     printTest(test3(Test2{ i: 420, t: Test{ b: true, i: -69, s: "another string" } }))
 
-    printStr("\nret indexed ------\n")
+    print("\nret indexed ------\n")
     printTest(test4())
 
-    printStr("\nret fnCall ------\n")
+    print("\nret fnCall ------\n")
     printTest(test5())
 
-    printStr("\nret non-const structLit\n")
+    print("\nret non-const structLit\n")
     s = testNonConst(-69)
-    printStr(s.s)
-    printInt(s.i) printChar('\n')
-    printStr("----\n")
+    print(s.s)
+    print(itos(s.i)) print(ctos('\n'))
+    print("----\n")
     t := testNonConst2(64)
-    printStr(t.s.s)
-    printInt(t.s.i) printChar('\n')
-    printStr("----\n")
+    print(t.s.s)
+    print(itos(t.s.i)) print(ctos('\n'))
+    print("----\n")
     t2 := testNonConst3(-64)
-    printInt(t2.i1) printChar(' ')
-    printInt(t2.i2) printChar(' ')
-    printInt(t2.i3) printChar(' ')
-    printInt(t2.i4) printChar(' ')
-    printInt(t2.i5) printChar('\n')
+    print(itos(t2.i1)) print(ctos(' '))
+    print(itos(t2.i2)) print(ctos(' '))
+    print(itos(t2.i3)) print(ctos(' '))
+    print(itos(t2.i4)) print(ctos(' '))
+    print(itos(t2.i5)) print(ctos('\n'))
 }

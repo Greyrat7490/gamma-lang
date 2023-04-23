@@ -1,5 +1,5 @@
 fn test(a1 i32) {
-    printInt(${ a1 < 0: -a1  _: a1 })
+    print(itos(${ a1 < 0: -a1  _: a1 }))
 }
 
 fn main() {

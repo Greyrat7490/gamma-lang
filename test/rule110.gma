@@ -15,13 +15,13 @@ fn memcpy(dest *bool, src *bool, size u64) {
 fn printRow() {
     for i u64, LEN {
         if *(cur+i) {
-            printStr("o")
+            print("o")
         } else {
-            printStr(" ")
+            print(" ")
         }
     }
 
-    printStr("\n")
+    print("\n")
 }
 
 fn setNextRow(round u64) {

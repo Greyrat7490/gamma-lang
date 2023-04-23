@@ -1,6 +1,6 @@
 import "importCycle.gma"
 
 fn func2() {
-    printStr("func2\n")
+    print("func2\n")
     testFunc()
 }

@@ -9,11 +9,11 @@ fn test() {
 
     for i i32, 4 {
         i2 i32 := i * 2
-        printInt(i2)
-        printStr(" ")
+        print(itos(i2))
+        print(" ")
     }
 
-    printStr("\n")
+    print("\n")
 }
 
 // 1 args, 2 local vars
@@ -23,58 +23,58 @@ fn test2(a1 i32) {
     l1 i32 := a1 - 2 * a1
     l2 i32 := l1 * -2
 
-    printInt(l1)
-    printStr("\n")
-    printInt(l2)
-    printStr("\n")
+    print(itos(l1))
+    print("\n")
+    print(itos(l2))
+    print("\n")
 }
 
 // 0 args, 0 local vars
 // -> 0 * 8byte = 0byte
 // -> (multiple of 16) = 0byte frame
 fn test3() {
-    printInt(g1)
-    printStr("\n")
+    print(itos(g1))
+    print("\n")
 }
 
 fn test4() {
     s str := "test string\n"
-    printStr(s)
+    print(s)
 
     s = "new string\n"
-    printStr(s)
+    print(s)
 }
 
 fn test5() {
-    printStr("g1 > 69 -> ")
+    print("g1 > 69 -> ")
     if g1 > 69 {
         l1 i32 := -69
-        printInt(l1)
+        print(itos(l1))
     } else {
         l1 i32 := 69
-        printInt(l1)
+        print(itos(l1))
     }
 
-    printStr("\ng1 < 69 -> ")
+    print("\ng1 < 69 -> ")
     if g1 < 69 {
         l1 i32 := -69
-        printInt(l1)
+        print(itos(l1))
     } else {
         l1 i32 := 69
-        printInt(l1)
+        print(itos(l1))
     }
 
-    printStr("\n")
+    print("\n")
 }
 
 fn main() {
     test()
-    printStr("-------\n")
+    print("-------\n")
     test2(g1)
-    printStr("-------\n")
+    print("-------\n")
     test3()
-    printStr("-------\n")
+    print("-------\n")
     test4()
-    printStr("-------\n")
+    print("-------\n")
     test5()
 }

@@ -2,90 +2,90 @@ fn testWhile() {
     idx i32 := 0
 
     while idx < 10 {
-        printInt(idx)
+        print(itos(idx))
         idx = idx + 1
     }
 
-    printStr("\n------------\n")
+    print("\n------------\n")
 
     while false {
-        printStr("dead code")
+        print("dead code")
     }
 
-    printStr("------------\n")
+    print("------------\n")
 
     idx = 0
     while true {
-        printStr("endless while loop\n")
+        print("endless while loop\n")
 
         if idx >= 30 {
-            printStr("...\naborted endless loop\n")
+            print("...\naborted endless loop\n")
             break
         }
         idx = idx + 1
     }
 
-    printStr("------------\n")
+    print("------------\n")
 
     // declare i32 i with default init value 0
     // and loop as long as the condition is true
     while i i32, i != 10 {
-        printInt(i)
+        print(itos(i))
         i = i + 1
     }
 
-    printStr("\n------------\n")
+    print("\n------------\n")
 
     // set init value of i
     while i i32, 69, i != 87 {
-        printInt(i)
-        printStr(" ")
+        print(itos(i))
+        print(" ")
         i = i + 1
     }
-    printStr("\n")
+    print("\n")
 }
 
 fn testFor() {
     // endless loop but with an iterator (starts with 0)
-    printStr("endless for loop\n")
+    print("endless for loop\n")
     for i i32 {
-        printInt(i)
-        printStr(" ")
+        print(itos(i))
+        print(" ")
 
         if i >= 30 {
-            printStr("...\naborted endless loop\n")
+            print("...\naborted endless loop\n")
             break
         }
     }
 
-    printStr("------------\n")
+    print("------------\n")
 
     // for (int i = 0; i < 4; i++)
     for i i32, 4 {
-        printInt(i)
+        print(itos(i))
     }
 
-    printStr("\n------------\n")
+    print("\n------------\n")
 
     // for (int i = 4; i < 4; i++)
     for i i32, 4, 4 {
-        printStr("dead code")
+        print("dead code")
     }
 
-    printStr("------------\n")
+    print("------------\n")
 
     // for (int i = -4; i < 87; i+=6)
     for i i32, 87, -4, i+6 {
-        printInt(i)
-        printStr(" ")
+        print(itos(i))
+        print(" ")
     }
 
-    printStr("\n")
+    print("\n")
 }
 
 fn main() {
-    printStr("while tests\n")
+    print("while tests\n")
     testWhile()
-    printStr("for tests\n")
+    print("for tests\n")
     testFor()
 }

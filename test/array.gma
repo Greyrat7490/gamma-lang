@@ -2,62 +2,62 @@ arr := [3]i32{ -420, 69, 64 }
 arr2 [4]i32 := [4]i32{}
 
 fn globalArr() {
-    printInt(arr[0]) printStr("\n")
-    printInt(arr[1]) printStr("\n")
-    printInt(arr[2]) printStr("\n")
+    print(itos(arr[0])) print("\n")
+    print(itos(arr[1])) print("\n")
+    print(itos(arr[2])) print("\n")
 
-    printStr("----\n")
+    print("----\n")
 
     arr[0] = 64
     arr[1] = 0
     arr[2] = 420
 
-    printInt(arr[0]) printStr("\n")
-    printInt(arr[1]) printStr("\n")
-    printInt(arr[2]) printStr("\n")
+    print(itos(arr[0])) print("\n")
+    print(itos(arr[1])) print("\n")
+    print(itos(arr[2])) print("\n")
 }
 
 fn localArr() {
     arr := [2]i32{ 69, 64 }
 
-    printInt(arr[0]) printStr("\n")
-    printInt(arr[1]) printStr("\n")
+    print(itos(arr[0])) print("\n")
+    print(itos(arr[1])) print("\n")
 
-    printStr("----\n")
+    print("----\n")
 
     arr[0] = -420
     arr[1] = -69
 
-    printInt(arr[0]) printStr("\n")
-    printInt(arr[1]) printStr("\n")
+    print(itos(arr[0])) print("\n")
+    print(itos(arr[1])) print("\n")
 }
 
 fn strArray() {
     arr := [2]str{ "index0\n", "str at index 1\n" }
 
-    printStr(arr[0])
-    printStr(arr[1])
+    print(arr[0])
+    print(arr[1])
 
-    printStr("----\n")
+    print("----\n")
 
     arr[0] = "changed index 0\n"
     arr[1] = "index 1 got changed too\n"
 
-    printStr(arr[0])
-    printStr(arr[1])
+    print(arr[0])
+    print(arr[1])
 }
 
 fn printArr(arr [2][2][2]i32) {
     for i i32, 2 {
-        printStr("{ ")
+        print("{ ")
         for j i32, 2 {
-            printStr("{ ")
+            print("{ ")
             for k i32, 2 {
-                printInt(arr[i][j][k]) printStr(" ")
+                print(itos(arr[i][j][k])) print(" ")
             }
-            printStr("} ")
+            print("} ")
         }
-        printStr("}\n")
+        print("}\n")
     }
 }
 
@@ -66,13 +66,13 @@ fn multiDimArray() {
         { 0, 1 },
         { 2, 3 }
     }
-    printInt(arr[1][0]) printStr("\n----\n")
+    print(itos(arr[1][0])) print("\n----\n")
 
     arr[1][0] = 69
-    printInt(arr[1][0]) printStr("\n")
+    print(itos(arr[1][0])) print("\n")
 
 
-    printStr("3D array ----\n")
+    print("3D array ----\n")
 
     arr2 := [2][2][2]i32{
         { { 0, 1 }, { 2, 3 } },
@@ -81,7 +81,7 @@ fn multiDimArray() {
 
     printArr(arr2)
 
-    printStr("----\n")
+    print("----\n")
     for i i32, 2 {
         arr2[1][0][i] = 64
     }
@@ -92,12 +92,12 @@ fn multiDimArray() {
 fn constArr() {
     arr :: [3]i32{ 420, 64, 69 }
 
-    printInt(arr[0]) printStr("\n")
-    printInt(arr[1]) printStr("\n")
-    printInt(arr[2]) printStr("\n")
+    print(itos(arr[0])) print("\n")
+    print(itos(arr[1])) print("\n")
+    print(itos(arr[2])) print("\n")
 
-    printStr("2 * arr[1] / 8 = ")
-    printInt(2 * arr[1] / 8) printStr("\n")
+    print("2 * arr[1] / 8 = ")
+    print(itos(2 * arr[1] / 8)) print("\n")
 }
 
 fn nonConstElems() {
@@ -106,28 +106,28 @@ fn nonConstElems() {
 
     arr := [3]i32{ i, i2, -64 }
 
-    printInt(arr[0]) printStr("\n")
-    printInt(arr[1]) printStr("\n")
-    printInt(arr[2]) printStr("\n")
+    print(itos(arr[0])) print("\n")
+    print(itos(arr[1])) print("\n")
+    print(itos(arr[2])) print("\n")
 }
 
 fn main() {
-    printStr("global ---------\n")
+    print("global ---------\n")
     globalArr()
 
-    printStr("\nlocal ---------\n")
+    print("\nlocal ---------\n")
     localArr()
 
-    printStr("\nstring ---------\n")
+    print("\nstring ---------\n")
     strArray()
 
-    printStr("\nmulti-dim ---------\n")
+    print("\nmulti-dim ---------\n")
     multiDimArray()
 
-    printStr("\nconst ---------\n")
+    print("\nconst ---------\n")
     constArr()
 
-    printStr("\nnon const elems ---------\n")
+    print("\nnon const elems ---------\n")
     nonConstElems()
     i := 1
     i2 := 420

@@ -1,17 +1,17 @@
 fn testSigned() {
     i i8 := 127
-    printStr(" 127 as u8: ") printUint(i as u8) printStr(" (expected: 127)\n")
+    print(" 127 as u8: ") print(utos(i as u8)) print(" (expected: 127)\n")
 
     i = -128
-    printStr("-128 as u8: ") printUint(i as u8) printStr(" (expected: 128)\n")
+    print("-128 as u8: ") print(utos(i as u8)) print(" (expected: 128)\n")
 }
 
 fn testSizes() {
     i i64 := 128
-    printStr("128 as i8: ") printInt(i as i8) printStr(" (expected: -128)\n")
+    print("128 as i8: ") print(itos(i as i8)) print(" (expected: -128)\n")
 
     i2 i16 := 255
-    printStr("255 as i8: ") printInt(i2 as i8) printStr(" (expected: -1)\n")
+    print("255 as i8: ") print(itos(i2 as i8)) print(" (expected: -1)\n")
 }
 
 fn testPtr() {
@@ -22,49 +22,49 @@ fn testPtr() {
 
     i := 64
     ptr := &i
-    printUint(&i as u64) printStr("\n")
-    printUint(ptr as u64) printStr("\n")
+    print(utos(&i as u64)) print("\n")
+    print(utos(ptr as u64)) print("\n")
 }
 
 fn testStr() {
     s := "test string"
     ptr := s as *char
 
-    printChar(*ptr) printStr("\n")
+    print(ctos(*ptr)) print("\n")
 }
 
 fn testArr() {
     arr := [3]i32{ -64, 69, 420 }
     ptr := arr as *i32
 
-    printInt(*ptr) printStr("\n")
+    print(itos(*ptr)) print("\n")
 }
 
 fn testChar() {
     i0 := 48
-    printInt(i0) printStr("(int) -> '") printChar(i0 as char) printStr("'\n")
+    print(itos(i0)) print("(int) -> '") print(ctos(i0 as char)) print("'\n")
 
     ia := 65
-    printInt(ia) printStr("(int) -> '") printChar(ia as char) printStr("'\n")
-    printInt(65) printStr("(int) -> '") printChar(65 as char) printStr("'\n")
-    printInt(ia + 25) printStr("(int) -> '") printChar(ia + 25 as char) printStr("'\n")
+    print(itos(ia)) print("(int) -> '") print(ctos(ia as char)) print("'\n")
+    print(itos(65)) print("(int) -> '") print(ctos(65 as char)) print("'\n")
+    print(itos(ia + 25)) print("(int) -> '") print(ctos(ia + 25 as char)) print("'\n")
 }
 
 fn testBool() {
     b := true
-    printBool(b) printStr("(bool) -> '") printInt(b as i32) printStr("'\n")
+    print(btos(b)) print("(bool) -> '") print(itos(b as i32)) print("'\n")
 
     b = false
-    printBool(b) printStr("(bool) -> '") printInt(b as i32) printStr("'\n")
+    print(btos(b)) print("(bool) -> '") print(itos(b as i32)) print("'\n")
 }
 
 fn testExtend() {
     u := -64 as u32             // 4294967232 / 0xffffffc0
-    printUint(u) printChar('\n')
-    printInt(u as i32) printChar('\n')
-    printInt(u as i64) printChar('\n')
+    print(utos(u)) print(ctos('\n'))
+    print(itos(u as i32)) print(ctos('\n'))
+    print(itos(u as i64)) print(ctos('\n'))
 
-    printInt(u as i32 as i64) printChar('\n')   // expected result: 4294967232
+    print(itos(u as i32 as i64)) print(ctos('\n'))   // expected result: 4294967232
     /*
      * go result: -64
      * size of u is 32bit a sign extention would be needed to set upper 32 bits
@@ -76,27 +76,27 @@ fn testExtend() {
 }
 
 fn main() {
-    printStr("test u8 / i8 ------\n")
+    print("test u8 / i8 ------\n")
     testSigned()
 
-    printStr("\ntest sizes ------\n")
+    print("\ntest sizes ------\n")
     testSizes()
 
-    printStr("\ntest pointer ------\n")
+    print("\ntest pointer ------\n")
     testPtr()
 
-    printStr("\ntest string ------\n")
+    print("\ntest string ------\n")
     testStr()
 
-    printStr("\ntest array ------\n")
+    print("\ntest array ------\n")
     testArr()
 
-    printStr("\ntest char ------\n")
+    print("\ntest char ------\n")
     testChar()
 
-    printStr("\ntest bool ------\n")
+    print("\ntest bool ------\n")
     testBool()
 
-    printStr("\ntest extend ------\n")
+    print("\ntest extend ------\n")
     testExtend()
 }

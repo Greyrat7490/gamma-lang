@@ -4,10 +4,10 @@ v3 str := "some string\n"
 v4 := "some string 2\n"     // infer type from value
 
 fn main() {
-    printInt(v1)
-    printStr("\n")
-    printInt(v2)
-    printStr("\n")
-    printStr(v3)
-    printStr(v4)
+    print(itos(v1))
+    print("\n")
+    print(itos(v2))
+    print("\n")
+    print(v3)
+    print(v4)
 }

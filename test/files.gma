@@ -5,15 +5,15 @@ path :: "test/txt/test1\0"
 fn testCurPath() {
     path := [PATH_MAX]char{}
     if getcwd(path as *char, PATH_MAX) == false {
-        printStr("[ERROR] could not get current dir\n")
+        print("[ERROR] could not get current dir\n")
         exit(1)
     }
 
-    printStr("current dir: ")
+    print("current dir: ")
     for i i32, PATH_MAX {
-        printChar(path[i])
+        print(ctos(path[i]))
     }
-    printChar('\n')
+    print(ctos('\n'))
 }
 
 fn testCreate() {
@@ -21,22 +21,22 @@ fn testCreate() {
 
     file := create(path as *char)
     if file < 0 {
-        printStr("[ERROR] could not open/create ") printStr(path) printChar('\n')
-        printInt(file) printChar('\n')
+        print("[ERROR] could not open/create ") print(path) print(ctos('\n'))
+        print(itos(file)) print(ctos('\n'))
         exit(1)
     } else {
-        printStr("opened/created ") printStr(path) printChar('\n')
+        print("opened/created ") print(path) print(ctos('\n'))
     }
 
     if write(file, content) < 0 {
-        printStr("[ERROR] could not write to file\n")
+        print("[ERROR] could not write to file\n")
         exit(1)
     } else {
-        printStr("wrote to file\n")
+        print("wrote to file\n")
     }
 
     if close(file) < 0 {
-        printStr("[ERROR] could not close file ") printStr(path) printChar('\n')
+        print("[ERROR] could not close file ") print(path) print(ctos('\n'))
         exit(1)
     }
 }
@@ -49,37 +49,37 @@ fn printFile(path str) {
 
     size := read(file, buf as *char, BUF_SIZE)
 
-    printChar('\"')
+    print(ctos('\"'))
     for i i64, size {
-        printChar(buf[i])
+        print(ctos(buf[i]))
     }
-    printChar('\"')
+    print(ctos('\"'))
 
     if close(file) < 0 {
-        printStr("[ERROR] could not close file ") printStr(path) printChar('\n')
+        print("[ERROR] could not close file ") print(path) print(ctos('\n'))
         exit(1)
     }
 }
 
 fn testAppend() {
-    printFile(path) printChar('\n')
+    printFile(path) print(ctos('\n'))
 
     file := open(path as *char, O_RDWR | O_APPEND)
     _ := write(file, "appended to file\n")
     if close(file) < 0 {
-        printStr("[ERROR] could not close file ") printStr(path) printChar('\n')
+        print("[ERROR] could not close file ") print(path) print(ctos('\n'))
         exit(1)
     }
 
-    printFile(path) printChar('\n')
+    printFile(path) print(ctos('\n'))
 }
 
 fn main() {
     testCurPath()
-    printStr("------\n")
+    print("------\n")
 
     testCreate()
-    printStr("------\n")
+    print("------\n")
 
     testAppend()
 }
