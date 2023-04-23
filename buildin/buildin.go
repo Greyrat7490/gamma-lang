@@ -21,13 +21,12 @@ const MAP_PRIVATE   = 2
 
 func Declare() {
     // build-in funcs
-    identObj.AddBuildIn("printStr",  types.StrType{}, nil)
-    identObj.AddBuildIn("printInt",  types.CreateInt(types.I64_Size), nil)
-    identObj.AddBuildIn("printUint", types.CreateUint(types.U64_Size), nil)
-    identObj.AddBuildIn("printPtr",  types.PtrType{}, nil)
-    identObj.AddBuildIn("printBool", types.BoolType{}, nil)
-    identObj.AddBuildIn("printChar", types.CharType{}, nil)
-    identObj.AddBuildIn("exit",      types.CreateInt(types.I32_Size), nil)
+    identObj.AddBuildIn("print", types.StrType{}, nil)
+    identObj.AddBuildIn("exit", types.CreateInt(types.I32_Size), nil)
+    identObj.AddBuildIn("itos", types.CreateInt(types.I64_Size), types.StrType{})
+    identObj.AddBuildIn("utos", types.CreateUint(types.U64_Size), types.StrType{})
+    identObj.AddBuildIn("btos", types.BoolType{}, types.StrType{})
+    identObj.AddBuildIn("ctos", types.CharType{}, types.StrType{})
     identObj.AddBuildIn("from_cstr", types.PtrType{ BaseType: types.CharType{} }, types.StrType{})
 
     // basic inline assembly
@@ -36,19 +35,16 @@ func Declare() {
 }
 
 func Define(file *bufio.Writer) {
-    defineItoS(file)
-    defineBtoS(file)
+    definePrint(file)
+
     defineAlloc(file)
     defineStrCmp(file)
     defineStrConcat(file)
 
-    definePrintStr(file)
-    definePrintChar(file)
-    definePrintInt(file)
-    definePrintUint(file)
-    definePrintPtr(file)
-    definePrintBool(file)
     defineFromCStr(file)
+    defineItoS(file)
+    defineBtoS(file)
+    defineCtoS(file)
 
     defineExit(file)
     file.WriteString("\n")
@@ -61,8 +57,8 @@ func syscall(file *bufio.Writer, syscallNum uint) {
     file.WriteString("syscall\n")
 }
 
-func definePrintStr(asm *bufio.Writer) {
-    asm.WriteString("printStr:\n")
+func definePrint(asm *bufio.Writer) {
+    asm.WriteString("print:\n")
 
     asm.WriteString("mov edx, esi\n")
     asm.WriteString("mov rsi, rdi\n")
@@ -72,91 +68,35 @@ func definePrintStr(asm *bufio.Writer) {
     asm.WriteString("ret\n")
 }
 
-func definePrintChar(asm *bufio.Writer) {
-    asm.WriteString("printChar:\n")
-    asm.WriteString("mov byte [_intBuf], dil\n")
-    asm.WriteString("mov rdx, 1\n")
-    asm.WriteString("mov rsi, _intBuf\n")
-    asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
-    syscall(asm, SYS_WRITE)
-
-    asm.WriteString("ret\n")
-}
-
-func definePrintInt(asm *bufio.Writer) {
-    asm.WriteString("printInt:\n")
-    asm.WriteString("mov rax, rdi\n")
-    asm.WriteString("call _int_to_str\n")
-
-    asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
-    asm.WriteString("mov rdx, rax\n")
-    asm.WriteString("mov rsi, rbx\n")
-    syscall(asm, SYS_WRITE)
-
-    asm.WriteString("ret\n")
-}
-
-func definePrintUint(asm *bufio.Writer) {
-    asm.WriteString("printUint:\n")
-    asm.WriteString("mov rax, rdi\n")
-    asm.WriteString("call _uint_to_str\n")
-
-    asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
-    asm.WriteString("mov rdx, rax\n")
-    asm.WriteString("mov rsi, rbx\n")
-    syscall(asm, SYS_WRITE)
-
-    asm.WriteString("ret\n")
-}
-
-func definePrintPtr(asm *bufio.Writer) {
-    asm.WriteString("printPtr:\n")
-    asm.WriteString("mov rax, rdi\n")
-    asm.WriteString("call _int_to_str\n")
-
-    asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
-    asm.WriteString("mov rdx, rax\n")
-    asm.WriteString("mov rsi, rbx\n")
-    syscall(asm, SYS_WRITE)
-
-    asm.WriteString("ret\n")
-}
-
-func definePrintBool(asm *bufio.Writer) {
-    asm.WriteString("printBool:\n")
-
-    asm.WriteString("mov eax, edi\n")
-    asm.WriteString("call _bool_to_str\n")
-
-    asm.WriteString(fmt.Sprintf("mov rdi, %d\n", STDOUT))
-    asm.WriteString("mov rdx, rax\n")
-    asm.WriteString("mov rsi, rbx\n")
-    syscall(asm, SYS_WRITE)
-
-    asm.WriteString("ret\n")
+func defineCtoS(asm *bufio.Writer) {
+    asm.WriteString(
+`ctos:
+    mov byte [_intBuf], dil
+    mov rax, _intBuf
+    mov edx, 1
+    ret
+`)
 }
 
 func defineBtoS(asm *bufio.Writer) {
     asm.WriteString(
-`_bool_to_str:
-    test eax, eax
+`btos:
+    test edi, edi
     jne .c1
-    mov rbx, _false
-    mov rax, 5
+    mov rax, _false
+    mov edx, 5
     ret
     .c1:
-        mov rbx, _true
-        mov rax, 4
+        mov rax, _true
+        mov edx, 4
         ret
 `)
 }
 
 func defineItoS(asm *bufio.Writer) {
     asm.WriteString(
-`; rax = input int
-; rbx = output string pointer
-; rax = output string length
-_uint_to_str:
+`utos:
+    mov rax, rdi
     mov rcx, 10
     lea rbx, [_intBuf+21]
     .l1:
@@ -167,12 +107,14 @@ _uint_to_str:
         mov byte [rbx], dl
         test rax, rax
         jne .l1
-    lea rax, [_intBuf+21]
-    sub rax, rbx
+    lea rdx, [_intBuf+21]
+    sub rdx, rbx
+    mov rax, rbx
     ret
-_int_to_str:
-    test rax, rax
-    jge _uint_to_str
+itos:
+    test rdi, rdi
+    jge utos
+    mov rax, rdi
     neg rax
     mov rcx, 10
     lea rbx, [_intBuf+21]
@@ -186,8 +128,9 @@ _int_to_str:
         jne .l1
     dec rbx
     mov byte [rbx], 0x2d
-    lea rax, [_intBuf+21]
-    sub rax, rbx
+    lea rdx, [_intBuf+21]
+    sub rdx, rbx
+    mov rax, rbx
     ret
 `)
 }

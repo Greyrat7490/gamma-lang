@@ -1,0 +1,11 @@
+fn main() {
+    i := -69
+    u u8 := 64
+    b := true
+    c := 'z'
+
+    print(itos(i)) print("\n")
+    print(utos(u)) print("\n")
+    print(btos(b)) print("\n")
+    print(ctos(c)) print("\n")
+}
