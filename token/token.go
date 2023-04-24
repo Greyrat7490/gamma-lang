@@ -380,7 +380,7 @@ type Token struct {
 }
 
 func (t Token) String() string {
-    return fmt.Sprintf("\"%s\"(%v)", t.Str, t.Type)
+    return fmt.Sprintf("%s (%v)", t.Str, t.Type)
 }
 
 func (t Token) At() string {

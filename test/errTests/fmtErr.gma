@@ -1,0 +1,4 @@
+fn main() {
+    b := false
+    println(fmt("{}{}", b))
+}

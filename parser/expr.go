@@ -46,7 +46,11 @@ func prsExpr(tokens *token.Tokens) ast.Expr {
     case token.Name:
         switch tokens.Peek().Type {
         case token.ParenL:
-            expr = prsCallFn(tokens)
+            if tokens.Cur().Str == "fmt" {
+                expr = prsFmt(tokens)
+            } else {
+                expr = prsCallFn(tokens)
+            }
 
         case token.Dot:
             ident := prsIdentExpr(tokens)
@@ -815,7 +819,11 @@ func prsBinary(tokens *token.Tokens, expr ast.Expr, min_precedence precedence) a
                 b.OperandR = prsIndexExpr(tokens, expr)
 
             case token.ParenL:
-                b.OperandR = prsCallFn(tokens)
+                if tokens.Cur().Str == "fmt" {
+                    b.OperandR = prsFmt(tokens)
+                } else {
+                    b.OperandR = prsCallFn(tokens)
+                }
 
             default:
                 b.OperandR = prsIdentExpr(tokens)
@@ -880,6 +888,26 @@ func swap(expr *ast.Binary) {
     expr.OperandL = tmp
 }
 
+func prsFmt(tokens *token.Tokens) ast.Expr {
+    pos := tokens.Next()
+    fmtStr := tokens.Next()
+
+    if fmtStr.Type != token.Str {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected string literal as format string but got %s\n", fmtStr.String())
+        fmt.Fprintln(os.Stderr, "\t" + pos.At())
+        os.Exit(1)
+    }
+
+    if len(fmtStr.Str) < 4 {
+        fmt.Fprintf(os.Stderr, "[ERROR] %v is not a valid format string (missing {})\n", fmtStr)
+        fmt.Fprintln(os.Stderr, "\t" + pos.At())
+        os.Exit(1)
+    }
+
+    values := prsFmtArgs(tokens)
+
+    return convertFmt(fmtStr, values)
+}
 
 func prsCallFn(tokens *token.Tokens) *ast.FnCall {
     ident := prsIdentExpr(tokens)
@@ -940,4 +968,149 @@ func prsCast(tokens *token.Tokens, e ast.Expr) *ast.Cast {
     c.DestType = prsType(tokens)
 
     return &c
+}
+
+func prsFmtArgs(tokens *token.Tokens) (args []ast.Expr) {
+    pos := tokens.Cur().Pos
+
+    for tokens.Next().Type == token.Comma {
+        tokens.Next()
+        args = append(args, prsFmtArg(tokens))
+    }
+
+    if tokens.Cur().Type != token.ParenR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+
+    if len(args) == 0 {
+        fmt.Fprintln(os.Stderr, "[ERROR] fmt go no arguments to format (only format string)")
+        fmt.Fprintln(os.Stderr, "\t" + pos.At())
+        os.Exit(1)
+    }
+
+    return
+}
+
+
+func createStrLit(fmtStr token.Token, startIdx int, endIdx int) *ast.StrLit {
+    if startIdx == 0 { startIdx += 1 }
+    if endIdx == len(fmtStr.Str)-1 { endIdx -= 1 }
+
+    fmtStr.Str = "\"" + fmtStr.Str[startIdx:endIdx-1] + "\""
+    idx := str.Add(fmtStr)
+    return &ast.StrLit{ Idx: idx, Val: fmtStr }
+}
+
+func prsFmtArg(tokens *token.Tokens) ast.Expr {
+    arg := prsExpr(tokens)
+    typ := arg.GetType()
+
+    var name string
+    switch typ.GetKind() {
+    case types.Str:
+        return arg
+    case types.Uint:
+        name = "utos"
+    case types.Int:
+        name = "itos"
+    case types.Char:
+        name = "ctos"
+    case types.Bool:
+        name = "btos"
+    case types.Ptr:
+        arg = &ast.Cast{ Expr: arg, AsPos: tokens.Cur().Pos, DestType: types.CreateUint(types.Ptr_Size) }
+        name = "utos"
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] %s has no format to string function\n", typ)
+        fmt.Fprintln(os.Stderr, "\t" + arg.At())
+        os.Exit(1)
+    }
+
+    values := []ast.Expr{ arg }
+    ident := ast.Ident{ Name: name, Obj: identObj.Get(name) }
+
+    var F *fn.Func
+    if obj := identObj.Get(name); obj != nil {
+        if f,ok := obj.(*fn.Func); ok {
+            F = f
+        }
+    }
+
+    return &ast.FnCall{ F: F, Ident: ident, Values: values }
+}
+
+func convertFmt(fmtStr token.Token, values []ast.Expr) ast.Expr {
+    if fmtStr.Str == "{}" {
+        return values[0]
+    } else {
+        res := ast.Binary{}
+        cur := &res.OperandR
+
+        valIdx := 0
+        startIdx := 0
+        for i := range fmtStr.Str {
+            if fmtStr.Str[i] == '}' && fmtStr.Str[i-1] == '{' {
+                // escaped {
+                if i > 2 && fmtStr.Str[i-2] == '\\' {
+                    continue
+                }
+
+                if i > startIdx {
+                    binOp := ast.Binary{
+                        Pos: fmtStr.Pos,
+                        Type: types.StrType{},
+                        OperandL: *cur,
+                        Operator: token.Token{ Pos: fmtStr.Pos, Str: "+", Type: token.Plus },
+                        OperandR: createStrLit(fmtStr, startIdx, i),
+                    }
+                    *cur = &binOp
+                    cur = &binOp.OperandR
+
+                    startIdx = i+1
+                }
+
+                if valIdx < len(values) {
+                    binOp := ast.Binary{
+                        Pos: fmtStr.Pos,
+                        Type: types.StrType{},
+                        OperandL: *cur,
+                        Operator: token.Token{ Pos: fmtStr.Pos, Str: "+", Type: token.Plus },
+                        OperandR: values[valIdx],
+                    }
+                    *cur = &binOp
+                    cur = &binOp.OperandR
+                }
+
+                valIdx += 1
+            }
+        }
+
+        if startIdx != len(fmtStr.Str)-1 {
+            binOp := ast.Binary{
+                Pos: fmtStr.Pos,
+                Type: types.StrType{},
+                OperandL: *cur,
+                Operator: token.Token{ Pos: fmtStr.Pos, Str: "+", Type: token.Plus },
+                OperandR: createStrLit(fmtStr, startIdx, len(fmtStr.Str)),
+            }
+
+            *cur = &binOp
+            cur = &binOp.OperandR
+        }
+
+        if len(values) != valIdx {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected %d args for fmt but got %d\n", valIdx, len(values))
+            fmt.Fprintln(os.Stderr, "\tfmt string: " + fmtStr.Str)
+            fmt.Fprintln(os.Stderr, "\t" + fmtStr.At())
+            os.Exit(1)
+        }
+
+        if binOp,ok := res.OperandR.(*ast.Binary); ok {
+            return binOp.OperandR
+        }
+
+        return &res
+    }
 }

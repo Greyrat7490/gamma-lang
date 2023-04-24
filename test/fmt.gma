@@ -1,11 +1,32 @@
+fn testToFuncs(i i32, u u8, b bool, c char) {
+    println(itos(i))
+    println(utos(u))
+    println(btos(b))
+    println(ctos(c))
+}
+
+fn testFmtFunc(i i32, u u8, b bool, c char) {
+    println(fmt("i: {} u: {} b: {} c: {}", i, u, b, c))
+    println(fmt("{}{}", i, u))
+}
+
+fn testEscape(i i32, u u8, b bool, c char) {
+    println(fmt("i: \{} u: {} b: {} c: {}", u, b, c))
+    println(fmt("\{{}\}", i))
+}
+
+fn testPtr(i i32) {
+    println(fmt("i: {} (at {})", i, &i))
+}
+
 fn main() {
     i := -69
     u u8 := 64
     b := true
     c := 'z'
 
-    print(itos(i)) print("\n")
-    print(utos(u)) print("\n")
-    print(btos(b)) print("\n")
-    print(ctos(c)) print("\n")
+    testToFuncs(i, u, b, c)
+    testFmtFunc(i, u, b, c)
+    testEscape(i, u, b, c)
+    testPtr(i)
 }
