@@ -90,8 +90,10 @@ func definePrintln(asm *bufio.Writer) {
     asm.WriteString("println:\n")
     asm.WriteString("call print\n")
     asm.WriteString(fmt.Sprintf(
-`mov byte [_intBuf], %d
-mov rdi, _intBuf
+`mov rax, 1
+call _alloc
+mov byte [rax], %d
+mov rdi, rax
 mov esi, 1
 `, int('\n')))
     asm.WriteString("call print\n")
@@ -102,8 +104,10 @@ func defineEprintln(asm *bufio.Writer) {
     asm.WriteString("eprintln:\n")
     asm.WriteString("call eprint\n")
     asm.WriteString(fmt.Sprintf(
-`mov byte [_intBuf], %d
-mov rdi, _intBuf
+`mov rax, 1
+call _alloc
+mov byte [rax], %d
+mov rdi, rax
 mov esi, 1
 `, int('\n')))
     asm.WriteString("call eprint\n")
@@ -113,8 +117,10 @@ mov esi, 1
 func defineCtoS(asm *bufio.Writer) {
     asm.WriteString(
 `ctos:
-    mov byte [_intBuf], dil
-    mov rax, _intBuf
+    mov rbx, rdi
+    mov rax, 1
+    call _alloc
+    mov byte [rax], bl
     mov edx, 1
     ret
 `)
@@ -136,11 +142,16 @@ func defineBtoS(asm *bufio.Writer) {
 }
 
 func defineItoS(asm *bufio.Writer) {
+ // max 64bit -> 20 digits max + sign -> 21 char string max
     asm.WriteString(
 `utos:
-    mov rax, rdi
+    mov rcx, rdi
+    mov rax, 21
+    call _alloc
+    lea rbx, [rax+21]
+    mov rsi, rbx
+    mov rax, rcx
     mov rcx, 10
-    lea rbx, [_intBuf+21]
     .l1:
         xor rdx, rdx
         div rcx
@@ -149,17 +160,21 @@ func defineItoS(asm *bufio.Writer) {
         mov byte [rbx], dl
         test rax, rax
         jne .l1
-    lea rdx, [_intBuf+21]
+    mov rdx, rsi
     sub rdx, rbx
     mov rax, rbx
     ret
 itos:
     test rdi, rdi
     jge utos
-    mov rax, rdi
+    mov rcx, rdi
+    mov rax, 21
+    call _alloc
+    lea rbx, [rax+21]
+    mov rsi, rbx
+    mov rax, rcx
     neg rax
     mov rcx, 10
-    lea rbx, [_intBuf+21]
     .l1:
         xor rdx, rdx
         div rcx
@@ -170,7 +185,7 @@ itos:
         jne .l1
     dec rbx
     mov byte [rbx], 0x2d
-    lea rdx, [_intBuf+21]
+    mov rdx, rsi
     sub rdx, rbx
     mov rax, rbx
     ret

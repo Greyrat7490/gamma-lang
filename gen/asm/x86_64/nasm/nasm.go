@@ -33,7 +33,6 @@ func writeBss(file *bufio.Writer) {
     file.WriteString("\nsection .bss\n")
     file.WriteString("align 16\n")
     file.WriteString("\tresb 1024 * 1024\n_stack_top:\n") // 1MiB
-    file.WriteString("_intBuf: resb 21\n") // max 64bit -> 20 digits max + sign -> 21 char string max
     file.WriteString(bss)
 }
 
