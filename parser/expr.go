@@ -985,7 +985,7 @@ func prsFmtArgs(tokens *token.Tokens) (args []ast.Expr) {
     }
 
     if len(args) == 0 {
-        fmt.Fprintln(os.Stderr, "[ERROR] fmt go no arguments to format (only format string)")
+        fmt.Fprintln(os.Stderr, "[ERROR] fmt got no arguments to format (only format string)")
         fmt.Fprintln(os.Stderr, "\t" + pos.At())
         os.Exit(1)
     }
