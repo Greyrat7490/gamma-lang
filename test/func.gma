@@ -105,7 +105,7 @@ fn test7args(a1 i32, a2 i32, a3 i32, a4 i32, a5 i32, a6 i32, a7 i32) {
     print(itos(a5)) print(" + ")
     print(itos(a6)) print(" + ")
     print(itos(a7)) print("\n")
-    print(itos(a1 + a2 + a3 + a4 + a5 + a6 + a7)) print("\n")
+    println(itos(a1 + a2 + a3 + a4 + a5 + a6 + a7))
 }
 
 fn test6args(a1 i32, a2 i32, a3 i32, a4 i32, a5 i32, a6 str) {
@@ -114,8 +114,8 @@ fn test6args(a1 i32, a2 i32, a3 i32, a4 i32, a5 i32, a6 str) {
     print(itos(a3)) print(" + ")
     print(itos(a4)) print(" + ")
     print(itos(a5)) print(" = ")
-    print(itos(a1 + a2 + a3 + a4 + a5)) print("\n")
-    print(a6) print("\n")
+    println(itos(a1 + a2 + a3 + a4 + a5))
+    println(a6)
 }
 
 fn test8args(a1 i32, a2 i32, a3 i32, a4 i32, a5 i32, a6 i32, a7 i32, a8 i32) {
@@ -127,7 +127,7 @@ fn test8args(a1 i32, a2 i32, a3 i32, a4 i32, a5 i32, a6 i32, a7 i32, a8 i32) {
     print(itos(a6)) print(" + ")
     print(itos(a7)) print(" + ")
     print(itos(a8)) print(" = ")
-    print(itos(a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8)) print("\n")
+    println(itos(a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8))
 }
 
 fn test7args2(a1 i32, a2 i32, a3 i32, a4 i32, a5 i32, a6 str, a7 i32) {
@@ -137,8 +137,8 @@ fn test7args2(a1 i32, a2 i32, a3 i32, a4 i32, a5 i32, a6 str, a7 i32) {
     print(itos(a4)) print(" + ")
     print(itos(a5)) print(" + ")
     print(itos(a7)) print(" = ")
-    print(itos(a1 + a2 + a3 + a4 + a5 + a7)) print("\n")
-    print(a6) print("\n")
+    println(itos(a1 + a2 + a3 + a4 + a5 + a7))
+    println(a6)
 }
 
 struct BigStruct {
@@ -161,8 +161,8 @@ fn test8argsWithStruct(a1 i32, a2 i32, a3 i32, a4 i32, a5 i32, b BigStruct, a6 i
     print(itos(b.i4)) print(" + ")
     print(itos(b.i5)) print(" + ")
     print(itos(a6)) print(" = ")
-    print(itos(a1 + a2 + a3 + a4 + a5 + b.i1 + b.i2 + b.i3 + b.i4 + b.i5 + a6)) print("\n")
-    print(a7) print("\n")
+    println(itos(a1 + a2 + a3 + a4 + a5 + b.i1 + b.i2 + b.i3 + b.i4 + b.i5 + a6))
+    println(a7)
 }
 
 fn main() {

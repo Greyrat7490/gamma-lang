@@ -528,29 +528,38 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
         regIdx++
     }
 
+    stackArgsIdx := make([]int, 0, len(e.F.GetArgs()))
+    bigStructArgsIdx := make([]int, 0, len(e.F.GetArgs()))
+    regArgsIdx := make([]int, 0, len(e.F.GetArgs()))
+
     // get start of args on stack, calc big args stack size % 16 ----
     rest := uint(0)
-    stackArgsStart := len(e.F.GetArgs())
+    b := true
+    regCount := regIdx
     for i,t := range e.F.GetArgs() {
         if types.IsBigStruct(t) {
+            bigStructArgsIdx = append(bigStructArgsIdx, i)
             rest += (t.Size() + 7) & ^uint(7)
-
-        } else if stackArgsStart == len(e.F.GetArgs()) {
+        } else {
             needed := types.RegCount(t)
-            if regIdx + needed > 6 {
-                stackArgsStart = i
-                if rest != 0 {
+            if regCount + needed > 6 {
+                stackArgsIdx = append(stackArgsIdx, i)
+                if b && rest != 0 {
+                    b = false
                     rest += 8
                 }
             } else {
-                regIdx += needed
+                regArgsIdx = append(regArgsIdx, i)
+                regCount += needed
             }
         }
     }
     rest %= 16
 
     // pass args on stack -------------------------------------------
-    for i := len(e.F.GetArgs())-1; i >= stackArgsStart; i-- {
+    for idx := len(stackArgsIdx)-1; idx >= 0; idx-- {
+        i := stackArgsIdx[idx]
+
         if v := cmpTime.ConstEval(e.Values[i]); v != nil {
             PassValStack(file, v, e.F.GetArgs()[i])
 
@@ -564,55 +573,49 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
     }
 
     // align stack (16byte) -----------------------------------------
-    bigArgsSize := uint(0)
+    stackReservedSize := uint(0)
     if rest != 0 {
         asm.SubSp(file, int64(rest))
-        bigArgsSize += rest
+        stackReservedSize += rest
     }
 
     // pass big struct args -----------------------------------------
-    for i := len(e.F.GetArgs())-1; i >= 0; i-- {
+    for idx := len(bigStructArgsIdx)-1; idx >= 0; idx-- {
+        i := bigStructArgsIdx[idx]
         t := e.F.GetArgs()[i]
-        if types.IsBigStruct(t) {
-            size := (t.Size() + 7) & ^uint(7)
-            bigArgsSize += size
+        size := (t.Size() + 7) & ^uint(7)
+        stackReservedSize += size
 
-            asm.SubSp(file, int64(size))
-            asm.MovRegReg(file, asm.RegC, asm.RegSp, types.Ptr_Size)
+        asm.SubSp(file, int64(size))
+        asm.MovRegReg(file, asm.RegC, asm.RegSp, types.Ptr_Size)
 
-            asm.UseReg(asm.RegC)
-            
-            switch t := t.(type) {
-            case types.StructType:
-                if v := cmpTime.ConstEval(e.Values[i]); v != nil {
-                    PassBigStructLit(file, t, *v.(*constVal.StructConst))
+        asm.UseReg(asm.RegC)
+        
+        switch t := t.(type) {
+        case types.StructType:
+            if v := cmpTime.ConstEval(e.Values[i]); v != nil {
+                PassBigStructLit(file, t, *v.(*constVal.StructConst))
 
-                } else if ident,ok := e.Values[i].(*ast.Ident); ok {
-                    PassBigStructVar(file, t, ident.Obj.(vars.Var), 0)
+            } else if ident,ok := e.Values[i].(*ast.Ident); ok {
+                PassBigStructVar(file, t, ident.Obj.(vars.Var), 0)
 
-                } else {
-                    PassBigStructReg(file, asm.RegAsAddr(asm.RegC), e.Values[i])
-                }
-            case types.VecType:
+            } else {
                 PassBigStructReg(file, asm.RegAsAddr(asm.RegC), e.Values[i])
-
-            default:
-                fmt.Fprintln(os.Stderr, "[ERROR] (internal) unreachable GenFnCall")
-                os.Exit(1)
             }
+        case types.VecType:
+            PassBigStructReg(file, asm.RegAsAddr(asm.RegC), e.Values[i])
 
-            asm.FreeReg(asm.RegC)
+        default:
+            fmt.Fprintln(os.Stderr, "[ERROR] (internal) unreachable GenFnCall")
+            os.Exit(1)
         }
+
+        asm.FreeReg(asm.RegC)
     }
 
     // pass args with regs -----------------------------------------
-    for i := stackArgsStart-1; i >= 0; i-- {
+    for _,i := range regArgsIdx {
         t := e.F.GetArgs()[i]
-        if types.IsBigStruct(t) {
-            continue
-        }
-
-        regIdx -= types.RegCount(t)
 
         if v := cmpTime.ConstEval(e.Values[i]); v != nil {
             PassVal(file, regIdx, v, t)
@@ -627,13 +630,15 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
             PassExpr(file, regIdx, t, e.Values[i].GetType().Size(), e.Values[i])
             asm.FreeReg(asm.RegC)
         }
+
+        regIdx += types.RegCount(t)
     }
 
     CallFn(file, e.F)
 
     // clear stack -------------------------------------------------
-    if bigArgsSize > 0 {
-        asm.AddSp(file, int64(bigArgsSize))
+    if stackReservedSize > 0 {
+        asm.AddSp(file, int64(stackReservedSize))
     }
 }
 
