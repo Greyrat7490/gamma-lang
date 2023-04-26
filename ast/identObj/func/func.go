@@ -11,14 +11,14 @@ import (
 type Func struct {
     decPos token.Pos
     name string
+    generic *types.GenericType
     args []types.Type
     retType types.Type
     frameSize uint
 }
 
-func CreateFunc(name token.Token, args []types.Type, retType types.Type) Func {
-    // frameSize = 1 -> invalid value
-    return Func{ name: name.Str, decPos: name.Pos, args: args, retType: retType, frameSize: 1 }
+func CreateFunc(name token.Token) Func {
+    return Func{ name: name.Str, decPos: name.Pos }
 }
 
 func (f *Func) GetArgs() []types.Type {
@@ -34,22 +34,16 @@ func (f *Func) GetType() types.Type {
     return nil
 }
 
+func (f *Func) GetGeneric() *types.GenericType {
+    return f.generic
+}
+
 func (f *Func) GetRetType() types.Type {
     return f.retType
 }
 
 func (f *Func) GetPos() token.Pos {
     return f.decPos
-}
-
-func (f *Func) SetFrameSize(size uint) {
-    if f.frameSize != 1 {
-        fmt.Fprintln(os.Stderr, "[ERROR] setting the frameSize of a function again is not allowed")
-        os.Exit(1)
-    }
-
-    // size has to be the multiple of 16byte
-    f.frameSize = (size + 15) & ^uint(15)
 }
 
 func (f *Func) GetFrameSize() uint {
@@ -60,4 +54,27 @@ func (f *Func) Addr() addr.Addr {
     fmt.Fprintln(os.Stderr, "[ERROR] TODO: func.go Addr()")
     os.Exit(1)
     return addr.Addr{}
+}
+
+
+
+func (f *Func) SetFrameSize(size uint) {
+    // size has to be the multiple of 16byte
+    f.frameSize = (size + 15) & ^uint(15)
+}
+
+func (f *Func) SetRetType(typ types.Type) {
+    f.retType = typ
+}
+
+func (f *Func) SetArgs(args []types.Type) {
+    f.args = args
+}
+
+func (f *Func) SetGeneric(generic *types.GenericType) {
+    f.generic = generic
+}
+
+func (f *Func) AddTypeToGeneric(typ types.Type) {
+    f.generic.UsedTypes = append(f.generic.UsedTypes, typ)
 }

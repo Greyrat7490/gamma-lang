@@ -53,6 +53,8 @@ type DefFn struct {
     RetType types.Type
     Block Block
     IsConst bool
+    Generic token.Token // empty when IsGeneric == false
+    IsGeneric bool
 }
 
 type DefStruct struct {

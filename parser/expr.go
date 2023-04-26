@@ -52,6 +52,9 @@ func prsExpr(tokens *token.Tokens) ast.Expr {
                 expr = prsCallFn(tokens)
             }
 
+        case token.DefConst:
+            expr = prsCallGenericFn(tokens)
+
         case token.Dot:
             ident := prsIdentExpr(tokens)
             expr = prsField(tokens, ident)
@@ -907,6 +910,60 @@ func prsFmt(tokens *token.Tokens) ast.Expr {
     values := prsFmtArgs(tokens)
 
     return convertFmt(fmtStr, values)
+}
+
+func prsGenericUsedType(tokens *token.Tokens) types.Type {
+    if tokens.Cur().Type == token.DefConst {
+        if tokens.Next().Type != token.Lss {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected \"<\" but got %v\n", tokens.Cur())
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+            os.Exit(1)
+        }
+
+        tokens.Next()
+        typ := prsType(tokens)
+
+
+        if tokens.Next().Type != token.Grt {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected \">\" but got %v\n", tokens.Cur())
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+            os.Exit(1)
+        }
+
+        tokens.Next()
+        return typ
+    }
+
+    return nil
+}
+
+func prsCallGenericFn(tokens *token.Tokens) *ast.FnCall {
+    ident := prsIdentExpr(tokens)
+
+    tokens.Next()
+    usedType := prsGenericUsedType(tokens)
+
+    posL := tokens.Cur().Pos
+    vals := prsPassArgs(tokens)
+    posR := tokens.Cur().Pos
+
+    if obj := identObj.Get(ident.Name); obj != nil {
+        if f,ok := obj.(*fn.Func); ok {
+            f.AddTypeToGeneric(usedType)
+            return &ast.FnCall{ Ident: *ident, F: f, Values: vals, ParenLPos: posL, ParenRPos: posR }
+
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] you can only call a function (%s is not a function)\n", ident.Name)
+            fmt.Fprintln(os.Stderr, "\t" + ident.At())
+            os.Exit(1)
+        }
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared\n", ident.Name)
+        fmt.Fprintln(os.Stderr, "\t" + ident.At())
+        os.Exit(1)
+    }
+
+    return nil
 }
 
 func prsCallFn(tokens *token.Tokens) *ast.FnCall {

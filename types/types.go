@@ -8,15 +8,16 @@ import (
 
 type TypeKind int
 const (
-    Int    TypeKind = iota
-    Uint   TypeKind = iota
-    Char   TypeKind = iota
-    Bool   TypeKind = iota
-    Ptr    TypeKind = iota
-    Arr    TypeKind = iota
-    Vec    TypeKind = iota
-    Str    TypeKind = iota
-    Struct TypeKind = iota
+    Int     TypeKind = iota
+    Uint    TypeKind = iota
+    Char    TypeKind = iota
+    Bool    TypeKind = iota
+    Ptr     TypeKind = iota
+    Arr     TypeKind = iota
+    Vec     TypeKind = iota
+    Str     TypeKind = iota
+    Struct  TypeKind = iota
+    Generic TypeKind = iota
 )
 
 const (
@@ -70,6 +71,10 @@ type StructType struct {
     isBigStruct bool
     isAligned bool
     size uint
+}
+type GenericType struct {
+    Name string
+    UsedTypes []Type
 }
 
 func isAligned(types []Type, size uint) (aligned bool, rest uint)  {
@@ -211,25 +216,27 @@ func RegCount(t Type) uint {
     }
 }
 
-func (t IntType)    GetKind() TypeKind { return Int }
-func (t UintType)   GetKind() TypeKind { return Uint }
-func (t CharType)   GetKind() TypeKind { return Char }
-func (t BoolType)   GetKind() TypeKind { return Bool }
-func (t StrType)    GetKind() TypeKind { return Str  }
-func (t PtrType)    GetKind() TypeKind { return Ptr  }
-func (t ArrType)    GetKind() TypeKind { return Arr  }
-func (t VecType)    GetKind() TypeKind { return Vec  }
-func (t StructType) GetKind() TypeKind { return Struct }
+func (t IntType)     GetKind() TypeKind { return Int }
+func (t UintType)    GetKind() TypeKind { return Uint }
+func (t CharType)    GetKind() TypeKind { return Char }
+func (t BoolType)    GetKind() TypeKind { return Bool }
+func (t StrType)     GetKind() TypeKind { return Str  }
+func (t PtrType)     GetKind() TypeKind { return Ptr  }
+func (t ArrType)     GetKind() TypeKind { return Arr  }
+func (t VecType)     GetKind() TypeKind { return Vec  }
+func (t StructType)  GetKind() TypeKind { return Struct }
+func (t GenericType) GetKind() TypeKind { return Generic }
 
-func (t IntType)    Size() uint { return t.size }
-func (t UintType)   Size() uint { return t.size }
-func (t CharType)   Size() uint { return Char_Size }
-func (t BoolType)   Size() uint { return Bool_Size }
-func (t StrType)    Size() uint { return Str_Size }
-func (t PtrType)    Size() uint { return Ptr_Size }
-func (t ArrType)    Size() uint { return Arr_Size }
-func (t VecType)    Size() uint { return Vec_Size }
-func (t StructType) Size() uint { return t.size }
+func (t IntType)     Size() uint { return t.size }
+func (t UintType)    Size() uint { return t.size }
+func (t CharType)    Size() uint { return Char_Size }
+func (t BoolType)    Size() uint { return Bool_Size }
+func (t StrType)     Size() uint { return Str_Size }
+func (t PtrType)     Size() uint { return Ptr_Size }
+func (t ArrType)     Size() uint { return Arr_Size }
+func (t VecType)     Size() uint { return Vec_Size }
+func (t StructType)  Size() uint { return t.size }
+func (t GenericType) Size() uint { return 0 }
 
 func (t IntType)  String() string {
     switch t.size {
@@ -267,9 +274,6 @@ func (t CharType) String() string { return "char" }
 func (t BoolType) String() string { return "bool" }
 func (t StrType)  String() string { return "str"  }
 func (t PtrType)  String() string {
-    if t.BaseType == nil {
-        return "ptr(generic)"
-    }
     return "*" + t.BaseType.String()
 }
 func (t ArrType)  String() string {
@@ -284,6 +288,7 @@ func (t VecType) String() string {
     return "[$]" + t.BaseType.String()
 }
 func (t StructType) String() string { return t.Name }
+func (t GenericType) String() string { return t.Name }
 
 func ToBaseType(s string) Type {
     switch s {

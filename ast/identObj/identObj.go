@@ -62,16 +62,13 @@ func DecConst(name token.Token, t types.Type, val constVal.ConstVal) *consts.Con
     return &c
 }
 
-func DecFunc(name token.Token, args []types.Type, retType types.Type) *fn.Func {
+func DecFunc(name token.Token) *fn.Func {
     checkName(name)
 
-    f := fn.CreateFunc(name, args, retType)
-    curScope.parent.identObjs[name.Str] = &f
-    if types.IsBigStruct(retType) {
-        curScope.frameSize += types.Ptr_Size
-    }
+    f := fn.CreateFunc(name)
+    curScope.identObjs[name.Str] = &f
     curFunc = &f
-    return &f
+    return curFunc
 }
 
 func DecStruct(name token.Token, names []string, types []types.Type) *structDec.Struct {
@@ -93,11 +90,14 @@ func AddBuildIn(name string, argtype types.Type, retType types.Type) {
         os.Exit(1)
     }
 
-    f := fn.CreateFunc(
-        token.Token{ Str: name, Type: token.Name },
-        []types.Type{ argtype },
-        retType,
-    )
-
+    f := fn.CreateFunc(token.Token{ Str: name })  
+    f.SetRetType(retType)
+    f.SetArgs([]types.Type{ argtype })
     curScope.identObjs[name] = &f
+}
+
+func SetRetType(retType types.Type) {
+    if types.IsBigStruct(retType) {
+        curScope.frameSize += types.Ptr_Size
+    }
 }

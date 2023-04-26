@@ -4,6 +4,7 @@ import (
     "os"
     "fmt"
     "gamma/token"
+    "gamma/types"
 )
 
 var curScope *Scope = &Scope{ identObjs: map[string]IdentObj{} }
@@ -55,6 +56,18 @@ func Get(name string) IdentObj {
         }
 
         scope = scope.parent
+    }
+
+    return nil
+}
+
+func GetGeneric(name string) *types.GenericType {
+    if curFunc != nil {
+        t := curFunc.GetGeneric()
+
+        if t != nil && t.Name == name {
+            return t
+        }
     }
 
     return nil

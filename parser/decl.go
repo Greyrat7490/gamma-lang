@@ -74,6 +74,10 @@ func prsType(tokens *token.Tokens) types.Type {
             }
         }
 
+        if generic := identObj.GetGeneric(tokens.Cur().Str); generic != nil {
+            return generic
+        }
+
         fmt.Fprintf(os.Stderr, "[ERROR] unknown struct type \"%s\"\n", tokens.Cur().Str)
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
@@ -350,9 +354,18 @@ func prsDefFn(tokens *token.Tokens, isConst bool) ast.DefFn {
         os.Exit(1)
     }
 
+    f := identObj.DecFunc(name)
     identObj.StartScope()
+
     tokens.Next()
+    generic := prsGeneric(tokens)
+    isGeneric := generic.Str != ""
+    if isGeneric {
+        f.SetGeneric(&types.GenericType{ Name: generic.Str, UsedTypes: make([]types.Type, 0) })
+    }
+
     argNames, argTypes := prsDecArgs(tokens)
+    f.SetArgs(argTypes)
 
     if name.Str == "main" {
         isMainDefined = true
@@ -365,14 +378,14 @@ func prsDefFn(tokens *token.Tokens, isConst bool) ast.DefFn {
         tokens.Next()
         retType = prsType(tokens)
     }
+    f.SetRetType(retType)
+    identObj.SetRetType(retType)
 
     if tokens.Next().Type != token.BraceL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", tokens.Cur())
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
-
-    f := identObj.DecFunc(name, argTypes, retType)
 
     var argDecs []ast.DecVar
     offset := uint(8)
@@ -400,14 +413,42 @@ func prsDefFn(tokens *token.Tokens, isConst bool) ast.DefFn {
     }
 
     block := prsBlock(tokens)
-    f.SetFrameSize(identObj.GetFrameSize())
+    if !isGeneric {
+        f.SetFrameSize(identObj.GetFrameSize())
+    }
     identObj.EndScope()
 
-    def := ast.DefFn{ Pos: pos, F: f, Args: argDecs, RetType: retType, Block: block, IsConst: isConst }
+    def := ast.DefFn{ Pos: pos, F: f, Args: argDecs, RetType: retType, Block: block,
+        IsConst: isConst, IsGeneric: isGeneric, Generic: generic }
+
     if isConst {
         cmpTime.AddConstFunc(def)
     }
+
     return def
+}
+
+func prsGeneric(tokens *token.Tokens) token.Token {
+    if tokens.Cur().Type == token.Lss {
+        name := tokens.Next()
+
+        if name.Type != token.Name {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", tokens.Cur())
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Last().At())
+            os.Exit(1)
+        }
+
+        if tokens.Next().Type != token.Grt {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected \">\" but got %v\n", tokens.Cur())
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+            os.Exit(1)
+        }
+
+        tokens.Next()
+        return name
+    }
+
+    return token.Token{}
 }
 
 func prsDecField(tokens *token.Tokens) ast.DecField {
