@@ -76,5 +76,9 @@ func (f *Func) SetGeneric(generic *types.GenericType) {
 }
 
 func (f *Func) AddTypeToGeneric(typ types.Type) {
+    for _,t := range f.generic.UsedTypes {
+        if types.Equal(typ, t) { return }
+    }
+
     f.generic.UsedTypes = append(f.generic.UsedTypes, typ)
 }

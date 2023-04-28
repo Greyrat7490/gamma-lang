@@ -74,6 +74,7 @@ type StructType struct {
 }
 type GenericType struct {
     Name string
+    CurUsedType Type
     UsedTypes []Type
 }
 
@@ -225,7 +226,13 @@ func (t PtrType)     GetKind() TypeKind { return Ptr  }
 func (t ArrType)     GetKind() TypeKind { return Arr  }
 func (t VecType)     GetKind() TypeKind { return Vec  }
 func (t StructType)  GetKind() TypeKind { return Struct }
-func (t GenericType) GetKind() TypeKind { return Generic }
+func (t GenericType) GetKind() TypeKind { 
+    if t.CurUsedType != nil {
+        return t.CurUsedType.GetKind()
+    }
+
+    return Generic
+}
 
 func (t IntType)     Size() uint { return t.size }
 func (t UintType)    Size() uint { return t.size }
@@ -236,7 +243,13 @@ func (t PtrType)     Size() uint { return Ptr_Size }
 func (t ArrType)     Size() uint { return Arr_Size }
 func (t VecType)     Size() uint { return Vec_Size }
 func (t StructType)  Size() uint { return t.size }
-func (t GenericType) Size() uint { return 0 }
+func (t GenericType) Size() uint { 
+    if t.CurUsedType != nil {
+        return t.CurUsedType.Size()
+    }
+
+    return 0
+}
 
 func (t IntType)  String() string {
     switch t.size {
@@ -288,7 +301,12 @@ func (t VecType) String() string {
     return "[$]" + t.BaseType.String()
 }
 func (t StructType) String() string { return t.Name }
-func (t GenericType) String() string { return t.Name }
+func (t GenericType) String() string {
+    if t.CurUsedType != nil {
+        return t.CurUsedType.String()
+    }
+    return t.Name
+}
 
 func ToBaseType(s string) Type {
     switch s {
@@ -379,4 +397,66 @@ func MinSizeUint(val uint64) uint {
     default:                // 64bit
         return 8
     }
+}
+
+func Equal(destType Type, srcType Type) bool {
+    if srcType == nil {
+        return false
+    }
+
+    switch t := destType.(type) {
+    case VecType:
+        if t2,ok := srcType.(VecType); ok {
+            return Equal(t.BaseType, t2.BaseType)
+        }
+
+    case ArrType:
+        if t2,ok := srcType.(ArrType); ok {
+            if Equal(t.BaseType, t2.BaseType) {
+                if len(t.Lens) == len(t2.Lens) {
+                    for i,l := range t.Lens {
+                        if l != t2.Lens[i] {
+                            return false
+                        }
+                    }
+
+                    return true
+                }
+            }
+        }
+
+    case PtrType:
+        if t2,ok := srcType.(PtrType); ok {
+            return Equal(t.BaseType, t2.BaseType)
+        }
+
+    case StructType:
+        if t2,ok := srcType.(StructType); ok {
+            for i,t := range t.Types {
+                if !Equal(t, t2.Types[i]) {
+                    return false
+                }
+            }
+
+            return true
+        }
+
+    case GenericType:
+        if t2,ok := srcType.(GenericType); ok {
+            return t.Name == t2.Name
+        }
+
+    case IntType:
+        if t2,ok := srcType.(IntType); ok {
+            return t2.Size() <= destType.Size()
+        }
+
+    case StrType:
+        return destType.GetKind() == srcType.GetKind()
+
+    default:
+        return destType == srcType
+    }
+
+    return false
 }

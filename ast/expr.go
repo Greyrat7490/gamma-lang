@@ -21,6 +21,7 @@ type BadExpr struct{}
 
 type FnCall struct {
     F *fn.Func
+    GenericUsedType types.Type
     Ident Ident
     ParenLPos token.Pos
     Values []Expr

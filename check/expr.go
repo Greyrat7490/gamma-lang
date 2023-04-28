@@ -107,7 +107,7 @@ func checkTypeExpr(destType types.Type, e ast.Expr) bool {
         return checkUint(destType, e)
 
     default:
-        return CheckTypes(destType, e.GetType())
+        return types.Equal(destType, e.GetType())
     }
 }
 
@@ -315,7 +315,7 @@ func typeCheckXSwitch(o *ast.XSwitch) {
         typeCheckXCase(&c)
 
         t2 := c.Expr.GetType()
-        if !CheckTypes(t1, t2) {
+        if !types.Equal(t1, t2) {
             fmt.Fprintln(os.Stderr, "[ERROR] expected every case body to return the same type but got:")
             for i,c := range o.Cases {
                 fmt.Fprintf(os.Stderr, "\tcase%d: %v\n", i, c.Expr.GetType())
@@ -327,6 +327,10 @@ func typeCheckXSwitch(o *ast.XSwitch) {
 }
 
 func typeCheckFnCall(o *ast.FnCall) {
+    if o.GenericUsedType != nil {
+        o.F.GetGeneric().CurUsedType = o.GenericUsedType
+    }
+
     for _,a := range o.Values {
         typeCheckExpr(a)
     }

@@ -950,7 +950,7 @@ func prsCallGenericFn(tokens *token.Tokens) *ast.FnCall {
     if obj := identObj.Get(ident.Name); obj != nil {
         if f,ok := obj.(*fn.Func); ok {
             f.AddTypeToGeneric(usedType)
-            return &ast.FnCall{ Ident: *ident, F: f, Values: vals, ParenLPos: posL, ParenRPos: posR }
+            return &ast.FnCall{ Ident: *ident, F: f, GenericUsedType: usedType, Values: vals, ParenLPos: posL, ParenRPos: posR }
 
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] you can only call a function (%s is not a function)\n", ident.Name)
