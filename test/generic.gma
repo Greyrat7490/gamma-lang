@@ -18,6 +18,25 @@ fn append<T>(arr [$]T, elem T) -> [$]T {
     ret arr
 }
 
+fn testGenericVec(int_arr [$]i32, uint_arr [$]u32, bool_arr [$]bool) {
+    printArr::<i32>(int_arr)
+    printArr::<u32>(uint_arr)
+    printArr::<bool>(bool_arr)
+}
+
+fn testAppend(int_arr [$]i32, uint_arr [$]u32, bool_arr [$]bool) {
+    int_arr = append::<i32>(int_arr, -3)
+    uint_arr = append::<u32>(uint_arr, 3)
+    bool_arr = append::<bool>(bool_arr, true)
+
+    testGenericVec(int_arr, uint_arr, bool_arr)
+}
+
+fn testJustRet() {
+    println(itos(dummy::<i64>(69)))
+    println(utos(dummy::<u8>(64 as u8)))
+}
+
 fn main() {
     int_arr := [$]i32{ len: 2 }
     uint_arr := [$]u32{ len: 2 }
@@ -31,16 +50,13 @@ fn main() {
     
     bool_arr[0] = false
     bool_arr[1] = true
-    
-    printArr::<i32>(int_arr)
 
-    printArr::<u32>(uint_arr)
-    printArr::<bool>(bool_arr)
+    println("test just return ----------------")
+    testJustRet()
 
-    println(itos(dummy::<i64>(69)))
-    println(utos(dummy::<u8>(64 as u8)))
+    println("test vec with generic type ------")
+    testGenericVec(int_arr, uint_arr, bool_arr)
 
-    // int_arr = append::<i32>(int_arr, -3)
-    // 
-    // printArr::<i32>(int_arr)
+    println("test vec append -----------------")
+    testAppend(int_arr, uint_arr, bool_arr)
 }

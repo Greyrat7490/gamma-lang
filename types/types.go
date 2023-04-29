@@ -193,6 +193,14 @@ func IsBigStruct(t Type) bool {
     return false
 }
 
+func ReplaceGeneric(t Type) Type {
+    if t,ok := t.(*GenericType); ok && t.CurUsedType != nil {
+        return t.CurUsedType
+    }
+
+    return t
+}
+
 func RegCount(t Type) uint {
     switch t.GetKind() {
     case Str:
@@ -404,13 +412,8 @@ func Equal(destType Type, srcType Type) bool {
         return false
     }
 
-    if t,ok := srcType.(*GenericType); ok && t.CurUsedType != nil {
-        srcType = t.CurUsedType
-    }
-
-    if t,ok := destType.(*GenericType); ok && t.CurUsedType != nil {
-        destType = t.CurUsedType
-    }
+    srcType = ReplaceGeneric(srcType)
+    destType = ReplaceGeneric(destType)
 
     switch t := destType.(type) {
     case VecType:
