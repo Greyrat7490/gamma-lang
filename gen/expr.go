@@ -93,6 +93,8 @@ func GenExpr(file *bufio.Writer, e ast.Expr) {
             GenSyscall(file, e.Values[0])
         case "_asm":
             GenInlineAsm(file, e.Values[0])
+        case "fmt":
+            GenFmt(file, e.Values)
         default:
             GenFnCall(file, e)
         }
@@ -780,6 +782,147 @@ func GenInlineAsm(file *bufio.Writer, val ast.Expr) {
         fmt.Fprintln(os.Stderr, "[ERROR] _asm takes only a string literal")
         fmt.Fprintln(os.Stderr, "\t" + val.At())
         os.Exit(1)
+    }
+}
+
+func GenFmt(file *bufio.Writer, values []ast.Expr) {
+    if fmtStr,ok := values[0].(*ast.StrLit); ok {
+        args := convertFmtArgs(values[1:])
+        expr := convertFmt(fmtStr.Val, args)
+
+        GenExpr(file, expr)
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] (internal) expected string literal but got %s (%s)\n", fmtStr.Val, reflect.TypeOf(fmtStr))
+        fmt.Fprintln(os.Stderr, "\t" + fmtStr.At())
+        os.Exit(1)
+    }
+}
+
+func createStrLit(fmtStr token.Token, startIdx int, endIdx int) *ast.StrLit {
+    if startIdx == 0 { startIdx += 1 }
+    if endIdx == len(fmtStr.Str)-1 { endIdx -= 1 }
+
+    fmtStr.Str = "\"" + fmtStr.Str[startIdx:endIdx-1] + "\""
+    idx := str.Add(fmtStr)
+    return &ast.StrLit{ Idx: idx, Val: fmtStr }
+}
+
+func convertFmtArgs(args []ast.Expr) []ast.Expr {
+    res := make([]ast.Expr, 0, len(args))
+    for _,a := range args {
+        res = append(res, convertFmtArg(a)) 
+    }
+    return res
+}
+
+func convertFmtArg(arg ast.Expr) ast.Expr {
+    typ := arg.GetType()
+
+    var name string
+    switch typ.GetKind() {
+    case types.Str:
+        return arg
+    case types.Uint:
+        name = "utos"
+    case types.Int:
+        name = "itos"
+    case types.Char:
+        name = "ctos"
+    case types.Bool:
+        name = "btos"
+    case types.Ptr:
+        arg = &ast.Cast{ Expr: arg, DestType: types.CreateUint(types.Ptr_Size) }
+        name = "utos"
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] %s has no format to string function\n", typ)
+        fmt.Fprintln(os.Stderr, "\t" + arg.At())
+        os.Exit(1)
+    }
+
+    values := []ast.Expr{ arg }
+    ident := ast.Ident{ Name: name, Obj: identObj.Get(name) }
+
+    var F *identObj.Func
+    if obj := identObj.Get(name); obj != nil {
+        if f,ok := obj.(*identObj.Func); ok {
+            F = f
+        }
+    }
+
+    return &ast.FnCall{ F: F, Ident: ident, Values: values }
+}
+
+func convertFmt(fmtStr token.Token, values []ast.Expr) ast.Expr {
+    if fmtStr.Str == "{}" {
+        return values[0]
+    } else {
+        res := ast.Binary{}
+        cur := &res.OperandR
+
+        valIdx := 0
+        startIdx := 0
+        for i := range fmtStr.Str {
+            if fmtStr.Str[i] == '}' && fmtStr.Str[i-1] == '{' {
+                // escaped {
+                if i > 2 && fmtStr.Str[i-2] == '\\' {
+                    continue
+                }
+
+                if i > startIdx {
+                    binOp := ast.Binary{
+                        Pos: fmtStr.Pos,
+                        Type: types.StrType{},
+                        OperandL: *cur,
+                        Operator: token.Token{ Pos: fmtStr.Pos, Str: "+", Type: token.Plus },
+                        OperandR: createStrLit(fmtStr, startIdx, i),
+                    }
+                    *cur = &binOp
+                    cur = &binOp.OperandR
+
+                    startIdx = i+1
+                }
+
+                if valIdx < len(values) {
+                    binOp := ast.Binary{
+                        Pos: fmtStr.Pos,
+                        Type: types.StrType{},
+                        OperandL: *cur,
+                        Operator: token.Token{ Pos: fmtStr.Pos, Str: "+", Type: token.Plus },
+                        OperandR: values[valIdx],
+                    }
+                    *cur = &binOp
+                    cur = &binOp.OperandR
+                }
+
+                valIdx += 1
+            }
+        }
+
+        if startIdx != len(fmtStr.Str)-1 {
+            binOp := ast.Binary{
+                Pos: fmtStr.Pos,
+                Type: types.StrType{},
+                OperandL: *cur,
+                Operator: token.Token{ Pos: fmtStr.Pos, Str: "+", Type: token.Plus },
+                OperandR: createStrLit(fmtStr, startIdx, len(fmtStr.Str)),
+            }
+
+            *cur = &binOp
+            cur = &binOp.OperandR
+        }
+
+        if len(values) != valIdx {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected %d args for fmt but got %d\n", valIdx, len(values))
+            fmt.Fprintln(os.Stderr, "\tfmt string: " + fmtStr.Str)
+            fmt.Fprintln(os.Stderr, "\t" + fmtStr.At())
+            os.Exit(1)
+        }
+
+        if binOp,ok := res.OperandR.(*ast.Binary); ok {
+            return binOp.OperandR
+        }
+
+        return &res
     }
 }
 

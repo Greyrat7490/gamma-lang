@@ -36,7 +36,11 @@ func typeCheckExpr(e ast.Expr) {
         typeCheckXSwitch(e)
 
     case *ast.FnCall:
-        typeCheckFnCall(e)
+        if e.Ident.Name == "fmt" {
+            typeCheckFmtCall(e)
+        } else {
+            typeCheckFnCall(e)
+        }
 
     case *ast.Cast:
         typeCheckCast(e)
@@ -357,6 +361,36 @@ func typeCheckFnCall(o *ast.FnCall) {
         }
     } else {
         fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a func (in typecheck.go FnCall)")
+        os.Exit(1)
+    }
+}
+
+func typeCheckFmtCall(o *ast.FnCall) {
+    for _,a := range o.Values {
+        typeCheckExpr(a)
+    }
+
+    if len(o.Values) < 2 {
+        if len(o.Values) == 1 {
+            fmt.Fprintln(os.Stderr, "[ERROR] fmt got no arguments to format (only format string)")
+            fmt.Fprintln(os.Stderr, "\t" + o.ParenRPos.At())
+            os.Exit(1)
+        } else {
+            fmt.Fprintln(os.Stderr, "[ERROR] fmt got no arguments (missing format string and args to format)")
+            fmt.Fprintln(os.Stderr, "\t" + o.ParenLPos.At())
+            os.Exit(1)
+        }
+    }
+
+    if fmtStr,ok := o.Values[0].(*ast.StrLit); ok {
+        if len(fmtStr.Val.Str) < 4 {
+            fmt.Fprintf(os.Stderr, "[ERROR] %v is not a valid format string (missing {})\n", fmtStr.Val)
+            fmt.Fprintln(os.Stderr, "\t" + fmtStr.At())
+            os.Exit(1)
+        }
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected string literal as format string but got %s (%s)\n", fmtStr.Val, reflect.TypeOf(fmtStr))
+        fmt.Fprintln(os.Stderr, "\t" + fmtStr.At())
         os.Exit(1)
     }
 }

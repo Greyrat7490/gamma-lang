@@ -175,7 +175,9 @@ func isDec(tokens *token.Tokens) bool {
     return isNextType(tokens)
 }
 func isDefInfer(tokens *token.Tokens) bool {
-    return tokens.Cur().Type == token.Name && (tokens.Peek().Type == token.DefVar || tokens.Peek().Type == token.DefConst)
+    return tokens.Cur().Type == token.Name &&
+        (tokens.Peek().Type == token.DefVar || 
+            (tokens.Peek().Type == token.DefConst && tokens.Peek2().Type != token.Lss))
 }
 func isNextType(tokens *token.Tokens) bool {
     tokens.SaveIdx()

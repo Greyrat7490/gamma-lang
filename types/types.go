@@ -404,6 +404,14 @@ func Equal(destType Type, srcType Type) bool {
         return false
     }
 
+    if t,ok := srcType.(*GenericType); ok && t.CurUsedType != nil {
+        srcType = t.CurUsedType
+    }
+
+    if t,ok := destType.(*GenericType); ok && t.CurUsedType != nil {
+        destType = t.CurUsedType
+    }
+
     switch t := destType.(type) {
     case VecType:
         if t2,ok := srcType.(VecType); ok {

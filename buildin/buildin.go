@@ -26,11 +26,14 @@ func Declare() {
     identObj.AddBuildIn("println", types.StrType{}, nil)
     identObj.AddBuildIn("eprint", types.StrType{}, nil)
     identObj.AddBuildIn("eprintln", types.StrType{}, nil)
+
     identObj.AddBuildIn("exit", types.CreateInt(types.I32_Size), nil)
+
     identObj.AddBuildIn("itos", types.CreateInt(types.I64_Size), types.StrType{})
     identObj.AddBuildIn("utos", types.CreateUint(types.U64_Size), types.StrType{})
     identObj.AddBuildIn("btos", types.BoolType{}, types.StrType{})
     identObj.AddBuildIn("ctos", types.CharType{}, types.StrType{})
+    identObj.AddBuildIn("fmt", nil, types.StrType{})
     identObj.AddBuildIn("from_cstr", types.PtrType{ BaseType: types.CharType{} }, types.StrType{})
 
     // basic inline assembly
