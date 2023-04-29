@@ -13,8 +13,6 @@ import (
     "gamma/cmpTime/constVal"
     "gamma/ast"
     "gamma/ast/identObj"
-    "gamma/ast/identObj/func"
-    "gamma/ast/identObj/struct"
 )
 
 type precedence int
@@ -64,7 +62,7 @@ func prsExpr(tokens *token.Tokens) ast.Expr {
 
         case token.BraceL:
             if obj := identObj.Get(tokens.Cur().Str); obj != nil {
-                if _,ok := obj.(*structDec.Struct); ok {
+                if _,ok := obj.(*identObj.Struct); ok {
                     return prsStructLit(tokens)
                 }
             }
@@ -316,9 +314,9 @@ func prsStructLit(tokens *token.Tokens) *ast.StructLit {
     }
 
     var t types.StructType
-    var s *structDec.Struct
+    var s *identObj.Struct
     if obj := identObj.Get(name.Str); obj != nil {
-        if strct,ok := obj.(*structDec.Struct); ok {
+        if strct,ok := obj.(*identObj.Struct); ok {
             t = strct.GetType().(types.StructType)
             s = strct
         }
@@ -948,7 +946,7 @@ func prsCallGenericFn(tokens *token.Tokens) *ast.FnCall {
     posR := tokens.Cur().Pos
 
     if obj := identObj.Get(ident.Name); obj != nil {
-        if f,ok := obj.(*fn.Func); ok {
+        if f,ok := obj.(*identObj.Func); ok {
             f.AddTypeToGeneric(usedType)
             return &ast.FnCall{ Ident: *ident, F: f, GenericUsedType: usedType, Values: vals, ParenLPos: posL, ParenRPos: posR }
 
@@ -973,7 +971,7 @@ func prsCallFn(tokens *token.Tokens) *ast.FnCall {
     posR := tokens.Cur().Pos
 
     if obj := identObj.Get(ident.Name); obj != nil {
-        if f,ok := obj.(*fn.Func); ok {
+        if f,ok := obj.(*identObj.Func); ok {
             return &ast.FnCall{ Ident: *ident, F: f, Values: vals, ParenLPos: posL, ParenRPos: posR }
 
         } else {
@@ -1088,9 +1086,9 @@ func prsFmtArg(tokens *token.Tokens) ast.Expr {
     values := []ast.Expr{ arg }
     ident := ast.Ident{ Name: name, Obj: identObj.Get(name) }
 
-    var F *fn.Func
+    var F *identObj.Func
     if obj := identObj.Get(name); obj != nil {
-        if f,ok := obj.(*fn.Func); ok {
+        if f,ok := obj.(*identObj.Func); ok {
             F = f
         }
     }

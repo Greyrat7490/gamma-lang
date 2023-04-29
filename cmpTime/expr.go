@@ -10,8 +10,8 @@ import (
     "gamma/gen/asm/x86_64"
     "gamma/cmpTime/constVal"
     "gamma/ast"
+    "gamma/ast/identObj"
     "gamma/ast/identObj/vars"
-    "gamma/ast/identObj/consts"
 )
 
 func ConstEvalInt(e ast.Expr) (int64, bool) {
@@ -129,7 +129,7 @@ func ConstEval(e ast.Expr) constVal.ConstVal {
 }
 
 func ConstEvalIdent(e *ast.Ident) constVal.ConstVal {
-    if c,ok := e.Obj.(*consts.Const); ok {
+    if c,ok := e.Obj.(*identObj.Const); ok {
         return c.GetVal()
     }
 

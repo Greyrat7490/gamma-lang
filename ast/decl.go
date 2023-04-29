@@ -6,10 +6,8 @@ import (
     "strings"
     "gamma/types"
     "gamma/token"
-    "gamma/ast/identObj/func"
+    "gamma/ast/identObj"
     "gamma/ast/identObj/vars"
-    "gamma/ast/identObj/consts"
-    "gamma/ast/identObj/struct"
 )
 
 
@@ -40,14 +38,14 @@ type DefVar struct {
 }
 
 type DefConst struct {
-    C *consts.Const
+    C *identObj.Const
     Type types.Type
     ColPos token.Pos
     Value Expr
 }
 
 type DefFn struct {
-    F *fn.Func
+    F *identObj.Func
     Pos token.Pos
     Args []DecVar
     RetType types.Type
@@ -58,7 +56,7 @@ type DefFn struct {
 }
 
 type DefStruct struct {
-    S *structDec.Struct
+    S *identObj.Struct
     Pos token.Pos
     Name token.Token
     BraceLPos token.Pos

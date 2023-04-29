@@ -11,12 +11,11 @@ type LocalVar struct {
     decPos token.Pos
     name string
     typ types.Type
-    isArg bool
     addr addr.Addr
 }
 
-func CreateLocal(name token.Token, t types.Type, frameSize uint, isArg bool, fromStack bool) LocalVar {
-    return LocalVar{ name: name.Str, decPos: name.Pos, typ: t, isArg: isArg, addr: addr.Addr{ BaseAddr: "rbp", Offset: calcOffset(t, frameSize, fromStack) } }
+func CreateLocal(name token.Token, t types.Type) LocalVar {
+    return LocalVar{ name: name.Str, decPos: name.Pos, typ: t }
 }
 
 func (v *LocalVar) String() string {
@@ -39,10 +38,14 @@ func (v *LocalVar) Addr() addr.Addr {
     return v.addr
 }
 
-func calcOffset(t types.Type, frameSize uint, fromStack bool) int64 {
+
+func (v *LocalVar) SetOffset(frameSize uint, fromStack bool) {
+    offset := int64(0)
     if fromStack {
-        return int64(types.Ptr_Size + frameSize + 7) & ^7
+        offset = int64(types.Ptr_Size + frameSize + 7) & ^7
+    } else {
+        offset = -int64(frameSize + v.typ.Size())
     }
 
-    return -int64(frameSize + t.Size())
+    v.addr = addr.Addr{ BaseAddr: "rbp", Offset: offset }
 }

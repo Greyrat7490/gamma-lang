@@ -10,7 +10,7 @@ import (
     "gamma/types/addr"
     "gamma/types/array"
     "gamma/ast"
-    "gamma/ast/identObj/func"
+    "gamma/ast/identObj"
     "gamma/ast/identObj/vars"
     "gamma/cmpTime"
     "gamma/cmpTime/constVal"
@@ -35,16 +35,20 @@ System V AMD64 ABI calling convention
   * [x] callee reserves space
 
   * [x] stack always 16bit aligned
+
+Name mangling
+  * [x] normal function: <function name>
+  * [x] generic function: <function name>$<type name>
 */
 
 var regs []asm.RegGroup = []asm.RegGroup{ asm.RegDi, asm.RegSi, asm.RegD, asm.RegC, asm.RegR8, asm.RegR9 }
 
-func Define(file *bufio.Writer, f *fn.Func) {
-    file.WriteString(f.GetName() + ":\n")
+func Define(file *bufio.Writer, f *identObj.Func, frameSize uint) {
+    file.WriteString(f.GetMangledName() + ":\n")
     asm.PushReg(file, asm.RegBp)
     asm.MovRegReg(file, asm.RegBp, asm.RegSp, types.Ptr_Size)
-    if f.GetFrameSize() > 0 {
-        asm.SubSp(file, int64(f.GetFrameSize()))
+    if frameSize > 0 {
+        asm.SubSp(file, int64(frameSize + 15) & ^15)
     }
 }
 
@@ -53,8 +57,8 @@ func FnEnd(file *bufio.Writer) {
     file.WriteString("ret\n")
 }
 
-func CallFn(file *bufio.Writer, f *fn.Func) {
-    file.WriteString("call " + f.GetName() + "\n")
+func CallFn(file *bufio.Writer, f *identObj.Func) {
+    file.WriteString("call " + f.GetMangledName() + "\n")
 }
 
 func DefArg(file *bufio.Writer, regIdx uint, v vars.Var) {

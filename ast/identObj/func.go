@@ -1,11 +1,12 @@
-package fn
+package identObj
 
 import (
-    "os"
-    "fmt"
-    "gamma/token"
-    "gamma/types"
-    "gamma/types/addr"
+	"fmt"
+	"gamma/ast/identObj/vars"
+	"gamma/token"
+	"gamma/types"
+	"gamma/types/addr"
+	"os"
 )
 
 type Func struct {
@@ -14,7 +15,14 @@ type Func struct {
     generic *types.GenericType
     args []types.Type
     retType types.Type
-    frameSize uint
+    retAddr addr.Addr
+    Scope *Scope
+}
+
+var curFunc *Func = nil
+
+func GetCurFunc() *Func {
+    return curFunc
 }
 
 func CreateFunc(name token.Token) Func {
@@ -46,25 +54,31 @@ func (f *Func) GetPos() token.Pos {
     return f.decPos
 }
 
-func (f *Func) GetFrameSize() uint {
-    return f.frameSize
-}
-
 func (f *Func) Addr() addr.Addr {
     fmt.Fprintln(os.Stderr, "[ERROR] TODO: func.go Addr()")
     os.Exit(1)
     return addr.Addr{}
 }
 
-
-
-func (f *Func) SetFrameSize(size uint) {
-    // size has to be the multiple of 16byte
-    f.frameSize = (size + 15) & ^uint(15)
+func (f *Func) GetRetAddr() addr.Addr {
+    return f.retAddr
 }
+
+func (f *Func) GetMangledName() string {
+    if f.GetGeneric() != nil {
+        return f.name + "$" + f.generic.CurUsedType.String()
+    } else {
+        return f.name
+    }
+}
+
 
 func (f *Func) SetRetType(typ types.Type) {
     f.retType = typ
+}
+
+func (f *Func) SetRetAddr(addr addr.Addr) {
+    f.retAddr = addr
 }
 
 func (f *Func) SetArgs(args []types.Type) {
@@ -75,6 +89,7 @@ func (f *Func) SetGeneric(generic *types.GenericType) {
     f.generic = generic
 }
 
+
 func (f *Func) AddTypeToGeneric(typ types.Type) {
     for _,t := range f.generic.UsedTypes {
         if types.Equal(typ, t) { return }
@@ -82,3 +97,4 @@ func (f *Func) AddTypeToGeneric(typ types.Type) {
 
     f.generic.UsedTypes = append(f.generic.UsedTypes, typ)
 }
+

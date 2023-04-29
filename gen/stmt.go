@@ -285,7 +285,7 @@ func GenRet(file *bufio.Writer, s *ast.Ret) {
 
         if types.IsBigStruct(t) {
             asm.MovRegDeref(file,
-                asm.RegC, addr.Addr{ BaseAddr: "rbp", Offset: -int64(types.Ptr_Size) },
+                asm.RegC, s.F.GetRetAddr(),
                 types.Ptr_Size, false)
 
             switch t := t.(type) {

@@ -1,17 +1,18 @@
 package gen
 
 import (
-    "os"
-    "fmt"
-    "bufio"
-    "reflect"
-    "gamma/ast"
-    "gamma/cmpTime"
-    "gamma/gen/asm/x86_64"
-    "gamma/gen/asm/x86_64/conditions"
-    "gamma/gen/asm/x86_64/loops"
-    "gamma/types"
-    "gamma/types/addr"
+	"bufio"
+	"fmt"
+	"gamma/ast"
+	"gamma/ast/identObj/vars"
+	"gamma/cmpTime"
+	"gamma/gen/asm/x86_64"
+	"gamma/gen/asm/x86_64/conditions"
+	"gamma/gen/asm/x86_64/loops"
+	"gamma/types"
+	"gamma/types/addr"
+	"os"
+	"reflect"
 )
 
 func GenDecl(file *bufio.Writer, d ast.Decl) {
@@ -23,7 +24,11 @@ func GenDecl(file *bufio.Writer, d ast.Decl) {
         GenDefVar(file, d)
 
     case *ast.DefFn:
-        GenDefFn(file, d)
+        if d.IsGeneric {
+            GenDefGenFn(file, d)
+        } else {
+            GenDefFn(file, d)
+        }
 
     case *ast.DefStruct, *ast.DecVar, *ast.DefConst:
         // nothing to generate
@@ -51,24 +56,64 @@ func GenDefVar(file *bufio.Writer, d *ast.DefVar) {
     }
 }
 
+func GenDefGenFn(file *bufio.Writer, d *ast.DefFn) {
+    genType := d.F.GetGeneric()
+    for _,t := range genType.UsedTypes {
+        genType.CurUsedType = t
+        GenDefFn(file, d)
+    }
+}
+
+
 func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
-    Define(file, d.F)
+    argsSize := d.F.Scope.ArgsSize()
+    innersize := d.F.Scope.SetLocalVarOffsets()
+    framesize := argsSize + innersize
+    if types.IsBigStruct(d.F.GetRetType()) {
+        framesize += types.Ptr_Size
+    }
+
+    Define(file, d.F, framesize)
 
     regIdx := uint(0)
+    argsFromStackOffset := uint(8)
+    regArgsOffset := innersize
 
     if types.IsBigStruct(d.F.GetRetType()) {
-        asm.MovDerefReg(file, addr.Addr{ BaseAddr: "rbp", Offset: -int64(types.Ptr_Size) }, types.Ptr_Size, asm.RegDi)
+        regArgsOffset += types.Ptr_Size
+        addr := addr.Addr{ BaseAddr: "rbp", Offset: -int64(regArgsOffset) }
+        asm.MovDerefReg(file, addr, types.Ptr_Size, asm.RegDi)
+        d.F.SetRetAddr(addr)
         regIdx++
     }
 
     for _,a := range d.Args {
-        if !types.IsBigStruct(a.V.GetType()) {
-            i := types.RegCount(a.Type)
-
-            if regIdx+i <= 6 {
-                DefArg(file, regIdx, a.V)
-                regIdx += i
+        if v,ok := a.V.(*vars.LocalVar); ok {
+            if types.IsBigStruct(v.GetType()) {
+                v.SetOffset(argsFromStackOffset, true) 
+                argsFromStackOffset += v.GetType().Size()
             }
+        }
+    }
+
+    for _,a := range d.Args {
+        if v,ok := a.V.(*vars.LocalVar); ok {
+            if !types.IsBigStruct(v.GetType()) {
+                needed := types.RegCount(v.GetType())
+
+                if regIdx + needed <= 6 {
+                    v.SetOffset(regArgsOffset, false) 
+                    DefArg(file, regIdx, v)
+                    regIdx += needed
+                    regArgsOffset += v.GetType().Size() 
+                } else {
+                    v.SetOffset(argsFromStackOffset, true) 
+                    argsFromStackOffset += v.GetType().Size()
+                }
+            }
+        } else {
+            fmt.Fprintln(os.Stderr, "[ERROR] (internal) expected arg to be local var")
+            os.Exit(1)
         }
     }
 

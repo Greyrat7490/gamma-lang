@@ -12,9 +12,8 @@ import (
     "gamma/cmpTime"
     "gamma/cmpTime/constVal"
     "gamma/ast"
-    "gamma/ast/identObj/func"
+    "gamma/ast/identObj"
     "gamma/ast/identObj/vars"
-    "gamma/ast/identObj/consts"
     "gamma/gen/asm/x86_64"
     "gamma/gen/asm/x86_64/conditions"
 )
@@ -307,7 +306,7 @@ func GenField(file *bufio.Writer, e *ast.Field) {
 }
 
 func GenIdent(file *bufio.Writer, e *ast.Ident) {
-    if c,ok := e.Obj.(*consts.Const); ok {
+    if c,ok := e.Obj.(*identObj.Const); ok {
         GenConstVal(file, e.GetType(), c.GetVal())
         return
     }
@@ -338,7 +337,7 @@ func GenIdent(file *bufio.Writer, e *ast.Ident) {
         return
     }
 
-    if _,ok := e.Obj.(*fn.Func); ok {
+    if _,ok := e.Obj.(*identObj.Func); ok {
         fmt.Fprintf(os.Stderr, "[ERROR] TODO: expr.go compile Ident for functions\n")
         os.Exit(1)
         return
@@ -523,6 +522,10 @@ func GenBinary(file *bufio.Writer, e *ast.Binary) {
 }
 
 func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
+    if e.F.GetGeneric() != nil {
+        e.F.GetGeneric().CurUsedType = e.GenericUsedType
+    }
+
     passArgs := createPassArgs(e.F, e.Values)
 
     passArgs.genAlignStack(file)
@@ -825,7 +828,7 @@ type arg struct {
     value ast.Expr
 }
 
-func createPassArgs(f *fn.Func, values []ast.Expr) passArgs {
+func createPassArgs(f *identObj.Func, values []ast.Expr) passArgs {
     stackArgs := make([]arg, 0, len(f.GetArgs()))
     bigStructArgs := make([]arg, 0, len(f.GetArgs()))
     regArgs := make([]arg, 0, len(f.GetArgs()))

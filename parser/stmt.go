@@ -135,6 +135,8 @@ func prsStmt(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
 }
 
 func prsBlock(tokens *token.Tokens) ast.Block {
+    identObj.StartScope()
+
     block := ast.Block{ BraceLPos: tokens.Cur().Pos }
 
     for tokens.Peek().Type != token.BraceR {
@@ -143,6 +145,7 @@ func prsBlock(tokens *token.Tokens) ast.Block {
 
     block.BraceRPos = tokens.Next().Pos
 
+    identObj.EndScope()
     return block
 }
 

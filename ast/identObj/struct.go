@@ -1,4 +1,4 @@
-package structDec
+package identObj
 
 import (
     "os"

@@ -8,7 +8,7 @@ import (
     "gamma/types"
     "gamma/cmpTime"
     "gamma/ast"
-    "gamma/ast/identObj/func"
+    "gamma/ast/identObj"
 )
 
 func typeCheckExpr(e ast.Expr) {
@@ -335,7 +335,7 @@ func typeCheckFnCall(o *ast.FnCall) {
         typeCheckExpr(a)
     }
 
-    if f,ok := o.Ident.Obj.(*fn.Func); ok {
+    if f,ok := o.Ident.Obj.(*identObj.Func); ok {
         args := f.GetArgs()
 
         if len(args) != len(o.Values) {

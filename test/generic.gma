@@ -32,10 +32,10 @@ fn main() {
     // bool_arr[0] = false
     // bool_arr[1] = true
     // 
-    // printArr<i32>(int_arr)
-    // printArr<u32>(uint_arr)
-    // printArr<bool>(bool_arr)
+    // printArr::<i32>(int_arr)
+    // printArr::<u32>(uint_arr)
+    // printArr::<bool>(bool_arr)
 
-    print(itos(dummy::<i32>(69)))
-    print(utos(dummy::<u8>(64 as u8)))
+    println(itos(dummy::<i64>(69)))
+    println(utos(dummy::<u8>(64 as u8)))
 }

@@ -5,7 +5,7 @@ import (
     "fmt"
     "strings"
     "gamma/token"
-    "gamma/ast/identObj/func"
+    "gamma/ast/identObj"
 )
 
 type Stmt interface {
@@ -90,7 +90,7 @@ type Continue struct {
 }
 
 type Ret struct {
-    F *fn.Func
+    F *identObj.Func
     Pos token.Pos
     RetExpr Expr    // nil -> return nothing
 }

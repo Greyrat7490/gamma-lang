@@ -1,4 +1,4 @@
-package consts
+package identObj
 
 import (
     "os"

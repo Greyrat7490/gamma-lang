@@ -8,7 +8,6 @@ import (
     "gamma/types"
     "gamma/types/addr"
     "gamma/ast/identObj"
-    "gamma/ast/identObj/func"
 )
 
 type Expr interface {
@@ -20,7 +19,7 @@ type Expr interface {
 type BadExpr struct{}
 
 type FnCall struct {
-    F *fn.Func
+    F *identObj.Func
     GenericUsedType types.Type
     Ident Ident
     ParenLPos token.Pos

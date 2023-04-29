@@ -9,7 +9,6 @@ import (
     "gamma/cmpTime"
     "gamma/ast"
     "gamma/ast/identObj"
-    "gamma/ast/identObj/struct"
 )
 
 func prsDecl(tokens *token.Tokens) ast.Decl {
@@ -69,7 +68,7 @@ func prsType(tokens *token.Tokens) types.Type {
 
     case token.Name:
         if obj := identObj.Get(tokens.Cur().Str); obj != nil {
-            if strct,ok := obj.(*structDec.Struct); ok {
+            if strct,ok := obj.(*identObj.Struct); ok {
                 return strct.GetType()
             }
         }
@@ -210,7 +209,7 @@ func isNextType(tokens *token.Tokens) bool {
 
     case token.Name:
         if obj := identObj.Get(tokens.Cur().Str); obj != nil {
-            _,ok := obj.(*structDec.Struct)
+            _,ok := obj.(*identObj.Struct)
             return ok
         }
         return false
@@ -355,7 +354,6 @@ func prsDefFn(tokens *token.Tokens, isConst bool) ast.DefFn {
     }
 
     f := identObj.DecFunc(name)
-    identObj.StartScope()
 
     tokens.Next()
     generic := prsGeneric(tokens)
@@ -379,7 +377,6 @@ func prsDefFn(tokens *token.Tokens, isConst bool) ast.DefFn {
         retType = prsType(tokens)
     }
     f.SetRetType(retType)
-    identObj.SetRetType(retType)
 
     if tokens.Next().Type != token.BraceL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", tokens.Cur())
@@ -388,34 +385,11 @@ func prsDefFn(tokens *token.Tokens, isConst bool) ast.DefFn {
     }
 
     var argDecs []ast.DecVar
-    offset := uint(8)
     for i,t := range argTypes {
-        if types.IsBigStruct(t) {
-            argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecArgFromStack(argNames[i], t, offset) })
-            offset += t.Size()
-        }
-    }
-
-    regCount := uint(0)
-    for i,t := range argTypes {
-        if types.IsBigStruct(t) {
-            continue
-        }
-
-        needed := types.RegCount(t)
-        if regCount + needed > 6 {
-            argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecArgFromStack(argNames[i], t, offset) })
-            offset += t.Size()
-        } else {
-            argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecArg(argNames[i], t) })
-            regCount += needed
-        }
+        argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecVar(argNames[i], t) })
     }
 
     block := prsBlock(tokens)
-    if !isGeneric {
-        f.SetFrameSize(identObj.GetFrameSize())
-    }
     identObj.EndScope()
 
     def := ast.DefFn{ Pos: pos, F: f, Args: argDecs, RetType: retType, Block: block,
