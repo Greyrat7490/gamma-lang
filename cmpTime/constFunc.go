@@ -16,7 +16,7 @@ type constFunc struct {
 }
 
 func (c constFunc) eval(args []constVal.ConstVal) constVal.ConstVal {
-    framesize := c.fn.F.Scope.ArgsSize() + c.fn.F.Scope.SetLocalVarOffsets()
+    framesize := c.fn.F.Scope.ArgsSize() + c.fn.F.Scope.GetInnerSize()
     startScope(framesize)
     defer endScope()
 

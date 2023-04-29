@@ -17,6 +17,7 @@ type Scope struct {
 
 var globalScope = Scope{ identObjs: make(map[string]IdentObj), children: make([]Scope, 0) }
 var curScope = &globalScope
+var stackSize uint = 0
 
 func (s *Scope) ArgsSize() uint {
     size := uint(0)
@@ -30,32 +31,27 @@ func (s *Scope) ArgsSize() uint {
     return size
 }
 
-func (s *Scope) setLocalVarOffsets(size uint) uint {
+func (s *Scope) getInnerSize(size uint) uint {
     for _,obj := range s.identObjs {
-        if v,ok := obj.(*vars.LocalVar); ok {
-            v.SetOffset(size, false)
+        if _,ok := obj.(*vars.LocalVar); ok {
             size += obj.GetType().Size()
         }
     }
 
-    innerSize := uint(0)
     for _,s := range s.children {
-        sz := s.setLocalVarOffsets(size)
-        if sz > innerSize {
-            innerSize = sz
-        }
+        size += s.getInnerSize(size)
     }
 
-    return size + innerSize
+    return size
 }
 
-func (s *Scope) SetLocalVarOffsets() uint {
+func (s *Scope) GetInnerSize() uint {
     if len(s.children) != 1 {
         fmt.Fprintf(os.Stderr, "[ERROR] (internal) expected scope of function to have 1 child scope, but got %d\n", len(s.children))
         os.Exit(1)
     }
 
-    size := s.children[0].setLocalVarOffsets(0)
+    size := s.children[0].getInnerSize(0)
 
     // framesize has to be the multiple of 16byte
     return (size + 15) & ^uint(15)
@@ -101,6 +97,18 @@ func GetGeneric(name string) *types.GenericType {
     }
 
     return nil
+}
+
+func GetStackSize() uint {
+    return stackSize
+}
+
+func IncStackSize(t types.Type) {
+    stackSize += t.Size()
+}
+
+func ResetStackSize() {
+    stackSize = 0
 }
 
 func (scope *Scope) nameTaken(name string) bool {

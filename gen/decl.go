@@ -1,18 +1,19 @@
 package gen
 
 import (
-	"bufio"
-	"fmt"
-	"gamma/ast"
-	"gamma/ast/identObj/vars"
-	"gamma/cmpTime"
-	"gamma/gen/asm/x86_64"
-	"gamma/gen/asm/x86_64/conditions"
-	"gamma/gen/asm/x86_64/loops"
-	"gamma/types"
-	"gamma/types/addr"
-	"os"
-	"reflect"
+    "os"
+    "fmt"
+    "bufio"
+    "reflect"
+    "gamma/ast"
+    "gamma/ast/identObj"
+    "gamma/ast/identObj/vars"
+    "gamma/cmpTime"
+    "gamma/types"
+    "gamma/types/addr"
+    "gamma/gen/asm/x86_64"
+    "gamma/gen/asm/x86_64/conditions"
+    "gamma/gen/asm/x86_64/loops"
 )
 
 func GenDecl(file *bufio.Writer, d ast.Decl) {
@@ -49,6 +50,11 @@ func GenImport(file *bufio.Writer, d *ast.Import) {
 }
 
 func GenDefVar(file *bufio.Writer, d *ast.DefVar) {
+    if v,ok := d.V.(*vars.LocalVar); ok {
+        v.SetOffset(identObj.GetStackSize(), false)
+        identObj.IncStackSize(v.GetType())
+    }
+
     if val := cmpTime.ConstEval(d.Value); val != nil {
         VarDefVal(file, d.V, val)
     } else {
@@ -67,7 +73,7 @@ func GenDefGenFn(file *bufio.Writer, d *ast.DefFn) {
 
 func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
     argsSize := d.F.Scope.ArgsSize()
-    innersize := d.F.Scope.SetLocalVarOffsets()
+    innersize := d.F.Scope.GetInnerSize()
     framesize := argsSize + innersize
     if types.IsBigStruct(d.F.GetRetType()) {
         framesize += types.Ptr_Size
@@ -125,4 +131,5 @@ func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
 
     cond.ResetCount()
     loops.ResetCount()
+    identObj.ResetStackSize()
 }

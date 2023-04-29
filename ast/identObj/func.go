@@ -1,12 +1,11 @@
 package identObj
 
 import (
+	"os"
 	"fmt"
-	"gamma/ast/identObj/vars"
 	"gamma/token"
 	"gamma/types"
 	"gamma/types/addr"
-	"os"
 )
 
 type Func struct {

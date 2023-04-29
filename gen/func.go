@@ -48,6 +48,7 @@ func Define(file *bufio.Writer, f *identObj.Func, frameSize uint) {
     asm.PushReg(file, asm.RegBp)
     asm.MovRegReg(file, asm.RegBp, asm.RegSp, types.Ptr_Size)
     if frameSize > 0 {
+        // framesize has to be the multiple of 16byte
         asm.SubSp(file, int64(frameSize + 15) & ^15)
     }
 }
