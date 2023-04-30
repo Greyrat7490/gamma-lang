@@ -23,3 +23,20 @@ fn append<T>(v [$]T, elem T) -> [$]T {
     v.len = v.len+1
     ret v
 }
+
+fn reserve<T>(v [$]T, cap u64) -> [$]T {
+    new_v := [$]T{ len: v.len, cap: cap * sizeof::<T>() }
+    memcpy(new_v as *T as u64, v as *T as u64, v.cap * sizeof::<T>())
+    ret new_v
+}
+
+fn concat<T>(lhs [$]T, rhs [$]T) -> [$]T {
+    v := [$]T{ len: lhs.len + rhs.len }
+
+    memcpy(v as *T as u64, lhs as *T as u64, lhs.len * sizeof::<T>())
+    memcpy(v as *T as u64 + lhs.len * sizeof::<T>(), rhs as *T as u64, rhs.len * sizeof::<T>())
+
+    ret v
+}
+
+// TODO resize (when closure functions implemented)

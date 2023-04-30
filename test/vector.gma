@@ -94,6 +94,31 @@ fn testAppend() {
     println("vec: " + vtos::<i32>(vec))
 }
 
+fn testConcat() {
+    v1 := [$]i32{ len: 3 }
+    v1[0] = 0
+    v1[1] = 1
+    v1[2] = 2
+
+    v2 := [$]i32{ len: 3 }
+    v2[0] = 3
+    v2[1] = 4
+    v2[2] = 5
+
+    v3 := concat::<i32>(v1, v2)
+
+    println("v1: " + vtos::<i32>(v1))
+    println("v2: " + vtos::<i32>(v2))
+    println("res: " + vtos::<i32>(v3))
+}
+
+fn testReserve() {
+    v1 := [$]i32{ len: 1 }
+    v1 = reserve::<i32>(v1, 9000000)
+    v1[9000000] = 64
+    println("no segfault")
+}
+
 fn main() {
     test1()
 
@@ -123,12 +148,17 @@ fn main() {
     println("----")
 
     testAppend()
+
+    println("----")
+
+    testConcat()
+
+    println("----")
+
+    testReserve()
 }
 
 /*
  * TODO
-    vec.reserve()   // update cap
     vec.resize()    // update len
-
-    vec ++ [2]i32{ 2, 3 }    // concat
 */
