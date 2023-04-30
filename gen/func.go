@@ -327,15 +327,15 @@ func RetBigStructExpr(file *bufio.Writer, address addr.Addr, e ast.Expr) {
                 asm.MovRegDeref(file, asm.RegDi, address.Offseted(int64(2*types.Ptr_Size)), types.U64_Size, false)
                 asm.Lea(file, asm.RegDi, fmt.Sprintf("%s*%d", asm.GetReg(asm.RegDi, types.Ptr_Size), baseTypeSize), types.Ptr_Size)
             } else {
-                asm.UseReg(asm.RegC)
-                GenExpr(file, lit.Cap)
-                asm.FreeReg(asm.RegC)
                 if c := cmpTime.ConstEval(lit.Cap); c != nil {
                     asm.MovDerefVal(file, address.Offseted(int64(types.Ptr_Size)), types.U64_Size, c.GetVal())
-                    asm.MovRegVal(file, asm.RegDi, types.U64_Size, fmt.Sprintf("%s*%d", c.GetVal(), baseTypeSize ))
+                    asm.MovRegVal(file, asm.RegDi, types.U64_Size, fmt.Sprintf("%s*%d", c.GetVal(), baseTypeSize))
                 } else {
+                    asm.UseReg(asm.RegC)
+                    GenExpr(file, lit.Cap)
+                    asm.FreeReg(asm.RegC)
                     asm.MovDerefReg(file, address.Offseted(int64(types.Ptr_Size)), types.U64_Size, asm.RegGroup(0))
-                    asm.Lea(file, asm.RegDi, fmt.Sprintf("%s*%d", asm.GetReg(asm.RegA, types.Ptr_Size), baseTypeSize ), types.Ptr_Size)
+                    asm.Lea(file, asm.RegDi, fmt.Sprintf("%s*%d", asm.GetReg(asm.RegA, types.Ptr_Size), baseTypeSize), types.Ptr_Size)
                 }
             }
 
