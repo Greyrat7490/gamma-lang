@@ -36,6 +36,8 @@ func Declare() {
     identObj.AddBuildIn("fmt", nil, types.StrType{})
     identObj.AddBuildIn("from_cstr", types.PtrType{ BaseType: types.CharType{} }, types.StrType{})
 
+    identObj.AddGenBuildIn("sizeof", "T", nil, types.CreateUint(types.Ptr_Size))
+
     // basic inline assembly
     identObj.AddBuildIn("_asm", types.StrType{}, nil)
     identObj.AddBuildIn("_syscall", types.CreateInt(types.I64_Size), types.CreateInt(types.I64_Size))

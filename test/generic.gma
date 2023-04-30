@@ -1,3 +1,5 @@
+import "memory.gma"
+
 fn dummy<T>(a T) -> T {
     ret a
 }
@@ -13,6 +15,16 @@ fn printArr<T>(arr [$]T) {
 }
 
 fn append<T>(arr [$]T, elem T) -> [$]T {
+    if arr.len >= arr.cap {
+        new_cap := arr.cap * 2
+        new_arr := [$]T{ len: arr.len, cap: new_cap }
+
+        memcpy(new_arr as *T as u64, arr as *T as u64, arr.cap * sizeof::<T>())
+
+        arr = new_arr
+        println(fmt("cap: {}", arr.cap))
+    }
+    
     arr[arr.len] = elem
     arr.len = arr.len+1
     ret arr
@@ -38,9 +50,9 @@ fn testJustRet() {
 }
 
 fn main() {
-    int_arr := [$]i32{ len: 2 }
-    uint_arr := [$]u32{ len: 2 }
-    bool_arr := [$]bool{ len: 2 }
+    int_arr := [$]i32{ len: 2, cap: 3 }
+    uint_arr := [$]u32{ len: 2, cap: 3 }
+    bool_arr := [$]bool{ len: 2, cap: 3 }
 
     int_arr[0] = -1
     int_arr[1] = -2
@@ -59,4 +71,8 @@ fn main() {
 
     println("test vec append -----------------")
     testAppend(int_arr, uint_arr, bool_arr)
+
+    for i i32, 1024 {
+        int_arr = append::<i32>(int_arr, i)
+    }
 }

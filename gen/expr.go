@@ -95,6 +95,8 @@ func GenExpr(file *bufio.Writer, e ast.Expr) {
             GenInlineAsm(file, e.Values[0])
         case "fmt":
             GenFmt(file, e.Values)
+        case "sizeof":
+            GenSizeof(file, e)
         default:
             GenFnCall(file, e)
         }
@@ -796,6 +798,10 @@ func GenFmt(file *bufio.Writer, values []ast.Expr) {
         fmt.Fprintln(os.Stderr, "\t" + fmtStr.At())
         os.Exit(1)
     }
+}
+
+func GenSizeof(file *bufio.Writer, e *ast.FnCall) {
+    asm.MovRegVal(file, asm.RegA, types.Ptr_Size, fmt.Sprint(e.GenericUsedType.Size()))
 }
 
 func createStrLit(fmtStr token.Token, startIdx int, endIdx int) *ast.StrLit {

@@ -141,6 +141,16 @@ func AddBuildIn(name string, argtype types.Type, retType types.Type) {
     globalScope.identObjs[name] = &f
 }
 
+func AddGenBuildIn(name string, genericName string, argtype types.Type, retType types.Type) {
+    f := CreateFunc(token.Token{ Str: name })  
+    f.SetGeneric(&types.GenericType{Name: genericName, UsedTypes: make([]types.Type, 0)})
+    f.SetRetType(retType)
+    if argtype != nil {
+        f.SetArgs([]types.Type{ argtype })
+    }
+    globalScope.identObjs[name] = &f
+}
+
 func DecVar(name token.Token, t types.Type) vars.Var {
     curScope.checkName(name)
 

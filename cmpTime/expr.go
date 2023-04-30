@@ -84,7 +84,11 @@ func ConstEval(e ast.Expr) constVal.ConstVal {
         return ConstEvalIdent(e)
 
     case *ast.FnCall:
-        return ConstEvalFnCall(e)
+        if e.Ident.Name == "sizeof" {
+            return ConstEvalSizeof(e)
+        } else {
+            return ConstEvalFnCall(e)
+        }
 
     case *ast.Unary:
         return ConstEvalUnary(e)
@@ -298,6 +302,11 @@ func ConstEvalFnCall(e *ast.FnCall) constVal.ConstVal {
     }
 
     return EvalFunc(e.F.GetName(), e.Ident.Pos, args)
+}
+
+func ConstEvalSizeof(e *ast.FnCall) constVal.ConstVal {
+    c := constVal.UintConst(e.GenericUsedType.Size())
+    return &c
 }
 
 func ConstEvalParen(e *ast.Paren) constVal.ConstVal {
