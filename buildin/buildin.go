@@ -33,9 +33,9 @@ func Declare() {
     identObj.AddBuildIn("utos", types.CreateUint(types.U64_Size), types.StrType{})
     identObj.AddBuildIn("btos", types.BoolType{}, types.StrType{})
     identObj.AddBuildIn("ctos", types.CharType{}, types.StrType{})
-    identObj.AddBuildIn("fmt", nil, types.StrType{})
     identObj.AddBuildIn("from_cstr", types.PtrType{ BaseType: types.CharType{} }, types.StrType{})
 
+    identObj.AddBuildIn("fmt", nil, types.StrType{})
     identObj.AddGenBuildIn("sizeof", "T", nil, types.CreateUint(types.Ptr_Size))
 
     // basic inline assembly
@@ -49,7 +49,6 @@ func Define(file *bufio.Writer) {
     defineEprint(file)
     defineEprintln(file)
 
-    defineAlloc(file)
     defineStrCmp(file)
     defineStrConcat(file)
 
@@ -95,8 +94,8 @@ func definePrintln(asm *bufio.Writer) {
     asm.WriteString("println:\n")
     asm.WriteString("call print\n")
     asm.WriteString(fmt.Sprintf(
-`mov rax, 1
-call _alloc
+`mov rdi, 1
+call malloc
 mov byte [rax], %d
 mov rdi, rax
 mov esi, 1
@@ -109,8 +108,8 @@ func defineEprintln(asm *bufio.Writer) {
     asm.WriteString("eprintln:\n")
     asm.WriteString("call eprint\n")
     asm.WriteString(fmt.Sprintf(
-`mov rax, 1
-call _alloc
+`mov rdi, 1
+call malloc
 mov byte [rax], %d
 mov rdi, rax
 mov esi, 1
@@ -123,14 +122,15 @@ func defineCtoS(asm *bufio.Writer) {
     asm.WriteString(
 `ctos:
     mov rbx, rdi
-    mov rax, 1
-    call _alloc
+    mov rdi, 1
+    call malloc
     mov byte [rax], bl
     mov edx, 1
     ret
 `)
 }
 
+// TODO malloc and copy
 func defineBtoS(asm *bufio.Writer) {
     asm.WriteString(
 `btos:
@@ -150,12 +150,12 @@ func defineItoS(asm *bufio.Writer) {
  // max 64bit -> 20 digits max + sign -> 21 char string max
     asm.WriteString(
 `utos:
-    mov rcx, rdi
-    mov rax, 21
-    call _alloc
-    lea rbx, [rax+21]
-    mov rsi, rbx
-    mov rax, rcx
+    mov rbx, rdi
+    mov rdi, 21
+    call malloc
+    lea rsi, [rax+21]
+    mov rax, rbx
+    mov rbx, rsi
     mov rcx, 10
     .l1:
         xor rdx, rdx
@@ -172,12 +172,12 @@ func defineItoS(asm *bufio.Writer) {
 itos:
     test rdi, rdi
     jge utos
-    mov rcx, rdi
-    mov rax, 21
-    call _alloc
-    lea rbx, [rax+21]
-    mov rsi, rbx
-    mov rax, rcx
+    mov rbx, rdi
+    mov rdi, 21
+    call malloc
+    lea rsi, [rax+21]
+    mov rax, rbx
+    mov rbx, rsi
     neg rax
     mov rcx, 10
     .l1:
@@ -214,24 +214,6 @@ sub rdx, rdi
 mov rax, rdi
 ret
 `))
-}
-
-// TODO: rather use std/memory malloc
-func defineAlloc(file *bufio.Writer) {
-    file.WriteString(fmt.Sprintf(`
-; rax = input size
-; rax = output pointer
-_alloc:
-mov rdi, 0
-mov rsi, rax
-mov rdx, %d
-mov r10, %d
-mov r8, -1
-mov r9, 0
-push rcx
-`, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE))
-    syscall(file, SYS_MMAP)
-    file.WriteString("pop rcx\nret\n")
 }
 
 func defineStrCmp(file *bufio.Writer) {
@@ -278,11 +260,11 @@ mov QWORD [rbp-16], rbx
 mov DWORD [rbp-20], ecx
 mov DWORD [rbp-24], edx
 
-mov eax, edx
-add eax, ecx
-mov DWORD [rbp-28], eax
+mov edi, edx
+add edi, ecx
+mov DWORD [rbp-28], edi
 
-call _alloc
+call malloc
 
 mov rbx, QWORD [rbp-8]
 mov edx, DWORD [rbp-24]

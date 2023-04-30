@@ -618,20 +618,20 @@ func DerefSetBigStruct(file *bufio.Writer, address addr.Addr, e ast.Expr) {
         }
 
         if e.Cap == nil {
-            asm.MovRegDeref(file, asm.RegA, address.Offseted(int64(2*types.Ptr_Size)), types.U64_Size, false)
-            asm.Lea(file, asm.RegA, fmt.Sprintf("%s*%d", asm.GetReg(asm.RegA, types.Ptr_Size), e.Type.BaseType.Size()), types.Ptr_Size)
+            asm.MovRegDeref(file, asm.RegDi, address.Offseted(int64(2*types.Ptr_Size)), types.U64_Size, false)
+            asm.Lea(file, asm.RegDi, fmt.Sprintf("%s*%d", asm.GetReg(asm.RegDi, types.Ptr_Size), e.Type.BaseType.Size()), types.Ptr_Size)
         } else {
             GenExpr(file, e.Cap)
             if c := cmpTime.ConstEval(e.Cap); c != nil {
                 asm.MovDerefVal(file, address.Offseted(int64(types.Ptr_Size)), types.U64_Size, c.GetVal())
-                asm.MovRegVal(file, asm.RegA, types.U64_Size, fmt.Sprintf("%s*%d", c.GetVal(), e.Type.BaseType.Size()))
+                asm.MovRegVal(file, asm.RegDi, types.U64_Size, fmt.Sprintf("%s*%d", c.GetVal(), e.Type.BaseType.Size()))
             } else {
                 asm.MovDerefReg(file, address.Offseted(int64(types.Ptr_Size)), types.U64_Size, asm.RegA)
-                asm.Lea(file, asm.RegA, fmt.Sprintf("%s*%d", asm.GetReg(asm.RegA, types.Ptr_Size), e.Type.BaseType.Size()), types.Ptr_Size)
+                asm.Lea(file, asm.RegDi, fmt.Sprintf("%s*%d", asm.GetReg(asm.RegA, types.Ptr_Size), e.Type.BaseType.Size()), types.Ptr_Size)
             }
         }
 
-        file.WriteString("call _alloc\n")
+        file.WriteString("call malloc\n")
         asm.MovDerefReg(file, address, types.Ptr_Size, asm.RegA)
 
     case *ast.Indexed:
