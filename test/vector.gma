@@ -82,31 +82,47 @@ fn xswitchTest(i u32) {
     printVec(vec2)
 }
 
+fn testAppend() {
+    vec := [$]i32{ 1 }
+
+    println("vec: " + vtos::<i32>(vec))
+
+    for i i32, 1024 {
+        vec = append::<i32>(vec, -i)
+    }
+
+    println("vec: " + vtos::<i32>(vec))
+}
+
 fn main() {
     test1()
 
-    print("----\n")
+    println("----")
 
     test2()
 
-    print("----\n")
+    println("----")
 
     test3()
 
-    print("----\n")
+    println("----")
 
     vec := retTest([3]i32{ 0, 1, 2 })
     printVec(vec)
 
-    print("----\n")
+    println("----")
 
     ptrTest()
 
-    print("----\n")
+    println("----")
 
     xswitchTest(0)
     print("--\n")
     xswitchTest(1)
+
+    println("----")
+
+    testAppend()
 }
 
 /*
@@ -115,5 +131,4 @@ fn main() {
     vec.resize()    // update len
 
     vec ++ [2]i32{ 2, 3 }    // concat
-    vec << 2                 // append elem
 */

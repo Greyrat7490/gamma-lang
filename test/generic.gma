@@ -14,7 +14,7 @@ fn printArr<T>(arr [$]T) {
     println("}")
 }
 
-fn append<T>(arr [$]T, elem T) -> [$]T {
+fn test_append<T>(arr [$]T, elem T) -> [$]T {
     if arr.len >= arr.cap {
         new_cap := arr.cap * 2
         new_arr := [$]T{ len: arr.len, cap: new_cap }
@@ -37,9 +37,9 @@ fn testGenericVec(int_arr [$]i32, uint_arr [$]u32, bool_arr [$]bool) {
 }
 
 fn testAppend(int_arr [$]i32, uint_arr [$]u32, bool_arr [$]bool) {
-    int_arr = append::<i32>(int_arr, -3)
-    uint_arr = append::<u32>(uint_arr, 3)
-    bool_arr = append::<bool>(bool_arr, true)
+    int_arr = test_append::<i32>(int_arr, -3)
+    uint_arr = test_append::<u32>(uint_arr, 3)
+    bool_arr = test_append::<bool>(bool_arr, true)
 
     testGenericVec(int_arr, uint_arr, bool_arr)
 }
@@ -75,7 +75,7 @@ fn main() {
     testAppend(int_arr, uint_arr, bool_arr)
 
     for i i32, 1024 {
-        int_arr = append::<i32>(int_arr, i)
+        int_arr = test_append::<i32>(int_arr, i)
     }
 
     println(fmt("len: {} cap: {}", int_arr.len, int_arr.cap))

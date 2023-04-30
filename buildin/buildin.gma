@@ -1,0 +1,25 @@
+import "memory.gma"
+
+fn vtos<T>(v [$]T) -> str {
+    s := "{ "
+
+    for i u64, v.len {
+        s = s + fmt("{} ", v[i])
+    }
+
+    ret s + "}"
+}
+
+fn append<T>(v [$]T, elem T) -> [$]T {
+    if v.len >= v.cap {
+        new_v := [$]T{ len: v.len, cap: v.cap * 2 }
+
+        memcpy(new_v as *T as u64, v as *T as u64, v.cap * sizeof::<T>())
+
+        v = new_v
+    }
+    
+    v[v.len] = elem
+    v.len = v.len+1
+    ret v
+}

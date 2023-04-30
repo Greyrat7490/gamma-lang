@@ -6,7 +6,7 @@ prev :: &dummy
 cur  :: prev + LEN          // size of prev is LEN*BOOL_SIZE
 
 
-fn memcpy(dest *bool, src *bool, size u64) {
+fn own_memcpy(dest *bool, src *bool, size u64) {
     for i u64, size {
         *(dest+i) = *(src+i)
     }
@@ -55,7 +55,7 @@ fn setNextRow(round u64) {
         }
     }
 
-    memcpy(prev, cur, LEN)
+    own_memcpy(prev, cur, LEN)
 }
 
 fn main() {

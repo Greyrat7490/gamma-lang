@@ -11,7 +11,7 @@ fn new_vec(len u64) -> vector {
     ret vector{ ptr: malloc(cap*4) as *i32, len: len, cap: cap }
 }
 
-fn append(v vector, i i32) -> vector {
+fn own_append(v vector, i i32) -> vector {
     if v.len >= v.cap {
         new_cap := v.cap + v.cap/2
         new_ptr := malloc(new_cap * 4) as *i32
@@ -48,13 +48,13 @@ fn main() {
     vec := new_vec(1)
     printVec(vec) print(ctos('\n'))
 
-    vec = append(vec, 1)
-    vec = append(vec, 2)
-    vec = append(vec, 3)
+    vec = own_append(vec, 1)
+    vec = own_append(vec, 2)
+    vec = own_append(vec, 3)
     printVec(vec) print(ctos('\n'))
 
     for i i32, 100, 4 {
-        vec = append(vec, i)
+        vec = own_append(vec, i)
     }
     printVec(vec) print(ctos('\n'))
 }
