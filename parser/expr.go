@@ -818,6 +818,9 @@ func prsBinary(tokens *token.Tokens, expr ast.Expr, min_precedence precedence) a
             case token.ParenL:
                 b.OperandR = prsCallFn(tokens)
 
+            case token.DefConst:
+                b.OperandR = prsCallGenericFn(tokens)
+
             default:
                 b.OperandR = prsIdentExpr(tokens)
             }
