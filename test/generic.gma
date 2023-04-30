@@ -50,9 +50,11 @@ fn testJustRet() {
 }
 
 fn main() {
-    int_arr := [$]i32{ len: 2, cap: 3 }
-    uint_arr := [$]u32{ len: 2, cap: 3 }
-    bool_arr := [$]bool{ len: 2, cap: 3 }
+    int_arr := [$]i32{ len: 2 }
+    uint_arr := [$]u32{ len: 2 }
+    bool_arr := [$]bool{ len: 2 }
+
+    println(fmt("len: {} cap: {}", int_arr.len, int_arr.cap))
 
     int_arr[0] = -1
     int_arr[1] = -2
@@ -75,4 +77,6 @@ fn main() {
     for i i32, 1024 {
         int_arr = append::<i32>(int_arr, i)
     }
+
+    println(fmt("len: {} cap: {}", int_arr.len, int_arr.cap))
 }

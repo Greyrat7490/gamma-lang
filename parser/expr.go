@@ -271,6 +271,19 @@ func prsVecLit(tokens *token.Tokens) *ast.VectorLit {
             tokens.Next()
             prsVecLitField(tokens, &lit)
         }
+
+        if lit.Cap == nil {
+            lit.Cap = &ast.Binary{ 
+                OperandL: lit.Len, 
+                OperandR: &ast.UintLit{
+                    Type: types.CreateUint(types.Ptr_Size), 
+                    Repr: 2,
+                    Val: token.Token{Type: token.Number, Str: "2"},
+                },
+                Type: types.CreateUint(types.Ptr_Size),
+                Operator: token.Token{Type: token.Mul, Str: "*"},
+            }
+        }
     } else if tokens.Cur().Type != token.BraceR {
         lit.Cap = prsExpr(tokens)
     }
