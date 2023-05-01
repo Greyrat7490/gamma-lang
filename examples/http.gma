@@ -4,76 +4,66 @@ MSG_SIZE        :: 1024
 PORT            :: 6969
 MAX_PENDING_CON :: 3
 
-// TODO: multiline string
-HTML :: "HTTP/1.1 200 ok\nServer: HTTP Server\nKeep-Alive: timeout=2, max=200\nConnection: Keep-Alive\nContent-type: text/html\n\n<h1>Hello from HTTP Server written in gamma</h1>\n"
+HTTP_RES :: "HTTP/1.1 200 ok\n" + 
+        "Server: HTTP Server\n" + 
+        "Keep-Alive: timeout=2, max=200\n" + 
+        "Connection: Keep-Alive\n" + 
+        "Content-type: text/html\n\n" + 
+        "<h1>Hello from HTTP Server written in gamma</h1>\n"
 
-I32_SIZE :: 4
-SOCKADDR_IN_SIZE :: 16
-
-fn testSwapEndians() {
-    print("swap endian tests\n")
-    print(utos(6969)) print("\n")
-    print(utos(htons(6969))) print("\n")
-    print(utos(ntohs(htons(6969)))) print("\n")
-
-    print(utos(69696969)) print("\n")
-    print(utos(htonl(69696969))) print("\n")
-    print(utos(ntohl(htonl(69696969)))) print("\n\n")
-}
 
 fn main() {
-    testSwapEndians()
-
-
+    println(fmt("run on http://localhost:{}", PORT))
+    
     // create ipv4/tcp socket --------------------------------------------------------
     fd := socket(AF_INET, SOCK_STREAM, 0)
     if fd == -1 {
-        print("error: could not create socket file descriptor\n")
+        println("error: could not create socket file descriptor")
         exit(1)
     }
-    print("created socket file descriptor: ") print(itos(fd)) print("\n")
+    println(fmt("created socket file descriptor: {}", fd))
 
 
     // test getsockopt ---------------------------------------------------------------
     opt := 0
-    optlen := I32_SIZE
+    optlen := sizeof::<i32>() as i32
     err := getsockopt(fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, &optlen)
     if err != 0 {
-        print(itos(err)) print(" getsockopt error\n")
+        println(fmt("{} getsockopt error", err))
         exit(1)
     }
-    print("reuseable port/addr: ") print(itos(opt)) print("\n")
+    println(fmt("reuseable port/addr: {}", opt))
 
 
     // make addr and port reusable ---------------------------------------------------
     opt = 1
     err = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, optlen)
     if err != 0 {
-        print(itos(err)) print(" setsockopt error\n")
+        println(fmt("{} setsockopt error", err))
         exit(1)
     }
-    print("set port/addr as reuseable\n")
+    println("set port/addr as reuseable")
 
 
     // prepare socket for connections ------------------------------------------------
     addr := sockaddr_in{ sin_family: AF_INET, sin_port: htons(PORT), sin_addr: INADDR_ANY, sin_zero: 0 }
 
-    err = bind(fd, &addr, SOCKADDR_IN_SIZE)
+    err = bind(fd, &addr, sizeof::<sockaddr_in>())
     if err != 0 {
-        print(itos(err)) print(" bind error\n")
+        println(fmt("{} bind error", err))
         exit(1)
     }
 
     err = listen(fd, MAX_PENDING_CON)
     if err != 0 {
-        print(itos(err)) print(" listen error\n")
+        println(fmt("{} listen error", err))
         exit(1)
     }
 
-    sockaddr_in_size u32 := SOCKADDR_IN_SIZE
+    sockaddr_in_size u32 := sizeof::<sockaddr_in>()
     client_fd := accept(fd, &addr, &sockaddr_in_size)
     if client_fd == -1 {
-        print(itos(client_fd)) print(" accept error\n")
+        println(fmt("{} accept error", client_fd))
         exit(1)
     }
 
@@ -88,9 +78,9 @@ fn main() {
     }
     print(ctos('\n'))
 
-    bytes := send(client_fd, HTML, 0)
+    bytes := send(client_fd, HTTP_RES, 0)
     if bytes == -1 {
-        print(itos(bytes)) print(" send error\n")
+        println(fmt("{} send error", bytes))
         exit(1)
     }
 
@@ -98,13 +88,13 @@ fn main() {
     // shutdown and close sockets ----------------------------------------------------
     err = close(client_fd)
     if err != 0 {
-        print(itos(err)) print(" close client_fd error\n")
+        println(fmt("{} close client_fd error", err))
         exit(1)
     }
 
     err = shutdown(fd, SHUT_RDWR)
     if err != 0 {
-        print(itos(err)) print(" socket shutdown error\n")
+        println(fmt("{} socket shutdown error", err))
         exit(1)
     }
 }

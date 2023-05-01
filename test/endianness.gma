@@ -1,0 +1,18 @@
+import "std.gma"
+
+fn testSwapEndians() {
+    println(utos(6969))
+    println(utos(htons(6969)))
+    println(utos(ntohs(htons(6969))))
+
+    println(utos(69696969))
+    println(utos(htonl(69696969)))
+    println(utos(ntohl(htonl(69696969))))
+}
+
+fn main() {
+    println(fmt("this machine is {} endian", $ { isBigEndian(): "big"; _: "little"}))
+
+    println("swap endian tests")
+    testSwapEndians()
+}

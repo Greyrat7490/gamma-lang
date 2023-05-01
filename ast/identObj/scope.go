@@ -38,8 +38,9 @@ func (s *Scope) getInnerSize(size uint) uint {
         }
     }
 
+    curSize := size
     for _,s := range s.children {
-        size += s.getInnerSize(size)
+        size += s.getInnerSize(curSize)
     }
 
     return size
