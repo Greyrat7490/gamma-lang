@@ -87,6 +87,21 @@ fn func<T>(v [$]T) -> [$]T {
 v = func::<i32>(v)
 ```
 
+### methods (like in rust)
+```v
+// in work
+```
+
+### interfaces (like in rust)
+```v
+// in work
+```
+
+### enums (like in rust)
+```v
+// in work
+```
+
 ### const functions
 ```v
 // only tmp sytnax for funcs (will be changed)
@@ -163,21 +178,52 @@ res := $ if {
 
 ## Get Started
 
-compile a source file
+### compile a source file
 ```console
 $ go run gamma <source_file>
 ```
-run tests
+### run tests
 ```console
 $ go test ./test -v
 ```
-gamma usage
+### gamma usage
 ```console
 $ go run gamma --help
 gamma usage:
   -ast
     	show the AST
   -r	run the compiled executable
+```
+### run simple http server example
+```console
+$ go run gamma -r ./examples/http.gma
+
+run on http://localhost:6969
+...
+```
+
+### run rule110 example
+```console
+$ go run gamma -r ./test/rule110.gma
+
+                o
+               oo
+              ooo
+             oo o
+            ooooo
+           oo   o
+          ooo  oo
+         oo o ooo
+        ooooooo o
+       oo     ooo
+      ooo    oo o
+     oo o   ooooo
+    ooooo  oo   o
+   oo   o ooo  oo
+  ooo  oooo o ooo
+ oo o oo  ooooo o
+oooooooo oo   ooo
+...
 ```
 
 ## TODO:
