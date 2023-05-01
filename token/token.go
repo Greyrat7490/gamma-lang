@@ -79,6 +79,8 @@ const (
     Through         // through
     Struct          // struct
     Interface       // interface
+    Impl            // impl
+    Self            // self
     Import          // import
     XSwitch         // $
     As              // as
@@ -198,6 +200,10 @@ func ToTokenType(s string, p Pos) TokenType {
         return Struct
     case "interface":
         return Interface
+    case "impl":
+        return Impl
+    case "self":
+        return Self
     case "import":
         return Import
     case "$":
@@ -343,6 +349,10 @@ func (t TokenType) String() string {
         return "Struct"
     case Interface:
         return "Interface"
+    case Impl:
+        return "Impl"
+    case Self:
+        return "Self"
     case Import:
         return "Import"
     case XSwitch:

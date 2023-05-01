@@ -1,6 +1,7 @@
 interface Number {
     add(a u64, b u64) -> u64
     sub(a u64, b u64) -> u64
+    inc(self) -> u64
 }
 
 struct Test {
@@ -11,7 +12,6 @@ struct Test2 {
     a u32
 }
 
-/*
 impl Test :: Number {
     fn add(a u64, b u64) -> u64 {
         ret a + b
@@ -40,6 +40,7 @@ impl Test2 :: Number {
     }
 }
 
+/*
 fn calc(lhs Number, rhs Number) -> u64 {
     ret lhs.inc + rhs.inc
 }

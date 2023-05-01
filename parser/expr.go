@@ -41,7 +41,7 @@ func prsExpr(tokens *token.Tokens) ast.Expr {
             return prsArrayLit(tokens)
         }
 
-    case token.Name:
+    case token.Name, token.Self:
         switch tokens.Peek().Type {
         case token.ParenL:
             expr = prsCallFn(tokens)
@@ -175,7 +175,7 @@ func prsIdentExpr(tokens *token.Tokens) *ast.Ident {
         return &ast.Ident{ Name: "_", Pos: ident.Pos, Obj: nil }
     }
 
-    if ident.Type != token.Name {
+    if ident.Type != token.Name && ident.Type != token.Self {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", ident)
         fmt.Fprintln(os.Stderr, "\t" + ident.At())
         os.Exit(1)

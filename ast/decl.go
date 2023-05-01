@@ -53,6 +53,7 @@ type DefFn struct {
 type FnHead struct {
     F *identObj.Func
     Name token.Token
+    Recver *identObj.FnRecver
     Args []DecVar
     RetType types.Type
     IsConst bool
@@ -75,6 +76,15 @@ type DefInterface struct {
     Name token.Token
     BraceLPos token.Pos
     FnHeads []FnHead
+    BraceRPos token.Pos
+}
+
+type Impl struct {
+    I *identObj.Interface
+    S *identObj.Struct
+    Pos token.Pos
+    BraceLPos token.Pos
+    FnDefs []DefFn
     BraceRPos token.Pos
 }
 
@@ -145,8 +155,11 @@ func (o *FnHead) Readable(indent int) string {
 
     s := strings.Repeat("   ", indent+1)
 
-    res += fmt.Sprintf("%sName: %s\n", s, o.Name) +
-        fmt.Sprintf("%sArgs: [%s]\n", s, args)
+    res += fmt.Sprintf("%sName: %s\n", s, o.Name)
+    if o.Recver != nil {
+        res += fmt.Sprintf("%sReceiver: %s\n", s, o.Recver)
+    }
+    res += fmt.Sprintf("%sArgs: [%s]\n", s, args)
 
     if o.RetType != nil {
         res += fmt.Sprintf("%sRet: %v\n", s, o.RetType)
@@ -183,6 +196,18 @@ func (o *DefInterface) Readable(indent int) string {
     return res
 }
 
+func (o *Impl) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) + "IMPL:\n" +
+        strings.Repeat("   ", indent+1) + "Struct: " + o.S.GetName() + "\n" +
+        strings.Repeat("   ", indent+1) + "Interface: " + o.I.GetName() + "\n"
+
+    for _,f := range o.FnDefs {
+        res += f.Readable(indent+1)
+    }
+
+    return res
+}
+
 func (d *Import) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "IMPORT:\n" +
         strings.Repeat("   ", indent+1) + d.Path.Str + "\n"
@@ -210,6 +235,7 @@ func (d *DefConst)      decl() {}
 func (d *DefFn)         decl() {}
 func (d *DefStruct)     decl() {}
 func (d *DefInterface)  decl() {}
+func (d *Impl)          decl() {}
 func (d *DecField)      decl() {}
 func (d *FnHead)        decl() {}
 func (d *Import)        decl() {}
@@ -221,6 +247,7 @@ func (d *DefConst)      At() string { return d.ColPos.At() }
 func (d *DefFn)         At() string { return d.Pos.At() }
 func (d *DefStruct)     At() string { return d.Pos.At() }
 func (d *DefInterface)  At() string { return d.Pos.At() }
+func (d *Impl)          At() string { return d.Pos.At() }
 func (d *DecField)      At() string { return d.Name.At() }
 func (d *Import)        At() string { return d.Pos.At() }
 
@@ -231,5 +258,6 @@ func (d *DefConst)      End() string { return d.Value.End() }
 func (d *DefFn)         End() string { return d.Block.End() }
 func (d *DefStruct)     End() string { return d.BraceRPos.At() }
 func (d *DefInterface)  End() string { return d.BraceRPos.At() }
+func (d *Impl)          End() string { return d.BraceRPos.At() }
 func (d *DecField)      End() string { return d.TypePos.At() }
 func (d *Import)        End() string { return d.Path.At() }

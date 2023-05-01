@@ -24,11 +24,11 @@ func prsDecl(tokens *token.Tokens) ast.Decl {
         return &d
 
     case token.Fn:
-        d := prsDefFn(tokens, false)
+        d := prsDefFn(tokens, false, false)
         return &d
 
     case token.ConstFn:
-        d := prsDefFn(tokens, true)
+        d := prsDefFn(tokens, true, false)
         return &d
 
     case token.Struct:
@@ -37,6 +37,9 @@ func prsDecl(tokens *token.Tokens) ast.Decl {
 
     case token.Interface:
         return prsInterface(tokens)
+
+    case token.Impl:
+        return prsImpl(tokens)
 
     case token.Name:
         d := prsDefine(tokens)
@@ -214,9 +217,15 @@ func isNextType(tokens *token.Tokens) bool {
 
     case token.Name:
         if obj := identObj.Get(tokens.Cur().Str); obj != nil {
-            _,ok := obj.(*identObj.Struct)
-            return ok
+            if _,ok := obj.(*identObj.Struct); ok {
+                return true
+            }
         }
+
+        if generic := identObj.GetGeneric(tokens.Cur().Str); generic != nil {
+            return true
+        }
+
         return false
 
     default:
@@ -368,14 +377,14 @@ func prsInterface(tokens *token.Tokens) ast.Decl {
 
     for tokens.Next().Type != token.BraceR {
         identObj.StartScope()
-        fnHead := prsFnHead(tokens, false)
+        fnHead := prsFnHead(tokens, false, true)
         identObj.EndScope()
 
         heads = append(heads, fnHead)
         funcs = append(funcs, *fnHead.F)
     }
 
-    I.SetFuncs(funcs)
+    I.Funcs = funcs
 
     braceRPos := tokens.Cur().Pos
     identObj.EndScope()
@@ -383,7 +392,82 @@ func prsInterface(tokens *token.Tokens) ast.Decl {
     return &ast.DefInterface{ Pos: pos, Name: name, I: I, BraceLPos: braceLPos, BraceRPos: braceRPos, FnHeads: heads }
 }
 
-func prsFnHead(tokens *token.Tokens, isConst bool) ast.FnHead {
+func prsImpl(tokens *token.Tokens) ast.Decl {
+    pos := tokens.Cur().Pos
+
+    StructName := tokens.Next()
+    if StructName.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", StructName)
+        fmt.Fprintln(os.Stderr, "\t" + StructName.At())
+        os.Exit(1)
+    }
+
+    // TODO: no interface given -> create new one for the struct
+    if tokens.Next().Type != token.DefConst {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a \"::\" but got %v\n", tokens.Cur().Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+
+    InterfaceName := tokens.Next()
+    if InterfaceName.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", InterfaceName)
+        fmt.Fprintln(os.Stderr, "\t" + InterfaceName.At())
+        os.Exit(1)
+    }
+
+    S,ok := identObj.Get(StructName.Str).(*identObj.Struct)
+    if !ok || S == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" is not defined\n", StructName.Str)
+        fmt.Fprintln(os.Stderr, "\t" + StructName.At())
+        os.Exit(1)
+    }
+
+    sType := S.GetType().(types.StructType)
+    identObj.CurImplStruct = &sType
+
+    I,ok := identObj.Get(InterfaceName.Str).(*identObj.Interface)
+    if !ok || I == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] interface \"%s\" is not defined\n", InterfaceName.Str)
+        fmt.Fprintln(os.Stderr, "\t" + InterfaceName.At())
+        os.Exit(1)
+    }
+
+    braceLPos := tokens.Next().Pos
+    if tokens.Cur().Type != token.BraceL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a \"{\" but got %v\n", tokens.Cur().Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+    identObj.StartScope()
+
+    funcs := make([]ast.DefFn, 0)
+
+    for tokens.Next().Type != token.BraceR {
+        switch tokens.Cur().Type {
+        case token.Fn:
+            funcs = append(funcs, prsDefFn(tokens, false, true))
+        case token.ConstFn:
+            funcs = append(funcs, prsDefFn(tokens, true, true))
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] you can only define methods in impl (unexpected token %v)\n", tokens.Cur().Str)
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+            os.Exit(1)
+        }
+    }
+
+    braceRPos := tokens.Cur().Pos
+    if tokens.Cur().Type != token.BraceR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a \"}\" but got %v\n", tokens.Cur().Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+    identObj.EndScope()
+
+    return &ast.Impl{ Pos: pos, I: I, S: S, BraceLPos: braceLPos, BraceRPos: braceRPos, FnDefs: funcs }
+}
+
+func prsFnHead(tokens *token.Tokens, isConst bool, isMethod bool) ast.FnHead {
     name := tokens.Cur()
     if name.Type != token.Name {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
@@ -391,7 +475,7 @@ func prsFnHead(tokens *token.Tokens, isConst bool) ast.FnHead {
         os.Exit(1)
     }
 
-    f := identObj.DecFunc(name)
+    f := identObj.DecFunc(name, isConst)
 
     tokens.Next()
     generic := prsGeneric(tokens)
@@ -400,8 +484,8 @@ func prsFnHead(tokens *token.Tokens, isConst bool) ast.FnHead {
         f.SetGeneric(&types.GenericType{ Name: generic.Str, UsedTypes: make([]types.Type, 0) })
     }
 
-    argNames, argTypes := prsDecArgs(tokens)
-    f.SetArgs(argTypes)
+    recver, argNames, argTypes := prsArgs(tokens, isMethod)
+    f.SetArgs(recver, argTypes)
 
     if name.Str == "main" {
         isMainDefined = true
@@ -416,20 +500,29 @@ func prsFnHead(tokens *token.Tokens, isConst bool) ast.FnHead {
     }
     f.SetRetType(retType)
 
+    if recver != nil && identObj.CurImplStruct != nil {
+        name := token.Token{ Str: "self", Pos: recver.DecPos, Type: token.Name }
+        if recver.IsPtr {
+            identObj.DecVar(name, types.PtrType{ BaseType: *identObj.CurImplStruct })
+        } else {
+            identObj.DecVar(name, *identObj.CurImplStruct)
+        }
+    }
+
     var argDecs []ast.DecVar
     for i,t := range argTypes {
         argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecVar(argNames[i], t) })
     }
 
-    return ast.FnHead{ Name: name, F: f, Args: argDecs, RetType: retType, IsConst: isConst, IsGeneric: isGeneric, Generic: generic }
+    return ast.FnHead{ Name: name, F: f, Recver: recver, Args: argDecs, RetType: retType, IsConst: isConst, IsGeneric: isGeneric, Generic: generic }
 }
 
-func prsDefFn(tokens *token.Tokens, isConst bool) ast.DefFn {
+func prsDefFn(tokens *token.Tokens, isConst bool, isMethod bool) ast.DefFn {
     pos := tokens.Cur().Pos
     tokens.Next()
 
     identObj.StartScope()
-    fnHead := prsFnHead(tokens, isConst)
+    fnHead := prsFnHead(tokens, isConst, isMethod)
 
     if tokens.Next().Type != token.BraceL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", tokens.Cur())
@@ -506,7 +599,20 @@ func prsDecFields(tokens *token.Tokens) (fields []ast.DecField) {
     return
 }
 
-func prsDecArgs(tokens *token.Tokens) (names []token.Token, types []types.Type) {
+func prsRecver(tokens *token.Tokens) *identObj.FnRecver {
+    if tokens.Cur().Type == token.Mul && tokens.Peek().Type == token.Self {
+        tokens.Next()
+        return &identObj.FnRecver{ DecPos: tokens.Cur().Pos, IsPtr: true }
+    }
+
+    if tokens.Cur().Type == token.Self {
+        return &identObj.FnRecver{ DecPos: tokens.Cur().Pos, IsPtr: false }
+    }
+
+    return nil
+}
+
+func prsArgs(tokens *token.Tokens, isMethod bool) (recver *identObj.FnRecver, names []token.Token, types []types.Type) {
     if tokens.Cur().Type != token.ParenL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got %v\n", tokens.Cur())
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
@@ -514,9 +620,17 @@ func prsDecArgs(tokens *token.Tokens) (names []token.Token, types []types.Type) 
     }
 
     if tokens.Next().Type != token.ParenR {
-        name,t := prsNameType(tokens)
-        names = append(names, name)
-        types = append(types, t)
+        recver = prsRecver(tokens)
+
+        if recver == nil {
+            name,t := prsNameType(tokens)
+            names = append(names, name)
+            types = append(types, t)
+        } else if !isMethod {
+            fmt.Fprintln(os.Stderr, "[ERROR] Self can only be used for methods (inside impl)")
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+            os.Exit(1)
+        }
 
         for tokens.Next().Type == token.Comma {
             tokens.Next()

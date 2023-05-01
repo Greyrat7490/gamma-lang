@@ -136,18 +136,18 @@ func (scope *Scope) checkName(name token.Token) {
 }
 
 func AddBuildIn(name string, argtype types.Type, retType types.Type) {
-    f := CreateFunc(token.Token{ Str: name })  
+    f := CreateFunc(token.Token{ Str: name }, false)  
     f.SetRetType(retType)
-    f.SetArgs([]types.Type{ argtype })
+    f.SetArgs(nil, []types.Type{ argtype })
     globalScope.identObjs[name] = &f
 }
 
 func AddGenBuildIn(name string, genericName string, argtype types.Type, retType types.Type) {
-    f := CreateFunc(token.Token{ Str: name })  
+    f := CreateFunc(token.Token{ Str: name }, false)
     f.SetGeneric(&types.GenericType{Name: genericName, UsedTypes: make([]types.Type, 0)})
     f.SetRetType(retType)
     if argtype != nil {
-        f.SetArgs([]types.Type{ argtype })
+        f.SetArgs(nil, []types.Type{ argtype })
     }
     globalScope.identObjs[name] = &f
 }
@@ -174,10 +174,10 @@ func DecConst(name token.Token, t types.Type, val constVal.ConstVal) *Const {
     return &c
 }
 
-func DecFunc(name token.Token) *Func {
+func DecFunc(name token.Token, isConst bool) *Func {
     curScope.parent.checkName(name)
 
-    f := CreateFunc(name)
+    f := CreateFunc(name, isConst)
     f.Scope = curScope
 
     curScope.parent.identObjs[name.Str] = &f

@@ -15,6 +15,8 @@ type Interface struct {
     Funcs []Func
 }
 
+var CurImplStruct *types.StructType = nil
+
 func CreateInterface(name token.Token) Interface {
     return Interface{ decPos: name.Pos, name: name.Str, Funcs: make([]Func, 0) }
 }
@@ -35,8 +37,4 @@ func (i *Interface) Addr() addr.Addr {
     fmt.Fprintln(os.Stderr, "[ERROR] (internal) Cannot get the addr of an interface definition")
     os.Exit(1)
     return addr.Addr{}
-}
-
-func (i *Interface) SetFuncs(funcs []Func) {
-    i.Funcs = funcs
 }

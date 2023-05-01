@@ -5,6 +5,7 @@ import (
     "fmt"
     "reflect"
     "gamma/ast"
+    "gamma/ast/identObj"
 )
 
 func typeCheckDecl(d ast.Decl) {
@@ -20,6 +21,9 @@ func typeCheckDecl(d ast.Decl) {
 
     case *ast.DefFn:
         typeCheckDefFn(d)
+
+    case *ast.Impl:
+        typeCheckImpl(d)
 
     case *ast.DefStruct, *ast.DefInterface:
         // nothing to do
@@ -75,6 +79,70 @@ func typeCheckDefFn(d *ast.DefFn) {
 
     for _,s := range d.Block.Stmts {
         typeCheckStmt(s)
+    }
+}
+
+func typeCheckImpl(d *ast.Impl) {
+    err := false
+
+    for _,expectedFunc := range d.I.Funcs {
+        found := false
+        for _,f := range d.FnDefs {
+            if f.FnHead.Name.Str == expectedFunc.GetName() {
+                if !expectedFunc.Equal(f.FnHead.F) {
+                    fmt.Fprintln(os.Stderr, "[ERROR] different function signatures in interface and impl")
+                    fmt.Fprintln(os.Stderr, "\texpected: " + expectedFunc.String())
+                    fmt.Fprintln(os.Stderr, "\tgot:      " + f.FnHead.F.String())
+                    fmt.Fprintln(os.Stderr, "\tinterface: " + expectedFunc.GetPos().At())
+                    fmt.Fprintln(os.Stderr, "\timpl:      " + f.At())
+                    err = true
+                }
+
+                found = true
+                break
+            }
+        }
+
+        if !found {
+            fmt.Fprintln(os.Stderr, "[ERROR] missing function definition in impl")
+            fmt.Fprintln(os.Stderr, "\texpected: " + expectedFunc.String())
+            fmt.Fprintln(os.Stderr, "\tinterface: " + expectedFunc.GetPos().At())
+            fmt.Fprintln(os.Stderr, "\timpl:      " + d.At())
+            err = true
+        }
+    }
+
+    if len(d.I.Funcs) < len(d.FnDefs) {
+        fmt.Fprintf(os.Stderr, "[ERROR] too many functions are defined in impl (expected %d got %d)\n", len(d.I.Funcs), len(d.FnDefs))
+        for _,f := range d.FnDefs {
+            found := false
+            for _,expectedFunc := range d.I.Funcs {
+                if f.FnHead.Name.Str == expectedFunc.GetName() {
+                    if expectedFunc.Equal(f.FnHead.F) {
+                        found = true
+                        break
+                    }
+                }
+            }
+
+            if !found { fmt.Fprintln(os.Stderr, "\tgot: " + f.FnHead.F.String()) }
+        }
+        fmt.Fprintln(os.Stderr, "\tinterface: " + d.I.GetPos().At())
+        fmt.Fprintln(os.Stderr, "\timpl:      " + d.At())
+        os.Exit(1)
+    }
+
+    if err { os.Exit(1) }
+}
+
+func printFuncs(interfaceFuncs []identObj.Func, implFuncs []ast.DefFn) {
+    fmt.Fprintln(os.Stderr, "\tinterface:")
+    for _,f := range interfaceFuncs {
+        fmt.Fprintln(os.Stderr, "\t\t" + f.String())
+    }
+    fmt.Fprintln(os.Stderr, "\timpl:")
+    for _,f := range implFuncs {
+        fmt.Fprintln(os.Stderr, "\t\t" + f.FnHead.F.String())
     }
 }
 
