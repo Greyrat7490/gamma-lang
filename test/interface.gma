@@ -1,0 +1,58 @@
+interface Number {
+    add(a u64, b u64) -> u64
+    sub(a u64, b u64) -> u64
+}
+
+struct Test {
+    a u64
+}
+
+struct Test2 {
+    a u32
+}
+
+/*
+impl Test :: Number {
+    fn add(a u64, b u64) -> u64 {
+        ret a + b
+    }
+
+    fn sub(a u64, b u64) -> u64 {
+        ret a - b
+    }
+
+    fn inc(self) -> u64 {
+        ret self.a + 1
+    }
+}
+
+impl Test2 :: Number {
+    fn add(a u64, b u64) -> u64 {
+        ret a + b
+    }
+
+    fn sub(a u64, b u64) -> u64 {
+        ret a - b
+    }
+
+    fn inc(self) -> u64 {
+        ret self.a + 1 as u64
+    }
+}
+
+fn calc(lhs Number, rhs Number) -> u64 {
+    ret lhs.inc + rhs.inc
+}
+*/
+
+fn main() {
+    t := Test{ 32 }
+    t2 := Test2{ 30 }
+
+    /*
+    println(fmt("{}", Test::add(30, 39)))
+    println(fmt("{}", Test::sub(69, 5)))
+    println(fmt("{}", t.inc()))
+    println(fmt("{}", calc(t, t2)))
+    */
+}

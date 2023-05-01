@@ -175,16 +175,26 @@ func DecConst(name token.Token, t types.Type, val constVal.ConstVal) *Const {
 }
 
 func DecFunc(name token.Token) *Func {
-    curScope.checkName(name)
+    curScope.parent.checkName(name)
 
     f := CreateFunc(name)
-    StartScope()
     f.Scope = curScope
 
     curScope.parent.identObjs[name.Str] = &f
     curFunc = &f
 
     return curFunc
+}
+
+func DecInterface(name token.Token) *Interface {
+    curScope.parent.checkName(name)
+
+    I := CreateInterface(name)
+    I.scope = curScope
+
+    curScope.parent.identObjs[name.Str] = &I
+
+    return &I
 }
 
 func DecStruct(name token.Token, names []string, types []types.Type) *Struct {

@@ -78,6 +78,7 @@ const (
     Continue        // continue
     Through         // through
     Struct          // struct
+    Interface       // interface
     Import          // import
     XSwitch         // $
     As              // as
@@ -195,6 +196,8 @@ func ToTokenType(s string, p Pos) TokenType {
         return Through
     case "struct":
         return Struct
+    case "interface":
+        return Interface
     case "import":
         return Import
     case "$":
@@ -338,6 +341,8 @@ func (t TokenType) String() string {
         return "Through"
     case Struct:
         return "Struct"
+    case Interface:
+        return "Interface"
     case Import:
         return "Import"
     case XSwitch:

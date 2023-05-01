@@ -21,7 +21,7 @@ func typeCheckDecl(d ast.Decl) {
     case *ast.DefFn:
         typeCheckDefFn(d)
 
-    case *ast.DefStruct:
+    case *ast.DefStruct, *ast.DefInterface:
         // nothing to do
 
     default:
@@ -61,13 +61,13 @@ func typeCheckImport(d *ast.Import) {
 }
 
 func typeCheckDefFn(d *ast.DefFn) {
-    if d.RetType != nil && !hasRet(&d.Block) {
+    if d.FnHead.RetType != nil && !hasRet(&d.Block) {
         fmt.Fprintln(os.Stderr, "[ERROR] missing return")
         fmt.Fprintln(os.Stderr, "\t" + d.At())
         os.Exit(1)
     }
 
-    if d.IsConst && d.RetType == nil {
+    if d.FnHead.IsConst && d.FnHead.RetType == nil {
         fmt.Fprintln(os.Stderr, "[ERROR] a const func returning nothing has no purpose")
         fmt.Fprintln(os.Stderr, "\t" + d.At())
         os.Exit(1)

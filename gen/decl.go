@@ -25,13 +25,13 @@ func GenDecl(file *bufio.Writer, d ast.Decl) {
         GenDefVar(file, d)
 
     case *ast.DefFn:
-        if d.IsGeneric {
+        if d.FnHead.IsGeneric {
             GenDefGenFn(file, d)
         } else {
             GenDefFn(file, d)
         }
 
-    case *ast.DefStruct, *ast.DecVar, *ast.DefConst:
+    case *ast.DefStruct, *ast.DecVar, *ast.DefConst, *ast.DefInterface:
         // nothing to generate
 
     case *ast.BadDecl:
@@ -63,7 +63,7 @@ func GenDefVar(file *bufio.Writer, d *ast.DefVar) {
 }
 
 func GenDefGenFn(file *bufio.Writer, d *ast.DefFn) {
-    genType := d.F.GetGeneric()
+    genType := d.FnHead.F.GetGeneric()
     for _,t := range genType.UsedTypes {
         genType.CurUsedType = t
         GenDefFn(file, d)
@@ -72,28 +72,28 @@ func GenDefGenFn(file *bufio.Writer, d *ast.DefFn) {
 
 
 func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
-    argsSize := d.F.Scope.ArgsSize()
-    innersize := d.F.Scope.GetInnerSize()
+    argsSize := d.FnHead.F.Scope.ArgsSize()
+    innersize := d.FnHead.F.Scope.GetInnerSize()
     framesize := argsSize + innersize
-    if types.IsBigStruct(d.F.GetRetType()) {
+    if types.IsBigStruct(d.FnHead.F.GetRetType()) {
         framesize += types.Ptr_Size
     }
 
-    Define(file, d.F, framesize)
+    Define(file, d.FnHead.F, framesize)
 
     regIdx := uint(0)
     argsFromStackOffset := uint(8)
     regArgsOffset := innersize
 
-    if types.IsBigStruct(d.F.GetRetType()) {
+    if types.IsBigStruct(d.FnHead.F.GetRetType()) {
         regArgsOffset += types.Ptr_Size
         addr := addr.Addr{ BaseAddr: "rbp", Offset: -int64(regArgsOffset) }
         asm.MovDerefReg(file, addr, types.Ptr_Size, asm.RegDi)
-        d.F.SetRetAddr(addr)
+        d.FnHead.F.SetRetAddr(addr)
         regIdx++
     }
 
-    for _,a := range d.Args {
+    for _,a := range d.FnHead.Args {
         if v,ok := a.V.(*vars.LocalVar); ok {
             if types.IsBigStruct(v.GetType()) {
                 v.SetOffset(argsFromStackOffset, true) 
@@ -102,7 +102,7 @@ func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
         }
     }
 
-    for _,a := range d.Args {
+    for _,a := range d.FnHead.Args {
         if v,ok := a.V.(*vars.LocalVar); ok {
             if !types.IsBigStruct(v.GetType()) {
                 needed := types.RegCount(v.GetType())
@@ -125,7 +125,7 @@ func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
 
     GenBlock(file, &d.Block)
 
-    if d.F.GetRetType() == nil {
+    if d.FnHead.F.GetRetType() == nil {
         FnEnd(file);
     }
 

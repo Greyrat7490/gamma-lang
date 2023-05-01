@@ -35,6 +35,9 @@ func prsDecl(tokens *token.Tokens) ast.Decl {
         d := prsStruct(tokens)
         return &d
 
+    case token.Interface:
+        return prsInterface(tokens)
+
     case token.Name:
         d := prsDefine(tokens)
         if _,ok := d.(*ast.BadDecl); ok {
@@ -342,13 +345,46 @@ func prsStruct(tokens *token.Tokens) ast.DefStruct {
         types = append(types, f.Type)
     }
 
-    return ast.DefStruct{ S: identObj.DecStruct(name, names, types), Pos: pos, Name: name, BraceLPos: braceLPos, Fields: fields, BraceRPos: braceRPos }
+    return ast.DefStruct{ S: identObj.DecStruct(name, names, types), Pos: pos, 
+        Name: name, BraceLPos: braceLPos, Fields: fields, BraceRPos: braceRPos }
 }
 
-func prsDefFn(tokens *token.Tokens, isConst bool) ast.DefFn {
+func prsInterface(tokens *token.Tokens) ast.Decl {
     pos := tokens.Cur().Pos
-    name := tokens.Next()
 
+    name := tokens.Next()
+    if name.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+    }
+
+    braceLPos := tokens.Next().Pos
+    identObj.StartScope()
+    I := identObj.DecInterface(name)
+
+    heads := make([]ast.FnHead, 0)
+    funcs := make([]identObj.Func, 0)
+
+    for tokens.Next().Type != token.BraceR {
+        identObj.StartScope()
+        fnHead := prsFnHead(tokens, false)
+        identObj.EndScope()
+
+        heads = append(heads, fnHead)
+        funcs = append(funcs, *fnHead.F)
+    }
+
+    I.SetFuncs(funcs)
+
+    braceRPos := tokens.Cur().Pos
+    identObj.EndScope()
+
+    return &ast.DefInterface{ Pos: pos, Name: name, I: I, BraceLPos: braceLPos, BraceRPos: braceRPos, FnHeads: heads }
+}
+
+func prsFnHead(tokens *token.Tokens, isConst bool) ast.FnHead {
+    name := tokens.Cur()
     if name.Type != token.Name {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
         fmt.Fprintln(os.Stderr, "\t" + name.At())
@@ -380,22 +416,34 @@ func prsDefFn(tokens *token.Tokens, isConst bool) ast.DefFn {
     }
     f.SetRetType(retType)
 
+    var argDecs []ast.DecVar
+    for i,t := range argTypes {
+        argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecVar(argNames[i], t) })
+    }
+
+    return ast.FnHead{ Name: name, F: f, Args: argDecs, RetType: retType, IsConst: isConst, IsGeneric: isGeneric, Generic: generic }
+}
+
+func prsDefFn(tokens *token.Tokens, isConst bool) ast.DefFn {
+    pos := tokens.Cur().Pos
+    tokens.Next()
+
+    identObj.StartScope()
+    fnHead := prsFnHead(tokens, isConst)
+
     if tokens.Next().Type != token.BraceL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", tokens.Cur())
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
 
-    var argDecs []ast.DecVar
-    for i,t := range argTypes {
-        argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecVar(argNames[i], t) })
-    }
-
+    identObj.StartScope()
     block := prsBlock(tokens)
     identObj.EndScope()
 
-    def := ast.DefFn{ Pos: pos, F: f, Args: argDecs, RetType: retType, Block: block,
-        IsConst: isConst, IsGeneric: isGeneric, Generic: generic }
+    identObj.EndScope()
+
+    def := ast.DefFn{ Pos: pos, FnHead: fnHead, Block: block }
 
     if isConst {
         cmpTime.AddConstFunc(def)

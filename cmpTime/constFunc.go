@@ -16,11 +16,11 @@ type constFunc struct {
 }
 
 func (c constFunc) eval(args []constVal.ConstVal) constVal.ConstVal {
-    framesize := c.fn.F.Scope.ArgsSize() + c.fn.F.Scope.GetInnerSize()
+    framesize := c.fn.FnHead.F.Scope.ArgsSize() + c.fn.FnHead.F.Scope.GetInnerSize()
     startScope(framesize)
     defer endScope()
 
-    for i,a := range c.fn.Args {
+    for i,a := range c.fn.FnHead.Args {
         defVar(a.V.GetName(), a.V.Addr(), a.V.GetType(), a.TypePos, args[i])
     }
 
@@ -28,7 +28,7 @@ func (c constFunc) eval(args []constVal.ConstVal) constVal.ConstVal {
 }
 
 func AddConstFunc(fn ast.DefFn) {
-    funcs[fn.F.GetName()] = constFunc{ fn: fn }
+    funcs[fn.FnHead.F.GetName()] = constFunc{ fn: fn }
 }
 
 func EvalFunc(name string, pos token.Pos, args []constVal.ConstVal) constVal.ConstVal {

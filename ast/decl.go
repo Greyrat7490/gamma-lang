@@ -45,11 +45,16 @@ type DefConst struct {
 }
 
 type DefFn struct {
-    F *identObj.Func
     Pos token.Pos
+    FnHead FnHead 
+    Block Block
+}
+
+type FnHead struct {
+    F *identObj.Func
+    Name token.Token
     Args []DecVar
     RetType types.Type
-    Block Block
     IsConst bool
     Generic token.Token // empty when IsGeneric == false
     IsGeneric bool
@@ -61,6 +66,15 @@ type DefStruct struct {
     Name token.Token
     BraceLPos token.Pos
     Fields []DecField
+    BraceRPos token.Pos
+}
+
+type DefInterface struct {
+    I *identObj.Interface
+    Pos token.Pos
+    Name token.Token
+    BraceLPos token.Pos
+    FnHeads []FnHead
     BraceRPos token.Pos
 }
 
@@ -120,8 +134,8 @@ func (o *DefConst) Readable(indent int) string {
     return res + o.Value.Readable(indent+1)
 }
 
-func (o *DefFn) Readable(indent int) string {
-    res := strings.Repeat("   ", indent) + "DEF_FN:\n"
+func (o *FnHead) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) + "FN_HEAD:\n"
 
     args := ""
     for _,a := range o.Args {
@@ -131,14 +145,20 @@ func (o *DefFn) Readable(indent int) string {
 
     s := strings.Repeat("   ", indent+1)
 
-    res += fmt.Sprintf("%sName: %s\n", s, o.F.GetName()) +
+    res += fmt.Sprintf("%sName: %s\n", s, o.Name) +
         fmt.Sprintf("%sArgs: [%s]\n", s, args)
 
     if o.RetType != nil {
         res += fmt.Sprintf("%sRet: %v\n", s, o.RetType)
     }
 
-    return res + fmt.Sprintf("%sIsConst: %t\n", s, o.IsConst) + o.Block.Readable(indent+2)
+    return res + fmt.Sprintf("%sIsConst: %t\n", s, o.IsConst)
+}
+
+func (o *DefFn) Readable(indent int) string {
+    return strings.Repeat("   ", indent) + "DEF_FN:\n" + 
+        o.FnHead.Readable(indent+1) +
+        o.Block.Readable(indent+1)
 }
 
 func (o *DefStruct) Readable(indent int) string {
@@ -146,6 +166,17 @@ func (o *DefStruct) Readable(indent int) string {
         strings.Repeat("   ", indent+1) + o.Name.String() + "\n"
 
     for _,f := range o.Fields {
+        res += f.Readable(indent+1)
+    }
+
+    return res
+}
+
+func (o *DefInterface) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) + "DEF_INTERFACE:\n" +
+        strings.Repeat("   ", indent+1) + o.Name.String() + "\n"
+
+    for _,f := range o.FnHeads {
         res += f.Readable(indent+1)
     }
 
@@ -172,29 +203,33 @@ func (o *BadDecl) Readable(indent int) string {
 }
 
 
-func (d *BadDecl)   decl() {}
-func (d *DecVar)    decl() {}
-func (d *DefVar)    decl() {}
-func (d *DefConst)  decl() {}
-func (d *DefFn)     decl() {}
-func (d *DefStruct) decl() {}
-func (d *DecField)  decl() {}
-func (d *Import)    decl() {}
+func (d *BadDecl)       decl() {}
+func (d *DecVar)        decl() {}
+func (d *DefVar)        decl() {}
+func (d *DefConst)      decl() {}
+func (d *DefFn)         decl() {}
+func (d *DefStruct)     decl() {}
+func (d *DefInterface)  decl() {}
+func (d *DecField)      decl() {}
+func (d *FnHead)        decl() {}
+func (d *Import)        decl() {}
 
-func (d *BadDecl)   At() string { return "" }
-func (d *DecVar)    At() string { return d.V.GetPos().At() }
-func (d *DefVar)    At() string { return d.ColPos.At() }
-func (d *DefConst)  At() string { return d.ColPos.At() }
-func (d *DefFn)     At() string { return d.Pos.At() }
-func (d *DefStruct) At() string { return d.Pos.At() }
-func (d *DecField)  At() string { return d.Name.At() }
-func (d *Import)    At() string { return d.Pos.At() }
+func (d *BadDecl)       At() string { return "" }
+func (d *DecVar)        At() string { return d.V.GetPos().At() }
+func (d *DefVar)        At() string { return d.ColPos.At() }
+func (d *DefConst)      At() string { return d.ColPos.At() }
+func (d *DefFn)         At() string { return d.Pos.At() }
+func (d *DefStruct)     At() string { return d.Pos.At() }
+func (d *DefInterface)  At() string { return d.Pos.At() }
+func (d *DecField)      At() string { return d.Name.At() }
+func (d *Import)        At() string { return d.Pos.At() }
 
-func (d *BadDecl)   End() string { return "" }
-func (d *DecVar)    End() string { return d.TypePos.At() }
-func (d *DefVar)    End() string { return d.Value.End() }
-func (d *DefConst)  End() string { return d.Value.End() }
-func (d *DefFn)     End() string { return d.Block.End() }
-func (d *DefStruct) End() string { return d.BraceRPos.At() }
-func (d *DecField)  End() string { return d.TypePos.At() }
-func (d *Import)    End() string { return d.Path.At() }
+func (d *BadDecl)       End() string { return "" }
+func (d *DecVar)        End() string { return d.TypePos.At() }
+func (d *DefVar)        End() string { return d.Value.End() }
+func (d *DefConst)      End() string { return d.Value.End() }
+func (d *DefFn)         End() string { return d.Block.End() }
+func (d *DefStruct)     End() string { return d.BraceRPos.At() }
+func (d *DefInterface)  End() string { return d.BraceRPos.At() }
+func (d *DecField)      End() string { return d.TypePos.At() }
+func (d *Import)        End() string { return d.Path.At() }
