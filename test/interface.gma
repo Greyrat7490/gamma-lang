@@ -2,6 +2,7 @@ interface Number {
     add(a u64, b u64) -> u64
     sub(a u64, b u64) -> u64
     inc(self) -> u64
+    print(a u64)
 }
 
 struct Test {
@@ -24,6 +25,10 @@ impl Test :: Number {
     fn inc(self) -> u64 {
         ret self.a + 1
     }
+
+    fn print(a u64) {
+        println(fmt("Test: {}", a))
+    }
 }
 
 impl Test2 :: Number {
@@ -38,6 +43,10 @@ impl Test2 :: Number {
     fn inc(self) -> u64 {
         ret self.a + 1 as u64
     }
+
+    fn print(a u64) {
+        println(fmt("Test2: {}", Test2::sub(a, 5)))
+    }
 }
 
 /*
@@ -50,9 +59,13 @@ fn main() {
     t := Test{ 32 }
     t2 := Test2{ 30 }
 
-    /*
+    Test::print(69)
+    Test2::print(69)
+
     println(fmt("{}", Test::add(30, 39)))
     println(fmt("{}", Test::sub(69, 5)))
+
+    /*
     println(fmt("{}", t.inc()))
     println(fmt("{}", calc(t, t2)))
     */

@@ -186,6 +186,18 @@ func DecFunc(name token.Token, isConst bool) *Func {
     return curFunc
 }
 
+func DecMethod(name token.Token, isConst bool, structName string) *Func {
+    curScope.parent.checkName(name)
+
+    f := CreateMethod(name, isConst, structName)
+    f.Scope = curScope
+
+    curScope.parent.identObjs[name.Str] = &f
+    curFunc = &f
+
+    return curFunc
+}
+
 func DecInterface(name token.Token) *Interface {
     curScope.parent.checkName(name)
 

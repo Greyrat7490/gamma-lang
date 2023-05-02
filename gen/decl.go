@@ -31,6 +31,9 @@ func GenDecl(file *bufio.Writer, d ast.Decl) {
             GenDefFn(file, d)
         }
 
+    case *ast.Impl:
+        GenImpl(file, d)
+
     case *ast.DefStruct, *ast.DecVar, *ast.DefConst, *ast.DefInterface:
         // nothing to generate
 
@@ -92,6 +95,20 @@ func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
         d.FnHead.F.SetRetAddr(addr)
         regIdx++
     }
+    
+    if d.FnHead.Recver != nil {
+        if v,ok := d.FnHead.Recver.V.(*vars.LocalVar); ok {
+            if types.IsBigStruct(v.GetType()) {
+                v.SetOffset(argsFromStackOffset, true) 
+                argsFromStackOffset += v.GetType().Size()
+            } else {
+                v.SetOffset(regArgsOffset, false) 
+                DefArg(file, regIdx, v)
+                regIdx += types.RegCount(v.GetType())
+                regArgsOffset += v.GetType().Size() 
+            }
+        }
+    }
 
     for _,a := range d.FnHead.Args {
         if v,ok := a.V.(*vars.LocalVar); ok {
@@ -132,4 +149,12 @@ func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
     cond.ResetCount()
     loops.ResetCount()
     identObj.ResetStackSize()
+}
+
+
+func GenImpl(file *bufio.Writer, d *ast.Impl) {
+    file.WriteString(d.Impl.GetStructName() + ":\n")
+    for _,f := range d.FnDefs {
+        GenDefFn(file, &f)
+    }
 }

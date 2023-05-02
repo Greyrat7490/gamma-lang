@@ -181,9 +181,33 @@ func isDec(tokens *token.Tokens) bool {
     return isNextType(tokens)
 }
 func isDefInfer(tokens *token.Tokens) bool {
-    return tokens.Cur().Type == token.Name &&
-        (tokens.Peek().Type == token.DefVar || 
-            (tokens.Peek().Type == token.DefConst && tokens.Peek2().Type != token.Lss))
+    if tokens.Cur().Type != token.Name {
+        return false
+    }
+
+    if tokens.Peek().Type == token.DefVar {
+        return true
+    }
+
+    if tokens.Peek().Type == token.DefConst {
+        if tokens.Peek2().Type == token.Lss || isStruct(tokens.Cur()) {
+            return false
+        }
+        return true
+    }
+
+    return false
+}
+func isStruct(token token.Token) bool {
+    _,ok := identObj.Get(token.Str).(*identObj.Struct)
+    return ok
+}
+func isGenericFunc(token token.Token) bool {
+    if f,ok := identObj.Get(token.Str).(*identObj.Func); ok {
+        return f.GetGeneric() != nil
+    }
+
+    return false
 }
 func isNextType(tokens *token.Tokens) bool {
     tokens.SaveIdx()
@@ -441,7 +465,10 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
     }
     identObj.StartScope()
 
-    funcs := make([]ast.DefFn, 0)
+    impl := identObj.CreateImpl(pos, I, S)
+    S.AddImpl(impl)
+
+    funcs := make([]ast.DefFn, 0, len(I.Funcs))
 
     for tokens.Next().Type != token.BraceR {
         switch tokens.Cur().Type {
@@ -463,8 +490,9 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
         os.Exit(1)
     }
     identObj.EndScope()
+    identObj.CurImplStruct = nil
 
-    return &ast.Impl{ Pos: pos, I: I, S: S, BraceLPos: braceLPos, BraceRPos: braceRPos, FnDefs: funcs }
+    return &ast.Impl{ Pos: pos, Impl: impl, BraceLPos: braceLPos, BraceRPos: braceRPos, FnDefs: funcs }
 }
 
 func prsFnHead(tokens *token.Tokens, isConst bool, isMethod bool) ast.FnHead {
@@ -475,7 +503,12 @@ func prsFnHead(tokens *token.Tokens, isConst bool, isMethod bool) ast.FnHead {
         os.Exit(1)
     }
 
-    f := identObj.DecFunc(name, isConst)
+    var f *identObj.Func = nil
+    if isMethod && identObj.CurImplStruct != nil {
+        f = identObj.DecMethod(name, isConst, identObj.CurImplStruct.Name)
+    } else {
+        f = identObj.DecFunc(name, isConst)
+    }
 
     tokens.Next()
     generic := prsGeneric(tokens)
@@ -500,13 +533,17 @@ func prsFnHead(tokens *token.Tokens, isConst bool, isMethod bool) ast.FnHead {
     }
     f.SetRetType(retType)
 
+    var recverDec *ast.DecVar = nil
     if recver != nil && identObj.CurImplStruct != nil {
         name := token.Token{ Str: "self", Pos: recver.DecPos, Type: token.Name }
+        var t types.Type = nil
         if recver.IsPtr {
-            identObj.DecVar(name, types.PtrType{ BaseType: *identObj.CurImplStruct })
+            t = &types.PtrType{ BaseType: *identObj.CurImplStruct }
         } else {
-            identObj.DecVar(name, *identObj.CurImplStruct)
+            t = *identObj.CurImplStruct
         }
+
+        recverDec = &ast.DecVar{ Type: t, V: identObj.DecVar(name, t) }
     }
 
     var argDecs []ast.DecVar
@@ -514,7 +551,7 @@ func prsFnHead(tokens *token.Tokens, isConst bool, isMethod bool) ast.FnHead {
         argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecVar(argNames[i], t) })
     }
 
-    return ast.FnHead{ Name: name, F: f, Recver: recver, Args: argDecs, RetType: retType, IsConst: isConst, IsGeneric: isGeneric, Generic: generic }
+    return ast.FnHead{ Name: name, F: f, Recver: recverDec, Args: argDecs, RetType: retType, IsConst: isConst, IsGeneric: isGeneric, Generic: generic }
 }
 
 func prsDefFn(tokens *token.Tokens, isConst bool, isMethod bool) ast.DefFn {

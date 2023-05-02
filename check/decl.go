@@ -85,7 +85,7 @@ func typeCheckDefFn(d *ast.DefFn) {
 func typeCheckImpl(d *ast.Impl) {
     err := false
 
-    for _,expectedFunc := range d.I.Funcs {
+    for _,expectedFunc := range d.Impl.GetInterfaceFuncs() {
         found := false
         for _,f := range d.FnDefs {
             if f.FnHead.Name.Str == expectedFunc.GetName() {
@@ -112,11 +112,12 @@ func typeCheckImpl(d *ast.Impl) {
         }
     }
 
-    if len(d.I.Funcs) < len(d.FnDefs) {
-        fmt.Fprintf(os.Stderr, "[ERROR] too many functions are defined in impl (expected %d got %d)\n", len(d.I.Funcs), len(d.FnDefs))
+    if len(d.Impl.GetInterfaceFuncs()) < len(d.FnDefs) {
+        fmt.Fprintf(os.Stderr, "[ERROR] too many functions are defined in impl (expected %d got %d)\n", 
+            len(d.Impl.GetInterfaceFuncs()), len(d.FnDefs))
         for _,f := range d.FnDefs {
             found := false
-            for _,expectedFunc := range d.I.Funcs {
+            for _,expectedFunc := range d.Impl.GetInterfaceFuncs() {
                 if f.FnHead.Name.Str == expectedFunc.GetName() {
                     if expectedFunc.Equal(f.FnHead.F) {
                         found = true
@@ -127,7 +128,7 @@ func typeCheckImpl(d *ast.Impl) {
 
             if !found { fmt.Fprintln(os.Stderr, "\tgot: " + f.FnHead.F.String()) }
         }
-        fmt.Fprintln(os.Stderr, "\tinterface: " + d.I.GetPos().At())
+        fmt.Fprintln(os.Stderr, "\tinterface: " + d.Impl.GetInterfacePos().At())
         fmt.Fprintln(os.Stderr, "\timpl:      " + d.At())
         os.Exit(1)
     }

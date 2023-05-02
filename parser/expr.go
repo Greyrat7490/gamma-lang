@@ -3,6 +3,7 @@ package prs
 import (
     "os"
     "fmt"
+    "reflect"
     "strconv"
     "gamma/token"
     "gamma/types"
@@ -47,7 +48,28 @@ func prsExpr(tokens *token.Tokens) ast.Expr {
             expr = prsCallFn(tokens)
 
         case token.DefConst:
-            expr = prsCallGenericFn(tokens)
+            if tokens.Peek2().Type == token.Lss {
+                expr = prsCallGenericFn(tokens)
+
+            } else if tokens.Peek2().Type == token.Name {
+                expr = prsStaticMethod(tokens)
+
+            } else {
+                if isGenericFunc(tokens.Cur()) {
+                    fmt.Fprintf(os.Stderr, "[ERROR] expected \"<\" after \"::\" for a generic function but got %v\n", tokens.Peek2())
+                    fmt.Fprintln(os.Stderr, "\t" + tokens.Peek2().At())
+
+                } else if isStruct(tokens.Cur()) {
+                    fmt.Fprintf(os.Stderr, "[ERROR] expected a static method name after \"::\" for a struct but got %v\n", tokens.Peek2())
+                    fmt.Fprintln(os.Stderr, "\t" + tokens.Peek2().At())
+
+                } else {
+                    fmt.Fprintln(os.Stderr, "[ERROR] unexpected \"::\"")
+                    fmt.Fprintln(os.Stderr, "\t" + tokens.Peek().At())
+                }
+
+                os.Exit(1)
+            }
 
         case token.Dot:
             ident := prsIdentExpr(tokens)
@@ -832,7 +854,11 @@ func prsBinary(tokens *token.Tokens, expr ast.Expr, min_precedence precedence) a
                 b.OperandR = prsCallFn(tokens)
 
             case token.DefConst:
-                b.OperandR = prsCallGenericFn(tokens)
+                if tokens.Peek2().Type == token.Lss {
+                    b.OperandR = prsCallGenericFn(tokens)
+                } else {
+                    b.OperandR = prsStaticMethod(tokens)
+                }
 
             default:
                 b.OperandR = prsIdentExpr(tokens)
@@ -945,6 +971,47 @@ func prsCallGenericFn(tokens *token.Tokens) *ast.FnCall {
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared\n", ident.Name)
         fmt.Fprintln(os.Stderr, "\t" + ident.At())
+        os.Exit(1)
+    }
+
+    return nil
+}
+
+func prsStaticMethod(tokens *token.Tokens) *ast.FnCall {
+    structIdent := prsIdentExpr(tokens)
+
+    if S,ok := structIdent.Obj.(*identObj.Struct); ok {
+        if tokens.Next().Type != token.DefConst {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected \"::\" but got %s\n", tokens.Cur())
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+            os.Exit(1)
+        }
+
+        name := tokens.Next()
+
+        tokens.Next()
+        usedType := prsGenericUsedType(tokens)
+
+        posL := tokens.Cur().Pos
+        vals := prsPassArgs(tokens)
+        posR := tokens.Cur().Pos
+
+        if f := S.GetMethod(name.Str); f != nil {
+            if usedType != nil {
+                f.AddTypeToGeneric(usedType)
+            }
+
+            ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
+
+            return &ast.FnCall{ Ident: ident, StructIdent: structIdent, F: f, GenericUsedType: usedType, Values: vals, ParenLPos: posL, ParenRPos: posR }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared in %s\n", name, structIdent.Name)
+            fmt.Fprintln(os.Stderr, "\t" + structIdent.At())
+            os.Exit(1)
+        }
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a struct before %s but got %s\n", structIdent.Name, reflect.TypeOf(structIdent.Obj))
+        fmt.Fprintln(os.Stderr, "\t" + structIdent.At())
         os.Exit(1)
     }
 

@@ -39,6 +39,7 @@ System V AMD64 ABI calling convention
 Name mangling
   * [x] normal function: <function name>
   * [x] generic function: <function name>$<type name>
+  * [x] method: <struct name>.<function name>$<type name>
 */
 
 var regs []asm.RegGroup = []asm.RegGroup{ asm.RegDi, asm.RegSi, asm.RegD, asm.RegC, asm.RegR8, asm.RegR9 }

@@ -17,6 +17,7 @@ type Func struct {
     retType types.Type
     retAddr addr.Addr
     Scope *Scope
+    methodOf string
     isConst bool
 }
 
@@ -33,6 +34,10 @@ func GetCurFunc() *Func {
 
 func CreateFunc(name token.Token, isConst bool) Func {
     return Func{ name: name.Str, decPos: name.Pos, isConst: isConst }
+}
+
+func CreateMethod(name token.Token, isConst bool, structName string) Func {
+    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, methodOf: structName }
 }
 
 func (f *Func) GetArgs() []types.Type {
@@ -71,11 +76,17 @@ func (f *Func) GetRetAddr() addr.Addr {
 }
 
 func (f *Func) GetMangledName() string {
-    if f.GetGeneric() != nil {
-        return f.name + "$" + f.generic.CurUsedType.String()
-    } else {
-        return f.name
+    name := f.name
+
+    if f.methodOf != "" {
+        name = f.methodOf + "." + name
     }
+
+    if f.GetGeneric() != nil {
+        name += "$" + f.generic.CurUsedType.String()
+    }
+
+    return name
 }
 
 

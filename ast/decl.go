@@ -53,7 +53,7 @@ type DefFn struct {
 type FnHead struct {
     F *identObj.Func
     Name token.Token
-    Recver *identObj.FnRecver
+    Recver *DecVar
     Args []DecVar
     RetType types.Type
     IsConst bool
@@ -80,8 +80,7 @@ type DefInterface struct {
 }
 
 type Impl struct {
-    I *identObj.Interface
-    S *identObj.Struct
+    Impl identObj.Impl
     Pos token.Pos
     BraceLPos token.Pos
     FnDefs []DefFn
@@ -157,7 +156,7 @@ func (o *FnHead) Readable(indent int) string {
 
     res += fmt.Sprintf("%sName: %s\n", s, o.Name)
     if o.Recver != nil {
-        res += fmt.Sprintf("%sReceiver: %s\n", s, o.Recver)
+        res += fmt.Sprintf("%sReceiver: %s\n", s, o.Recver.V.String())
     }
     res += fmt.Sprintf("%sArgs: [%s]\n", s, args)
 
@@ -198,8 +197,8 @@ func (o *DefInterface) Readable(indent int) string {
 
 func (o *Impl) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "IMPL:\n" +
-        strings.Repeat("   ", indent+1) + "Struct: " + o.S.GetName() + "\n" +
-        strings.Repeat("   ", indent+1) + "Interface: " + o.I.GetName() + "\n"
+        strings.Repeat("   ", indent+1) + "Struct: " + o.Impl.GetStructName() + "\n" +
+        strings.Repeat("   ", indent+1) + "Interface: " + o.Impl.GetInterfaceName() + "\n"
 
     for _,f := range o.FnDefs {
         res += f.Readable(indent+1)
