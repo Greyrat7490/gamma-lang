@@ -75,6 +75,14 @@ func (f *Func) GetRetAddr() addr.Addr {
     return f.retAddr
 }
 
+func (f *Func) GetRecver() *FnRecver {
+    return f.fnRecver
+}
+
+func (f *Func) GetMethodOf() string {
+    return f.methodOf
+}
+
 func (f *Func) GetMangledName() string {
     name := f.name
 

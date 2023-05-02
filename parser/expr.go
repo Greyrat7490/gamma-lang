@@ -72,11 +72,8 @@ func prsExpr(tokens *token.Tokens) ast.Expr {
             }
 
         case token.Dot:
-            ident := prsIdentExpr(tokens)
-            expr = prsField(tokens, ident)
-            for tokens.Peek().Type == token.Dot {
-                expr = prsField(tokens, expr)
-            }
+            obj := prsIdentExpr(tokens)
+            expr = prsDotExpr(tokens, obj)
 
         case token.BraceL:
             if obj := identObj.Get(tokens.Cur().Str); obj != nil {
@@ -116,7 +113,7 @@ func prsExpr(tokens *token.Tokens) ast.Expr {
     }
 
     for tokens.Peek().Type == token.Dot {
-        expr = prsField(tokens, expr)
+        expr = prsDotExpr(tokens, expr)
     }
 
     for tokens.Peek().Type == token.As {
@@ -392,7 +389,7 @@ func prsStructLit(tokens *token.Tokens) *ast.StructLit {
         for _,f := range fields {
             if idx := t.GetFieldNum(f.Name.Str); idx == -1 {
                 fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" has no field called \"%s\"\n", name.Str, f.Name.Str)
-                fmt.Fprintf(os.Stderr, "\tfields: %v\n", s.GetNames())
+                fmt.Fprintf(os.Stderr, "\tfields: %v\n", s.GetFieldNames())
                 fmt.Fprintln(os.Stderr, "\t" + f.At())
                 os.Exit(1)
             } else {
@@ -577,7 +574,19 @@ func prsIndexExpr(tokens *token.Tokens, e ast.Expr) *ast.Indexed {
     return &res
 }
 
-func prsField(tokens *token.Tokens, obj ast.Expr) *ast.Field {
+func getStructFromExpr(expr ast.Expr) *identObj.Struct {
+    typ := expr.GetType()
+
+    if typ,ok := typ.(types.StructType); ok {
+        if s,ok := identObj.Get(typ.Name).(*identObj.Struct); ok {
+            return s           
+        }
+    }
+
+    return nil
+}
+
+func prsDotExpr(tokens *token.Tokens, obj ast.Expr) ast.Expr {
     dot := tokens.Next()
     if dot.Type != token.Dot {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \".\" but got %v\n", dot)
@@ -585,17 +594,68 @@ func prsField(tokens *token.Tokens, obj ast.Expr) *ast.Field {
         os.Exit(1)
     }
 
-    fieldName := tokens.Next()
-    if fieldName.Type != token.Name {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", fieldName)
+    name := tokens.Next()
+    if name.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
 
-    field := ast.Field{ Obj: obj, DotPos: dot.Pos, FieldName: fieldName }
-    setFieldType(&field)
+    s := getStructFromExpr(obj)
+    if s != nil {
+        if typ := s.GetFieldType(name.Str); typ != nil {
+            field := &ast.Field{ Obj: obj, DotPos: dot.Pos, FieldName: name }
+            setFieldType(field)
+            return field
+            
+        } else if f := s.GetMethod(name.Str); f != nil {
+            tokens.Next()
+            usedType := prsGenericUsedType(tokens)
 
-    return &field
+            posL := tokens.Cur().Pos
+            vals := prsPassArgs(tokens)
+            posR := tokens.Cur().Pos
+
+            vals = addRecver(vals, f, obj)
+
+            if usedType != nil {
+                f.AddTypeToGeneric(usedType)
+            }
+
+            ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
+            structIdent := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: s }
+            return &ast.FnCall{ Ident: ident, StructIdent: &structIdent, F: f, GenericUsedType: usedType, Values: vals, ParenLPos: posL, ParenRPos: posR }
+
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" has no a field/method called \"%s\"\n", s.GetName(), name.Str)
+            fmt.Fprintf(os.Stderr, "\tfields: %v\n", s.GetFieldNames())
+            fmt.Fprintf(os.Stderr, "\tmethods: %v\n", s.GetMethodNames())
+            fmt.Fprintln(os.Stderr, "\t" + obj.At())
+            os.Exit(1)
+            return nil
+        }
+    } else {
+        field := &ast.Field{ Obj: obj, DotPos: dot.Pos, FieldName: name }
+        setFieldType(field)
+        return field
+    }
+}
+
+func addRecver(values []ast.Expr, f *identObj.Func, obj ast.Expr) []ast.Expr {
+    values = append(values, nil)
+    copy(values[1:], values)
+
+    if f.GetRecver().IsPtr {
+        values[0] = &ast.Unary{ 
+            Type: types.PtrType{ BaseType: obj.GetType() },
+            Operator: token.Token{ Type: token.Mul, Str: "*" },
+            Operand: obj,
+        }
+    } else {
+        values[0] = obj
+    }
+
+    return values
 }
 
 func setFieldType(field *ast.Field) {
@@ -661,9 +721,9 @@ func prsUnaryExpr(tokens *token.Tokens) *ast.Unary {
         tokens.Next()
         expr.Operand = prsIdentExpr(tokens)
         if tokens.Peek().Type == token.Dot {
-            expr.Operand = prsField(tokens, expr.Operand)
+            expr.Operand = prsDotExpr(tokens, expr.Operand)
             for tokens.Peek().Type == token.Dot {
-                expr.Operand = prsField(tokens, expr.Operand)
+                expr.Operand = prsDotExpr(tokens, expr.Operand)
             }
         }
     case token.BitNot:
@@ -840,9 +900,9 @@ func prsBinary(tokens *token.Tokens, expr ast.Expr, min_precedence precedence) a
             switch tokens.Peek().Type {
             case token.Dot:
                 ident := prsIdentExpr(tokens)
-                b.OperandR = prsField(tokens, ident)
+                b.OperandR = prsDotExpr(tokens, ident)
                 for tokens.Peek().Type == token.Dot {
-                    b.OperandR = prsField(tokens, b.OperandR)
+                    b.OperandR = prsDotExpr(tokens, b.OperandR)
                 }
 
             case token.BrackL:

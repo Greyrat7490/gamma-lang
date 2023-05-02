@@ -65,8 +65,7 @@ fn main() {
     println(fmt("{}", Test::add(30, 39)))
     println(fmt("{}", Test::sub(69, 5)))
 
-    /*
     println(fmt("{}", t.inc()))
-    println(fmt("{}", calc(t, t2)))
-    */
+    println(fmt("{}", t2.inc()))
+    // println(fmt("{}", calc(t, t2)))
 }

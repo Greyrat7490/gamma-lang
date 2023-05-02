@@ -63,6 +63,16 @@ func (i *Impl) GetInterfaceFuncs() []Func {
     return i.interface_.Funcs
 }
 
+func (i *Impl) GetInterfaceFuncNames() []string {
+    names := make([]string, 0, len(i.interface_.Funcs))
+
+    for _,f := range i.interface_.Funcs {
+        names = append(names, f.name)
+    }
+
+    return names
+}
+
 func (i *Impl) GetInterfacePos() token.Pos {
     return i.interface_.decPos
 }

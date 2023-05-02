@@ -978,16 +978,21 @@ type arg struct {
 }
 
 func createPassArgs(f *identObj.Func, values []ast.Expr) passArgs {
-    stackArgs := make([]arg, 0, len(f.GetArgs()))
-    bigStructArgs := make([]arg, 0, len(f.GetArgs()))
-    regArgs := make([]arg, 0, len(f.GetArgs()))
+    args := f.GetArgs()
+    if f.GetRecver() != nil {
+        args = append(args, identObj.Get(f.GetMethodOf()).GetType())
+    }
+
+    stackArgs := make([]arg, 0, len(args))
+    bigStructArgs := make([]arg, 0, len(args))
+    regArgs := make([]arg, 0, len(args))
 
     // rdi contains addr to return big struct to
     regsCount := uint(0)
     if types.IsBigStruct(f.GetRetType()) { regsCount = 1 }
 
     stackSize := uint(0)
-    for i,t := range f.GetArgs() {
+    for i,t := range args {
         if types.IsBigStruct(t) {
             bigStructArgs = prepend(bigStructArgs, t, values[i])
             stackSize += (t.Size() + 7) & ^uint(7)

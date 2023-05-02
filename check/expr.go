@@ -341,6 +341,9 @@ func typeCheckFnCall(o *ast.FnCall) {
 
     if f,ok := o.Ident.Obj.(*identObj.Func); ok {
         args := f.GetArgs()
+        if o.StructIdent != nil && f.GetRecver() != nil {
+            args = addRecverToArgs(args, o.StructIdent.GetType())
+        }
 
         if len(args) != len(o.Values) {
             fmt.Fprintf(os.Stderr, "[ERROR] expected %d args for function \"%s\" but got %d\n", len(args), f.GetName(), len(o.Values))
@@ -363,6 +366,13 @@ func typeCheckFnCall(o *ast.FnCall) {
         fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a func (in typecheck.go FnCall)")
         os.Exit(1)
     }
+}
+
+func addRecverToArgs(args []types.Type, t types.Type) []types.Type {
+    args = append(args, nil)
+    copy(args[1:], args)
+    args[0] = t
+    return args
 }
 
 func typeCheckFmtCall(o *ast.FnCall) {

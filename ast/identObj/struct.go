@@ -41,8 +41,22 @@ func (s *Struct) GetType() types.Type {
     return s.typ
 }
 
-func (s *Struct) GetNames() []string {
+func (s *Struct) GetFieldType(name string) types.Type {
+    return s.typ.GetType(name)
+}
+
+func (s *Struct) GetFieldNames() []string {
     return s.typ.GetFields()
+}
+
+func (s *Struct) GetMethodNames() []string {
+    funcs := []string{}
+
+    for _,i := range s.impls {
+        funcs = append(funcs, i.GetInterfaceFuncNames()...)
+    }
+
+    return funcs
 }
 
 func (s *Struct) AddImpl(impl Impl) {
