@@ -42,7 +42,7 @@ func prsExpr(tokens *token.Tokens) ast.Expr {
             return prsArrayLit(tokens)
         }
 
-    case token.Name, token.Self:
+    case token.Name, token.Self, token.SelfType:
         switch tokens.Peek().Type {
         case token.ParenL:
             expr = prsCallFn(tokens)
@@ -192,6 +192,17 @@ func prsIdentExpr(tokens *token.Tokens) *ast.Ident {
     // if wildcard ("_")
     if ident.Type == token.UndScr {
         return &ast.Ident{ Name: "_", Pos: ident.Pos, Obj: nil }
+    }
+
+    if ident.Type == token.SelfType {
+        if identObj.CurImplStruct == nil {
+            fmt.Fprintln(os.Stderr, "[ERROR] Use of Self outside of impl")
+            fmt.Fprintln(os.Stderr, "\t" + ident.At())
+            os.Exit(1)
+        }
+
+        ident.Str = identObj.CurImplStruct.Name
+        ident.Type = token.Name
     }
 
     if ident.Type != token.Name && ident.Type != token.Self {
@@ -577,8 +588,8 @@ func prsIndexExpr(tokens *token.Tokens, e ast.Expr) *ast.Indexed {
 func getStructFromExpr(expr ast.Expr) *identObj.Struct {
     typ := expr.GetType()
 
-    if typ,ok := typ.(types.StructType); ok {
-        if s,ok := identObj.Get(typ.Name).(*identObj.Struct); ok {
+    if t,ok := typ.(types.StructType); ok {
+        if s,ok := identObj.Get(t.Name).(*identObj.Struct); ok {
             return s           
         }
     }
@@ -616,7 +627,7 @@ func prsDotExpr(tokens *token.Tokens, obj ast.Expr) ast.Expr {
             vals := prsPassArgs(tokens)
             posR := tokens.Cur().Pos
 
-            vals = addRecver(vals, f, obj)
+            vals = addSelfArg(vals, obj)
 
             if usedType != nil {
                 f.AddTypeToGeneric(usedType)
@@ -641,19 +652,21 @@ func prsDotExpr(tokens *token.Tokens, obj ast.Expr) ast.Expr {
     }
 }
 
-func addRecver(values []ast.Expr, f *identObj.Func, obj ast.Expr) []ast.Expr {
+func addSelfArg(values []ast.Expr, obj ast.Expr) []ast.Expr {
     values = append(values, nil)
     copy(values[1:], values)
 
-    if f.GetRecver().IsPtr {
+    /*
+    // TODO auto-deref
+    if t.GetKind() == types.Ptr {
         values[0] = &ast.Unary{ 
             Type: types.PtrType{ BaseType: obj.GetType() },
             Operator: token.Token{ Type: token.Mul, Str: "*" },
             Operand: obj,
         }
-    } else {
-        values[0] = obj
     }
+    */
+    values[0] = obj
 
     return values
 }

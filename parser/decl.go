@@ -517,8 +517,8 @@ func prsFnHead(tokens *token.Tokens, isConst bool, isMethod bool) ast.FnHead {
         f.SetGeneric(&types.GenericType{ Name: generic.Str, UsedTypes: make([]types.Type, 0) })
     }
 
-    recver, argNames, argTypes := prsArgs(tokens, isMethod)
-    f.SetArgs(recver, argTypes)
+    argNames, argTypes := prsArgs(tokens, isMethod)
+    f.SetArgs(argTypes)
 
     if name.Str == "main" {
         isMainDefined = true
@@ -533,25 +533,13 @@ func prsFnHead(tokens *token.Tokens, isConst bool, isMethod bool) ast.FnHead {
     }
     f.SetRetType(retType)
 
-    var recverDec *ast.DecVar = nil
-    if recver != nil && identObj.CurImplStruct != nil {
-        name := token.Token{ Str: "self", Pos: recver.DecPos, Type: token.Name }
-        var t types.Type = nil
-        if recver.IsPtr {
-            t = &types.PtrType{ BaseType: *identObj.CurImplStruct }
-        } else {
-            t = *identObj.CurImplStruct
-        }
-
-        recverDec = &ast.DecVar{ Type: t, V: identObj.DecVar(name, t) }
-    }
-
     var argDecs []ast.DecVar
     for i,t := range argTypes {
-        argDecs = append(argDecs, ast.DecVar{ Type: t, V: identObj.DecVar(argNames[i], t) })
+        a := ast.DecVar{ Type: t, V: identObj.DecVar(argNames[i], t) }
+        argDecs = append(argDecs, a)
     }
 
-    return ast.FnHead{ Name: name, F: f, Recver: recverDec, Args: argDecs, RetType: retType, IsConst: isConst, IsGeneric: isGeneric, Generic: generic }
+    return ast.FnHead{ Name: name, F: f, Args: argDecs, RetType: retType, IsConst: isConst, IsGeneric: isGeneric, Generic: generic }
 }
 
 func prsDefFn(tokens *token.Tokens, isConst bool, isMethod bool) ast.DefFn {
@@ -636,20 +624,69 @@ func prsDecFields(tokens *token.Tokens) (fields []ast.DecField) {
     return
 }
 
-func prsRecver(tokens *token.Tokens) *identObj.FnRecver {
-    if tokens.Cur().Type == token.Mul && tokens.Peek().Type == token.Self {
+func prsOptionalSelfType(tokens *token.Tokens) types.Type {
+    if tokens.Peek().Type == token.SelfType {
         tokens.Next()
-        return &identObj.FnRecver{ DecPos: tokens.Cur().Pos, IsPtr: true }
+        return createSelfType()
     }
 
-    if tokens.Cur().Type == token.Self {
-        return &identObj.FnRecver{ DecPos: tokens.Cur().Pos, IsPtr: false }
+    if tokens.Peek().Type == token.Mul && tokens.Peek2().Type == token.SelfType {
+        tokens.Next()
+        tokens.Next()
+        return types.PtrType{ BaseType: createSelfType() } 
+    }
+
+    // explicitly used StructName
+    if identObj.CurImplStruct != nil {
+        if tokens.Peek().Type == token.Name && tokens.Peek().Str == identObj.CurImplStruct.Name {
+            tokens.Next()
+            return *identObj.CurImplStruct
+
+        } else if tokens.Peek().Type == token.Mul && tokens.Peek2().Type == token.Name && tokens.Peek2().Str == identObj.CurImplStruct.Name {
+            tokens.Next()
+            tokens.Next()
+            return types.PtrType{ BaseType: *identObj.CurImplStruct } 
+        }
     }
 
     return nil
 }
 
-func prsArgs(tokens *token.Tokens, isMethod bool) (recver *identObj.FnRecver, names []token.Token, types []types.Type) {
+func createSelfType() types.Type {
+    if identObj.CurImplStruct != nil {
+        return *identObj.CurImplStruct
+    }
+
+    return types.StructType{ Name: "Self" }
+}
+
+func prsSelf(tokens *token.Tokens) (name token.Token, typ types.Type) {
+    if tokens.Cur().Type == token.Mul && tokens.Peek().Type == token.Self {
+        return tokens.Next(), types.PtrType{ BaseType: createSelfType() } 
+    }
+
+    if tokens.Cur().Type == token.Self {
+        name = tokens.Cur()
+        typ = prsOptionalSelfType(tokens)
+        if typ == nil {
+            typ = createSelfType()
+        }
+        return
+    }
+
+    name = tokens.Cur()
+    if name.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+
+    typ = prsOptionalSelfType(tokens)
+
+    return
+}
+
+func prsArgs(tokens *token.Tokens, isMethod bool) (names []token.Token, types []types.Type) {
     if tokens.Cur().Type != token.ParenL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got %v\n", tokens.Cur())
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
@@ -657,17 +694,18 @@ func prsArgs(tokens *token.Tokens, isMethod bool) (recver *identObj.FnRecver, na
     }
 
     if tokens.Next().Type != token.ParenR {
-        recver = prsRecver(tokens)
+        name, t := prsSelf(tokens)
 
-        if recver == nil {
-            name,t := prsNameType(tokens)
-            names = append(names, name)
-            types = append(types, t)
+        if t == nil {
+            name,t = prsNameType(tokens)
         } else if !isMethod {
             fmt.Fprintln(os.Stderr, "[ERROR] Self can only be used for methods (inside impl)")
             fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
             os.Exit(1)
         }
+
+        names = append(names, name)
+        types = append(types, t)
 
         for tokens.Next().Type == token.Comma {
             tokens.Next()

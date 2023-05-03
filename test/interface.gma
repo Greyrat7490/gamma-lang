@@ -40,12 +40,16 @@ impl Test2 :: Number {
         ret a - b
     }
 
+                // optinal: use explicitly Self type
+                // optinal: use explicitly actual Struct type
     fn inc(self) -> u64 {
         ret self.a + 1 as u64
     }
 
     fn print(a u64) {
-        println(fmt("Test2: {}", Test2::sub(a, 5)))
+        // Self:: is optinal
+        // println(fmt("Test2: {}", Self::sub(a, 5)))
+        println(fmt("Test2: {}", sub(a, 5)))
     }
 }
 

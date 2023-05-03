@@ -138,7 +138,7 @@ func (scope *Scope) checkName(name token.Token) {
 func AddBuildIn(name string, argtype types.Type, retType types.Type) {
     f := CreateFunc(token.Token{ Str: name }, false)  
     f.SetRetType(retType)
-    f.SetArgs(nil, []types.Type{ argtype })
+    f.SetArgs([]types.Type{ argtype })
     globalScope.identObjs[name] = &f
 }
 
@@ -147,7 +147,7 @@ func AddGenBuildIn(name string, genericName string, argtype types.Type, retType 
     f.SetGeneric(&types.GenericType{Name: genericName, UsedTypes: make([]types.Type, 0)})
     f.SetRetType(retType)
     if argtype != nil {
-        f.SetArgs(nil, []types.Type{ argtype })
+        f.SetArgs([]types.Type{ argtype })
     }
     globalScope.identObjs[name] = &f
 }

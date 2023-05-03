@@ -53,7 +53,6 @@ type DefFn struct {
 type FnHead struct {
     F *identObj.Func
     Name token.Token
-    Recver *DecVar
     Args []DecVar
     RetType types.Type
     IsConst bool
@@ -154,11 +153,7 @@ func (o *FnHead) Readable(indent int) string {
 
     s := strings.Repeat("   ", indent+1)
 
-    res += fmt.Sprintf("%sName: %s\n", s, o.Name)
-    if o.Recver != nil {
-        res += fmt.Sprintf("%sReceiver: %s\n", s, o.Recver.V.String())
-    }
-    res += fmt.Sprintf("%sArgs: [%s]\n", s, args)
+    res += fmt.Sprintf("%sName: %s\n%sArgs: [%s]\n", s, o.Name, s, args)
 
     if o.RetType != nil {
         res += fmt.Sprintf("%sRet: %v\n", s, o.RetType)

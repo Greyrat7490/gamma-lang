@@ -81,6 +81,7 @@ const (
     Interface       // interface
     Impl            // impl
     Self            // self
+    SelfType        // Self
     Import          // import
     XSwitch         // $
     As              // as
@@ -204,6 +205,8 @@ func ToTokenType(s string, p Pos) TokenType {
         return Impl
     case "self":
         return Self
+    case "Self":
+        return SelfType
     case "import":
         return Import
     case "$":
@@ -353,6 +356,8 @@ func (t TokenType) String() string {
         return "Impl"
     case Self:
         return "Self"
+    case SelfType:
+        return "SelfType"
     case Import:
         return "Import"
     case XSwitch:

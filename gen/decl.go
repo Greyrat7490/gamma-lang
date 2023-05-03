@@ -95,20 +95,6 @@ func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
         d.FnHead.F.SetRetAddr(addr)
         regIdx++
     }
-    
-    if d.FnHead.Recver != nil {
-        if v,ok := d.FnHead.Recver.V.(*vars.LocalVar); ok {
-            if types.IsBigStruct(v.GetType()) {
-                v.SetOffset(argsFromStackOffset, true) 
-                argsFromStackOffset += v.GetType().Size()
-            } else {
-                v.SetOffset(regArgsOffset, false) 
-                DefArg(file, regIdx, v)
-                regIdx += types.RegCount(v.GetType())
-                regArgsOffset += v.GetType().Size() 
-            }
-        }
-    }
 
     for _,a := range d.FnHead.Args {
         if v,ok := a.V.(*vars.LocalVar); ok {

@@ -75,7 +75,7 @@ func prsStmt(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
             }
         }
 
-    case token.Name:
+    case token.Name, token.SelfType:
         if isDec(tokens) || isDefInfer(tokens) {
             return &ast.DeclStmt{ Decl: prsDefine(tokens) }
         }

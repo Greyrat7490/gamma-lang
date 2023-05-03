@@ -12,18 +12,12 @@ type Func struct {
     decPos token.Pos
     name string
     generic *types.GenericType
-    fnRecver *FnRecver
     args []types.Type
     retType types.Type
     retAddr addr.Addr
     Scope *Scope
     methodOf string
     isConst bool
-}
-
-type FnRecver struct {
-    DecPos token.Pos
-    IsPtr bool
 }
 
 var curFunc *Func = nil
@@ -75,10 +69,6 @@ func (f *Func) GetRetAddr() addr.Addr {
     return f.retAddr
 }
 
-func (f *Func) GetRecver() *FnRecver {
-    return f.fnRecver
-}
-
 func (f *Func) GetMethodOf() string {
     return f.methodOf
 }
@@ -106,9 +96,8 @@ func (f *Func) SetRetAddr(addr addr.Addr) {
     f.retAddr = addr
 }
 
-func (f *Func) SetArgs(recver *FnRecver, args []types.Type) {
+func (f *Func) SetArgs(args []types.Type) {
     f.args = args
-    f.fnRecver = recver
 }
 
 func (f *Func) SetGeneric(generic *types.GenericType) {
@@ -148,23 +137,7 @@ func (f *Func) Equal(other *Func) bool {
         }
     }
 
-    return equal(f.fnRecver, other.fnRecver)
-}
-
-func equal(r *FnRecver, other *FnRecver) bool {
-    if r != nil && other != nil {
-        return r.IsPtr == other.IsPtr
-    }
-
-    return r == nil && other == nil
-}
-
-func (r FnRecver) String() string {
-    if r.IsPtr {
-        return "*Self"
-    } else {
-        return "Self"
-    }
+    return true
 }
 
 func (f Func) String() string {
@@ -173,15 +146,10 @@ func (f Func) String() string {
         generic = fmt.Sprintf("<%s>", f.generic)
     }
 
-    recver := ""
-    if f.fnRecver != nil {
-        recver = f.fnRecver.String() + ", "
-    }
-
     ret := ""
     if f.retType != nil {
         ret = fmt.Sprintf(" -> %s", f.retType)
     }
 
-    return fmt.Sprintf("%s%s(%s%v)%s", f.name, generic, recver, f.args, ret)
+    return fmt.Sprintf("%s%s(%v)%s", f.name, generic, f.args, ret)
 }
