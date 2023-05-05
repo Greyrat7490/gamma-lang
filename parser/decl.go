@@ -77,6 +77,10 @@ func prsType(tokens *token.Tokens) types.Type {
             if strct,ok := obj.(*identObj.Struct); ok {
                 return strct.GetType()
             }
+
+            if interfc,ok := obj.(*identObj.Interface); ok {
+                return interfc.GetType()
+            }
         }
 
         if generic := identObj.GetGeneric(tokens.Cur().Str); generic != nil {
@@ -244,6 +248,10 @@ func isNextType(tokens *token.Tokens) bool {
             if _,ok := obj.(*identObj.Struct); ok {
                 return true
             }
+
+            if _,ok := obj.(*identObj.Interface); ok {
+                return true
+            }
         }
 
         if generic := identObj.GetGeneric(tokens.Cur().Str); generic != nil {
@@ -397,7 +405,6 @@ func prsInterface(tokens *token.Tokens) ast.Decl {
     I := identObj.DecInterface(name)
 
     heads := make([]ast.FnHead, 0)
-    funcs := make([]identObj.Func, 0)
 
     for tokens.Next().Type != token.BraceR {
         identObj.StartScope()
@@ -405,10 +412,8 @@ func prsInterface(tokens *token.Tokens) ast.Decl {
         identObj.EndScope()
 
         heads = append(heads, fnHead)
-        funcs = append(funcs, *fnHead.F)
+        I.AddFunc(*fnHead.F)
     }
-
-    I.Funcs = funcs
 
     braceRPos := tokens.Cur().Pos
     identObj.EndScope()
@@ -468,7 +473,7 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
     impl := identObj.CreateImpl(pos, I, S)
     S.AddImpl(impl)
 
-    funcs := make([]ast.DefFn, 0, len(I.Funcs))
+    funcs := make([]ast.DefFn, 0, len(I.GetFuncs()))
 
     for tokens.Next().Type != token.BraceR {
         switch tokens.Cur().Type {

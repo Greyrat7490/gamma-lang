@@ -13,13 +13,14 @@ type Interface struct {
     decPos token.Pos
     name string
     scope *Scope
-    Funcs []Func
+    typ types.InterfaceType
+    funcPos []token.Pos
 }
 
 var CurImplStruct *types.StructType = nil
 
 func CreateInterface(name token.Token) Interface {
-    return Interface{ decPos: name.Pos, name: name.Str, Funcs: make([]Func, 0) }
+    return Interface{ decPos: name.Pos, name: name.Str, typ: types.InterfaceType{ Name: name.Str }, funcPos: make([]token.Pos, 0) }
 }
 
 func (i *Interface) GetName() string {
@@ -27,7 +28,7 @@ func (i *Interface) GetName() string {
 }
 
 func (i *Interface) GetType() types.Type {
-    return nil
+    return i.typ
 }
 
 func (i *Interface) GetPos() token.Pos {
@@ -38,6 +39,15 @@ func (i *Interface) Addr() addr.Addr {
     fmt.Fprintln(os.Stderr, "[ERROR] (internal) Cannot get the addr of an interface definition")
     os.Exit(1)
     return addr.Addr{}
+}
+
+func (i *Interface) GetFuncs() []types.FuncType {
+    return i.typ.Funcs
+}
+
+func (i *Interface) AddFunc(f Func) {
+    i.typ.Funcs = append(i.typ.Funcs, f.typ)
+    i.funcPos = append(i.funcPos, f.decPos)
 }
 
 type Impl struct {
@@ -59,18 +69,28 @@ func (i *Impl) GetStructName() string {
     return i.struct_.name
 }
 
-func (i *Impl) GetInterfaceFuncs() []Func {
-    return i.interface_.Funcs
+func (i *Impl) GetInterfaceFuncs() []types.FuncType {
+    return i.interface_.typ.Funcs
 }
 
 func (i *Impl) GetInterfaceFuncNames() []string {
-    names := make([]string, 0, len(i.interface_.Funcs))
+    names := make([]string, 0, len(i.interface_.typ.Funcs))
 
-    for _,f := range i.interface_.Funcs {
-        names = append(names, f.name)
+    for _,f := range i.interface_.typ.Funcs {
+        names = append(names, f.Name)
     }
 
     return names
+}
+
+func (i *Impl) GetInterfaceFuncPos(name string) token.Pos {
+    for idx, f := range i.interface_.typ.Funcs {
+        if f.Name == name {
+            return i.interface_.funcPos[idx]
+        }
+    }
+
+    return token.Pos{}
 }
 
 func (i *Impl) GetInterfacePos() token.Pos {

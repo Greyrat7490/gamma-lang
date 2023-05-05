@@ -4,6 +4,7 @@ import (
     "os"
     "fmt"
     "reflect"
+    "gamma/types"
     "gamma/ast"
     "gamma/ast/identObj"
 )
@@ -85,15 +86,15 @@ func typeCheckDefFn(d *ast.DefFn) {
 func typeCheckImpl(d *ast.Impl) {
     err := false
 
-    for _,expectedFunc := range d.Impl.GetInterfaceFuncs() {
+    for _,expected := range d.Impl.GetInterfaceFuncs() {
         found := false
         for _,f := range d.FnDefs {
-            if f.FnHead.Name.Str == expectedFunc.GetName() {
-                if !expectedFunc.Equal(f.FnHead.F) {
+            if f.FnHead.Name.Str == expected.Name {
+                if !types.Equal(expected, f.FnHead.F.GetType()) {
                     fmt.Fprintln(os.Stderr, "[ERROR] different function signatures in interface and impl")
-                    fmt.Fprintln(os.Stderr, "\texpected: " + expectedFunc.String())
+                    fmt.Fprintln(os.Stderr, "\texpected: " + expected.String())
                     fmt.Fprintln(os.Stderr, "\tgot:      " + f.FnHead.F.String())
-                    fmt.Fprintln(os.Stderr, "\tinterface: " + expectedFunc.GetPos().At())
+                    fmt.Fprintln(os.Stderr, "\tinterface: " + d.Impl.GetInterfaceFuncPos(expected.Name).At())
                     fmt.Fprintln(os.Stderr, "\timpl:      " + f.At())
                     err = true
                 }
@@ -105,8 +106,8 @@ func typeCheckImpl(d *ast.Impl) {
 
         if !found {
             fmt.Fprintln(os.Stderr, "[ERROR] missing function definition in impl")
-            fmt.Fprintln(os.Stderr, "\texpected: " + expectedFunc.String())
-            fmt.Fprintln(os.Stderr, "\tinterface: " + expectedFunc.GetPos().At())
+            fmt.Fprintln(os.Stderr, "\texpected: " + expected.String())
+            fmt.Fprintln(os.Stderr, "\tinterface: " + d.Impl.GetInterfaceFuncPos(expected.Name).At())
             fmt.Fprintln(os.Stderr, "\timpl:      " + d.At())
             err = true
         }
@@ -117,9 +118,9 @@ func typeCheckImpl(d *ast.Impl) {
             len(d.Impl.GetInterfaceFuncs()), len(d.FnDefs))
         for _,f := range d.FnDefs {
             found := false
-            for _,expectedFunc := range d.Impl.GetInterfaceFuncs() {
-                if f.FnHead.Name.Str == expectedFunc.GetName() {
-                    if expectedFunc.Equal(f.FnHead.F) {
+            for _,expected := range d.Impl.GetInterfaceFuncs() {
+                if f.FnHead.Name.Str == expected.Name {
+                    if !types.Equal(expected, f.FnHead.F.GetType()) {
                         found = true
                         break
                     }

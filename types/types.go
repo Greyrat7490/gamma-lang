@@ -8,35 +8,39 @@ import (
 
 type TypeKind int
 const (
-    Int     TypeKind = iota
-    Uint    TypeKind = iota
-    Char    TypeKind = iota
-    Bool    TypeKind = iota
-    Ptr     TypeKind = iota
-    Arr     TypeKind = iota
-    Vec     TypeKind = iota
-    Str     TypeKind = iota
-    Struct  TypeKind = iota
-    Generic TypeKind = iota
+    Int         TypeKind = iota
+    Uint        TypeKind = iota
+    Char        TypeKind = iota
+    Bool        TypeKind = iota
+    Ptr         TypeKind = iota
+    Arr         TypeKind = iota
+    Vec         TypeKind = iota
+    Str         TypeKind = iota
+    Struct      TypeKind = iota
+    Generic     TypeKind = iota
+    Func        TypeKind = iota
+    Interface   TypeKind = iota
 )
 
 const (
-    I8_Size   uint = 1
-    I16_Size  uint = 2
-    I32_Size  uint = 4
-    I64_Size  uint = 8
-
-    U8_Size   uint = 1
-    U16_Size  uint = 2
-    U32_Size  uint = 4
-    U64_Size  uint = 8
-
-    Char_Size uint = 1
-    Bool_Size uint = 1
-    Ptr_Size  uint = 8
-    Arr_Size  uint = 8
-    Str_Size  uint = Ptr_Size + U32_Size
-    Vec_Size  uint = Ptr_Size + U64_Size + U64_Size
+    I8_Size         uint = 1
+    I16_Size        uint = 2
+    I32_Size        uint = 4
+    I64_Size        uint = 8
+                    
+    U8_Size         uint = 1
+    U16_Size        uint = 2
+    U32_Size        uint = 4
+    U64_Size        uint = 8
+                    
+    Char_Size       uint = 1
+    Bool_Size       uint = 1
+    Ptr_Size        uint = 8
+    Arr_Size        uint = 8
+    Func_Size       uint = Ptr_Size
+    Interface_Size  uint = Ptr_Size
+    Str_Size        uint = Ptr_Size + U32_Size
+    Vec_Size        uint = Ptr_Size + U64_Size + U64_Size
 )
 
 type Type interface {
@@ -72,10 +76,21 @@ type StructType struct {
     isAligned bool
     size uint
 }
+type FuncType struct {
+    Name string
+    Args []Type
+    Ret Type
+    Generic *GenericType
+    // TODO: isConst?
+}
 type GenericType struct {
     Name string
     CurUsedType Type
     UsedTypes []Type
+}
+type InterfaceType struct {
+    Name string
+    Funcs []FuncType
 }
 
 func isAligned(types []Type, size uint) (aligned bool, rest uint)  {
@@ -225,16 +240,18 @@ func RegCount(t Type) uint {
     }
 }
 
-func (t IntType)     GetKind() TypeKind { return Int }
-func (t UintType)    GetKind() TypeKind { return Uint }
-func (t CharType)    GetKind() TypeKind { return Char }
-func (t BoolType)    GetKind() TypeKind { return Bool }
-func (t StrType)     GetKind() TypeKind { return Str  }
-func (t PtrType)     GetKind() TypeKind { return Ptr  }
-func (t ArrType)     GetKind() TypeKind { return Arr  }
-func (t VecType)     GetKind() TypeKind { return Vec  }
-func (t StructType)  GetKind() TypeKind { return Struct }
-func (t GenericType) GetKind() TypeKind { 
+func (t IntType)        GetKind() TypeKind { return Int }
+func (t UintType)       GetKind() TypeKind { return Uint }
+func (t CharType)       GetKind() TypeKind { return Char }
+func (t BoolType)       GetKind() TypeKind { return Bool }
+func (t StrType)        GetKind() TypeKind { return Str  }
+func (t PtrType)        GetKind() TypeKind { return Ptr  }
+func (t ArrType)        GetKind() TypeKind { return Arr  }
+func (t VecType)        GetKind() TypeKind { return Vec  }
+func (t StructType)     GetKind() TypeKind { return Struct }
+func (t InterfaceType)  GetKind() TypeKind { return Interface }
+func (t FuncType)       GetKind() TypeKind { return Func }
+func (t GenericType)    GetKind() TypeKind { 
     if t.CurUsedType != nil {
         return t.CurUsedType.GetKind()
     }
@@ -242,15 +259,17 @@ func (t GenericType) GetKind() TypeKind {
     return Generic
 }
 
-func (t IntType)     Size() uint { return t.size }
-func (t UintType)    Size() uint { return t.size }
-func (t CharType)    Size() uint { return Char_Size }
-func (t BoolType)    Size() uint { return Bool_Size }
-func (t StrType)     Size() uint { return Str_Size }
-func (t PtrType)     Size() uint { return Ptr_Size }
-func (t ArrType)     Size() uint { return Arr_Size }
-func (t VecType)     Size() uint { return Vec_Size }
-func (t StructType)  Size() uint { return t.size }
+func (t IntType)        Size() uint { return t.size }
+func (t UintType)       Size() uint { return t.size }
+func (t CharType)       Size() uint { return Char_Size }
+func (t BoolType)       Size() uint { return Bool_Size }
+func (t StrType)        Size() uint { return Str_Size }
+func (t PtrType)        Size() uint { return Ptr_Size }
+func (t ArrType)        Size() uint { return Arr_Size }
+func (t VecType)        Size() uint { return Vec_Size }
+func (t StructType)     Size() uint { return t.size }
+func (t InterfaceType)  Size() uint { return Interface_Size }
+func (t FuncType)       Size() uint { return Func_Size }
 func (t GenericType) Size() uint { 
     if t.CurUsedType != nil {
         return t.CurUsedType.Size()
@@ -309,11 +328,25 @@ func (t VecType) String() string {
     return "[$]" + t.BaseType.String()
 }
 func (t StructType) String() string { return t.Name }
+func (t InterfaceType) String() string { return t.Name }
 func (t GenericType) String() string {
     if t.CurUsedType != nil {
         return t.CurUsedType.String()
     }
     return t.Name
+}
+func (t FuncType) String() string {
+    generic := ""
+    if t.Generic != nil {
+        generic = fmt.Sprintf("<%s>", t.Generic)
+    }
+
+    ret := ""
+    if t.Ret != nil {
+        ret = fmt.Sprintf(" -> %s", t.Ret)
+    }
+
+    return fmt.Sprintf("%s%s(%v)%s", t.Name, generic, t.Args, ret) 
 }
 
 func ToBaseType(s string) Type {
@@ -408,10 +441,6 @@ func MinSizeUint(val uint64) uint {
 }
 
 func Equal(destType Type, srcType Type) bool {
-    if srcType == nil {
-        return false
-    }
-
     srcType = ReplaceGeneric(srcType)
     destType = ReplaceGeneric(destType)
 
@@ -452,9 +481,53 @@ func Equal(destType Type, srcType Type) bool {
             return true
         }
 
+    case InterfaceType:
+        if t2,ok := srcType.(InterfaceType); ok {
+            if t.Name != t2.Name {
+                return false
+            }
+
+            if len(t.Funcs) == len(t2.Funcs) {
+                for i := range t.Funcs {
+                    if !Equal(t.Funcs[i], t2.Funcs[i]) {
+                        return false
+                    }
+                }
+            }
+        }
+
     case GenericType:
         if t2,ok := srcType.(GenericType); ok {
             return t.Name == t2.Name
+        }
+
+    case FuncType:
+        if t2,ok := srcType.(FuncType); ok {
+            if t.Name != t2.Name {
+                return false
+            }
+
+            if t.Generic != nil && t2.Generic != nil {
+                if !Equal(*t.Generic, *t2.Generic) {
+                    return false
+                }
+            } else if !(t.Generic == nil && t2.Generic == nil) {
+                return false
+            }
+
+            if !Equal(t.Ret, t2.Ret) {
+                return false
+            }
+
+            if len(t.Args) == len(t2.Args) {
+                for i := range t.Args {
+                    if !Equal(t.Args[i], t2.Args[i]) {
+                        return false
+                    }
+                }
+            }
+
+            return true
         }
 
     case IntType:

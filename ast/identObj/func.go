@@ -1,20 +1,16 @@
 package identObj
 
 import (
-	"os"
-	"fmt"
-	"gamma/token"
-	"gamma/types"
-	"gamma/types/addr"
+    "gamma/token"
+    "gamma/types"
+    "gamma/types/addr"
 )
 
 type Func struct {
     decPos token.Pos
     name string
-    generic *types.GenericType
-    args []types.Type
-    retType types.Type
-    retAddr addr.Addr
+    typ types.FuncType
+    retAddr addr.Addr   // TODO remove
     Scope *Scope
     methodOf string
     isConst bool
@@ -27,15 +23,15 @@ func GetCurFunc() *Func {
 }
 
 func CreateFunc(name token.Token, isConst bool) Func {
-    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst }
+    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, typ: types.FuncType{ Name: name.Str } }
 }
 
 func CreateMethod(name token.Token, isConst bool, structName string) Func {
-    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, methodOf: structName }
+    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, methodOf: structName, typ: types.FuncType{ Name: name.Str } }
 }
 
 func (f *Func) GetArgs() []types.Type {
-    return f.args
+    return f.typ.Args
 }
 
 func (f *Func) GetName() string {
@@ -43,16 +39,15 @@ func (f *Func) GetName() string {
 }
 
 func (f *Func) GetType() types.Type {
-    // TODO
-    return nil
+    return f.typ
 }
 
 func (f *Func) GetGeneric() *types.GenericType {
-    return f.generic
+    return f.typ.Generic
 }
 
 func (f *Func) GetRetType() types.Type {
-    return f.retType
+    return f.typ.Ret
 }
 
 func (f *Func) GetPos() token.Pos {
@@ -60,9 +55,7 @@ func (f *Func) GetPos() token.Pos {
 }
 
 func (f *Func) Addr() addr.Addr {
-    fmt.Fprintln(os.Stderr, "[ERROR] TODO: func.go Addr()")
-    os.Exit(1)
-    return addr.Addr{}
+    return addr.Addr{ BaseAddr: f.GetMangledName() }
 }
 
 func (f *Func) GetRetAddr() addr.Addr {
@@ -81,7 +74,7 @@ func (f *Func) GetMangledName() string {
     }
 
     if f.GetGeneric() != nil {
-        name += "$" + f.generic.CurUsedType.String()
+        name += "$" + f.typ.Generic.CurUsedType.String()
     }
 
     return name
@@ -89,7 +82,7 @@ func (f *Func) GetMangledName() string {
 
 
 func (f *Func) SetRetType(typ types.Type) {
-    f.retType = typ
+    f.typ.Ret = typ
 }
 
 func (f *Func) SetRetAddr(addr addr.Addr) {
@@ -97,59 +90,21 @@ func (f *Func) SetRetAddr(addr addr.Addr) {
 }
 
 func (f *Func) SetArgs(args []types.Type) {
-    f.args = args
+    f.typ.Args = args
 }
 
 func (f *Func) SetGeneric(generic *types.GenericType) {
-    f.generic = generic
+    f.typ.Generic = generic
 }
 
-
 func (f *Func) AddTypeToGeneric(typ types.Type) {
-    for _,t := range f.generic.UsedTypes {
+    for _,t := range f.typ.Generic.UsedTypes {
         if types.Equal(typ, t) { return }
     }
 
-    f.generic.UsedTypes = append(f.generic.UsedTypes, typ)
-}
-
-
-func (f *Func) Equal(other *Func) bool {
-    if f.name != other.name {
-        return false
-    }
-
-    if f.generic != other.generic {
-        return false
-    }
-
-    if f.retType != other.retType {
-        return false
-    }
-
-    if len(f.args) != len(other.args) {
-        return false
-    }
-
-    for i := range f.args {
-        if !types.Equal(f.args[i], other.args[i]) {
-            return false
-        }
-    }
-
-    return true
+    f.typ.Generic.UsedTypes = append(f.typ.Generic.UsedTypes, typ)
 }
 
 func (f Func) String() string {
-    generic := ""
-    if f.generic != nil {
-        generic = fmt.Sprintf("<%s>", f.generic)
-    }
-
-    ret := ""
-    if f.retType != nil {
-        ret = fmt.Sprintf(" -> %s", f.retType)
-    }
-
-    return fmt.Sprintf("%s%s(%v)%s", f.name, generic, f.args, ret)
+    return f.typ.String()
 }
