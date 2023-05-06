@@ -38,7 +38,7 @@ const (
     Ptr_Size        uint = 8
     Arr_Size        uint = 8
     Func_Size       uint = Ptr_Size
-    Interface_Size  uint = Ptr_Size
+    Interface_Size  uint = 2 * Ptr_Size
     Str_Size        uint = Ptr_Size + U32_Size
     Vec_Size        uint = Ptr_Size + U64_Size + U64_Size
 )
@@ -196,6 +196,16 @@ func (t *StructType) GetFields() []string {
     return fields
 }
 
+func (t *InterfaceType) GetFunc(name string) *FuncType {
+    for _,f := range t.Funcs {
+        if f.Name == name {
+            return &f
+        }
+    }
+
+    return nil
+}
+
 func IsBigStruct(t Type) bool {
     if _,ok := t.(VecType); ok {
         return true
@@ -206,6 +216,19 @@ func IsBigStruct(t Type) bool {
     }
 
     return false
+}
+
+func IsSelfType(t Type) bool {
+    switch t := t.(type) {
+    case StructType:
+        return t.Name == "Self"
+
+    case PtrType:
+        return IsSelfType(t.BaseType)
+
+    default:
+        return false
+    }
 }
 
 func ReplaceGeneric(t Type) Type {
@@ -234,6 +257,9 @@ func RegCount(t Type) uint {
         } else {
             return 1
         }
+
+    case Interface:
+        return 2
 
     default:
         return 1

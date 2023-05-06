@@ -53,9 +53,13 @@ impl Test2 :: Number {
     }
 }
 
-/*
 fn calc(lhs Number, rhs Number) -> u64 {
-    ret lhs.inc + rhs.inc
+    ret lhs.inc() + rhs.inc()
+}
+
+/*
+fn calc2<T: Number, T2: Number>(lhs u64, rhs u64) -> u64 {
+    ret T::add(lhs, rhs) + T2::add(lhs, rhs)
 }
 */
 
@@ -71,5 +75,9 @@ fn main() {
 
     println(fmt("{}", t.inc()))
     println(fmt("{}", t2.inc()))
-    // println(fmt("{}", calc(t, t2)))
+    println(fmt("{}", calc(t, t2)))
+
+    t.a = t.a + 5
+
+    println(fmt("{}", calc(t, t2)))
 }

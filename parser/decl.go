@@ -412,7 +412,7 @@ func prsInterface(tokens *token.Tokens) ast.Decl {
         identObj.EndScope()
 
         heads = append(heads, fnHead)
-        I.AddFunc(*fnHead.F)
+        I.AddFunc(fnHead.F)
     }
 
     braceRPos := tokens.Cur().Pos

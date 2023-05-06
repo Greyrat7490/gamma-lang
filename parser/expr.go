@@ -592,8 +592,85 @@ func getStructFromExpr(expr ast.Expr) *identObj.Struct {
         if s,ok := identObj.Get(t.Name).(*identObj.Struct); ok {
             return s           
         }
+    } else if _,ok := typ.(*types.StructType); ok {
+        if s,ok := identObj.Get(t.Name).(*identObj.Struct); ok {
+            return s           
+        }
     }
 
+    return nil
+}
+
+func prsDotExprStruct(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ types.StructType, name token.Token) ast.Expr {
+    if t := typ.GetType(name.Str); t != nil {
+        field := &ast.Field{ Obj: obj, DotPos: dotPos, FieldName: name }
+        setFieldType(field)
+        return field
+    }
+
+    if s,ok := identObj.Get(typ.Name).(*identObj.Struct); ok {
+        if f := s.GetMethod(name.Str); f != nil {
+            tokens.Next()
+            usedType := prsGenericUsedType(tokens)
+
+            posL := tokens.Cur().Pos
+            vals := prsPassArgs(tokens)
+            posR := tokens.Cur().Pos
+
+            vals = addSelfArg(vals, obj)
+
+            if usedType != nil {
+                f.AddTypeToGeneric(usedType)
+            }
+
+            ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
+            structIdent := ast.Ident{ Name: typ.Name, Pos: dotPos, Obj: s }
+            return &ast.FnCall{ Ident: ident, StructIdent: &structIdent, F: f, GenericUsedType: usedType,
+                Values: vals, ParenLPos: posL, ParenRPos: posR }
+        }
+        
+        fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" has no field/method called \"%s\"\n", typ.Name, name.Str)
+        fmt.Fprintf(os.Stderr, "\tmethods: %v\n", s.GetMethodNames())
+        fmt.Fprintf(os.Stderr, "\tfields: %v\n", typ.GetFields())
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" is not defined\n", typ.Name)
+    }
+
+    fmt.Fprintln(os.Stderr, "\t" + obj.At())
+    os.Exit(1)
+    return nil
+}
+
+func prsDotExprInterface(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ types.InterfaceType, name token.Token) ast.Expr {
+    if i,ok := identObj.Get(typ.Name).(*identObj.Interface); ok {
+        if f := i.GetFunc(name.Str); f != nil {
+            tokens.Next()
+            usedType := prsGenericUsedType(tokens)
+
+            posL := tokens.Cur().Pos
+            vals := prsPassArgs(tokens)
+            posR := tokens.Cur().Pos
+
+            vals = addSelfArg(vals, obj)
+
+            if usedType != nil {
+                f.AddTypeToGeneric(usedType)
+            }
+
+            ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
+            structIdent := ast.Ident{ Name: typ.Name, Pos: dotPos, Obj: i }
+            return &ast.FnCall{ Ident: ident, StructIdent: &structIdent, F: f, GenericUsedType: usedType,
+                Values: vals, ParenLPos: posL, ParenRPos: posR }
+        }
+
+        fmt.Fprintf(os.Stderr, "[ERROR] interface \"%s\" has no method called \"%s\"\n", typ.Name, name.Str)
+        fmt.Fprintf(os.Stderr, "\tmethods: %v\n", typ.Funcs)
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] interface \"%s\" is not defined\n", typ.Name)
+    }
+
+    fmt.Fprintln(os.Stderr, "\t" + obj.At())
+    os.Exit(1)
     return nil
 }
 
@@ -612,40 +689,16 @@ func prsDotExpr(tokens *token.Tokens, obj ast.Expr) ast.Expr {
         os.Exit(1)
     }
 
-    s := getStructFromExpr(obj)
-    if s != nil {
-        if typ := s.GetFieldType(name.Str); typ != nil {
-            field := &ast.Field{ Obj: obj, DotPos: dot.Pos, FieldName: name }
-            setFieldType(field)
-            return field
-            
-        } else if f := s.GetMethod(name.Str); f != nil {
-            tokens.Next()
-            usedType := prsGenericUsedType(tokens)
+    switch typ := obj.GetType().(type) {
+    case *types.StructType:
+        return prsDotExprStruct(tokens, obj, dot.Pos, *typ, name)
+    case types.StructType:
+        return prsDotExprStruct(tokens, obj, dot.Pos, typ, name)
 
-            posL := tokens.Cur().Pos
-            vals := prsPassArgs(tokens)
-            posR := tokens.Cur().Pos
+    case types.InterfaceType:
+        return prsDotExprInterface(tokens, obj, dot.Pos, typ, name)
 
-            vals = addSelfArg(vals, obj)
-
-            if usedType != nil {
-                f.AddTypeToGeneric(usedType)
-            }
-
-            ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
-            structIdent := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: s }
-            return &ast.FnCall{ Ident: ident, StructIdent: &structIdent, F: f, GenericUsedType: usedType, Values: vals, ParenLPos: posL, ParenRPos: posR }
-
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" has no a field/method called \"%s\"\n", s.GetName(), name.Str)
-            fmt.Fprintf(os.Stderr, "\tfields: %v\n", s.GetFieldNames())
-            fmt.Fprintf(os.Stderr, "\tmethods: %v\n", s.GetMethodNames())
-            fmt.Fprintln(os.Stderr, "\t" + obj.At())
-            os.Exit(1)
-            return nil
-        }
-    } else {
+    default:
         field := &ast.Field{ Obj: obj, DotPos: dot.Pos, FieldName: name }
         setFieldType(field)
         return field

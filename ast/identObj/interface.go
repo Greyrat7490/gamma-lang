@@ -14,13 +14,13 @@ type Interface struct {
     name string
     scope *Scope
     typ types.InterfaceType
-    funcPos []token.Pos
+    funcs []Func
 }
 
 var CurImplStruct *types.StructType = nil
 
 func CreateInterface(name token.Token) Interface {
-    return Interface{ decPos: name.Pos, name: name.Str, typ: types.InterfaceType{ Name: name.Str }, funcPos: make([]token.Pos, 0) }
+    return Interface{ decPos: name.Pos, name: name.Str, typ: types.InterfaceType{ Name: name.Str }, funcs: make([]Func, 0) }
 }
 
 func (i *Interface) GetName() string {
@@ -45,9 +45,34 @@ func (i *Interface) GetFuncs() []types.FuncType {
     return i.typ.Funcs
 }
 
-func (i *Interface) AddFunc(f Func) {
+func (i *Interface) GetFunc(name string) *Func {
+    for _,f := range i.funcs {
+        if f.name == name {
+            return &f
+        }       
+    }
+
+    return nil
+}
+
+func (i *Interface) AddFunc(f *Func) {
     i.typ.Funcs = append(i.typ.Funcs, f.typ)
-    i.funcPos = append(i.funcPos, f.decPos)
+    i.funcs = append(i.funcs, *f)
+}
+
+func (i *Interface) GetVTableOffset(funcName string) uint {
+    offset := uint(0)
+    for _,f := range i.funcs {
+        if f.name == funcName {
+            return offset
+        }
+
+        if len(f.typ.Args) > 0 && types.IsSelfType(f.typ.Args[0]) {
+            offset += 8
+        }
+    }
+
+    return 0
 }
 
 type Impl struct {
@@ -73,6 +98,18 @@ func (i *Impl) GetInterfaceFuncs() []types.FuncType {
     return i.interface_.typ.Funcs
 }
 
+func (i *Impl) GetVTableFuncNames() []string {
+    names := make([]string, 0, len(i.interface_.typ.Funcs))
+
+    for _,f := range i.interface_.typ.Funcs {
+        if len(f.Args) > 0 && types.IsSelfType(f.Args[0]) {
+            names = append(names, f.Name)
+        }
+    }
+
+    return names
+}
+
 func (i *Impl) GetInterfaceFuncNames() []string {
     names := make([]string, 0, len(i.interface_.typ.Funcs))
 
@@ -86,7 +123,7 @@ func (i *Impl) GetInterfaceFuncNames() []string {
 func (i *Impl) GetInterfaceFuncPos(name string) token.Pos {
     for idx, f := range i.interface_.typ.Funcs {
         if f.Name == name {
-            return i.interface_.funcPos[idx]
+            return i.interface_.funcs[idx].decPos
         }
     }
 

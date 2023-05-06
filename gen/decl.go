@@ -12,8 +12,9 @@ import (
     "gamma/types"
     "gamma/types/addr"
     "gamma/gen/asm/x86_64"
-    "gamma/gen/asm/x86_64/conditions"
     "gamma/gen/asm/x86_64/loops"
+    "gamma/gen/asm/x86_64/vtable"
+    "gamma/gen/asm/x86_64/conditions"
 )
 
 func GenDecl(file *bufio.Writer, d ast.Decl) {
@@ -137,8 +138,15 @@ func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
     identObj.ResetStackSize()
 }
 
+func createVTable(file *bufio.Writer, d *ast.Impl) {
+    fnNames := d.Impl.GetVTableFuncNames()
+    implName := d.Impl.GetStructName()
+    vtable.Create(implName, fnNames)
+}
 
 func GenImpl(file *bufio.Writer, d *ast.Impl) {
+    createVTable(file, d)
+
     file.WriteString(d.Impl.GetStructName() + ":\n")
     for _,f := range d.FnDefs {
         GenDefFn(file, &f)

@@ -15,6 +15,7 @@ import (
     "gamma/cmpTime"
     "gamma/cmpTime/constVal"
     "gamma/gen/asm/x86_64"
+    "gamma/gen/asm/x86_64/vtable"
 )
 
 /*
@@ -63,6 +64,11 @@ func CallFn(file *bufio.Writer, f *identObj.Func) {
     file.WriteString("call " + f.GetMangledName() + "\n")
 }
 
+func CallVTableFn(file *bufio.Writer, offset uint) {
+    addr := addr.Addr{ BaseAddr: asm.GetReg(asm.RegD, types.Ptr_Size), Offset: int64(offset) }
+    file.WriteString(fmt.Sprintf("call QWORD [%s]\n", addr))
+}
+
 func DefArg(file *bufio.Writer, regIdx uint, v vars.Var) {
     switch t := v.GetType().(type) {
     case types.StrType:
@@ -72,10 +78,14 @@ func DefArg(file *bufio.Writer, regIdx uint, v vars.Var) {
     case types.StructType:
         if t.Size() > uint(8) {
             asm.MovDerefReg(file, v.Addr(), types.Ptr_Size, regs[regIdx])
-            asm.MovDerefReg(file, v.Addr().Offseted(int64(types.Ptr_Size)), t.Size() - 8, regs[regIdx+1])
+            asm.MovDerefReg(file, v.Addr().Offseted(int64(types.Ptr_Size)), t.Size() - types.Ptr_Size, regs[regIdx+1])
         } else {
             asm.MovDerefReg(file, v.Addr(), t.Size(), regs[regIdx])
         }
+
+    case types.InterfaceType:
+        asm.MovDerefReg(file, v.Addr(), types.Ptr_Size, regs[regIdx])
+        asm.MovDerefReg(file, v.Addr().Offseted(int64(types.Ptr_Size)), t.Size() - types.Ptr_Size, regs[regIdx+1])
 
     default:
         asm.MovDerefReg(file, v.Addr(), t.Size(), regs[regIdx])
@@ -130,6 +140,10 @@ func PassVar(file *bufio.Writer, regIdx uint, t types.Type, otherVar vars.Var) {
             asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(), t.Size(), false)
         }
 
+    case types.InterfaceType:
+        asm.MovRegDeref(file, regs[regIdx], otherVar.Addr(), types.Ptr_Size, false)
+        asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vtable.GetVTableName(otherVar.GetType().String()))
+
     case types.IntType:
         asm.MovRegDerefExtend(file, regs[regIdx], t.Size(), otherVar.Addr(), otherVar.GetType().Size(), true)
 
@@ -153,6 +167,10 @@ func PassExpr(file *bufio.Writer, regIdx uint, argType types.Type, regSize uint,
         } else {
             asm.MovRegReg(file, regs[regIdx], asm.RegGroup(0), t.Size())
         }
+
+    case types.InterfaceType:
+        asm.MovRegReg(file, regs[regIdx], asm.RegGroup(0), types.Ptr_Size)
+        asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vtable.GetVTableName(expr.GetType().String()))
 
     case types.IntType:
         GenExpr(file, expr)
@@ -222,6 +240,10 @@ func PassVarStack(file *bufio.Writer, otherVar vars.Var) {
         }
         asm.PushDeref(file, otherVar.Addr())
 
+    case types.InterfaceType:
+        asm.PushVal(file, otherVar.GetType().String())
+        asm.PushDeref(file, otherVar.Addr())
+
     default:
         asm.PushDeref(file, otherVar.Addr())
     }
@@ -229,7 +251,7 @@ func PassVarStack(file *bufio.Writer, otherVar vars.Var) {
 
 func PassRegStack(file *bufio.Writer, argType types.Type) {
     switch t := argType.(type) {
-    case types.StrType:
+    case types.StrType, types.InterfaceType:
         asm.PushReg(file, asm.RegGroup(1))
         asm.PushReg(file, asm.RegGroup(0))
 

@@ -329,6 +329,10 @@ func GenIdent(file *bufio.Writer, e *ast.Ident) {
                 asm.MovRegDeref(file, asm.RegA, v.Addr(), t.Size(), false)
             }
 
+        case types.InterfaceType:
+            asm.MovRegDeref(file, asm.RegA, v.Addr(), types.Ptr_Size, false)
+            asm.MovRegDeref(file, asm.RegD, v.Addr().Offseted(int64(types.Ptr_Size)), t.Size() - 8, false)
+
         case types.VecType:
             asm.MovRegDeref(file, asm.RegA, v.Addr(), types.Ptr_Size, false)
 
@@ -525,6 +529,24 @@ func GenBinary(file *bufio.Writer, e *ast.Binary) {
     }
 }
 
+func getVtableOffset(expr ast.Expr, funcName string) uint {
+    if interfaceType,ok := expr.GetType().(types.InterfaceType); ok {
+        if i,ok := identObj.Get(interfaceType.Name).(*identObj.Interface); ok {
+            return i.GetVTableOffset(funcName)
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] interface %v is not defined\n", interfaceType.Name)
+            fmt.Fprintln(os.Stderr, "\t" + expr.At())
+            os.Exit(1)
+        }
+
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] (internal) expected interface type but got %v\n", expr.GetType())
+        fmt.Fprintln(os.Stderr, "\t" + expr.At())
+        os.Exit(1)
+    }
+    return 0
+}
+
 func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
     if e.F.GetGeneric() != nil {
         e.F.GetGeneric().CurUsedType = e.GenericUsedType
@@ -538,7 +560,13 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
     passArgs.genPassArgsBigStruct(file)
     passArgs.genPassArgsReg(file)
 
-    CallFn(file, e.F)
+    if e.StructIdent != nil && e.StructIdent.GetType().GetKind() == types.Interface {
+        offset := getVtableOffset(passArgs.regArgs[0].value, e.F.GetName())
+        GenExpr(file, passArgs.regArgs[0].value)
+        CallVTableFn(file, offset)
+    } else {
+        CallFn(file, e.F)
+    }
 
     passArgs.genClearStack(file)
 }

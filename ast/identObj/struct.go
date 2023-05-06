@@ -63,6 +63,16 @@ func (s *Struct) AddImpl(impl Impl) {
     s.impls = append(s.impls, impl)
 }
 
+func (s *Struct) HasImpl(interfaceName string) bool {
+    for _,impl := range s.impls {
+        if impl.interface_.name == interfaceName {
+            return true
+        }
+    }
+
+    return false
+}
+
 func (s *Struct) GetMethod(name string) *Func {
     for _,i := range s.impls {
         f := i.GetMethod(name)
