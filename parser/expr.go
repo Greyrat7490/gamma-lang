@@ -20,13 +20,19 @@ type precedence int
 const (
     LOGICAL_PRECEDENCE precedence = iota // &&, ||
     COMPARE_PRECEDENCE            = iota // ==, !=, <, <=, >, >=
+    CAST_PRECEDENCE               = iota // as
     BITWISE_PRECEDENCE            = iota // <<, >>, &, |, ^, ~
     ADD_SUB_PRECEDENCE            = iota // +, -
     MUL_DIV_PRECEDENCE            = iota // *, /, %
     PAREN_PRECEDENCE              = iota // ()
 )
 
+
 func prsExpr(tokens *token.Tokens) ast.Expr {
+    return prsExprWithPrecedence(tokens, 0)
+}
+
+func prsExprWithPrecedence(tokens *token.Tokens, precedence precedence) ast.Expr {
     var expr ast.Expr
     switch tokens.Cur().Type {
     case token.Number, token.Boolean, token.Char:
@@ -107,25 +113,21 @@ func prsExpr(tokens *token.Tokens) ast.Expr {
         return &ast.BadExpr{}
     }
 
-    for tokens.Peek().Type == token.BrackL {
-        tokens.Next()
-        expr = prsIndexExpr(tokens, expr)
-    }
+    for {
+        if isBinaryExpr(tokens) {
+            expr = prsBinary(tokens, expr, precedence)
+        }
 
-    for tokens.Peek().Type == token.Dot {
-        expr = prsDotExpr(tokens, expr)
-    }
-
-    for tokens.Peek().Type == token.As {
-        tokens.Next()
-        expr = prsCast(tokens, expr)
-    }
-
-    if isBinaryExpr(tokens) {
-        expr = prsBinary(tokens, expr, 0)
-        for tokens.Peek().Type == token.As {
+        if tokens.Peek().Type == token.BrackL {
+            tokens.Next()
+            expr = prsIndexExpr(tokens, expr)
+        } else if tokens.Peek().Type == token.Dot {
+            expr = prsDotExpr(tokens, expr)
+        } else if tokens.Peek().Type == token.As && CAST_PRECEDENCE >= precedence {
             tokens.Next()
             expr = prsCast(tokens, expr)
+        } else {
+            break
         }
     }
 
@@ -173,6 +175,8 @@ func getPrecedence(tokens *token.Tokens) precedence {
         return LOGICAL_PRECEDENCE
     case isComparison(tokens):
         return COMPARE_PRECEDENCE
+    case tokens.Peek().Type == token.As:
+        return CAST_PRECEDENCE
     case tokens.Peek().Type == token.Plus || tokens.Peek().Type == token.Minus:
         return ADD_SUB_PRECEDENCE
     case tokens.Peek().Type == token.Mul || tokens.Peek().Type == token.Div || tokens.Peek().Type == token.Mod:
@@ -957,50 +961,8 @@ func prsBinary(tokens *token.Tokens, expr ast.Expr, min_precedence precedence) a
             return &b
         }
 
-        switch {
-        case isParenExpr(tokens):
-            b.OperandR = prsParenExpr(tokens)
-        case isUnaryExpr(tokens):
-            b.OperandR = prsUnaryExpr(tokens)
-        case tokens.Cur().Type == token.Name:
-            switch tokens.Peek().Type {
-            case token.Dot:
-                ident := prsIdentExpr(tokens)
-                b.OperandR = prsDotExpr(tokens, ident)
-                for tokens.Peek().Type == token.Dot {
-                    b.OperandR = prsDotExpr(tokens, b.OperandR)
-                }
-
-            case token.BrackL:
-                expr := prsIdentExpr(tokens)
-                tokens.Next()
-                b.OperandR = prsIndexExpr(tokens, expr)
-
-            case token.ParenL:
-                b.OperandR = prsCallFn(tokens)
-
-            case token.DefConst:
-                if tokens.Peek2().Type == token.Lss {
-                    b.OperandR = prsCallGenericFn(tokens)
-                } else {
-                    b.OperandR = prsStaticMethod(tokens)
-                }
-
-            default:
-                b.OperandR = prsIdentExpr(tokens)
-            }
-        case tokens.Cur().Type == token.Str:
-            b.OperandR = prsStrLit(tokens)
-        default:
-            b.OperandR = prsBasicLit(tokens)
-        }
-
+        b.OperandR = prsExprWithPrecedence(tokens, precedenceL+1)
         b.Type = GetTypeBinary(&b)
-
-        if isBinaryExpr(tokens) {
-            b.OperandR = prsBinary(tokens, b.OperandR, precedenceL+1)
-            b.Type = GetTypeBinary(&b)
-        }
 
         // left to right as correct order of operations
         if precedenceR > precedenceL {

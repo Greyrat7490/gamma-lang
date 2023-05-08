@@ -75,13 +75,13 @@ func prsStmt(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
             }
         }
 
-    case token.Name, token.SelfType:
+    case token.Name:
         if isDec(tokens) || isDefInfer(tokens) {
             return &ast.DeclStmt{ Decl: prsDefine(tokens) }
         }
         fallthrough
 
-    case token.XSwitch, token.Plus, token.Minus, token.Mul, token.Amp:
+    case token.XSwitch, token.Plus, token.Minus, token.Mul, token.Amp, token.Self:
         e := prsExpr(tokens)
 
         if tokens.Peek().Type == token.Assign {
