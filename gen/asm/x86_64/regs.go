@@ -119,6 +119,7 @@ func SaveReg(file *bufio.Writer, reg RegGroup) {
     if used[reg] {
         preserve[reg] = true
         PushReg(file, reg)
+        used[reg] = false
     }
 }
 
@@ -126,5 +127,6 @@ func RestoreReg(file *bufio.Writer, reg RegGroup) {
     if preserve[reg] {
         preserve[reg] = false
         PopReg(file, reg)
+        used[reg] = true
     }
 }
