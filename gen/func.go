@@ -142,7 +142,7 @@ func PassVar(file *bufio.Writer, regIdx uint, t types.Type, otherVar vars.Var) {
 
     case types.InterfaceType:
         asm.MovRegDeref(file, regs[regIdx], otherVar.Addr(), types.Ptr_Size, false)
-        asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vtable.GetVTableName(otherVar.GetType().String()))
+        asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vtable.GetVTableName(otherVar.GetType().String(), t.String()))
 
     case types.IntType:
         asm.MovRegDerefExtend(file, regs[regIdx], t.Size(), otherVar.Addr(), otherVar.GetType().Size(), true)
@@ -170,7 +170,7 @@ func PassExpr(file *bufio.Writer, regIdx uint, argType types.Type, regSize uint,
 
     case types.InterfaceType:
         asm.MovRegReg(file, regs[regIdx], asm.RegGroup(0), types.Ptr_Size)
-        asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vtable.GetVTableName(expr.GetType().String()))
+        asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vtable.GetVTableName(expr.GetType().String(), t.String()))
 
     case types.IntType:
         GenExpr(file, expr)
