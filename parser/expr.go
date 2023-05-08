@@ -624,6 +624,11 @@ func prsDotExprStruct(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ 
             vals = addSelfArg(vals, obj)
 
             if usedType != nil {
+                if !f.IsGeneric() {
+                    fmt.Fprintf(os.Stderr, "[ERROR] %s (from %s) is not generic\n", name.Str, typ.Name)
+                    fmt.Fprintln(os.Stderr, "\t" + name.At())
+                    os.Exit(1)
+                }
                 f.AddTypeToGeneric(usedType)
             }
 
@@ -658,6 +663,11 @@ func prsDotExprInterface(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, t
             vals = addSelfArg(vals, obj)
 
             if usedType != nil {
+                if !f.IsGeneric() {
+                    fmt.Fprintf(os.Stderr, "[ERROR] %s (from %s) is not generic\n", name.Str, typ.Name)
+                    fmt.Fprintln(os.Stderr, "\t" + name.At())
+                    os.Exit(1)
+                }
                 f.AddTypeToGeneric(usedType)
             }
 
@@ -1048,6 +1058,12 @@ func prsCallGenericFn(tokens *token.Tokens) *ast.FnCall {
 
     if obj := identObj.Get(ident.Name); obj != nil {
         if f,ok := obj.(*identObj.Func); ok {
+            if !f.IsGeneric() {
+                fmt.Fprintf(os.Stderr, "[ERROR] function %s is not generic\n", ident.Name)
+                fmt.Fprintln(os.Stderr, "\t" + ident.At())
+                os.Exit(1)
+            }
+
             f.AddTypeToGeneric(usedType)
             return &ast.FnCall{ Ident: *ident, F: f, GenericUsedType: usedType, Values: vals, ParenLPos: posL, ParenRPos: posR }
 
@@ -1086,6 +1102,11 @@ func prsStaticMethod(tokens *token.Tokens) *ast.FnCall {
 
         if f := S.GetMethod(name.Str); f != nil {
             if usedType != nil {
+                if !f.IsGeneric() {
+                    fmt.Fprintf(os.Stderr, "[ERROR] function %s is not generic\n", name.Str)
+                    fmt.Fprintln(os.Stderr, "\t" + name.At())
+                    os.Exit(1)
+                }
                 f.AddTypeToGeneric(usedType)
             }
 

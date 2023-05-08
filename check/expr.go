@@ -333,6 +333,10 @@ func typeCheckXSwitch(o *ast.XSwitch) {
 func typeCheckFnCall(o *ast.FnCall) {
     if o.GenericUsedType != nil {
         o.F.GetGeneric().CurUsedType = o.GenericUsedType
+    } else if o.F.IsGeneric() {
+        fmt.Fprintf(os.Stderr, "[ERROR] function %s is generic but got no generic typ passed\n", o.F.GetName())
+        fmt.Fprintln(os.Stderr, "\t" + o.At())
+        os.Exit(1)
     }
 
     for _,a := range o.Values {

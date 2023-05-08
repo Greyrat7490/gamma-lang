@@ -1,0 +1,7 @@
+fn test() -> u64 {
+    ret 0
+}
+
+fn main() {
+    u := test::<i32>()
+}

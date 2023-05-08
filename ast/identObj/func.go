@@ -97,6 +97,10 @@ func (f *Func) SetGeneric(generic *types.GenericType) {
     f.typ.Generic = generic
 }
 
+func (f *Func) IsGeneric() bool {
+    return f.typ.Generic != nil
+}
+
 func (f *Func) AddTypeToGeneric(typ types.Type) {
     for _,t := range f.typ.Generic.UsedTypes {
         if types.Equal(typ, t) { return }
