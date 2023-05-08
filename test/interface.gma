@@ -13,6 +13,12 @@ struct Test2 {
     a u32
 }
 
+struct Test3 {
+    a u8,
+    b str,
+    c [$]i32
+}
+
 impl Test :: Number {
     fn add(a u64, b u64) -> u64 {
         ret a + b
@@ -22,12 +28,15 @@ impl Test :: Number {
         ret a - b
     }
 
+                // optinal: use explicitly Self type
+                // optinal: use explicitly actual Struct type
     fn inc(self) -> u64 {
         ret self.a + 1
     }
 
     fn print(a u64) {
-        println(fmt("Test: {}", a))
+        // Self:: is optinal
+        println(fmt("Test: {}", Self::sub(a, 1)))
     }
 }
 
@@ -40,16 +49,39 @@ impl Test2 :: Number {
         ret a - b
     }
 
-                // optinal: use explicitly Self type
-                // optinal: use explicitly actual Struct type
-    fn inc(self) -> u64 {
+    fn inc(self Self) -> u64 {
         ret self.a + 1 as u64
     }
 
     fn print(a u64) {
-        // Self:: is optinal
-        // println(fmt("Test2: {}", Self::sub(a, 5)))
         println(fmt("Test2: {}", sub(a, 5)))
+    }
+}
+
+impl Test3 :: Number {
+    fn sub(a u64, b u64) -> u64 {
+        ret 0
+    }
+
+    fn print(i u64) {
+        println("nothing")
+    }
+
+    fn inc(self Test3) -> u64 {
+        self.c = append::<i32>(self.c, 1) 
+        self.a = self.a + 1
+        println(fmt("{}", self.a))
+
+        res u64 := 0
+        for i u64, self.c.len {
+            res = res + (self.c[i] as u64)
+        }
+
+        ret res
+    }
+
+    fn add(a u64, b u64) -> u64 {
+        ret 0
     }
 }
 
@@ -67,7 +99,7 @@ fn main() {
     t := Test{ 32 }
     t2 := Test2{ 30 }
 
-    Test::print(69)
+    Test::print(70)
     Test2::print(69)
 
     println(fmt("{}", Test::add(30, 39)))

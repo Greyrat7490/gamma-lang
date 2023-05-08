@@ -88,6 +88,7 @@ func typeCheckImpl(d *ast.Impl) {
     for _,expected := range d.Impl.GetInterfaceFuncs() {
         found := false
         for _,f := range d.FnDefs {
+            typeCheckDefFn(&f)
             if f.FnHead.Name.Str == expected.Name {
                 if !TypesEqual(expected, f.FnHead.F.GetType()) {
                     fmt.Fprintln(os.Stderr, "[ERROR] different function signatures in interface and impl")
@@ -119,7 +120,7 @@ func typeCheckImpl(d *ast.Impl) {
             found := false
             for _,expected := range d.Impl.GetInterfaceFuncs() {
                 if f.FnHead.Name.Str == expected.Name {
-                    if !TypesEqual(expected, f.FnHead.F.GetType()) {
+                    if TypesEqual(expected, f.FnHead.F.GetType()) {
                         found = true
                         break
                     }

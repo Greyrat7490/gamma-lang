@@ -26,8 +26,12 @@ func TypesEqual(destType types.Type, srcType types.Type) bool {
     if t,ok := destType.(types.InterfaceType); ok {
         if t2,ok := srcType.(types.StructType); ok {
             if s,ok := identObj.Get(t2.Name).(*identObj.Struct); ok {
-                return s.HasImpl(t.Name)
+                if hasImpl,typ := s.GetInterfaceType(t.Name); hasImpl {
+                    return types.Equal(destType, typ)
+                }
             }
+
+            return false
         }
     }
 

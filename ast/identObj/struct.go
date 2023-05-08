@@ -63,14 +63,14 @@ func (s *Struct) AddImpl(impl Impl) {
     s.impls = append(s.impls, impl)
 }
 
-func (s *Struct) HasImpl(interfaceName string) bool {
+func (s *Struct) GetInterfaceType(interfaceName string) (hasImpl bool, typ types.InterfaceType) {
     for _,impl := range s.impls {
         if impl.interface_.name == interfaceName {
-            return true
+            return true, impl.interface_.typ
         }
     }
 
-    return false
+    return
 }
 
 func (s *Struct) GetMethod(name string) *Func {

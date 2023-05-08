@@ -27,12 +27,12 @@ const (
     I16_Size        uint = 2
     I32_Size        uint = 4
     I64_Size        uint = 8
-                    
+
     U8_Size         uint = 1
     U16_Size        uint = 2
     U32_Size        uint = 4
     U64_Size        uint = 8
-                    
+
     Char_Size       uint = 1
     Bool_Size       uint = 1
     Ptr_Size        uint = 8
@@ -519,6 +519,8 @@ func Equal(destType Type, srcType Type) bool {
                         return false
                     }
                 }
+
+                return true
             }
         }
 
@@ -551,9 +553,9 @@ func Equal(destType Type, srcType Type) bool {
                         return false
                     }
                 }
-            }
 
-            return true
+                return true
+            }
         }
 
     case IntType:
