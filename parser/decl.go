@@ -23,12 +23,8 @@ func prsDecl(tokens *token.Tokens) ast.Decl {
         d := prsImport(tokens)
         return &d
 
-    case token.Fn:
-        d := prsDefFn(tokens, false, false)
-        return &d
-
-    case token.ConstFn:
-        d := prsDefFn(tokens, true, false)
+    case token.Fn, token.ConstFn:
+        d := prsDefFn(tokens, false)
         return &d
 
     case token.Struct:
@@ -419,7 +415,7 @@ func prsInterface(tokens *token.Tokens) ast.Decl {
 
     for tokens.Next().Type != token.BraceR {
         identObj.StartScope()
-        fnHead := prsFnHead(tokens, false, true)
+        fnHead := prsFnHead(tokens, true)
         identObj.EndScope()
 
         heads = append(heads, fnHead)
@@ -487,16 +483,13 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
     funcs := make([]ast.DefFn, 0, len(I.GetFuncs()))
 
     for tokens.Next().Type != token.BraceR {
-        switch tokens.Cur().Type {
-        case token.Fn:
-            funcs = append(funcs, prsDefFn(tokens, false, true))
-        case token.ConstFn:
-            funcs = append(funcs, prsDefFn(tokens, true, true))
-        default:
-            fmt.Fprintf(os.Stderr, "[ERROR] you can only define methods in impl (unexpected token %v)\n", tokens.Cur().Str)
+        if tokens.Cur().Type != token.Fn && tokens.Cur().Type != token.ConstFn {
+            fmt.Fprintf(os.Stderr, "[ERROR] you can only define funcs in impl (unexpected token %v)\n", tokens.Cur().Str)
             fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
             os.Exit(1)
         }
+
+        funcs = append(funcs, prsDefFn(tokens, true))
     }
 
     braceRPos := tokens.Cur().Pos
@@ -511,8 +504,17 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
     return &ast.Impl{ Pos: pos, Impl: impl, BraceLPos: braceLPos, BraceRPos: braceRPos, FnDefs: funcs }
 }
 
-func prsFnHead(tokens *token.Tokens, isConst bool, isMethod bool) ast.FnHead {
-    name := tokens.Cur()
+func prsFnHead(tokens *token.Tokens, isInterfaceFn bool) ast.FnHead {
+    fn := tokens.Cur()
+    if fn.Type != token.Fn && fn.Type != token.ConstFn {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected fn or cfn but got %v\n", fn.Str)
+        fmt.Fprintln(os.Stderr, "\t" + fn.At())
+        os.Exit(1)
+    }
+
+    isConst := fn.Type == token.ConstFn
+
+    name := tokens.Next()
     if name.Type != token.Name {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
         fmt.Fprintln(os.Stderr, "\t" + name.At())
@@ -558,12 +560,11 @@ func prsFnHead(tokens *token.Tokens, isConst bool, isMethod bool) ast.FnHead {
     return ast.FnHead{ Name: name, F: f, Args: argDecs, RetType: retType, IsConst: isConst, IsGeneric: isGeneric, Generic: generic }
 }
 
-func prsDefFn(tokens *token.Tokens, isConst bool, isMethod bool) ast.DefFn {
+func prsDefFn(tokens *token.Tokens, isInterfaceFn bool) ast.DefFn {
     pos := tokens.Cur().Pos
-    tokens.Next()
 
     identObj.StartScope()
-    fnHead := prsFnHead(tokens, isConst, isMethod)
+    fnHead := prsFnHead(tokens, isInterfaceFn)
 
     if tokens.Next().Type != token.BraceL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", tokens.Cur())
@@ -579,7 +580,7 @@ func prsDefFn(tokens *token.Tokens, isConst bool, isMethod bool) ast.DefFn {
 
     def := ast.DefFn{ Pos: pos, FnHead: fnHead, Block: block }
 
-    if isConst {
+    if fnHead.IsConst {
         cmpTime.AddConstFunc(def)
     }
 

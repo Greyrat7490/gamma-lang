@@ -1,8 +1,8 @@
 interface Number {
-    add(a u64, b u64) -> u64
-    sub(a u64, b u64) -> u64
-    inc(self) -> u64
-    print(a u64)
+    fn add(a u64, b u64) -> u64
+    fn sub(a u64, b u64) -> u64
+    fn inc(self) -> u64
+    fn print(a u64)
 }
 
 struct Test {
@@ -128,11 +128,10 @@ fn interface_arg(t Test, t2 Test2) {
 }
 
 interface Interface {
-    // TODO fn or cfn
-    test_append(*self)
+    fn test_append(*self)
     // TODO allow another func with same name?
-    inc2(*self) -> u64
-    new() -> Self
+    fn inc2(*self) -> u64
+    fn new() -> Self
 }
 
 impl Test3 :: Interface {
