@@ -14,6 +14,7 @@ struct Test2 {
 }
 
 struct Test3 {
+    // TODO no comma
     a u8,
     b str,
     c [$]i32
@@ -35,7 +36,7 @@ impl Test :: Number {
     }
 
     fn print(a u64) {
-        // Self:: is optinal
+        // Self:: is optional (TODO force Self::)
         println(fmt("Test: {}", Self::sub(a, 1)))
     }
 }
@@ -68,16 +69,14 @@ impl Test3 :: Number {
     }
 
     fn inc(self Test3) -> u64 {
-        self.c = append::<i32>(self.c, 1) 
         self.a = self.a + 1
-        println(fmt("{}", self.a))
 
-        res u64 := 0
         for i u64, self.c.len {
-            res = res + (self.c[i] as u64)
+            self.c[i] = self.c[i] + 1
         }
 
-        ret res
+        println(vtos::<i32>(self.c))
+        ret self.a
     }
 
     fn add(a u64, b u64) -> u64 {
@@ -95,21 +94,88 @@ fn calc2<T: Number, T2: Number>(lhs u64, rhs u64) -> u64 {
 }
 */
 
-fn main() {
-    t := Test{ 32 }
-    t2 := Test2{ 30 }
-
+fn static_no_ret() {
     Test::print(70)
     Test2::print(69)
+}
 
+fn static_ret() {
     println(fmt("{}", Test::add(30, 39)))
     println(fmt("{}", Test::sub(69, 5)))
+}
 
+fn self_ret(t Test, t2 Test2) {
     println(fmt("{}", t.inc()))
     println(fmt("{}", t2.inc()))
+}
+
+fn self_ret2() {
+    t3 := Test3{ 69, "test", [$]i32{ len: 5 } }
+
+    println(fmt("{}", t3.inc()))
+    println(fmt("{}", t3.inc()))
+    println(fmt("{}", t3.inc()))
+    println("no side effect on self, but same pointer in vec so only side effect at this addr")
+    println("TODO copy vec properly")
+}
+
+fn interface_arg(t Test, t2 Test2) {
     println(fmt("{}", calc(t, t2)))
 
     t.a = t.a + 5
 
     println(fmt("{}", calc(t, t2)))
+}
+
+interface Interface {
+    // TODO fn or cfn
+    test_append(*self)
+    // TODO allow another func with same name?
+    inc2(*self) -> u64
+}
+
+impl Test3 :: Interface {
+    fn test_append(*self) {
+        self.c = append::<i32>(self.c, 1)
+        println(fmt("{}", vtos::<i32>(self.c)))
+    }
+
+    fn inc2(*self) -> u64 {
+        self.a = self.a + 1
+        ret self.a
+    }
+}
+
+fn self_ptr() {
+    t := Test3{ 0, "", [$]i32{ cap: 5 } }
+
+    t.test_append()
+    t.test_append()
+    t.test_append()
+
+    println(fmt("{}", t.inc2()))
+    println(fmt("{}", t.inc2()))
+    println(fmt("{}", t.inc2()))
+}
+
+fn main() {
+    t := Test{ 32 }
+    t2 := Test2{ 30 }
+
+    static_no_ret()
+    println("----")
+
+    static_ret()
+    println("----")
+
+    self_ret(t, t2)
+    println("----")
+
+    self_ret2()
+    println("----")
+
+    interface_arg(t, t2)
+    println("----")
+
+    self_ptr()
 }

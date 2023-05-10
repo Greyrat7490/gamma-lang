@@ -621,7 +621,7 @@ func prsDotExprStruct(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ 
             vals := prsPassArgs(tokens)
             posR := tokens.Cur().Pos
 
-            vals = addSelfArg(vals, obj)
+            vals = addSelfArg(vals, f, obj)
 
             if usedType != nil {
                 if !f.IsGeneric() {
@@ -660,7 +660,7 @@ func prsDotExprInterface(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, t
             vals := prsPassArgs(tokens)
             posR := tokens.Cur().Pos
 
-            vals = addSelfArg(vals, obj)
+            vals = addSelfArg(vals, f, obj)
 
             if usedType != nil {
                 if !f.IsGeneric() {
@@ -719,21 +719,21 @@ func prsDotExpr(tokens *token.Tokens, obj ast.Expr) ast.Expr {
     }
 }
 
-func addSelfArg(values []ast.Expr, obj ast.Expr) []ast.Expr {
+func addSelfArg(values []ast.Expr, f *identObj.Func, obj ast.Expr) []ast.Expr {
     values = append(values, nil)
     copy(values[1:], values)
 
-    /*
-    // TODO auto-deref
-    if t.GetKind() == types.Ptr {
-        values[0] = &ast.Unary{ 
+    expectedSelfType := f.GetArgs()[0]
+
+    if expectedSelfType.GetKind() == types.Ptr &&  obj.GetType().GetKind() != types.Ptr {
+        values[0] = &ast.Unary { 
             Type: types.PtrType{ BaseType: obj.GetType() },
-            Operator: token.Token{ Type: token.Mul, Str: "*" },
+            Operator: token.Token{ Type: token.Amp, Str: "&" },
             Operand: obj,
         }
+    } else {
+        values[0] = obj
     }
-    */
-    values[0] = obj
 
     return values
 }
