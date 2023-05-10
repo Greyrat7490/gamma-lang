@@ -43,9 +43,9 @@ func prsExprWithPrecedence(tokens *token.Tokens, precedence precedence) ast.Expr
 
     case token.BrackL:
         if tokens.Peek().Type == token.XSwitch {
-            return prsVecLit(tokens)
+            expr = prsVecLit(tokens)
         } else {
-            return prsArrayLit(tokens)
+            expr = prsArrayLit(tokens)
         }
 
     case token.Name, token.Self, token.SelfType:
@@ -82,12 +82,11 @@ func prsExprWithPrecedence(tokens *token.Tokens, precedence precedence) ast.Expr
             expr = prsDotExpr(tokens, obj)
 
         case token.BraceL:
-            if obj := identObj.Get(tokens.Cur().Str); obj != nil {
-                if _,ok := obj.(*identObj.Struct); ok {
-                    return prsStructLit(tokens)
-                }
+            if isStruct(tokens.Cur()) || tokens.Cur().Type == token.SelfType {
+                expr = prsStructLit(tokens)
+            } else {
+                expr = prsIdentExpr(tokens)
             }
-            fallthrough
 
         default:
             expr = prsIdentExpr(tokens)
@@ -190,30 +189,46 @@ func getPrecedence(tokens *token.Tokens) precedence {
     }
 }
 
-func prsIdentExpr(tokens *token.Tokens) *ast.Ident {
-    ident := tokens.Cur()
+func prsName(tokens *token.Tokens) token.Token {
+    name := tokens.Cur()
 
-    // if wildcard ("_")
-    if ident.Type == token.UndScr {
-        return &ast.Ident{ Name: "_", Pos: ident.Pos, Obj: nil }
-    }
-
-    if ident.Type == token.SelfType {
+    if name.Type == token.SelfType {
         if identObj.CurImplStruct == nil {
-            fmt.Fprintln(os.Stderr, "[ERROR] Use of Self outside of impl")
-            fmt.Fprintln(os.Stderr, "\t" + ident.At())
+            fmt.Fprintln(os.Stderr, "[ERROR] Self used outside of impl")
+            fmt.Fprintln(os.Stderr, "\t" + name.At())
             os.Exit(1)
         }
 
-        ident.Str = identObj.CurImplStruct.Name
-        ident.Type = token.Name
+        name.Str = identObj.CurImplStruct.Name
+        name.Type = token.Name
     }
 
-    if ident.Type != token.Name && ident.Type != token.Self {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", ident)
-        fmt.Fprintln(os.Stderr, "\t" + ident.At())
+    if name.Type == token.Self {
+        if identObj.CurImplStruct == nil {
+            fmt.Fprintln(os.Stderr, "[ERROR] self used outside of impl")
+            fmt.Fprintln(os.Stderr, "\t" + name.At())
+            os.Exit(1)
+        }
+
+        name.Type = token.Name
+    }
+
+    if name.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
+
+    return name
+}
+
+func prsIdentExpr(tokens *token.Tokens) *ast.Ident {
+    // if wildcard ("_")
+    if tokens.Cur().Type == token.UndScr {
+        return &ast.Ident{ Name: "_", Pos: tokens.Cur().Pos, Obj: nil }
+    }
+
+    ident := prsName(tokens)
 
     if obj := identObj.Get(ident.Str); obj != nil {
         return &ast.Ident{ Name: ident.Str, Pos: ident.Pos, Obj: obj }
@@ -349,12 +364,7 @@ func prsVecLitField(tokens *token.Tokens, lit *ast.VectorLit) {
 }
 
 func prsStructLit(tokens *token.Tokens) *ast.StructLit {
-    name := tokens.Cur()
-    if name.Type != token.Name {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
-    }
+    name := prsName(tokens)
 
     var t types.StructType
     var s *identObj.Struct
@@ -455,12 +465,7 @@ func prsFieldLit(tokens *token.Tokens, omitNames bool) ast.FieldLit {
     var pos token.Pos
 
     if !omitNames {
-        name = tokens.Cur()
-        if name.Type != token.Name {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
-            fmt.Fprintln(os.Stderr, "\t" + name.At())
-            os.Exit(1)
-        }
+        name = prsName(tokens)
 
         if tokens.Next().Type != token.Colon {
             fmt.Fprintf(os.Stderr, "[ERROR] expected a \":\" but got %v\n", tokens.Cur())

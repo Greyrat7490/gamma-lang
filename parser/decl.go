@@ -59,6 +59,14 @@ func prsDecl(tokens *token.Tokens) ast.Decl {
     }
 }
 
+func createSelfType() types.Type {
+    if identObj.CurImplStruct != nil {
+        return *identObj.CurImplStruct
+    }
+
+    return types.StructType{ Name: "Self" }
+}
+
 func prsType(tokens *token.Tokens) types.Type {
     switch tokens.Cur().Type {
     case token.Mul:
@@ -71,6 +79,9 @@ func prsType(tokens *token.Tokens) types.Type {
         } else {
             return prsArrType(tokens)
         }
+
+    case token.SelfType:
+        return createSelfType()
 
     case token.Name:
         if obj := identObj.Get(tokens.Cur().Str); obj != nil {
@@ -655,14 +666,6 @@ func prsOptionalSelfType(tokens *token.Tokens) types.Type {
     }
 
     return nil
-}
-
-func createSelfType() types.Type {
-    if identObj.CurImplStruct != nil {
-        return *identObj.CurImplStruct
-    }
-
-    return types.StructType{ Name: "Self" }
 }
 
 func prsSelf(tokens *token.Tokens) (name token.Token, typ types.Type) {

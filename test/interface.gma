@@ -36,7 +36,7 @@ impl Test :: Number {
     }
 
     fn print(a u64) {
-        // Self:: is optional (TODO force Self::)
+        // Self:: is optinal (TODO force Self::)
         println(fmt("Test: {}", Self::sub(a, 1)))
     }
 }
@@ -132,9 +132,16 @@ interface Interface {
     test_append(*self)
     // TODO allow another func with same name?
     inc2(*self) -> u64
+    new() -> Self
 }
 
 impl Test3 :: Interface {
+    fn new() -> Self {
+        s := Self{ 0, "", [$]i32{ cap: 5 } }  
+        // TODO fix ret StructLit -> segfault
+        ret s
+    }
+
     fn test_append(*self) {
         self.c = append::<i32>(self.c, 1)
         println(fmt("{}", vtos::<i32>(self.c)))
@@ -147,7 +154,7 @@ impl Test3 :: Interface {
 }
 
 fn self_ptr() {
-    t := Test3{ 0, "", [$]i32{ cap: 5 } }
+    t := Test3::new()
 
     t.test_append()
     t.test_append()
