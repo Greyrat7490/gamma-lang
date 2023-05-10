@@ -362,7 +362,9 @@ func RetBigStructExpr(file *bufio.Writer, address addr.Addr, e ast.Expr) {
                 }
             }
 
+            asm.SaveReg(file, asm.RegC)
             file.WriteString("call malloc\n")
+            asm.RestoreReg(file, asm.RegC)
             asm.MovDerefReg(file, address, types.Ptr_Size, asm.RegGroup(0))
 
         default:

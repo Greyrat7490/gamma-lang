@@ -137,9 +137,7 @@ interface Interface {
 
 impl Test3 :: Interface {
     fn new() -> Self {
-        s := Self{ 0, "", [$]i32{ cap: 5 } }  
-        // TODO fix ret StructLit -> segfault
-        ret s
+        ret Self{ 0, "test", [$]i32{ cap: 5 } }  
     }
 
     fn test_append(*self) {
@@ -155,6 +153,7 @@ impl Test3 :: Interface {
 
 fn self_ptr() {
     t := Test3::new()
+    println(fmt("{} {} {} {}", t.a, t.b, t.c.len, t.c.cap))
 
     t.test_append()
     t.test_append()
@@ -163,6 +162,8 @@ fn self_ptr() {
     println(fmt("{}", t.inc2()))
     println(fmt("{}", t.inc2()))
     println(fmt("{}", t.inc2()))
+
+    println(fmt("{} {} {} {}", t.a, t.b, t.c.len, t.c.cap))
 }
 
 fn main() {
