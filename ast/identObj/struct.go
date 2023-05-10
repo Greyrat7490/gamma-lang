@@ -49,7 +49,7 @@ func (s *Struct) GetFieldNames() []string {
     return s.typ.GetFields()
 }
 
-func (s *Struct) GetMethodNames() []string {
+func (s *Struct) GetFuncNames() []string {
     funcs := []string{}
 
     for _,i := range s.impls {
@@ -73,9 +73,9 @@ func (s *Struct) GetInterfaceType(interfaceName string) (hasImpl bool, typ types
     return
 }
 
-func (s *Struct) GetMethod(name string) *Func {
+func (s *Struct) GetFunc(name string) *Func {
     for _,i := range s.impls {
-        f := i.GetMethod(name)
+        f := i.GetFunc(name)
         if f != nil {
             return f
         }

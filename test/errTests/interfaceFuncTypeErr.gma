@@ -1,0 +1,30 @@
+interface Number {
+    fn inc(self) -> u64
+}
+
+struct Test {
+    a u64
+}
+
+struct Test2 {
+    a u32
+}
+
+impl Test :: Number {
+    fn inc(self) -> u64 {
+        ret self.a + 1
+    }
+}
+
+impl Test2 :: Number {
+    fn inc(self Self) -> u64 {
+        ret self.a + 1 as u64
+    }
+}
+
+
+fn main() {
+    t := Test2{ 64 }
+
+    println(fmt("{}", Test::inc(t)))
+}

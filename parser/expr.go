@@ -58,7 +58,7 @@ func prsExprWithPrecedence(tokens *token.Tokens, precedence precedence) ast.Expr
                 expr = prsCallGenericFn(tokens)
 
             } else if tokens.Peek2().Type == token.Name {
-                expr = prsStaticMethod(tokens)
+                expr = prsCallInterfaceFn(tokens)
 
             } else {
                 if isGenericFunc(tokens.Cur()) {
@@ -66,7 +66,7 @@ func prsExprWithPrecedence(tokens *token.Tokens, precedence precedence) ast.Expr
                     fmt.Fprintln(os.Stderr, "\t" + tokens.Peek2().At())
 
                 } else if isStruct(tokens.Cur()) {
-                    fmt.Fprintf(os.Stderr, "[ERROR] expected a static method name after \"::\" for a struct but got %v\n", tokens.Peek2())
+                    fmt.Fprintf(os.Stderr, "[ERROR] expected a interface func name after \"::\" for a struct but got %v\n", tokens.Peek2())
                     fmt.Fprintln(os.Stderr, "\t" + tokens.Peek2().At())
 
                 } else {
@@ -618,7 +618,7 @@ func prsDotExprStruct(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ 
     }
 
     if s,ok := identObj.Get(typ.Name).(*identObj.Struct); ok {
-        if f := s.GetMethod(name.Str); f != nil {
+        if f := s.GetFunc(name.Str); f != nil {
             tokens.Next()
             usedType := prsGenericUsedType(tokens)
 
@@ -643,8 +643,8 @@ func prsDotExprStruct(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ 
                 Values: vals, ParenLPos: posL, ParenRPos: posR }
         }
         
-        fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" has no field/method called \"%s\"\n", typ.Name, name.Str)
-        fmt.Fprintf(os.Stderr, "\tmethods: %v\n", s.GetMethodNames())
+        fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" has no field/func called \"%s\"\n", typ.Name, name.Str)
+        fmt.Fprintf(os.Stderr, "\tfuncs: %v\n", s.GetFuncNames())
         fmt.Fprintf(os.Stderr, "\tfields: %v\n", typ.GetFields())
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" is not defined\n", typ.Name)
@@ -682,8 +682,8 @@ func prsDotExprInterface(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, t
                 Values: vals, ParenLPos: posL, ParenRPos: posR }
         }
 
-        fmt.Fprintf(os.Stderr, "[ERROR] interface \"%s\" has no method called \"%s\"\n", typ.Name, name.Str)
-        fmt.Fprintf(os.Stderr, "\tmethods: %v\n", typ.Funcs)
+        fmt.Fprintf(os.Stderr, "[ERROR] interface \"%s\" has no func called \"%s\"\n", typ.Name, name.Str)
+        fmt.Fprintf(os.Stderr, "\tfuncs: %v\n", typ.Funcs)
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] interface \"%s\" is not defined\n", typ.Name)
     }
@@ -1086,7 +1086,7 @@ func prsCallGenericFn(tokens *token.Tokens) *ast.FnCall {
     return nil
 }
 
-func prsStaticMethod(tokens *token.Tokens) *ast.FnCall {
+func prsCallInterfaceFn(tokens *token.Tokens) *ast.FnCall {
     structIdent := prsIdentExpr(tokens)
 
     if S,ok := structIdent.Obj.(*identObj.Struct); ok {
@@ -1105,7 +1105,7 @@ func prsStaticMethod(tokens *token.Tokens) *ast.FnCall {
         vals := prsPassArgs(tokens)
         posR := tokens.Cur().Pos
 
-        if f := S.GetMethod(name.Str); f != nil {
+        if f := S.GetFunc(name.Str); f != nil {
             if usedType != nil {
                 if !f.IsGeneric() {
                     fmt.Fprintf(os.Stderr, "[ERROR] function %s is not generic\n", name.Str)

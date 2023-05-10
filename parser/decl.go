@@ -522,8 +522,8 @@ func prsFnHead(tokens *token.Tokens, isInterfaceFn bool) ast.FnHead {
     }
 
     var f *identObj.Func = nil
-    if isMethod && identObj.CurImplStruct != nil {
-        f = identObj.DecMethod(name, isConst, identObj.CurImplStruct.Name)
+    if isInterfaceFn && identObj.CurImplStruct != nil {
+        f = identObj.DecInterfaceFunc(name, isConst, identObj.CurImplStruct.Name)
     } else {
         f = identObj.DecFunc(name, isConst)
     }
@@ -535,7 +535,7 @@ func prsFnHead(tokens *token.Tokens, isInterfaceFn bool) ast.FnHead {
         f.SetGeneric(&types.GenericType{ Name: generic.Str, UsedTypes: make([]types.Type, 0) })
     }
 
-    argNames, argTypes := prsArgs(tokens, isMethod)
+    argNames, argTypes := prsArgs(tokens, isInterfaceFn)
     f.SetArgs(argTypes)
 
     if name.Str == "main" {
@@ -695,7 +695,7 @@ func prsSelf(tokens *token.Tokens) (name token.Token, typ types.Type) {
     return
 }
 
-func prsArgs(tokens *token.Tokens, isMethod bool) (names []token.Token, types []types.Type) {
+func prsArgs(tokens *token.Tokens, isInterfaceFn bool) (names []token.Token, types []types.Type) {
     if tokens.Cur().Type != token.ParenL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got %v\n", tokens.Cur())
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
@@ -707,8 +707,8 @@ func prsArgs(tokens *token.Tokens, isMethod bool) (names []token.Token, types []
 
         if t == nil {
             name,t = prsNameType(tokens)
-        } else if !isMethod {
-            fmt.Fprintln(os.Stderr, "[ERROR] Self can only be used for methods (inside impl)")
+        } else if !isInterfaceFn {
+            fmt.Fprintln(os.Stderr, "[ERROR] Self can only be used for interface funcs (inside interface / impl)")
             fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
             os.Exit(1)
         }

@@ -134,7 +134,7 @@ func (i *Impl) GetInterfacePos() token.Pos {
     return i.interface_.decPos
 }
 
-func (i *Impl) GetMethod(name string) *Func {
+func (i *Impl) GetFunc(name string) *Func {
     if obj,ok := i.scope.identObjs[name]; ok {
         if f,ok := obj.(*Func); ok {
             return f

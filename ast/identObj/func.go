@@ -12,7 +12,7 @@ type Func struct {
     typ types.FuncType
     retAddr addr.Addr   // TODO remove
     Scope *Scope
-    methodOf string
+    funcOfStruct string
     isConst bool
 }
 
@@ -26,8 +26,8 @@ func CreateFunc(name token.Token, isConst bool) Func {
     return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, typ: types.FuncType{ Name: name.Str } }
 }
 
-func CreateMethod(name token.Token, isConst bool, structName string) Func {
-    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, methodOf: structName, typ: types.FuncType{ Name: name.Str } }
+func CreateInterfaceFunc(name token.Token, isConst bool, structName string) Func {
+    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, funcOfStruct: structName, typ: types.FuncType{ Name: name.Str } }
 }
 
 func (f *Func) GetArgs() []types.Type {
@@ -62,15 +62,11 @@ func (f *Func) GetRetAddr() addr.Addr {
     return f.retAddr
 }
 
-func (f *Func) GetMethodOf() string {
-    return f.methodOf
-}
-
 func (f *Func) GetMangledName() string {
     name := f.name
 
-    if f.methodOf != "" {
-        name = f.methodOf + "." + name
+    if f.funcOfStruct != "" {
+        name = f.funcOfStruct + "." + name
     }
 
     if f.GetGeneric() != nil {
