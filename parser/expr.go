@@ -825,7 +825,7 @@ func prsUnaryExpr(tokens *token.Tokens) *ast.Unary {
         }
     }
 
-    expr.Type = GetTypeUnary(&expr)
+    expr.Type = getTypeUnary(&expr)
     return &expr
 }
 
@@ -977,7 +977,7 @@ func prsBinary(tokens *token.Tokens, expr ast.Expr, min_precedence precedence) a
         }
 
         b.OperandR = prsExprWithPrecedence(tokens, precedenceL+1)
-        b.Type = GetTypeBinary(&b)
+        b.Type = getTypeBinary(&b)
 
         // left to right as correct order of operations
         if precedenceR > precedenceL {

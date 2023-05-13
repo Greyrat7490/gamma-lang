@@ -1,0 +1,8 @@
+cfn test(u u64) -> u64 {
+    ret u
+}
+
+fn main() {
+    c1 u64 :: 420
+    c :: test(c1)
+}

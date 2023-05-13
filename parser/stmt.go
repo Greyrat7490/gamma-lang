@@ -275,22 +275,41 @@ func prsForStmt(tokens *token.Tokens) ast.For {
     }
 
     if op.Def.Value == nil {
-        op.Def.Value = &ast.IntLit{
-            Repr: 0,
-            Val: token.Token{ Str: "0", Type: token.Number },
-            Type: types.CreateInt(types.I32_Size),
+        if dec.Type.GetKind() == types.Uint {
+            op.Def.Value = &ast.UintLit{
+                Repr: 0,
+                Val: token.Token{ Str: "0", Type: token.Number },
+                Type: types.CreateUint(dec.Type.Size()),
+            }
+        } else {
+            op.Def.Value = &ast.IntLit{
+                Repr: 0,
+                Val: token.Token{ Str: "0", Type: token.Number },
+                Type: types.CreateInt(dec.Type.Size()),
+            }
         }
     }
 
     if op.Step == nil {
+        var lit ast.Expr = nil
+        if dec.Type.GetKind() == types.Uint {
+            lit = &ast.UintLit{
+                Repr: 1,
+                Val: token.Token{ Str: "1", Type: token.Number },
+                Type: types.CreateUint(dec.Type.Size()),
+            }
+        } else {
+            lit = &ast.IntLit{
+                Repr: 1,
+                Val: token.Token{ Str: "1", Type: token.Number },
+                Type: types.CreateInt(dec.Type.Size()),
+            }
+        }
+
         op.Step = &ast.Binary{
             Operator: token.Token{ Type: token.Plus },
             OperandL: &ast.Ident{ Obj: op.Def.V, Name: op.Def.V.GetName(), Pos: op.Def.V.GetPos() },
-            OperandR: &ast.IntLit{
-                Repr: 1,
-                Val: token.Token{ Str: "1", Type: token.Number },
-                Type: types.CreateInt(types.I32_Size),
-            },
+            OperandR: lit,
             Type: dec.Type,
         }
     }

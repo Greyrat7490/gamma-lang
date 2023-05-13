@@ -273,23 +273,33 @@ func typeCheckBinary(o *ast.Binary) {
     t1 := o.OperandL.GetType()
     t2 := o.OperandR.GetType()
 
-    // most typechecking is already done in GetTypeBinary
-    if o.Type != nil {
-        if o.Operator.Type == token.And || o.Operator.Type == token.Or {
-            if t1.GetKind() != types.Bool || t2.GetKind() != types.Bool {
-                fmt.Fprintf(os.Stderr, "[ERROR] expected 2 bools for logic op \"%s\" but got %v and %v\n", o.Operator.Str, t1, t2)
-                fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
-                os.Exit(1)
+    if o.Operator.Type == token.And || o.Operator.Type == token.Or {
+        if t1.GetKind() != types.Bool || t2.GetKind() != types.Bool {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected 2 bools for logic op \"%s\" but got %v and %v\n", o.Operator.Str, t1, t2)
+            fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+            os.Exit(1)
+        }
+    } else if !TypesEqual(t1, t2) {
+        // allow ptr + u64 / u64 + ptr
+        if (t1.GetKind() == types.Ptr && t2.GetKind() == types.Uint) || 
+            (t2.GetKind() == types.Ptr && t1.GetKind() == types.Uint) {
+            if t1.Size() == t2.Size() {
+                if o.Operator.Type != token.Plus && o.Operator.Type != token.Minus {
+                    fmt.Fprintln(os.Stderr, "[ERROR] you can only add or subtract a pointer with an u64")
+                    fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+                    os.Exit(1)
+                }
+                return
             }
         }
 
-        return
-    }
+        return 
 
-    fmt.Fprintf(os.Stderr, "[ERROR] binary operation (%s) has two incompatible types (left: %v right: %v)\n",
-        o.Operator.Str, t1, t2)
-    fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
-    os.Exit(1)
+        fmt.Fprintf(os.Stderr, "[ERROR] binary operation %s has two incompatible types (left: %v right: %v)\n",
+            o.Operator.Str, t1, t2)
+        fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+        os.Exit(1)
+    }
 }
 
 func typeCheckXCase(s *ast.XCase) {

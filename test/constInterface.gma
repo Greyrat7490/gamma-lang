@@ -1,0 +1,37 @@
+interface Const {
+    cfn add(a u64, b u64) -> u64
+    cfn inc(self) -> u64
+    cfn calc(self) -> u64
+}
+
+struct Test {
+    a u64,
+    b u8
+}
+
+impl Test :: Const {
+    cfn add(a u64, b u64) -> u64 {
+        ret a + b
+    }
+
+    cfn inc(self) -> u64 {
+        ret self.a + 1
+    }
+
+    cfn calc(self) -> u64 {
+        v := self.a
+        for i u64, self.b {
+            v = v + i
+        }
+
+        ret v
+    }
+}
+
+fn main() {
+    t :: Test{ 63, 4 }
+
+    println(fmt("{}", Test::add(20, 400)))
+    println(fmt("{}", t.inc()))
+    println(fmt("{}", t.calc()))
+}
