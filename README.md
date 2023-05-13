@@ -87,14 +87,71 @@ fn func<T>(v [$]T) -> [$]T {
 v = func::<i32>(v)
 ```
 
-### methods (like in rust)
+### interfaces
 ```v
-// in work
+// define an interface
+interface Number {
+    fn add(a u64, b u64) -> u64
+    fn inc(self) -> u64
+    fn dec(*self) -> u64
+}
+
+struct Test {
+    a u64
+}
+
+// implement an interface
+impl Test :: Number {
+    fn add(a u64, b u64) -> u64 {
+        ret a + b
+    }
+                // optinal: use explicitly Self type
+                // optinal: use explicitly actual Struct type
+    fn inc(self) -> u64 {
+        ret self.a + 1
+    }
+    
+    fn dec(*self) -> u64 {
+       self.a = self.a + 1
+       ret self.a
+    }
+}
+
+// call interface functions
+res := Test::add(30, 39)
+
+// call like methods
+t := Test{ 64 }
+res := t.inc()
+res2 := t.dec()    // causes a side effect due of *self
+
+Test::inc(t)       // is possible too
+Test::dec(&t)
 ```
 
-### interfaces (like in rust)
+### methods
 ```v
-// in work
+struct Test {
+    a u64
+}
+
+// implment without an interface
+impl Test {
+    fn inc(self) -> u64 {
+        ret self.a + 1
+    }
+
+    fn dec(*self) -> u64 {
+       self.a = self.a + 1
+       ret self.a
+    }
+}
+
+t := Test{ 64 }
+res := t.inc()
+res2 := t.dec()
+Test::inc(t)
+Test::dec(&t)
 ```
 
 ### enums (like in rust)
