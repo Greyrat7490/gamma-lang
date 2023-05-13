@@ -77,7 +77,7 @@ func (i *Interface) GetVTableOffset(funcName string) uint {
 
 type Impl struct {
     decPos token.Pos
-    interface_ *Interface
+    interface_ *Interface // can be nil
     struct_ *Struct
     scope *Scope
 }
@@ -86,19 +86,39 @@ func CreateImpl(decPos token.Pos, interface_ *Interface, struct_ *Struct) Impl {
     return Impl{ decPos: decPos, interface_: interface_, struct_: struct_, scope: curScope }
 }
 
+func (i *Impl) HasInterface() bool {
+    return i.interface_ != nil
+}
+
 func (i *Impl) GetInterfaceName() string {
+    if i.interface_ == nil {
+        return ""
+    }
+
     return i.interface_.name
 }
 
 func (i *Impl) GetStructName() string {
+    if i.interface_ == nil {
+        return ""
+    }
+
     return i.struct_.name
 }
 
 func (i *Impl) GetInterfaceFuncs() []types.FuncType {
+    if i.interface_ == nil {
+        return nil
+    }
+
     return i.interface_.typ.Funcs
 }
 
 func (i *Impl) GetVTableFuncNames() []string {
+    if i.interface_ == nil {
+        return nil
+    }
+
     names := make([]string, 0, len(i.interface_.typ.Funcs))
 
     for _,f := range i.interface_.typ.Funcs {
@@ -111,6 +131,10 @@ func (i *Impl) GetVTableFuncNames() []string {
 }
 
 func (i *Impl) GetInterfaceFuncNames() []string {
+    if i.interface_ == nil {
+        return nil
+    }
+
     names := make([]string, 0, len(i.interface_.typ.Funcs))
 
     for _,f := range i.interface_.typ.Funcs {
@@ -121,9 +145,11 @@ func (i *Impl) GetInterfaceFuncNames() []string {
 }
 
 func (i *Impl) GetInterfaceFuncPos(name string) token.Pos {
-    for idx, f := range i.interface_.typ.Funcs {
-        if f.Name == name {
-            return i.interface_.funcs[idx].decPos
+    if i.interface_ != nil {
+        for idx, f := range i.interface_.typ.Funcs {
+            if f.Name == name {
+                return i.interface_.funcs[idx].decPos
+            }
         }
     }
 
@@ -131,6 +157,10 @@ func (i *Impl) GetInterfaceFuncPos(name string) token.Pos {
 }
 
 func (i *Impl) GetInterfacePos() token.Pos {
+    if i.interface_ == nil {
+        return token.Pos{}
+    }
+
     return i.interface_.decPos
 }
 

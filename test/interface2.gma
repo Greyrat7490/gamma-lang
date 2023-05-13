@@ -1,0 +1,44 @@
+struct Test {
+    a u64
+}
+
+impl Test {
+    fn add(a u64, b u64) -> u64 {
+        ret a + b
+    }
+
+    fn sub(a u64, b u64) -> u64 {
+        ret a - b
+    }
+
+    fn inc(self) -> u64 {
+        ret Self::add(self.a, 1) 
+    }
+
+    fn inc2(*self) -> u64 {
+        self.a = self.a + 1
+        ret self.a
+    }
+
+    fn print_(self) {
+        println(fmt("{}", self.a))
+    }
+}
+
+fn main() {
+    t := Test{ 69 }
+    t.print_()
+    println(fmt("{}", t.inc())) 
+    t.print_()
+
+    println("--------")
+
+    t.print_()
+    println(fmt("{}", t.inc2())) 
+    t.print_()
+
+    println("--------")
+
+    println(fmt("{}", Test::add(30, 39)))
+    println(fmt("{}", Test::sub(69, 5)))
+}

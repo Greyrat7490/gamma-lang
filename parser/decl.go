@@ -438,18 +438,23 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
         os.Exit(1)
     }
 
-    // TODO: no interface given -> create new one for the struct
-    if tokens.Next().Type != token.DefConst {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a \"::\" but got %v\n", tokens.Cur().Str)
-        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-        os.Exit(1)
-    }
+    var I *identObj.Interface = nil
+    if tokens.Peek().Type == token.DefConst {
+        tokens.Next()
+        InterfaceName := tokens.Next()
+        if InterfaceName.Type != token.Name {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", InterfaceName)
+            fmt.Fprintln(os.Stderr, "\t" + InterfaceName.At())
+            os.Exit(1)
+        }
 
-    InterfaceName := tokens.Next()
-    if InterfaceName.Type != token.Name {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", InterfaceName)
-        fmt.Fprintln(os.Stderr, "\t" + InterfaceName.At())
-        os.Exit(1)
+        i,ok := identObj.Get(InterfaceName.Str).(*identObj.Interface)
+        if !ok || i == nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] interface \"%s\" is not defined\n", InterfaceName.Str)
+            fmt.Fprintln(os.Stderr, "\t" + InterfaceName.At())
+            os.Exit(1)
+        }
+        I = i
     }
 
     S,ok := identObj.Get(StructName.Str).(*identObj.Struct)
@@ -462,13 +467,6 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
     sType := S.GetType().(types.StructType)
     identObj.CurImplStruct = &sType
 
-    I,ok := identObj.Get(InterfaceName.Str).(*identObj.Interface)
-    if !ok || I == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] interface \"%s\" is not defined\n", InterfaceName.Str)
-        fmt.Fprintln(os.Stderr, "\t" + InterfaceName.At())
-        os.Exit(1)
-    }
-
     braceLPos := tokens.Next().Pos
     if tokens.Cur().Type != token.BraceL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a \"{\" but got %v\n", tokens.Cur().Str)
@@ -480,7 +478,9 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
     impl := identObj.CreateImpl(pos, I, S)
     S.AddImpl(impl)
 
-    funcs := make([]ast.DefFn, 0, len(I.GetFuncs()))
+    funcsReservedLen := 5
+    if I != nil { funcsReservedLen = len(I.GetFuncs()) }
+    funcs := make([]ast.DefFn, 0, funcsReservedLen)
 
     for tokens.Next().Type != token.BraceR {
         if tokens.Cur().Type != token.Fn && tokens.Cur().Type != token.ConstFn {

@@ -82,7 +82,13 @@ func typeCheckDefFn(d *ast.DefFn) {
     }
 }
 
-func typeCheckImpl(d *ast.Impl) {
+func typeCheckImplNoInterface(d *ast.Impl) {
+    for _,f := range d.FnDefs {
+        typeCheckDefFn(&f)
+    }
+}
+
+func typeCheckInterfaceImplemented(d *ast.Impl) {
     err := false
 
     for _,expected := range d.Impl.GetInterfaceFuncs() {
@@ -135,6 +141,14 @@ func typeCheckImpl(d *ast.Impl) {
     }
 
     if err { os.Exit(1) }
+}
+
+func typeCheckImpl(d *ast.Impl) {
+    if d.Impl.HasInterface() {
+        typeCheckInterfaceImplemented(d)
+    } else {
+        typeCheckImplNoInterface(d)
+    }
 }
 
 func printFuncs(interfaceFuncs []identObj.Func, implFuncs []ast.DefFn) {
