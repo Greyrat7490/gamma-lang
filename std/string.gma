@@ -69,13 +69,26 @@ fn parse_hex(s str, valid *bool) -> u64 {
             ret 0
 
         // 0-9
-        ('9' as u8): digit = digit - ('0' as u8)
+        ('9' as u8): 
+            digit = digit - ('0' as u8)
 
         // A-F
-        ('F' as u8) && digit >= ('A' as u8): digit = digit - ('A' as u8) + 10
+        ('F' as u8):
+            if digit < ('A' as u8) {
+                *valid = false
+                ret 0
+            } 
+            
+            digit = digit - ('A' as u8) + 10
 
         // a-f
-        ('f' as u8) && digit >= ('a' as u8): digit = digit - ('a' as u8) + 10
+        ('f' as u8):
+            if digit < ('a' as u8) {
+                *valid = false
+                ret 0
+            } 
+            
+            digit = digit - ('a' as u8) + 10
 
         _:
             *valid = false
