@@ -529,24 +529,11 @@ func prsArrayLitExprs(tokens *token.Tokens, t types.ArrType) ast.ArrayLit {
         }
     }
 
-    // check literal length and missing characters
-    if parsedLen != t.Len {
-        if parsedLen > t.Len {
-            fmt.Fprintf(os.Stderr, "[ERROR] too big array literal (expected len %d, but got %d)\n", t.Len, parsedLen)
-            fmt.Fprintf(os.Stderr, "\tarray type: %v\n", t)
-            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-        } else {
-            switch tokens.Cur().Type {
-            case token.Comma, token.BraceR:
-                fmt.Fprintf(os.Stderr, "[ERROR] too small array literal (expected len %d, but got %d)\n", t.Len, parsedLen)
-                fmt.Fprintf(os.Stderr, "\tarray type: %v\n", t)
-                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-            default:
-                fmt.Fprintln(os.Stderr, "[ERROR] missing \",\"")
-                fmt.Fprintf(os.Stderr, "\tarray type: %v\n", t)
-                fmt.Fprintln(os.Stderr, "\t" + tokens.Last().At())
-            }
-        }
+    // check missing ,
+    if parsedLen < t.Len && tokens.Cur().Type != token.Comma && tokens.Cur().Type != token.BraceR {
+        fmt.Fprintln(os.Stderr, "[ERROR] missing \",\"")
+        fmt.Fprintf(os.Stderr, "\tarray type: %v\n", t)
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Last().At())
         os.Exit(1)
     }
 

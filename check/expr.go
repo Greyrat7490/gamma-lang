@@ -229,12 +229,25 @@ func typeCheckUnary(e *ast.Unary) {
 
 func typeCheckArrayLit(o *ast.ArrayLit) {
     for _,v := range o.Values {
+        typeCheckExpr(v)
+
         t := v.GetType()
         if !checkTypeExpr(t, v) {
             fmt.Fprintf(os.Stderr, "[ERROR] all values in the ArrayLit should be of type %v but got a value of %v\n", o.Type.BaseType, t)
             fmt.Fprintln(os.Stderr, "\t" + v.At())
             os.Exit(1)
         }
+    }
+
+    if uint64(len(o.Values)) != 0 && uint64(len(o.Values)) != o.Type.Len {
+        if uint64(len(o.Values)) > o.Type.Len {
+            fmt.Fprintf(os.Stderr, "[ERROR] too big array literal (expected len %d, but got %d)\n", o.Type.Len, len(o.Values))
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] too small array literal (expected len %d, but got %d)\n", o.Type.Len, len(o.Values))
+        }
+        fmt.Fprintf(os.Stderr, "\tarray type: %v\n", o.Type)
+        fmt.Fprintln(os.Stderr, "\t" + o.At())
+        os.Exit(1)
     }
 }
 
