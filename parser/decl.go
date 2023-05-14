@@ -137,30 +137,27 @@ func prsArrType(tokens *token.Tokens) types.ArrType {
         os.Exit(1)
     }
 
-    var lens []uint64
-    for tokens.Cur().Type == token.BrackL {
-        pos := tokens.Next().Pos
-        expr := prsExpr(tokens)
+    pos := tokens.Next().Pos
+    expr := prsExpr(tokens)
 
-        if length,ok := cmpTime.ConstEvalUint(expr); ok {
-            lens = append(lens, length)
-        } else {
-            fmt.Fprintln(os.Stderr, "[ERROR] length of an array has to a const/eval at compile time")
-            fmt.Fprintln(os.Stderr, "\t" + pos.At())
-            os.Exit(1)
-        }
-
-
-        if tokens.Next().Type != token.BrackR {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected %v but got %v\n", token.BrackR, tokens.Cur())
-            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-            os.Exit(1)
-        }
-
-        tokens.Next()
+    Len := uint64(0)
+    if length,ok := cmpTime.ConstEvalUint(expr); ok {
+        Len = length
+    } else {
+        fmt.Fprintln(os.Stderr, "[ERROR] length of an array has to a const/eval at compile time")
+        fmt.Fprintln(os.Stderr, "\t" + pos.At())
+        os.Exit(1)
     }
 
-    return types.ArrType{ BaseType: prsType(tokens), Lens: lens }
+    if tokens.Next().Type != token.BrackR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected %v but got %v\n", token.BrackR, tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+
+    tokens.Next()
+
+    return types.ArrType{ BaseType: prsType(tokens), Len: Len }
 }
 
 func prsDecVar(tokens *token.Tokens) ast.DecVar {

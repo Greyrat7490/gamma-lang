@@ -264,7 +264,7 @@ func fieldAddrToReg(file *bufio.Writer, e *ast.Field, r asm.RegGroup, offset int
 func GenField(file *bufio.Writer, e *ast.Field) {
     switch t := e.Obj.GetType().(type) {
     case types.ArrType:
-        asm.MovRegVal(file, asm.RegA, types.Ptr_Size, fmt.Sprint(t.Lens[0]))
+        asm.MovRegVal(file, asm.RegA, types.Ptr_Size, fmt.Sprint(t.Len))
 
     case types.VecType:
         FieldAddrToReg(file, e, asm.RegA)

@@ -123,8 +123,8 @@ func typeCheckIndexed(e *ast.Indexed) {
         switch e.Index.GetType().GetKind() {
         case types.Uint, types.Int:
             if c,ok := cmpTime.ConstEvalUint(e.Index); ok {
-                if c >= t.Lens[0] || c < 0 {
-                    fmt.Fprintf(os.Stderr, "[ERROR] index %d is out of bounds [%d]\n", c, t.Lens[0])
+                if c >= t.Len || c < 0 {
+                    fmt.Fprintf(os.Stderr, "[ERROR] index %d is out of bounds [%d]\n", c, t.Len)
                     fmt.Fprintf(os.Stderr, "\tarray type: %v\n", e.ArrType)
                     fmt.Fprintln(os.Stderr, "\t" + e.Index.At())
                     os.Exit(1)

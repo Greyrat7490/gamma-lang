@@ -321,7 +321,7 @@ func (e *Indexed) Flatten() Expr {
                     Type: idxType,
                     Operator: token.Token{ Str: "*", Type: token.Mul },
                     OperandL: i.Flatten(),
-                    OperandR: &UintLit{ Repr: t.Lens[0], Type: idxType },
+                    OperandR: &UintLit{ Repr: t.Len, Type: idxType },
                 },
             }
         }

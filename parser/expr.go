@@ -289,15 +289,18 @@ func prsStrLit(tokens *token.Tokens) *ast.StrLit {
 }
 
 func prsArrayLit(tokens *token.Tokens) *ast.ArrayLit {
-    lit := ast.ArrayLit{ Pos: tokens.Cur().Pos }
+    pos := tokens.Cur().Pos
 
-    lit.Type = prsArrType(tokens)
+    typ := prsArrType(tokens)
 
-    lit.BraceLPos = tokens.Next().Pos
-    lit.Values = prsArrayLitExprs(tokens, lit.Type, 0)
-    lit.BraceRPos = tokens.Cur().Pos
+    braceLPos := tokens.Next().Pos
+    lit := prsArrayLitExprs(tokens, typ)
+    braceRPos := tokens.Cur().Pos
 
-    lit.Idx = array.Add(lit.Type, constEvalExprs(lit.Values))
+    lit.BraceLPos = braceLPos
+    lit.BraceRPos = braceRPos
+    lit.Pos = pos
+    lit.Idx = array.Add(typ, constEvalExprs(lit.Values))
     return &lit
 }
 
@@ -483,31 +486,40 @@ func prsFieldLit(tokens *token.Tokens, omitNames bool) ast.FieldLit {
 }
 
 func constEvalExprs(values []ast.Expr) []constVal.ConstVal {
-    res := make([]constVal.ConstVal, len(values))
+    res := make([]constVal.ConstVal, 0, len(values))
 
-    for i,v := range values {
-        res[i] = cmpTime.ConstEval(v)
+    for _,v := range values {
+        res = append(res, cmpTime.ConstEvalArrWithNils(v))
     }
 
     return res
 }
 
-func prsArrayLitExprs(tokens *token.Tokens, t types.ArrType, depth int) (exprs []ast.Expr) {
-    parsedLen := uint64(1)
-
+func prsArrayLitExprs(tokens *token.Tokens, t types.ArrType) ast.ArrayLit {
     if tokens.Cur().Type != token.BraceL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", tokens.Cur())
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
 
-    if tokens.Peek().Type == token.BraceR {
-        tokens.Next()
-        return
+    exprs := []ast.Expr{}
+
+    if tokens.Next().Type == token.BraceR {
+        return ast.ArrayLit{ Values: exprs, Type: t, Idx: ^uint64(0) }
     }
 
-    if len(t.Lens) - depth == 1 {
-        tokens.Next()
+    parsedLen := uint64(1)
+    if baseType,ok := t.BaseType.(types.ArrType); ok {
+        es := prsArrayLitExprs(tokens, baseType)
+        exprs = append(exprs, &es)
+
+        for tokens.Next().Type == token.Comma {
+            if tokens.Next().Type == token.BraceR { break } // trailing comma
+            es := prsArrayLitExprs(tokens, baseType)
+            exprs = append(exprs, &es)
+            parsedLen++
+        }
+    } else {
         exprs = append(exprs, prsExpr(tokens))
 
         for tokens.Next().Type == token.Comma {
@@ -515,34 +527,18 @@ func prsArrayLitExprs(tokens *token.Tokens, t types.ArrType, depth int) (exprs [
             exprs = append(exprs, prsExpr(tokens))
             parsedLen++
         }
-
-    } else {
-        tokens.Next()
-        es := prsArrayLitExprs(tokens, t, depth+1)
-        for _, e := range es {
-            exprs = append(exprs, e)
-        }
-
-        for tokens.Next().Type == token.Comma {
-            if tokens.Next().Type == token.BraceR { break } // trailing comma
-            es := prsArrayLitExprs(tokens, t, depth+1)
-            for _, e := range es {
-                exprs = append(exprs, e)
-            }
-            parsedLen++
-        }
     }
 
     // check literal length and missing characters
-    if parsedLen != t.Lens[depth] {
-        if parsedLen > t.Lens[depth] {
-            fmt.Fprintf(os.Stderr, "[ERROR] too big array literal (expected len %d, but got %d)\n", t.Lens[depth], parsedLen)
+    if parsedLen != t.Len {
+        if parsedLen > t.Len {
+            fmt.Fprintf(os.Stderr, "[ERROR] too big array literal (expected len %d, but got %d)\n", t.Len, parsedLen)
             fmt.Fprintf(os.Stderr, "\tarray type: %v\n", t)
             fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         } else {
             switch tokens.Cur().Type {
             case token.Comma, token.BraceR:
-                fmt.Fprintf(os.Stderr, "[ERROR] too small array literal (expected len %d, but got %d)\n", t.Lens[depth], parsedLen)
+                fmt.Fprintf(os.Stderr, "[ERROR] too small array literal (expected len %d, but got %d)\n", t.Len, parsedLen)
                 fmt.Fprintf(os.Stderr, "\tarray type: %v\n", t)
                 fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
             default:
@@ -560,7 +556,7 @@ func prsArrayLitExprs(tokens *token.Tokens, t types.ArrType, depth int) (exprs [
         os.Exit(1)
     }
 
-    return
+    return ast.ArrayLit{ Values: exprs, Type: t, Idx: ^uint64(0) }
 }
 
 func prsIndexExpr(tokens *token.Tokens, e ast.Expr) *ast.Indexed {
@@ -578,11 +574,7 @@ func prsIndexExpr(tokens *token.Tokens, e ast.Expr) *ast.Indexed {
 
     switch t := res.ArrType.(type) {
     case types.ArrType:
-        if len(t.Lens) == 1 {
-            res.Type = t.BaseType
-        } else {
-            res.Type = types.ArrType{ BaseType: t.BaseType, Lens: t.Lens[1:] }
-        }
+        res.Type = t.BaseType
     case types.VecType:
         res.Type = t.BaseType
     default:

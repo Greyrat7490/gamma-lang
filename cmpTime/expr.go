@@ -42,7 +42,15 @@ func ConstEvalUint(e ast.Expr) (uint64, bool) {
     return 0, false
 }
 
+func ConstEvalArrWithNils(e ast.Expr) constVal.ConstVal {
+    return constEval(e, true)
+}
+
 func ConstEval(e ast.Expr) constVal.ConstVal {
+    return constEval(e, false)
+}
+
+func constEval(e ast.Expr, arrWithNils bool) constVal.ConstVal {
     switch e := e.(type) {
     case *ast.IntLit:
         return (*constVal.IntConst)(&e.Repr)
@@ -58,13 +66,19 @@ func ConstEval(e ast.Expr) constVal.ConstVal {
     case *ast.StrLit:
         return (*constVal.StrConst)(&e.Idx)
     case *ast.ArrayLit:
-        elems := make([]constVal.ConstVal, len(e.Values))
-        for i,v := range e.Values {
-            c := ConstEval(v)
-            if c == nil {
-                return nil
+        elems := make([]constVal.ConstVal, 0, len(e.Values))
+        if arrWithNils {
+            for _,v := range e.Values {
+                elems = append(elems, ConstEvalArrWithNils(v)) 
             }
-            elems[i] = c
+        } else {
+            for _,v := range e.Values {
+                c := ConstEval(v)
+                if c == nil {
+                    return nil
+                }
+                elems = append(elems, c) 
+            }
         }
 
         return &constVal.ArrConst{ Idx: e.Idx, Elems: elems, Type: e.Type }
@@ -177,7 +191,7 @@ func ConstEvalStructLit(e *ast.StructLit) constVal.ConstVal {
 
 func ConstEvalField(e *ast.Field) constVal.ConstVal {
     if t,ok := e.Obj.GetType().(types.ArrType); ok {
-        l := t.Lens[0]
+        l := t.Len
         return (*constVal.UintConst)(&l)
     } else {
         if c := ConstEval(e.Obj); c != nil {

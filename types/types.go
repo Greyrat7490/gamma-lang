@@ -62,7 +62,7 @@ type PtrType struct {
 }
 type ArrType struct {
     BaseType Type
-    Lens []uint64
+    Len uint64
 }
 type VecType struct {
     BaseType Type
@@ -343,12 +343,7 @@ func (t PtrType)  String() string {
     return "*" + t.BaseType.String()
 }
 func (t ArrType)  String() string {
-    res := ""
-    for _,l := range t.Lens {
-        res += fmt.Sprintf("[%d]", l)
-    }
-
-    return res + t.BaseType.String()
+    return fmt.Sprintf("[%d]%s", t.Len, t.BaseType)
 }
 func (t VecType) String() string {
     return "[$]" + t.BaseType.String()
@@ -478,16 +473,8 @@ func Equal(destType Type, srcType Type) bool {
 
     case ArrType:
         if t2,ok := srcType.(ArrType); ok {
-            if Equal(t.BaseType, t2.BaseType) {
-                if len(t.Lens) == len(t2.Lens) {
-                    for i,l := range t.Lens {
-                        if l != t2.Lens[i] {
-                            return false
-                        }
-                    }
-
-                    return true
-                }
+            if t.Len == t2.Len {
+                return Equal(t.BaseType, t2.BaseType)
             }
         }
 

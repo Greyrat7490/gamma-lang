@@ -7,9 +7,9 @@ import (
     "gamma/types"
     "gamma/types/str"
     "gamma/types/addr"
-    "gamma/types/array"
     "gamma/ast"
     "gamma/ast/identObj/vars"
+    "gamma/cmpTime"
     "gamma/cmpTime/constVal"
     "gamma/gen/asm/x86_64"
     "gamma/gen/asm/x86_64/nasm"
@@ -192,13 +192,7 @@ func DerefSetExpr(file *bufio.Writer, dst addr.Addr, t types.Type, val ast.Expr)
 
     case types.ArrType:
         if lit,ok := val.(*ast.ArrayLit); ok {
-            arrAddr := addr.Addr{ BaseAddr: fmt.Sprintf("_arr%d", lit.Idx) }
-            for i, v := range array.GetValues(lit.Idx) {
-                if v == nil {
-                    DerefSetExpr(file, arrAddr.Offseted(int64(i) * int64(t.BaseType.Size())), t.BaseType, lit.Values[i])
-                }
-            }
-            asm.MovDerefVal(file, dst, types.Arr_Size, arrAddr.BaseAddr)
+            derefSetArrLit(file, dst, t, lit)
         } else {
             GenExpr(file, val)
             asm.MovDerefReg(file, dst, t.Size(), asm.RegGroup(0))
@@ -210,6 +204,30 @@ func DerefSetExpr(file *bufio.Writer, dst addr.Addr, t types.Type, val ast.Expr)
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (DerefSetExpr)\n", t)
         os.Exit(1)
+    }
+}
+
+func getActualArrBaseSize(t types.Type) uint64 {
+    if t,ok := t.(types.ArrType); ok {
+        return t.Len * getActualArrBaseSize(t.BaseType)
+    }
+
+    return uint64(t.Size())
+}
+
+func derefSetArrLit(file *bufio.Writer, dst addr.Addr, t types.ArrType, lit *ast.ArrayLit) {
+    if lit.Idx != ^uint64(0) {
+        arrAddr := addr.Addr{ BaseAddr: fmt.Sprintf("_arr%d", lit.Idx) }
+        for i, v := range lit.Values {
+            DerefSetExpr(file, arrAddr.Offseted(int64(i) * int64(getActualArrBaseSize(t.BaseType))), t.BaseType, v)
+        }
+        asm.MovDerefVal(file, dst, lit.Type.Size(), arrAddr.BaseAddr)
+    } else {
+        for i, v := range lit.Values {
+            if cmpTime.ConstEval(v) == nil {
+                DerefSetExpr(file, dst.Offseted(int64(i) * int64(getActualArrBaseSize(t.BaseType))), t.BaseType, v)
+            }
+        }
     }
 }
 

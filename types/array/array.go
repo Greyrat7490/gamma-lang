@@ -14,11 +14,7 @@ var arrayData []constVal.ArrConst
 
 func SetElem(arrIdx uint64, idx uint64, val constVal.ConstVal) {
     if len(arrayData[arrIdx].Elems) == 0 {
-        sum := uint64(0)
-        for _,l := range arrayData[arrIdx].Type.Lens {
-            sum += l
-        }
-        arrayData[arrIdx].Elems = make([]constVal.ConstVal, sum)
+        arrayData[arrIdx].Elems = make([]constVal.ConstVal, arrayData[arrIdx].Type.Len)
     }
 
     arrayData[arrIdx].Elems[idx] = val
@@ -34,15 +30,20 @@ func Add(t types.ArrType, elems []constVal.ConstVal) uint64 {
     return arr.Idx
 }
 
+func getBaseAndLength(t types.ArrType) (baseType types.Type, lenght uint64) {
+    if t,ok := t.BaseType.(types.ArrType); ok {
+        b,l := getBaseAndLength(t)
+        return b,l*t.Len
+    }
+
+    return t.BaseType, t.Len
+}
+
 func Gen() {
     for i,arr := range arrayData {
         if len(arr.Elems) == 0 {
-            sum := uint64(0)
-            for _,l := range arr.Type.Lens {
-                sum += l
-            }
-
-            nasm.AddBss(fmt.Sprintf("_arr%d: %s %d", i, asm.GetBssSize(arr.Type.BaseType.Size()), sum))
+            baseType, lenSum := getBaseAndLength(arr.Type)
+            nasm.AddBss(fmt.Sprintf("_arr%d: %s %d", i, asm.GetBssSize(baseType.Size()), lenSum))
         } else {
             nasm.AddData(fmt.Sprintf("_arr%d:", i))
             addArr(&arr)
@@ -68,10 +69,18 @@ func addDefault(t types.Type) {
     case types.StrType:
         nasm.AddData(fmt.Sprintf("  %s 0", asm.GetDataSize(types.Ptr_Size)))
         nasm.AddData(fmt.Sprintf("  %s 0", asm.GetDataSize(types.U32_Size)))
+
     case types.StructType:
         for _,t := range t.Types {
             addDefault(t)
         }
+
+    case types.ArrType:
+        baseType, lenSum := getBaseAndLength(t)
+        for i := uint64(0); i < lenSum; i++ {
+            nasm.AddData(fmt.Sprintf("  %s 0", asm.GetDataSize(baseType.Size())))
+        }
+
     default:
         nasm.AddData(fmt.Sprintf("  %s 0", asm.GetDataSize(t.Size())))
     }
