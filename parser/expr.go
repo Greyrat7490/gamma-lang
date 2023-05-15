@@ -943,11 +943,10 @@ func prsBinary(tokens *token.Tokens, expr ast.Expr, min_precedence precedence) a
         var b ast.Binary
         b.OperandL = expr
 
-        precedenceL := getPrecedence(tokens)
+        precedence := getPrecedence(tokens)
         b.Operator = tokens.Next()
 
         tokens.Next()
-        precedenceR := getPrecedence(tokens)
 
         // switch/xswitch
         if tokens.Cur().Type == token.BraceL {
@@ -955,54 +954,13 @@ func prsBinary(tokens *token.Tokens, expr ast.Expr, min_precedence precedence) a
             return &b
         }
 
-        b.OperandR = prsExprWithPrecedence(tokens, precedenceL+1)
+        b.OperandR = prsExprWithPrecedence(tokens, precedence+1)
         b.Type = getTypeBinary(&b)
-
-        // left to right as correct order of operations
-        if precedenceR > precedenceL {
-            swap(&b)
-        }
 
         expr = &b
     }
 
     return expr
-}
-
-func swap(expr *ast.Binary) {
-    switch expr.Operator.Type {
-    case token.Minus:
-        expr.Operator.Type = token.Plus
-        expr.Operator.Str = "+"
-
-        t := token.Token{ Type: token.Minus, Str: "-" }
-        expr.OperandR = &ast.Unary{ Operator: t, Operand: expr.OperandR, Type: expr.Type }
-
-    // TODO: proper fix
-    // only tmp
-    case token.Div:
-        return
-
-    case token.Geq:
-        expr.Operator.Type = token.Leq
-        expr.Operator.Str = "<="
-
-    case token.Leq:
-        expr.Operator.Type = token.Geq
-        expr.Operator.Str = ">="
-
-    case token.Grt:
-        expr.Operator.Type = token.Lss
-        expr.Operator.Str = "<"
-
-    case token.Lss:
-        expr.Operator.Type = token.Grt
-        expr.Operator.Str = ">"
-    }
-
-    tmp := expr.OperandR
-    expr.OperandR = expr.OperandL
-    expr.OperandL = tmp
 }
 
 func prsGenericUsedType(tokens *token.Tokens) types.Type {
