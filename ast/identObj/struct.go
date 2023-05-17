@@ -61,6 +61,7 @@ func (s *Struct) GetFuncNames() []string {
 
 func (s *Struct) AddImpl(impl Impl) {
     s.impls = append(s.impls, impl)
+    s.typ.Interfaces[impl.interface_.name] = impl.interface_.typ
 }
 
 func (s *Struct) GetInterfaceType(interfaceName string) (hasImpl bool, typ types.InterfaceType) {

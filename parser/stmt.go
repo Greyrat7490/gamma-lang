@@ -235,7 +235,16 @@ func prsWhileStmt(tokens *token.Tokens) ast.While {
             op.Def.Value = expr
             tokens.Next()
         } else {
-            op.Def.Value = &ast.IntLit{ Repr: 0, Val: token.Token{ Str: "0" }, Type: types.CreateInt(types.I32_Size) }
+            switch t := dec.Type.(type) {
+            case types.IntType:
+                op.Def.Value = &ast.IntLit{ Repr: 0, Val: token.Token{ Str: "0" }, Type: t }
+            case types.UintType:
+                op.Def.Value = &ast.UintLit{ Repr: 0, Val: token.Token{ Str: "0" }, Type: t }
+            default:
+                fmt.Fprintf(os.Stderr, "[ERROR] expected an int/uint as iterator type but got %v\n", dec.Type)
+                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+                os.Exit(1)
+            }
             op.Cond = expr
         }
     } else {

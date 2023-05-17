@@ -6,6 +6,7 @@ import (
     "reflect"
     "gamma/ast"
     "gamma/ast/identObj"
+    "gamma/types"
 )
 
 func typeCheckDecl(d ast.Decl) {
@@ -96,7 +97,7 @@ func typeCheckInterfaceImplemented(d *ast.Impl) {
         for _,f := range d.FnDefs {
             typeCheckDefFn(&f)
             if f.FnHead.Name.Str == expected.Name {
-                if !TypesEqual(expected, f.FnHead.F.GetType()) {
+                if !types.Equal(expected, f.FnHead.F.GetType()) {
                     fmt.Fprintln(os.Stderr, "[ERROR] different function signatures in interface and impl")
                     fmt.Fprintln(os.Stderr, "\texpected: " + expected.String())
                     fmt.Fprintln(os.Stderr, "\tgot:      " + f.FnHead.F.String())
@@ -126,7 +127,7 @@ func typeCheckInterfaceImplemented(d *ast.Impl) {
             found := false
             for _,expected := range d.Impl.GetInterfaceFuncs() {
                 if f.FnHead.Name.Str == expected.Name {
-                    if TypesEqual(expected, f.FnHead.F.GetType()) {
+                    if types.Equal(expected, f.FnHead.F.GetType()) {
                         found = true
                         break
                     }

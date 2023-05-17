@@ -56,8 +56,8 @@ func prsDecl(tokens *token.Tokens) ast.Decl {
 }
 
 func createSelfType() types.Type {
-    if identObj.CurImplStruct != nil {
-        return *identObj.CurImplStruct
+    if identObj.CurSelfType != nil {
+        return identObj.CurSelfType
     }
 
     return types.StructType{ Name: "Self" }
@@ -293,12 +293,17 @@ func prsDefConst(tokens *token.Tokens, name token.Token, t types.Type) ast.DefCo
     return ast.DefConst{ C: identObj.DecConst(name, t, v), Type: t, ColPos: pos, Value: val }
 }
 
+func inferType(val ast.Expr) types.Type {
+    t := val.GetType()
+    return types.DisableFlexable(t)
+}
+
 func prsDefVarInfer(tokens *token.Tokens, name token.Token) ast.DefVar {
     pos := tokens.Cur().Pos
     tokens.Next()
     val := prsExpr(tokens)
 
-    t := val.GetType()
+    t := inferType(val)
     if t == nil {
         if f,ok := val.(*ast.FnCall); ok {
             fmt.Fprintf(os.Stderr, "[ERROR] %s returns nothing\n", f.Ident.Name)
@@ -317,7 +322,7 @@ func prsDefConstInfer(tokens *token.Tokens, name token.Token) ast.DefConst {
     tokens.Next()
     val := prsExpr(tokens)
 
-    t := val.GetType()
+    t := inferType(val)
     if t == nil {
         if f,ok := val.(*ast.FnCall); ok {
             fmt.Fprintf(os.Stderr, "[ERROR] %s returns nothing\n", f.Ident.Name)
@@ -407,6 +412,7 @@ func prsInterface(tokens *token.Tokens) ast.Decl {
     braceLPos := tokens.Next().Pos
     identObj.StartScope()
     I := identObj.DecInterface(name)
+    identObj.CurSelfType = I.GetType()
 
     heads := make([]ast.FnHead, 0)
 
@@ -421,6 +427,7 @@ func prsInterface(tokens *token.Tokens) ast.Decl {
 
     braceRPos := tokens.Cur().Pos
     identObj.EndScope()
+    identObj.CurSelfType = nil
 
     return &ast.DefInterface{ Pos: pos, Name: name, I: I, BraceLPos: braceLPos, BraceRPos: braceRPos, FnHeads: heads }
 }
@@ -461,8 +468,7 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
         os.Exit(1)
     }
 
-    sType := S.GetType().(types.StructType)
-    identObj.CurImplStruct = &sType
+    identObj.CurSelfType = S.GetType()
 
     braceLPos := tokens.Next().Pos
     if tokens.Cur().Type != token.BraceL {
@@ -496,7 +502,7 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
         os.Exit(1)
     }
     identObj.EndScope()
-    identObj.CurImplStruct = nil
+    identObj.CurSelfType = nil
 
     return &ast.Impl{ Pos: pos, Impl: impl, BraceLPos: braceLPos, BraceRPos: braceRPos, FnDefs: funcs }
 }
@@ -519,8 +525,8 @@ func prsFnHead(tokens *token.Tokens, isInterfaceFn bool) ast.FnHead {
     }
 
     var f *identObj.Func = nil
-    if isInterfaceFn && identObj.CurImplStruct != nil {
-        f = identObj.DecInterfaceFunc(name, isConst, identObj.CurImplStruct.Name)
+    if isInterfaceFn && identObj.CurSelfType != nil {
+        f = identObj.DecInterfaceFunc(name, isConst, identObj.CurSelfType.String())
     } else {
         f = identObj.DecFunc(name, isConst)
     }
@@ -651,15 +657,15 @@ func prsOptionalSelfType(tokens *token.Tokens) types.Type {
     }
 
     // explicitly used StructName
-    if identObj.CurImplStruct != nil {
-        if tokens.Peek().Type == token.Name && tokens.Peek().Str == identObj.CurImplStruct.Name {
+    if identObj.CurSelfType != nil {
+        if tokens.Peek().Type == token.Name && tokens.Peek().Str == identObj.CurSelfType.String() {
             tokens.Next()
-            return *identObj.CurImplStruct
+            return identObj.CurSelfType
 
-        } else if tokens.Peek().Type == token.Mul && tokens.Peek2().Type == token.Name && tokens.Peek2().Str == identObj.CurImplStruct.Name {
+        } else if tokens.Peek().Type == token.Mul && tokens.Peek2().Type == token.Name && tokens.Peek2().Str == identObj.CurSelfType.String() {
             tokens.Next()
             tokens.Next()
-            return types.PtrType{ BaseType: *identObj.CurImplStruct } 
+            return types.PtrType{ BaseType: identObj.CurSelfType } 
         }
     }
 

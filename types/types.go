@@ -53,9 +53,11 @@ type CharType struct {}
 type BoolType struct {}
 type UintType struct {
     size uint
+    isFlexable bool
 }
 type IntType struct {
     size uint
+    isFlexable bool
 }
 type PtrType struct {
     BaseType Type
@@ -71,6 +73,7 @@ type StrType struct {}
 type StructType struct {
     Name string
     Types []Type
+    Interfaces map[string]InterfaceType
     names map[string]int
     isBigStruct bool
     isAligned bool
@@ -156,7 +159,15 @@ func CreateStructType(name string, types []Type, names []string) StructType {
         isBigStruct = true
     }
 
-    return StructType{ Name: name, Types: types, isBigStruct: isBigStruct, isAligned: aligned, size: size, names: ns }
+    return StructType{ 
+        Name: name,
+        Types: types,
+        Interfaces: make(map[string]InterfaceType),
+        isBigStruct: isBigStruct,
+        isAligned: aligned,
+        size: size,
+        names: ns,
+    }
 }
 
 func (t *StructType) GetOffset(field string) (offset int64) {
@@ -218,17 +229,30 @@ func IsBigStruct(t Type) bool {
     return false
 }
 
-func IsSelfType(t Type) bool {
+func IsFlexable(t Type) bool {
     switch t := t.(type) {
-    case StructType:
-        return t.Name == "Self"
-
-    case PtrType:
-        return IsSelfType(t.BaseType)
-
+    case UintType:
+        return t.isFlexable
+    case *UintType:
+        return t.isFlexable
+    case IntType:
+        return t.isFlexable
+    case *IntType:
+        return t.isFlexable
     default:
         return false
     }
+}
+
+func DisableFlexable(t Type) Type {
+    switch t := t.(type) {
+    case UintType:
+        t.isFlexable = false
+    case IntType:
+        t.isFlexable = false
+    }
+
+    return t
 }
 
 func ReplaceGeneric(t Type) Type {
@@ -277,7 +301,7 @@ func (t VecType)        GetKind() TypeKind { return Vec  }
 func (t StructType)     GetKind() TypeKind { return Struct }
 func (t InterfaceType)  GetKind() TypeKind { return Interface }
 func (t FuncType)       GetKind() TypeKind { return Func }
-func (t GenericType)    GetKind() TypeKind { 
+func (t GenericType)    GetKind() TypeKind {
     if t.CurUsedType != nil {
         return t.CurUsedType.GetKind()
     }
@@ -296,7 +320,7 @@ func (t VecType)        Size() uint { return Vec_Size }
 func (t StructType)     Size() uint { return t.size }
 func (t InterfaceType)  Size() uint { return Interface_Size }
 func (t FuncType)       Size() uint { return Func_Size }
-func (t GenericType) Size() uint { 
+func (t GenericType) Size() uint {
     if t.CurUsedType != nil {
         return t.CurUsedType.Size()
     }
@@ -367,7 +391,7 @@ func (t FuncType) String() string {
         ret = fmt.Sprintf(" -> %s", t.Ret)
     }
 
-    return fmt.Sprintf("%s%s(%v)%s", t.Name, generic, t.Args, ret) 
+    return fmt.Sprintf("%s%s(%v)%s", t.Name, generic, t.Args, ret)
 }
 
 func ToBaseType(s string) Type {
@@ -409,17 +433,17 @@ func TypeOfVal(val string) Type {
         return BoolType{}
     case len(val) > 2 && val[0:2] == "0x":
         if _, err := strconv.ParseUint(val, 0, 64); err == nil {
-            return UintType{ size: U64_Size }
+            return UintType{ size: U64_Size, isFlexable: true }
         }
     default:
         if _, err := strconv.ParseInt(val, 10, 32); err == nil {
-            return IntType{ size: I32_Size }
+            return IntType{ size: I32_Size, isFlexable: true }
         }
         if _, err := strconv.ParseInt(val, 10, 64); err == nil {
-            return IntType{ size: I64_Size }
+            return IntType{ size: I64_Size, isFlexable: true }
         }
         if _, err := strconv.ParseUint(val, 0, 64); err == nil {
-            return UintType{ size: U64_Size }
+            return UintType{ size: U64_Size, isFlexable: true }
         }
     }
 
@@ -461,6 +485,44 @@ func MinSizeUint(val uint64) uint {
     }
 }
 
+
+func EqualBinary(t1 Type, t2 Type) bool {
+    switch t := t1.(type) {
+    case IntType:
+        if t2,ok := t2.(IntType); ok {
+            return t2.Size() <= t.Size()
+        }
+
+        if IsFlexable(t2) { return true }
+        if IsFlexable(t1) { return true }
+
+    case UintType:
+        if t2,ok := t2.(UintType); ok {
+            return t2.Size() <= t.Size()
+        }
+        if _,ok := t2.(PtrType); ok {
+            return t1.Size() == Ptr_Size
+        }
+
+        if IsFlexable(t2) { return true }
+        if IsFlexable(t1) { return true }
+
+    case PtrType:
+        if _,ok := t2.(PtrType); ok {
+            return true
+        }
+        if t2.GetKind() == Uint && t2.Size() == Ptr_Size {
+            return true
+        }
+        return IsFlexable(t2)
+
+    default:
+        return Equal(t1, t2)
+    }
+
+    return false
+}
+
 func Equal(destType Type, srcType Type) bool {
     srcType = ReplaceGeneric(srcType)
     destType = ReplaceGeneric(destType)
@@ -485,34 +547,23 @@ func Equal(destType Type, srcType Type) bool {
 
     case StructType:
         if t2,ok := srcType.(StructType); ok {
-            for i,t := range t.Types {
-                if !Equal(t, t2.Types[i]) {
-                    return false
-                }
-            }
-
-            return true
+            return t.Name == t2.Name
         }
 
     case InterfaceType:
-        if t2,ok := srcType.(InterfaceType); ok {
-            if t.Name != t2.Name {
-                return false
+        if t2,ok := srcType.(StructType); ok {
+            if t,ok := t2.Interfaces[t.Name]; ok {
+                return Equal(destType, t)
             }
-
-            if len(t.Funcs) == len(t2.Funcs) {
-                for i := range t.Funcs {
-                    if !Equal(t.Funcs[i], t2.Funcs[i]) {
-                        return false
-                    }
-                }
-
-                return true
-            }
+            return false
         }
 
-    case GenericType:
-        if t2,ok := srcType.(GenericType); ok {
+        if t2,ok := srcType.(InterfaceType); ok {
+            return t.Name == t2.Name
+        }
+
+    case *GenericType:
+        if t2,ok := srcType.(*GenericType); ok {
             return t.Name == t2.Name
         }
 
@@ -546,7 +597,16 @@ func Equal(destType Type, srcType Type) bool {
         }
 
     case IntType:
+        if IsFlexable(srcType) { return true }
+
         if t2,ok := srcType.(IntType); ok {
+            return t2.Size() <= destType.Size()
+        }
+
+    case UintType:
+        if IsFlexable(srcType) { return true }
+
+        if t2,ok := srcType.(UintType); ok {
             return t2.Size() <= destType.Size()
         }
 

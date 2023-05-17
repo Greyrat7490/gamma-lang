@@ -9,27 +9,27 @@ PROT_GROWSDOWN      :: 0x01000000
 PROT_GROWSUP        :: 0x02000000
 
 // mmap flags
-MAP_FILE            :: 0
-MAP_SHARED          :: 1            // Share changes
-MAP_PRIVATE         :: 2            // Changes are private
-MAP_SHARED_VALIDATE :: 3            // Share changes and validate
-MAP_TYPE            :: 0x0f         // Mask for type of mapping
-MAP_FIXED           :: 0x10         // Interpret addr exactly
-MAP_ANONYMOUS       :: 0x20         // Don't use a file
-MAP_ANON            :: MAP_ANONYMOUS
-MAP_HUGE_SHIFT      :: 26
-MAP_HUGE_MASK       :: 0x3f
-MAP_GROWSDOWN       :: 0x00100      // Stack-like segment
-MAP_DENYWRITE       :: 0x00800      // ETXTBSY
-MAP_EXECUTABLE      :: 0x01000      // Mark it as an executable
-MAP_LOCKED          :: 0x02000      // Lock the mapping
-MAP_NORESERVE       :: 0x04000      // Don't check for reservations
-MAP_POPULATE        :: 0x08000      // Populate (prefault) pagetables
-MAP_NONBLOCK        :: 0x10000      // Do not block on IO
-MAP_STACK           :: 0x20000      // Allocation is for a stack
-MAP_HUGETLB         :: 0x40000      // Create huge page mapping
-MAP_SYNC            :: 0x80000      // Perform synchronous page faults for the mapping
-MAP_FIXED_NOREPLACE :: 0x100000     // MAP_FIXED but do not unmap underlying mapping
+MAP_FILE            i32 :: 0
+MAP_SHARED          i32 :: 1            // Share changes
+MAP_PRIVATE         i32 :: 2            // Changes are private
+MAP_SHARED_VALIDATE i32 :: 3            // Share changes and validate
+MAP_TYPE            i32 :: 0x0f         // Mask for type of mapping
+MAP_FIXED           i32 :: 0x10         // Interpret addr exactly
+MAP_ANONYMOUS       i32 :: 0x20         // Don't use a file
+MAP_ANON            i32 :: MAP_ANONYMOUS
+MAP_HUGE_SHIFT      i32 :: 26
+MAP_HUGE_MASK       i32 :: 0x3f
+MAP_GROWSDOWN       i32 :: 0x00100      // Stack-like segment
+MAP_DENYWRITE       i32 :: 0x00800      // ETXTBSY
+MAP_EXECUTABLE      i32 :: 0x01000      // Mark it as an executable
+MAP_LOCKED          i32 :: 0x02000      // Lock the mapping
+MAP_NORESERVE       i32 :: 0x04000      // Don't check for reservations
+MAP_POPULATE        i32 :: 0x08000      // Populate (prefault) pagetables
+MAP_NONBLOCK        i32 :: 0x10000      // Do not block on IO
+MAP_STACK           i32 :: 0x20000      // Allocation is for a stack
+MAP_HUGETLB         i32 :: 0x40000      // Create huge page mapping
+MAP_SYNC            i32 :: 0x80000      // Perform synchronous page faults for the mapping
+MAP_FIXED_NOREPLACE i32 :: 0x100000     // MAP_FIXED but do not unmap underlying mapping
 
 
 fn mmap(addr u64, len u64, prot i32, flags i32, fd i32, offset i64) -> u64 {

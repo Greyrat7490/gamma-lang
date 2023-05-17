@@ -54,65 +54,10 @@ func typeCheckExpr(e ast.Expr) {
     }
 }
 
-func checkInt(destType types.Type, val ast.Expr) bool {
-    t := val.GetType()
-    if t == nil || (t.GetKind() != types.Uint && t.GetKind() != types.Int) {
-        return false
-    }
-
-    if t.GetKind() == types.Int && t.Size() <= destType.Size() {
-        return true
-    } else {
-        if v,ok := cmpTime.ConstEvalInt(val); ok {
-            if types.MinSizeInt(v) > destType.Size() {
-                fmt.Fprintf(os.Stderr, "[ERROR] %d does not fit into %v\n", v, destType)
-                fmt.Fprintln(os.Stderr, "\t" + val.At())
-                os.Exit(1)
-            }
-
-            return true
-        }
-    }
-
-    return false
-}
-
-func checkUint(destType types.Type, val ast.Expr) bool {
-    t := val.GetType()
-    if t == nil || (t.GetKind() != types.Uint && t.GetKind() != types.Int) {
-        return false
-    }
-
-    if t.GetKind() == types.Uint && t.Size() <= destType.Size() {
-        return true
-    } else {
-        if v,ok := cmpTime.ConstEvalUint(val); ok {
-            if types.MinSizeUint(v) > destType.Size() {
-                fmt.Fprintf(os.Stderr, "[ERROR] %d does not fit into %v\n", v, destType)
-                fmt.Fprintln(os.Stderr, "\t" + val.At())
-                os.Exit(1)
-            }
-
-            return true
-        }
-    }
-
-    return false
-}
 
 func checkTypeExpr(destType types.Type, e ast.Expr) bool {
     typeCheckExpr(e)
-
-    switch destType.GetKind() {
-    case types.Int:
-        return checkInt(destType, e)
-
-    case types.Uint:
-        return checkUint(destType, e)
-
-    default:
-        return TypesEqual(destType, e.GetType())
-    }
+    return types.Equal(destType, e.GetType())
 }
 
 func typeCheckIndexed(e *ast.Indexed) {
@@ -213,9 +158,17 @@ func typeCheckUnary(e *ast.Unary) {
             }
         }
 
-    case token.Plus, token.Minus, token.BitNot:
+    case token.Minus:
+        t := e.Operand.GetType()
+        if t.GetKind() != types.Int && !types.IsFlexable(t) {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected an int after - unary op but got %v\n", t)
+            fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
+            os.Exit(1)
+        }
+
+    case token.Plus, token.BitNot:
         if t := e.Operand.GetType(); t.GetKind() != types.Int && t.GetKind() != types.Uint {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected int/uint after +,-,~ unary op but got %v\n", t)
+            fmt.Fprintf(os.Stderr, "[ERROR] expected an int/uint after %s unary op but got %v\n", t, e.Operator.Str)
             fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
             os.Exit(1)
         }
@@ -282,36 +235,42 @@ func typeCheckStructLit(o *ast.StructLit) {
     }
 }
 
-func typeCheckBinary(o *ast.Binary) {
-    t1 := o.OperandL.GetType()
-    t2 := o.OperandR.GetType()
+func typeCheckBinary(e *ast.Binary) {
+    t1 := e.OperandL.GetType()
+    t2 := e.OperandR.GetType()
 
-    if o.Operator.Type == token.And || o.Operator.Type == token.Or {
+    typeCheckExpr(e.OperandL)
+    typeCheckExpr(e.OperandR)
+
+    if e.Operator.Type == token.And || e.Operator.Type == token.Or {
         if t1.GetKind() != types.Bool || t2.GetKind() != types.Bool {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected 2 bools for logic op \"%s\" but got %v and %v\n", o.Operator.Str, t1, t2)
-            fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
+            fmt.Fprintf(os.Stderr, "[ERROR] expected 2 bools for logic op \"%s\" but got %v and %v\n", e.Operator.Str, t1, t2)
+            fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
             os.Exit(1)
         }
-    } else if !TypesEqual(t1, t2) {
-        // allow ptr + u64 / u64 + ptr
-        if (t1.GetKind() == types.Ptr && t2.GetKind() == types.Uint) || 
-            (t2.GetKind() == types.Ptr && t1.GetKind() == types.Uint) {
-            if t1.Size() == t2.Size() {
-                if o.Operator.Type != token.Plus && o.Operator.Type != token.Minus {
-                    fmt.Fprintln(os.Stderr, "[ERROR] you can only add or subtract a pointer with an u64")
-                    fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
-                    os.Exit(1)
-                }
-                return
+
+    } else {
+        // allow ptr + u64 / u64 + ptr / ptr - u64
+        if e.Type.GetKind() == types.Ptr {
+            if e.Operator.Type != token.Plus && e.Operator.Type != token.Minus {
+                fmt.Fprintln(os.Stderr, "[ERROR] you can only add or subtract a pointer with an u64")
+                fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
+                os.Exit(1)
+            }
+
+            if t2.GetKind() == types.Ptr && e.Operator.Type == token.Minus {
+                fmt.Fprintln(os.Stderr, "[ERROR] you can only subtract a pointer with an u64 (not the other way around)")
+                fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
+                os.Exit(1)
             }
         }
 
-        return 
-
-        fmt.Fprintf(os.Stderr, "[ERROR] binary operation %s has two incompatible types (left: %v right: %v)\n",
-            o.Operator.Str, t1, t2)
-        fmt.Fprintln(os.Stderr, "\t" + o.Operator.At())
-        os.Exit(1)
+        if !types.EqualBinary(t1, t2) {
+            fmt.Fprintf(os.Stderr, "[ERROR] binary operation %s has two incompatible types (left: %v right: %v)\n",
+                e.Operator.Str, t1, t2)
+            fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
+            os.Exit(1)
+        }
     }
 }
 
@@ -342,7 +301,7 @@ func typeCheckXSwitch(o *ast.XSwitch) {
         typeCheckXCase(&c)
 
         t2 := c.Expr.GetType()
-        if !TypesEqual(t1, t2) {
+        if !types.Equal(t1, t2) {
             fmt.Fprintln(os.Stderr, "[ERROR] expected every case body to return the same type but got:")
             for i,c := range o.Cases {
                 fmt.Fprintf(os.Stderr, "\tcase%d: %v\n", i, c.Expr.GetType())

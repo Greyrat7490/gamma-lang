@@ -193,19 +193,19 @@ func prsName(tokens *token.Tokens) token.Token {
     name := tokens.Cur()
 
     if name.Type == token.SelfType {
-        if identObj.CurImplStruct == nil {
-            fmt.Fprintln(os.Stderr, "[ERROR] Self used outside of impl")
+        if identObj.CurSelfType == nil {
+            fmt.Fprintln(os.Stderr, "[ERROR] Self used outside of impl and interface")
             fmt.Fprintln(os.Stderr, "\t" + name.At())
             os.Exit(1)
         }
 
-        name.Str = identObj.CurImplStruct.Name
+        name.Str = identObj.CurSelfType.String()
         name.Type = token.Name
     }
 
     if name.Type == token.Self {
-        if identObj.CurImplStruct == nil {
-            fmt.Fprintln(os.Stderr, "[ERROR] self used outside of impl")
+        if identObj.CurSelfType == nil {
+            fmt.Fprintln(os.Stderr, "[ERROR] self used outside of impl and interface")
             fmt.Fprintln(os.Stderr, "\t" + name.At())
             os.Exit(1)
         }
@@ -246,12 +246,7 @@ func prsBasicLit(tokens *token.Tokens) ast.Expr {
 
     switch t.GetKind() {
     case types.Bool:
-        repr := false
-        if val.Str == "true" {
-            repr = true
-        }
-
-        return &ast.BoolLit{ Repr: repr, Val: val }
+        return &ast.BoolLit{ Repr: val.Str == "true", Val: val }
 
     case types.Char:
         var repr uint8

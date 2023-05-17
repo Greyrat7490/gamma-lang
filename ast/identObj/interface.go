@@ -17,7 +17,7 @@ type Interface struct {
     funcs []Func
 }
 
-var CurImplStruct *types.StructType = nil
+var CurSelfType types.Type = nil
 
 func CreateInterface(name token.Token) Interface {
     return Interface{ decPos: name.Pos, name: name.Str, typ: types.InterfaceType{ Name: name.Str }, funcs: make([]Func, 0) }
@@ -67,7 +67,7 @@ func (i *Interface) GetVTableOffset(funcName string) uint {
             return offset
         }
 
-        if len(f.typ.Args) > 0 && types.IsSelfType(f.typ.Args[0]) {
+        if len(f.typ.Args) > 0 && isSelfType(f.typ.Args[0], i.typ) {
             offset += 8
         }
     }
@@ -122,7 +122,7 @@ func (i *Impl) GetVTableFuncNames() []string {
     names := make([]string, 0, len(i.interface_.typ.Funcs))
 
     for _,f := range i.interface_.typ.Funcs {
-        if len(f.Args) > 0 && types.IsSelfType(f.Args[0]) {
+        if len(f.Args) > 0 && isSelfType(f.Args[0], i.interface_.typ) {
             names = append(names, f.Name)
         }
     }
@@ -175,4 +175,17 @@ func (i *Impl) GetFunc(name string) *Func {
     }
 
     return nil
+}
+
+func isSelfType(t types.Type, interfaceType types.InterfaceType) bool {
+    switch t := t.(type) {
+    case types.InterfaceType:
+        return types.Equal(t, interfaceType)
+
+    case types.PtrType:
+        return isSelfType(t.BaseType, interfaceType)
+
+    default:
+        return false
+    }
 }

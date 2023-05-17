@@ -73,7 +73,7 @@ fn getcwd(buf *char, size u64) -> bool {
 }
 
 
-READER_BUF_SIZE :: 4 * 1024
+READER_BUF_SIZE u64 :: 4 * 1024
 
 struct Reader {
     fd i32,

@@ -1,10 +1,6 @@
 package check
 
-import (
-    "gamma/ast"
-    "gamma/ast/identObj"
-    "gamma/types"
-)
+import "gamma/ast"
 
 func TypeCheckNode(n ast.Node) {
     switch n := n.(type) {
@@ -17,23 +13,4 @@ func TypeCheckNode(n ast.Node) {
     case ast.Decl:
         typeCheckDecl(n)
     }
-}
-
-func TypesEqual(destType types.Type, srcType types.Type) bool {
-    srcType = types.ReplaceGeneric(srcType)
-    destType = types.ReplaceGeneric(destType)
-
-    if t,ok := destType.(types.InterfaceType); ok {
-        if t2,ok := srcType.(types.StructType); ok {
-            if s,ok := identObj.Get(t2.Name).(*identObj.Struct); ok {
-                if hasImpl,typ := s.GetInterfaceType(t.Name); hasImpl {
-                    return types.Equal(destType, typ)
-                }
-            }
-
-            return false
-        }
-    }
-
-    return types.Equal(destType, srcType)
 }

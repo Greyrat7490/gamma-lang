@@ -1,0 +1,7 @@
+fn test(a1 u64, a2 u64) {
+    println(utos(-a1 * -a2))  // unary operator "-" requires a signed int
+}
+
+fn main() {
+    test(64, 69)
+}

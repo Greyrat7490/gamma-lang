@@ -64,12 +64,12 @@ fn testMul(a1 u64, a2 u64) {
     print(utos(a1 * a2))
     print("\n")
 
-    print(itos(-a1)) print(" * ") print(itos(-a2)) print(" = ")
-    print(itos(-a1 * -a2))
+    print(itos(-(a1 as i64))) print(" * ") print(itos(-(a2 as i64))) print(" = ")
+    print(itos(-(a1 as i64) * -(a2 as i64)))
     print("\n")
 
-    print(itos(a1 as i64)) print(" * ") print(itos(-a2)) print(" = ")
-    print(itos(a1 as i64 * -a2))
+    print(itos(a1 as i64)) print(" * ") print(itos(-(a2 as i64))) print(" = ")
+    print(itos(a1 as i64 * -(a2 as i64)))
     print("\n")
 }
 

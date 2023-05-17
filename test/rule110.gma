@@ -1,6 +1,6 @@
 dummy bool := false
 
-LEN :: 150                  // amount of lines printed
+LEN u64 :: 150                  // amount of lines printed
 
 prev :: &dummy
 cur  :: prev + LEN          // size of prev is LEN*BOOL_SIZE
