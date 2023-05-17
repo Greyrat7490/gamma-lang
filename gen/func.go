@@ -142,7 +142,17 @@ func PassVar(file *bufio.Writer, regIdx uint, t types.Type, otherVar vars.Var) {
 
     case types.InterfaceType:
         asm.MovRegDeref(file, regs[regIdx], otherVar.Addr(), types.Ptr_Size, false)
-        asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vtable.GetVTableName(otherVar.GetType().String(), t.String()))
+
+        switch otherVar.GetType().(type) {
+        case types.InterfaceType:
+            asm.MovRegDeref(file, regs[regIdx+1], otherVar.Addr().Offseted(int64(types.Ptr_Size)), types.Ptr_Size, false)
+        case types.StructType:
+            asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vtable.GetVTableName(otherVar.GetType().String(), t.String()))
+        default:
+            fmt.Fprintf(os.Stderr, "[ERROR] (internal) expected %v to be an interface or struct but got %v\n", 
+                otherVar.GetName(), otherVar.GetType())
+            os.Exit(1)
+        }
 
     case types.IntType:
         asm.MovRegDerefExtend(file, regs[regIdx], t.Size(), otherVar.Addr(), otherVar.GetType().Size(), true)
@@ -169,8 +179,9 @@ func PassExpr(file *bufio.Writer, regIdx uint, argType types.Type, regSize uint,
         }
 
     case types.InterfaceType:
+        GenExpr(file, expr)
         asm.MovRegReg(file, regs[regIdx], asm.RegGroup(0), types.Ptr_Size)
-        asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vtable.GetVTableName(expr.GetType().String(), t.String()))
+        asm.MovRegReg(file, regs[regIdx+1], asm.RegGroup(1), t.Size() - 8)
 
     case types.IntType:
         GenExpr(file, expr)
