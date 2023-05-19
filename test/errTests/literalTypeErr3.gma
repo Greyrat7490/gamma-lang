@@ -1,0 +1,7 @@
+fn test(u u64) {
+    println(fmt("{}", u))
+}
+
+fn main() {
+    test(-0x64)
+}

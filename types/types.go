@@ -245,11 +245,15 @@ func IsFlexable(t Type) bool {
 }
 
 func DisableFlexable(t Type) Type {
-    switch t := t.(type) {
+    switch t.(type) {
     case UintType:
-        t.isFlexable = false
+        return CreateUint(t.Size())
     case IntType:
-        t.isFlexable = false
+        return CreateInt(t.Size())
+    case *UintType:
+        return CreateUint(t.Size())
+    case *IntType:
+        return CreateInt(t.Size())
     }
 
     return t
@@ -485,16 +489,36 @@ func MinSizeUint(val uint64) uint {
     }
 }
 
+var curFlexableType Type = IntType{ size: I32_Size }
+
+func SetFlexableType(dstType Type, srcType Type) {
+    if (dstType.GetKind() == Uint || dstType.GetKind() == Int) && !IsFlexable(dstType) {
+        curFlexableType = dstType
+    }
+}
+
+func checkFlexable(dstType Type, srcType Type) bool {
+    if IsFlexable(srcType) {
+        return curFlexableType.GetKind() == dstType.GetKind() && curFlexableType.Size() <= dstType.Size()
+    }
+
+    return false
+}
+
 
 func EqualBinary(t1 Type, t2 Type) bool {
+    if IsFlexable(t1) {
+        t1 = curFlexableType
+    }
+    if IsFlexable(t2) {
+        t2 = curFlexableType
+    }
+
     switch t := t1.(type) {
     case IntType:
         if t2,ok := t2.(IntType); ok {
             return t2.Size() <= t.Size()
         }
-
-        if IsFlexable(t2) { return true }
-        if IsFlexable(t1) { return true }
 
     case UintType:
         if t2,ok := t2.(UintType); ok {
@@ -504,17 +528,11 @@ func EqualBinary(t1 Type, t2 Type) bool {
             return t1.Size() == Ptr_Size
         }
 
-        if IsFlexable(t2) { return true }
-        if IsFlexable(t1) { return true }
-
     case PtrType:
         if _,ok := t2.(PtrType); ok {
             return true
         }
-        if t2.GetKind() == Uint && t2.Size() == Ptr_Size {
-            return true
-        }
-        return IsFlexable(t2)
+        return Equal(CreateUint(Ptr_Size), t2)
 
     default:
         return Equal(t1, t2)
@@ -597,14 +615,16 @@ func Equal(destType Type, srcType Type) bool {
         }
 
     case IntType:
-        if IsFlexable(srcType) { return true }
-
-        if t2,ok := srcType.(IntType); ok {
-            return t2.Size() <= destType.Size()
+        if IsFlexable(srcType) {
+            return checkFlexable(destType, srcType)
+        } else {
+            if t2,ok := srcType.(IntType); ok {
+                return t2.Size() <= destType.Size()
+            }
         }
 
     case UintType:
-        if IsFlexable(srcType) { return true }
+        if checkFlexable(destType, srcType) { return true }
 
         if t2,ok := srcType.(UintType); ok {
             return t2.Size() <= destType.Size()

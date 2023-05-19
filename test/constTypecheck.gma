@@ -7,7 +7,5 @@ fn main() {
     println(fmt("{}", i))
     test1(30 - 39)
 
-    u u64 := -64                // TODO: 64 as u64 literal -> cause a type error with unary op "-"
-    println(fmt("{}", u))
-    test1(-0x64)                // TODO: same here
+    // TODO more tests
 }

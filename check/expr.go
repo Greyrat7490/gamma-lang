@@ -56,6 +56,8 @@ func typeCheckExpr(e ast.Expr) {
 
 
 func checkTypeExpr(destType types.Type, e ast.Expr) bool {
+    types.SetFlexableType(destType, e.GetType())
+
     typeCheckExpr(e)
     return types.Equal(destType, e.GetType())
 }
@@ -160,7 +162,8 @@ func typeCheckUnary(e *ast.Unary) {
 
     case token.Minus:
         t := e.Operand.GetType()
-        if t.GetKind() != types.Int && !types.IsFlexable(t) {
+        if !types.Equal(types.CreateInt(types.Ptr_Size), t) {
+            // TODO print actual flexable type
             fmt.Fprintf(os.Stderr, "[ERROR] expected an int after - unary op but got %v\n", t)
             fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
             os.Exit(1)
@@ -178,18 +181,19 @@ func typeCheckUnary(e *ast.Unary) {
         fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
         os.Exit(1)
     }
+
+    typeCheckExpr(e.Operand)
 }
 
 func typeCheckArrayLit(o *ast.ArrayLit) {
     for _,v := range o.Values {
-        typeCheckExpr(v)
-
-        t := v.GetType()
-        if !checkTypeExpr(t, v) {
-            fmt.Fprintf(os.Stderr, "[ERROR] all values in the ArrayLit should be of type %v but got a value of %v\n", o.Type.BaseType, t)
+        if !checkTypeExpr(o.Type.BaseType, v) {
+            fmt.Fprintf(os.Stderr, "[ERROR] all values in the ArrayLit should be of type %v but got a value of %v\n", o.Type.BaseType, v.GetType())
             fmt.Fprintln(os.Stderr, "\t" + v.At())
             os.Exit(1)
         }
+
+        typeCheckExpr(v)
     }
 
     if uint64(len(o.Values)) != 0 && uint64(len(o.Values)) != o.Type.Len {
@@ -239,9 +243,6 @@ func typeCheckBinary(e *ast.Binary) {
     t1 := e.OperandL.GetType()
     t2 := e.OperandR.GetType()
 
-    typeCheckExpr(e.OperandL)
-    typeCheckExpr(e.OperandR)
-
     if e.Operator.Type == token.And || e.Operator.Type == token.Or {
         if t1.GetKind() != types.Bool || t2.GetKind() != types.Bool {
             fmt.Fprintf(os.Stderr, "[ERROR] expected 2 bools for logic op \"%s\" but got %v and %v\n", e.Operator.Str, t1, t2)
@@ -263,6 +264,18 @@ func typeCheckBinary(e *ast.Binary) {
                 fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
                 os.Exit(1)
             }
+
+            if types.IsFlexable(t1) {
+                types.SetFlexableType(types.CreateUint(types.Ptr_Size), t1)
+            } else if types.IsFlexable(t2) {
+                types.SetFlexableType(types.CreateUint(types.Ptr_Size), t2)
+            }
+        } else {
+            if types.IsFlexable(t1) {
+                types.SetFlexableType(t2, t1)
+            } else if types.IsFlexable(t2) {
+                types.SetFlexableType(t1, t2)
+            }
         }
 
         if !types.EqualBinary(t1, t2) {
@@ -272,6 +285,9 @@ func typeCheckBinary(e *ast.Binary) {
             os.Exit(1)
         }
     }
+
+    typeCheckExpr(e.OperandL)
+    typeCheckExpr(e.OperandR)
 }
 
 func typeCheckXCase(s *ast.XCase) {
@@ -321,10 +337,6 @@ func typeCheckFnCall(o *ast.FnCall) {
         os.Exit(1)
     }
 
-    for _,a := range o.Values {
-        typeCheckExpr(a)
-    }
-
     if f,ok := o.Ident.Obj.(*identObj.Func); ok {
         if len(f.GetArgs()) != len(o.Values) {
             fmt.Fprintf(os.Stderr, "[ERROR] expected %d args for function \"%s\" but got %d\n", len(f.GetArgs()), f.GetName(), len(o.Values))
@@ -346,6 +358,10 @@ func typeCheckFnCall(o *ast.FnCall) {
     } else {
         fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a func (in typecheck.go FnCall)")
         os.Exit(1)
+    }
+
+    for _,a := range o.Values {
+        typeCheckExpr(a)
     }
 }
 

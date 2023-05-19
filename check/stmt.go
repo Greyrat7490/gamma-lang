@@ -56,7 +56,7 @@ func typeCheckAssign(s *ast.Assign) {
     t2 := s.Value.GetType()
 
     if !checkTypeExpr(t1, s.Value) {
-        fmt.Fprintf(os.Stderr, "[ERROR] cannot assign a type: %v with type: %v\n", t1, t2)
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot assign %v with %v\n", t1, t2)
         fmt.Fprintln(os.Stderr, "\t" + s.Pos.At())
         os.Exit(1)
     }

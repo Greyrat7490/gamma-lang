@@ -36,8 +36,6 @@ func typeCheckDecl(d ast.Decl) {
 }
 
 func typeCheckDefVar(d *ast.DefVar) {
-    typeCheckExpr(d.Value)
-
     t1 := d.V.GetType()
     t2 := d.Value.GetType()
 
@@ -46,6 +44,8 @@ func typeCheckDefVar(d *ast.DefVar) {
         fmt.Fprintln(os.Stderr, "\t" + d.At())
         os.Exit(1)
     }
+
+    typeCheckExpr(d.Value)
 }
 
 func typeCheckDefConst(d *ast.DefConst) {
