@@ -42,7 +42,7 @@ func ExprAddrToReg(file *bufio.Writer, e ast.Expr, reg asm.RegGroup) {
     case *ast.Cast:
         ExprAddrToReg(file, e.Expr, reg)
 
-    case *ast.IntLit, *ast.UintLit, *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.ArrayLit, *ast.StructLit, *ast.Binary, *ast.FnCall:
+    case *ast.IntLit, *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.ArrayLit, *ast.StructLit, *ast.Binary, *ast.FnCall:
         fmt.Fprintf(os.Stderr, "[ERROR] cannot get address from %v\n", reflect.TypeOf(e))
         fmt.Fprintln(os.Stderr, "\t" + e.At())
         os.Exit(1)
@@ -62,8 +62,6 @@ func GenExpr(file *bufio.Writer, e ast.Expr) {
     switch e := e.(type) {
     case *ast.IntLit:
         GenIntLit(file, e.Type.Size(), e)
-    case *ast.UintLit:
-        GenUintLit(file, e.Type.Size(), e)
     case *ast.CharLit:
         GenCharLit(file, e)
     case *ast.BoolLit:
@@ -125,10 +123,6 @@ func GenExpr(file *bufio.Writer, e ast.Expr) {
 }
 
 func GenIntLit(file *bufio.Writer, size uint, e *ast.IntLit) {
-    asm.MovRegVal(file, asm.RegA, e.Type.Size(), fmt.Sprint(e.Repr))
-}
-
-func GenUintLit(file *bufio.Writer, size uint, e *ast.UintLit) {
     asm.MovRegVal(file, asm.RegA, e.Type.Size(), fmt.Sprint(e.Repr))
 }
 

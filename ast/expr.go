@@ -29,15 +29,9 @@ type FnCall struct {
 }
 
 type IntLit struct {
-    Repr int64
-    Val token.Token
-    Type types.IntType
-}
-
-type UintLit struct {
     Repr uint64
     Val token.Token
-    Type types.UintType
+    Type types.Type
 }
 
 type BoolLit struct {
@@ -159,10 +153,6 @@ type Cast struct {
 
 
 func (e *IntLit) Readable(indent int) string {
-    return strings.Repeat("   ", indent) + fmt.Sprintf("%s(%v)\n", e.Val.Str, e.Type)
-}
-
-func (e *UintLit) Readable(indent int) string {
     return strings.Repeat("   ", indent) + fmt.Sprintf("%s(%v)\n", e.Val.Str, e.Type)
 }
 
@@ -321,7 +311,7 @@ func (e *Indexed) Flatten() Expr {
                     Type: idxType,
                     Operator: token.Token{ Str: "*", Type: token.Mul },
                     OperandL: i.Flatten(),
-                    OperandR: &UintLit{ Repr: t.Len, Type: idxType },
+                    OperandR: &IntLit{ Repr: t.Len, Type: idxType },
                 },
             }
         }
@@ -362,7 +352,6 @@ func (f *Field) ToOffset() int64 {
 
 func (e *BadExpr)   GetType() types.Type { return nil }
 func (e *IntLit)    GetType() types.Type { return e.Type }
-func (e *UintLit)   GetType() types.Type { return e.Type }
 func (e *BoolLit)   GetType() types.Type { return types.BoolType{} }
 func (e *CharLit)   GetType() types.Type { return types.CharType{} }
 func (e *PtrLit)    GetType() types.Type { return e.Type }
@@ -385,7 +374,6 @@ func (e *Cast)      GetType() types.Type { return e.DestType }
 
 func (e *BadExpr)   expr() {}
 func (e *IntLit)    expr() {}
-func (e *UintLit)   expr() {}
 func (e *BoolLit)   expr() {}
 func (e *CharLit)   expr() {}
 func (e *PtrLit)    expr() {}
@@ -407,7 +395,6 @@ func (e *Cast)      expr() {}
 
 func (e *BadExpr)   At() string { return "" }
 func (e *IntLit)    At() string { return e.Val.At() }
-func (e *UintLit)   At() string { return e.Val.At() }
 func (e *BoolLit)   At() string { return e.Val.At() }
 func (e *CharLit)   At() string { return e.Val.At() }
 func (e *PtrLit)    At() string { return e.Val.At() }
@@ -429,7 +416,6 @@ func (e *Cast)      At() string { return e.Expr.At() }
 
 func (e *BadExpr)   End() string { return "" }
 func (e *IntLit)    End() string { return e.Val.At() }
-func (e *UintLit)   End() string { return e.Val.At() }
 func (e *BoolLit)   End() string { return e.Val.At() }
 func (e *CharLit)   End() string { return e.Val.At() }
 func (e *PtrLit)    End() string { return e.Val.At() }

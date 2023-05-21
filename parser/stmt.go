@@ -235,16 +235,7 @@ func prsWhileStmt(tokens *token.Tokens) ast.While {
             op.Def.Value = expr
             tokens.Next()
         } else {
-            switch t := dec.Type.(type) {
-            case types.IntType:
-                op.Def.Value = &ast.IntLit{ Repr: 0, Val: token.Token{ Str: "0" }, Type: t }
-            case types.UintType:
-                op.Def.Value = &ast.UintLit{ Repr: 0, Val: token.Token{ Str: "0" }, Type: t }
-            default:
-                fmt.Fprintf(os.Stderr, "[ERROR] expected an int/uint as iterator type but got %v\n", dec.Type)
-                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-                os.Exit(1)
-            }
+            op.Def.Value = &ast.IntLit{ Repr: 0, Val: token.Token{ Str: "0" }, Type: dec.Type }
             op.Cond = expr
         }
     } else {
@@ -284,35 +275,18 @@ func prsForStmt(tokens *token.Tokens) ast.For {
     }
 
     if op.Def.Value == nil {
-        if dec.Type.GetKind() == types.Uint {
-            op.Def.Value = &ast.UintLit{
-                Repr: 0,
-                Val: token.Token{ Str: "0", Type: token.Number },
-                Type: types.CreateUint(dec.Type.Size()),
-            }
-        } else {
-            op.Def.Value = &ast.IntLit{
-                Repr: 0,
-                Val: token.Token{ Str: "0", Type: token.Number },
-                Type: types.CreateInt(dec.Type.Size()),
-            }
+        op.Def.Value = &ast.IntLit{
+            Repr: 0,
+            Val: token.Token{ Str: "0", Type: token.Number },
+            Type: dec.Type,
         }
     }
 
     if op.Step == nil {
-        var lit ast.Expr = nil
-        if dec.Type.GetKind() == types.Uint {
-            lit = &ast.UintLit{
-                Repr: 1,
-                Val: token.Token{ Str: "1", Type: token.Number },
-                Type: types.CreateUint(dec.Type.Size()),
-            }
-        } else {
-            lit = &ast.IntLit{
-                Repr: 1,
-                Val: token.Token{ Str: "1", Type: token.Number },
-                Type: types.CreateInt(dec.Type.Size()),
-            }
+        lit := &ast.IntLit{
+            Repr: 1,
+            Val: token.Token{ Str: "1", Type: token.Number },
+            Type: dec.Type,
         }
 
         op.Step = &ast.Binary{

@@ -10,7 +10,7 @@ fn testCurPath() {
     }
 
     print("current dir: ")
-    for i i32, PATH_MAX {
+    for i u64, PATH_MAX {
         print(ctos(path[i]))
     }
     print(ctos('\n'))
@@ -44,7 +44,7 @@ fn testCreate() {
 fn printFile(path str) {
     file := open(path as *char, O_RDONLY)
 
-    BUF_SIZE :: 1024
+    BUF_SIZE u64 :: 1024
     buf := [BUF_SIZE]char{}
 
     size := read(file, buf as *char, BUF_SIZE)

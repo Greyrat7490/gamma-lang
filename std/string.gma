@@ -44,7 +44,7 @@ fn parse_int(s str, valid *bool) -> i64 {
     }
 
     if startIdx == 1 {
-        ret -res as i64
+        ret -(res as i64)
     }
     ret res as i64
 }

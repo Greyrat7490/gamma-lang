@@ -53,9 +53,12 @@ func ConstEval(e ast.Expr) constVal.ConstVal {
 func constEval(e ast.Expr, arrWithNils bool) constVal.ConstVal {
     switch e := e.(type) {
     case *ast.IntLit:
-        return (*constVal.IntConst)(&e.Repr)
-    case *ast.UintLit:
-        return (*constVal.UintConst)(&e.Repr)
+        if e.Type.GetKind() == types.Int {
+            i := int64(e.Repr)
+            return (*constVal.IntConst)(&i)
+        } else {
+            return (*constVal.UintConst)(&e.Repr)
+        }
     case *ast.BoolLit:
         return (*constVal.BoolConst)(&e.Repr)
     case *ast.CharLit:

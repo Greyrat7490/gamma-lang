@@ -45,7 +45,7 @@ func typeCheckExpr(e ast.Expr) {
     case *ast.Cast:
         typeCheckCast(e)
 
-    case *ast.IntLit, *ast.UintLit, *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.Ident:
+    case *ast.IntLit, *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.Ident:
         // nothing to check
 
     default:
@@ -292,12 +292,12 @@ func typeCheckBinary(e *ast.Binary) {
 
 func typeCheckXCase(s *ast.XCase) {
     if s.Cond != nil {
-        typeCheckExpr(s.Cond)
         if t := s.Cond.GetType(); t.GetKind() != types.Bool {
             fmt.Fprintf(os.Stderr, "[ERROR] expected a condition of type bool but got \"%v\"\n", t)
             fmt.Fprintln(os.Stderr, "\t" + s.ColonPos.At())
             os.Exit(1)
         }
+        typeCheckExpr(s.Cond)
     }
 
     typeCheckExpr(s.Expr)
@@ -310,14 +310,9 @@ func typeCheckXSwitch(o *ast.XSwitch) {
         os.Exit(1)
     }
 
-    t1 := o.Cases[0].Expr.GetType()
-    typeCheckXCase(&o.Cases[0])
-
-    for _,c := range o.Cases[1:] {
-        typeCheckXCase(&c)
-
-        t2 := c.Expr.GetType()
-        if !types.Equal(t1, t2) {
+    for _,c := range o.Cases {
+        t := c.Expr.GetType()
+        if !types.Equal(o.Type, t) {
             fmt.Fprintln(os.Stderr, "[ERROR] expected every case body to return the same type but got:")
             for i,c := range o.Cases {
                 fmt.Fprintf(os.Stderr, "\tcase%d: %v\n", i, c.Expr.GetType())
@@ -325,6 +320,10 @@ func typeCheckXSwitch(o *ast.XSwitch) {
             fmt.Fprintln(os.Stderr, "\t" + o.At())
             os.Exit(1)
         }
+    }
+
+    for _,c := range o.Cases {
+        typeCheckXCase(&c)
     }
 }
 
@@ -358,10 +357,6 @@ func typeCheckFnCall(o *ast.FnCall) {
     } else {
         fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a func (in typecheck.go FnCall)")
         os.Exit(1)
-    }
-
-    for _,a := range o.Values {
-        typeCheckExpr(a)
     }
 }
 
@@ -417,14 +412,14 @@ func typeCheckCast(e *ast.Cast) {
     switch e.DestType.GetKind() {
     case types.Bool, types.Int, types.Uint, types.Char:
         switch t.GetKind() {
-        case types.Bool, types.Uint, types.Int, types.Char:
-            return
         case types.Ptr:
             if e.DestType.GetKind() != types.Uint || e.DestType.Size() != types.Ptr_Size {
                 fmt.Fprintf(os.Stderr, "[ERROR] you can cast a pointer only into an u64 (got %v)\n", t)
                 fmt.Fprintln(os.Stderr, "\t" + e.Expr.At())
                 os.Exit(1)
             }
+
+        case types.Bool, types.Uint, types.Int, types.Char:
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] cannot cast %v into %v\n", t, e.DestType)
@@ -465,7 +460,7 @@ func typeCheckCast(e *ast.Cast) {
             }
 
         case types.Int, types.Uint:
-            if !checkTypeExpr(types.CreateUint(types.Ptr_Size), e.Expr) {
+            if !types.Equal(types.CreateUint(types.Ptr_Size), t) {
                 fmt.Fprintf(os.Stderr, "[ERROR] you can only cast an u64 into a pointer (got %v)\n", t)
                 fmt.Fprintln(os.Stderr, "\t" + e.Expr.At())
                 os.Exit(1)
@@ -492,4 +487,6 @@ func typeCheckCast(e *ast.Cast) {
         fmt.Fprintf(os.Stderr, "[ERROR] typeCheckCast for %v is not implemente yet\n", e.DestType)
         os.Exit(1)
     }
+
+    typeCheckExpr(e.Expr)
 }

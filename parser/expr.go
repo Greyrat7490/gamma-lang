@@ -263,13 +263,9 @@ func prsBasicLit(tokens *token.Tokens) ast.Expr {
 
         return &ast.CharLit{ Repr: repr, Val: val }
 
-    case types.Int:
-        repr,_ := strconv.ParseInt(val.Str, 0, 64)
-        return &ast.IntLit{ Repr: repr, Val: val, Type: t.(types.IntType) }
-
-    case types.Uint:
+    case types.Int, types.Uint:
         repr,_ := strconv.ParseUint(val.Str, 0, 64)
-        return &ast.UintLit{ Repr: repr, Val: val, Type: t.(types.UintType) }
+        return &ast.IntLit{ Repr: repr, Val: val, Type: t }
 
     default:
         return &ast.BadExpr{}
@@ -322,7 +318,7 @@ func prsVecLit(tokens *token.Tokens) *ast.VectorLit {
         if lit.Cap == nil {
             lit.Cap = &ast.Binary{ 
                 OperandL: lit.Len, 
-                OperandR: &ast.UintLit{
+                OperandR: &ast.IntLit{
                     Type: types.CreateUint(types.Ptr_Size), 
                     Repr: 2,
                     Val: token.Token{Type: token.Number, Str: "2"},
