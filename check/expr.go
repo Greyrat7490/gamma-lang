@@ -56,8 +56,6 @@ func typeCheckExpr(e ast.Expr) {
 
 
 func checkTypeExpr(destType types.Type, e ast.Expr) bool {
-    types.SetFlexableType(destType, e.GetType())
-
     typeCheckExpr(e)
     return types.Equal(destType, e.GetType())
 }
@@ -263,18 +261,6 @@ func typeCheckBinary(e *ast.Binary) {
                 fmt.Fprintln(os.Stderr, "[ERROR] you can only subtract a pointer with an u64 (not the other way around)")
                 fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
                 os.Exit(1)
-            }
-
-            if types.IsFlexable(t1) {
-                types.SetFlexableType(types.CreateUint(types.Ptr_Size), t1)
-            } else if types.IsFlexable(t2) {
-                types.SetFlexableType(types.CreateUint(types.Ptr_Size), t2)
-            }
-        } else {
-            if types.IsFlexable(t1) {
-                types.SetFlexableType(t2, t1)
-            } else if types.IsFlexable(t2) {
-                types.SetFlexableType(t1, t2)
             }
         }
 

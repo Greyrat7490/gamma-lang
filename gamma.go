@@ -8,6 +8,7 @@ import (
     "gamma/check"
     "gamma/import"
     "gamma/parser"
+    "gamma/resolver"
     "gamma/gen"
     "gamma/gen/asm/x86_64/nasm"
 )
@@ -49,6 +50,7 @@ func main() {
     imprt.SetImportDirs(path, importDir)
 
     Ast := prs.Parse(path)
+    Ast = resolver.Resolve(Ast)
     if showAst { Ast.ShowAst() }
 
     check.TypeCheck(Ast)

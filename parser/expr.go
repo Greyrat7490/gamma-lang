@@ -263,7 +263,7 @@ func prsBasicLit(tokens *token.Tokens) ast.Expr {
 
         return &ast.CharLit{ Repr: repr, Val: val }
 
-    case types.Int, types.Uint:
+    case types.Int, types.Uint, types.Infer:
         repr,_ := strconv.ParseUint(val.Str, 0, 64)
         return &ast.IntLit{ Repr: repr, Val: val, Type: t }
 

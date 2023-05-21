@@ -20,6 +20,7 @@ const (
     Generic     TypeKind = iota
     Func        TypeKind = iota
     Interface   TypeKind = iota
+    Infer       TypeKind = iota
 )
 
 const (
@@ -53,11 +54,9 @@ type CharType struct {}
 type BoolType struct {}
 type UintType struct {
     size uint
-    isFlexable bool
 }
 type IntType struct {
     size uint
-    isFlexable bool
 }
 type PtrType struct {
     BaseType Type
@@ -94,6 +93,10 @@ type GenericType struct {
 type InterfaceType struct {
     Name string
     Funcs []FuncType
+}
+type InferType struct {
+    Idx uint64
+    DefaultType Type
 }
 
 func isAligned(types []Type, size uint) (aligned bool, rest uint)  {
@@ -229,35 +232,6 @@ func IsBigStruct(t Type) bool {
     return false
 }
 
-func IsFlexable(t Type) bool {
-    switch t := t.(type) {
-    case UintType:
-        return t.isFlexable
-    case *UintType:
-        return t.isFlexable
-    case IntType:
-        return t.isFlexable
-    case *IntType:
-        return t.isFlexable
-    default:
-        return false
-    }
-}
-
-func DisableFlexable(t Type) Type {
-    switch t.(type) {
-    case UintType:
-        return CreateUint(t.Size())
-    case IntType:
-        return CreateInt(t.Size())
-    case *UintType:
-        return CreateUint(t.Size())
-    case *IntType:
-        return CreateInt(t.Size())
-    }
-
-    return t
-}
 
 func ReplaceGeneric(t Type) Type {
     if t,ok := t.(*GenericType); ok && t.CurUsedType != nil {
@@ -305,6 +279,7 @@ func (t VecType)        GetKind() TypeKind { return Vec  }
 func (t StructType)     GetKind() TypeKind { return Struct }
 func (t InterfaceType)  GetKind() TypeKind { return Interface }
 func (t FuncType)       GetKind() TypeKind { return Func }
+func (t InferType)      GetKind() TypeKind { return Infer }
 func (t GenericType)    GetKind() TypeKind {
     if t.CurUsedType != nil {
         return t.CurUsedType.GetKind()
@@ -324,6 +299,7 @@ func (t VecType)        Size() uint { return Vec_Size }
 func (t StructType)     Size() uint { return t.size }
 func (t InterfaceType)  Size() uint { return Interface_Size }
 func (t FuncType)       Size() uint { return Func_Size }
+func (t InferType)      Size() uint { return 0 }
 func (t GenericType) Size() uint {
     if t.CurUsedType != nil {
         return t.CurUsedType.Size()
@@ -378,6 +354,7 @@ func (t VecType) String() string {
 }
 func (t StructType) String() string { return t.Name }
 func (t InterfaceType) String() string { return t.Name }
+func (t InferType) String() string { return "infered" }
 func (t GenericType) String() string {
     if t.CurUsedType != nil {
         return t.CurUsedType.String()
@@ -427,6 +404,8 @@ func ToBaseType(s string) Type {
     }
 }
 
+var inferIdx uint64 = 0
+
 func TypeOfVal(val string) Type {
     switch {
     case val[0] == '"' && val[len(val) - 1] == '"':
@@ -435,19 +414,27 @@ func TypeOfVal(val string) Type {
         return CharType{}
     case val == "true" || val == "false":
         return BoolType{}
-    case len(val) > 2 && val[0:2] == "0x":
+    case len(val) > 2 && val[:2] == "0x":
         if _, err := strconv.ParseUint(val, 0, 64); err == nil {
-            return UintType{ size: U64_Size, isFlexable: true }
+            t := InferType{ Idx: inferIdx, DefaultType: UintType{ size: U64_Size } } 
+            inferIdx++
+            return t
         }
     default:
         if _, err := strconv.ParseInt(val, 10, 32); err == nil {
-            return IntType{ size: I32_Size, isFlexable: true }
+            t := InferType{ Idx: inferIdx, DefaultType: IntType{ size: I32_Size } } 
+            inferIdx++
+            return t
         }
         if _, err := strconv.ParseInt(val, 10, 64); err == nil {
-            return IntType{ size: I64_Size, isFlexable: true }
+            t := InferType{ Idx: inferIdx, DefaultType: IntType{ size: I64_Size } } 
+            inferIdx++
+            return t
         }
         if _, err := strconv.ParseUint(val, 0, 64); err == nil {
-            return UintType{ size: U64_Size, isFlexable: true }
+            t := InferType{ Idx: inferIdx, DefaultType: UintType{ size: U64_Size } } 
+            inferIdx++
+            return t
         }
     }
 
@@ -489,31 +476,7 @@ func MinSizeUint(val uint64) uint {
     }
 }
 
-var curFlexableType Type = IntType{ size: I32_Size }
-
-func SetFlexableType(dstType Type, srcType Type) {
-    if (dstType.GetKind() == Uint || dstType.GetKind() == Int) && !IsFlexable(dstType) {
-        curFlexableType = dstType
-    }
-}
-
-func checkFlexable(dstType Type, srcType Type) bool {
-    if IsFlexable(srcType) {
-        return curFlexableType.GetKind() == dstType.GetKind() && curFlexableType.Size() <= dstType.Size()
-    }
-
-    return false
-}
-
-
 func EqualBinary(t1 Type, t2 Type) bool {
-    if IsFlexable(t1) {
-        t1 = curFlexableType
-    }
-    if IsFlexable(t2) {
-        t2 = curFlexableType
-    }
-
     switch t := t1.(type) {
     case IntType:
         if t2,ok := t2.(IntType); ok {
@@ -615,17 +578,11 @@ func Equal(destType Type, srcType Type) bool {
         }
 
     case IntType:
-        if IsFlexable(srcType) {
-            return checkFlexable(destType, srcType)
-        } else {
-            if t2,ok := srcType.(IntType); ok {
-                return t2.Size() <= destType.Size()
-            }
+        if t2,ok := srcType.(IntType); ok {
+            return t2.Size() <= destType.Size()
         }
 
     case UintType:
-        if checkFlexable(destType, srcType) { return true }
-
         if t2,ok := srcType.(UintType); ok {
             return t2.Size() <= destType.Size()
         }

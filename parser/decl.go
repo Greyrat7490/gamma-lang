@@ -293,17 +293,12 @@ func prsDefConst(tokens *token.Tokens, name token.Token, t types.Type) ast.DefCo
     return ast.DefConst{ C: identObj.DecConst(name, t, v), Type: t, ColPos: pos, Value: val }
 }
 
-func inferType(val ast.Expr) types.Type {
-    t := val.GetType()
-    return types.DisableFlexable(t)
-}
-
 func prsDefVarInfer(tokens *token.Tokens, name token.Token) ast.DefVar {
     pos := tokens.Cur().Pos
     tokens.Next()
     val := prsExpr(tokens)
 
-    t := inferType(val)
+    t := val.GetType()
     if t == nil {
         if f,ok := val.(*ast.FnCall); ok {
             fmt.Fprintf(os.Stderr, "[ERROR] %s returns nothing\n", f.Ident.Name)
@@ -322,7 +317,7 @@ func prsDefConstInfer(tokens *token.Tokens, name token.Token) ast.DefConst {
     tokens.Next()
     val := prsExpr(tokens)
 
-    t := inferType(val)
+    t := val.GetType()
     if t == nil {
         if f,ok := val.(*ast.FnCall); ok {
             fmt.Fprintf(os.Stderr, "[ERROR] %s returns nothing\n", f.Ident.Name)
