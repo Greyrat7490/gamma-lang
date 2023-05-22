@@ -70,6 +70,9 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
             }
         }
 
+    case *ast.Ident:
+        addResolved(e.GetType(), t)
+
     case *ast.Cast:
         resolveForwardExpr(e.Expr, t)
 
@@ -77,7 +80,7 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
         addResolved(e.Type, t)
         e.Type = getResolvedForwardType(t)
 
-    case *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.Field, *ast.Ident:
+    case *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.Field:
         // nothing to do
 
     default:

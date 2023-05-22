@@ -36,6 +36,16 @@ func (c *Const) GetVal() constVal.ConstVal {
     return c.val
 }
 
+func (c *Const) ResolveType(t types.Type) {
+    if c.typ.GetKind() == types.Infer {
+        if inferType,ok := t.(types.InferType); ok {
+            c.typ = inferType.DefaultType
+        } else {
+            c.typ = t
+        }
+    }
+}
+
 func (c *Const) Addr() addr.Addr {
     fmt.Fprintln(os.Stderr, "[ERROR] Cannot get the addr of a const (consts are not allocated anywhere)")
     os.Exit(1)

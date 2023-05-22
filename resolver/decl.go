@@ -20,6 +20,9 @@ func resolveForwardDecl(d ast.Decl) {
 
         addResolved(d.Value.GetType(), d.Type)
         resolveForwardExpr(d.Value, d.Type)
+        if d.Type.GetKind() != types.Infer {
+            d.V.ResolveType(d.Type)
+        }
 
     case *ast.DefConst:
         if dstType,ok := d.Type.(types.InferType); ok {
@@ -31,6 +34,9 @@ func resolveForwardDecl(d ast.Decl) {
 
         addResolved(d.Value.GetType(), d.Type)
         resolveForwardExpr(d.Value, d.Type)
+        if d.Type.GetKind() != types.Infer {
+            d.C.ResolveType(d.Type)
+        }
 
     case *ast.DefFn:
         resolveForwardStmt(&d.Block)
@@ -59,10 +65,12 @@ func resolveBackwardDecl(d ast.Decl) {
     case *ast.DefVar:
         d.Type = getResolvedBackwardType(d.Type)
         resolveBackwardExpr(d.Value)
+        d.V.ResolveType(d.Type)
 
     case *ast.DefConst:
         d.Type = getResolvedBackwardType(d.Type)
         resolveBackwardExpr(d.Value)
+        d.C.ResolveType(d.Type)
 
     case *ast.DefFn:
         resolveBackwardStmt(&d.Block)

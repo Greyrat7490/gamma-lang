@@ -38,6 +38,15 @@ func (v *LocalVar) Addr() addr.Addr {
     return v.addr
 }
 
+func (v *LocalVar) ResolveType(t types.Type) {
+    if v.typ.GetKind() == types.Infer {
+        if inferType,ok := t.(types.InferType); ok {
+            v.typ = inferType.DefaultType
+        } else {
+            v.typ = t
+        }
+    }
+}
 
 func (v *LocalVar) SetOffset(frameSize uint, fromStack bool) {
     offset := int64(0)

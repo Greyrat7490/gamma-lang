@@ -33,6 +33,16 @@ func (v *GlobalVar) GetType() types.Type {
     return v.typ
 }
 
+func (v *GlobalVar) ResolveType(t types.Type) {
+    if v.typ.GetKind() == types.Infer {
+        if inferType,ok := t.(types.InferType); ok {
+            v.typ = inferType.DefaultType
+        } else {
+            v.typ = t
+        }
+    }
+}
+
 func (v *GlobalVar) Addr() addr.Addr {
     return addr.Addr{ BaseAddr: v.name }
 }
