@@ -37,10 +37,13 @@ func getResolvedForwardType(t types.Type) types.Type {
 
 func getResolvedBackwardType(t types.Type) types.Type {
     if inferType,ok := t.(types.InferType); ok {
-        if resolvedType,ok := resolvedInfers[inferType.Idx]; ok && resolvedType != nil {
+        if resolvedType,ok := resolvedInfers[inferType.Idx]; ok {
+            if t,ok := resolvedType.(types.InferType); ok {
+                return t.DefaultType
+            }
+
             return resolvedType
         }
-
         return inferType.DefaultType
     }
 
@@ -48,15 +51,11 @@ func getResolvedBackwardType(t types.Type) types.Type {
 }
 
 func addResolved(dstType types.Type, t types.Type) {
-    if dstType,ok := dstType.(types.InferType); ok {
-        if _,ok := t.(types.InferType); ok {
-            if _,ok := resolvedInfers[dstType.Idx]; !ok {
-                resolvedInfers[dstType.Idx] = nil
-            }
-        } else {
+    if t == nil { return }
+
+        if dstType,ok := dstType.(types.InferType); ok {
             if resolvedType := resolvedInfers[dstType.Idx]; resolvedType == nil {
                 resolvedInfers[dstType.Idx] = t
             }
         }
-    }
 }

@@ -22,28 +22,33 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
         resolveForwardExpr(e.Len, types.CreateUint(types.Ptr_Size))
 
     case *ast.StructLit:
-        for _,field := range e.Fields {
-            resolveForwardExpr(field.Value, e.StructType.GetType(field.Name.Str))
+        for i,field := range e.Fields {
+            t := e.StructType.GetType(field.Name.Str)
+            if t == nil {
+                t = e.StructType.Types[i]
+            }
+            addResolved(field.Value.GetType(), t)
+            resolveForwardExpr(field.Value, t)
         }
 
     case *ast.Indexed:
+        resolveForwardExpr(e.ArrExpr, e.ArrType)
         resolveForwardExpr(e.Index, types.CreateUint(types.Ptr_Size))
         addResolved(e.Type, t)
-        e.Type = getResolvedForwardType(e.GetType())
+        e.Type = getResolvedForwardType(e.Type)
 
     case *ast.Unary:
         resolveForwardExpr(e.Operand, t)
         addResolved(e.Type, t)
-        e.Type = getResolvedForwardType(e.GetType())
+        e.Type = getResolvedForwardType(e.Type)
 
     case *ast.Binary:
-        if t == nil || t.GetKind() == types.Infer {
-            if e.OperandL.GetType().GetKind() != types.Infer {
-                t = e.OperandL.GetType()
-            } else if e.OperandR.GetType().GetKind() != types.Infer {
-                t = e.OperandR.GetType()
-            }
+        if e.OperandL.GetType().GetKind() != types.Infer {
+            t = e.OperandL.GetType()
+        } else if e.OperandR.GetType().GetKind() != types.Infer {
+            t = e.OperandR.GetType()
         }
+
         resolveForwardExpr(e.OperandL, t)
         resolveForwardExpr(e.OperandR, t)
         addResolved(e.Type, t)
@@ -53,6 +58,8 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
         resolveForwardExpr(e.Expr, t)
 
     case *ast.XSwitch:
+        addResolved(e.Type, t)
+        e.Type = getResolvedBackwardType(e.Type)
         for _,c := range e.Cases {
             resolveForwardExpr(c.Cond, nil)
             resolveForwardExpr(c.Expr, e.Type)
@@ -65,8 +72,11 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
             }
         } else {
             for i,arg := range e.Values {
-                addResolved(arg.GetType(), e.F.GetArgs()[i])
-                resolveForwardExpr(arg, e.F.GetArgs()[i])
+                var t types.Type = nil
+                if i < len(e.F.GetArgs()) {
+                    t = e.F.GetArgs()[i]
+                }
+                resolveForwardExpr(arg, t)
             }
         }
 
@@ -74,11 +84,14 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
         addResolved(e.GetType(), t)
 
     case *ast.Cast:
+        if e.DestType.GetKind() == types.Ptr {
+            t = types.CreateUint(types.Ptr_Size)
+        }
         resolveForwardExpr(e.Expr, t)
 
     case *ast.IntLit:
         addResolved(e.Type, t)
-        e.Type = getResolvedForwardType(t)
+        e.Type = getResolvedForwardType(e.Type)
 
     case *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.Field:
         // nothing to do
@@ -108,6 +121,7 @@ func resolveBackwardExpr(e ast.Expr) {
         }
 
     case *ast.Indexed:
+        resolveBackwardExpr(e.ArrExpr)
         resolveBackwardExpr(e.Index)
         e.Type = getResolvedBackwardType(e.GetType())
 
@@ -116,19 +130,19 @@ func resolveBackwardExpr(e ast.Expr) {
         e.Type = getResolvedBackwardType(e.GetType())
 
     case *ast.Binary:
+        e.Type = getResolvedBackwardType(e.Type)
         resolveBackwardExpr(e.OperandL)
         resolveBackwardExpr(e.OperandR)
-        e.Type = getResolvedBackwardType(e.GetType())
 
     case *ast.Paren:
         resolveBackwardExpr(e.Expr)
 
     case *ast.XSwitch:
+        e.Type = getResolvedBackwardType(e.Type)
         for _,e := range e.Cases {
             resolveBackwardExpr(e.Cond)
             resolveBackwardExpr(e.Expr)
         }
-        e.Type = getResolvedBackwardType(e.GetType())
 
     case *ast.FnCall:
         for _,e := range e.Values {

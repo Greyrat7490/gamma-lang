@@ -5,16 +5,14 @@ import (
     "fmt"
     "reflect"
     "gamma/ast"
-    "gamma/types"
 )
 
 func resolveForwardStmt(s ast.Stmt) {
     switch s := s.(type) {
     case *ast.Assign:
-        if inferType,ok := s.Value.GetType().(types.InferType); ok {
-            addResolved(inferType, s.Dest.GetType())
-        }
+        addResolved(s.Value.GetType(), s.Dest.GetType())
         resolveForwardExpr(s.Value, s.Dest.GetType())
+        resolveForwardExpr(s.Dest, s.Dest.GetType())
 
     case *ast.Block:
         for _,s := range s.Stmts {
