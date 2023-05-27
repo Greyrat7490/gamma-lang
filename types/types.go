@@ -484,12 +484,12 @@ func EqualBinary(t1 Type, t2 Type) bool {
     switch t := t1.(type) {
     case IntType:
         if t2,ok := t2.(IntType); ok {
-            return t2.Size() <= t.Size()
+            return t2.Size() == t.Size()
         }
 
     case UintType:
         if t2,ok := t2.(UintType); ok {
-            return t2.Size() <= t.Size()
+            return t2.Size() == t.Size()
         }
         if _,ok := t2.(PtrType); ok {
             return t1.Size() == Ptr_Size
