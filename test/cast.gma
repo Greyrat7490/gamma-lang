@@ -59,7 +59,7 @@ fn testBool() {
 }
 
 fn testExtend() {
-    u := -64 as u32             // 4294967232 / 0xffffffc0
+    u := -(64 as i32) as u32             // 4294967232 / 0xffffffc0
     print(utos(u)) print(ctos('\n'))
     print(itos(u as i32)) print(ctos('\n'))
     print(itos(u as i64)) print(ctos('\n'))

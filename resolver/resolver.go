@@ -14,8 +14,6 @@ func Resolve(a ast.Ast) ast.Ast {
         resolveForwardDecl(d)
     }
 
-    fmt.Println(len(resolvedInfers))
-
     for _,d := range a.Decls {
         resolveBackwardDecl(d)
         // TODO: move create identObj here (resolve names)
@@ -27,7 +25,7 @@ func Resolve(a ast.Ast) ast.Ast {
 
 func getResolvedForwardType(t types.Type) types.Type {
     if inferType,ok := t.(types.InferType); ok {
-        if resolvedType,ok := resolvedInfers[inferType.Idx]; ok && resolvedType != nil {
+        if resolvedType := resolvedInfers[inferType.Idx]; resolvedType != nil {
             return resolvedType
         }
     }
@@ -39,9 +37,12 @@ func getResolvedBackwardType(t types.Type) types.Type {
     if inferType,ok := t.(types.InferType); ok {
         if resolvedType,ok := resolvedInfers[inferType.Idx]; ok {
             if t,ok := resolvedType.(types.InferType); ok {
-                return t.DefaultType
+                if t.Idx != inferType.Idx {
+                    return getResolvedBackwardType(t)
+                } else {
+                    return t.DefaultType
+                }
             }
-
             return resolvedType
         }
         return inferType.DefaultType
@@ -53,9 +54,13 @@ func getResolvedBackwardType(t types.Type) types.Type {
 func addResolved(dstType types.Type, t types.Type) {
     if t == nil { return }
 
+    switch t.GetKind() {
+    case types.Infer, types.Uint, types.Int, types.Generic:
         if dstType,ok := dstType.(types.InferType); ok {
-            if resolvedType := resolvedInfers[dstType.Idx]; resolvedType == nil {
+            resolvedType := resolvedInfers[dstType.Idx]
+            if resolvedType == nil || resolvedType.GetKind() == types.Infer {
                 resolvedInfers[dstType.Idx] = t
             }
         }
+    }
 }

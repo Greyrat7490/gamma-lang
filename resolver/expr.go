@@ -5,6 +5,8 @@ import (
     "fmt"
     "reflect"
     "gamma/ast"
+    "gamma/ast/identObj"
+    "gamma/ast/identObj/vars"
     "gamma/types"
 )
 
@@ -63,7 +65,7 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
 
     case *ast.XSwitch:
         addResolved(e.Type, t)
-        e.Type = getResolvedBackwardType(e.Type)
+        e.Type = getResolvedForwardType(e.Type)
         for _,c := range e.Cases {
             resolveForwardExpr(c.Cond, nil)
             resolveForwardExpr(c.Expr, e.Type)
@@ -80,12 +82,19 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
                 if i < len(e.F.GetArgs()) {
                     t = e.F.GetArgs()[i]
                 }
+                addResolved(arg.GetType(), t)
                 resolveForwardExpr(arg, t)
             }
         }
 
     case *ast.Ident:
         addResolved(e.GetType(), t)
+        switch o := e.Obj.(type) {
+        case *identObj.Const:
+            o.ResolveType(getResolvedForwardType(e.GetType()), false)
+        case vars.Var:
+            o.ResolveType(getResolvedForwardType(e.GetType()), false)
+        }
 
     case *ast.Cast:
         if e.DestType.GetKind() == types.Ptr {
@@ -159,7 +168,10 @@ func resolveBackwardExpr(e ast.Expr) {
     case *ast.IntLit:
         e.Type = getResolvedBackwardType(e.GetType())
 
-    case *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.Field, *ast.Ident:
+    case *ast.Field:
+        resolveBackwardExpr(e.Obj)
+
+    case *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.Ident:
         // nothing to do
 
     default:
