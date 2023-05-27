@@ -1,0 +1,68 @@
+fn test1(u u64) {
+    println(fmt("{}", u))
+}
+
+fn test2() {
+    a := 0
+    b := 1
+    c := a + b
+    d u32 := c
+    println(fmt("{}", d))
+}
+
+fn test3() -> u8 {
+    ret 69 - 5
+}
+
+fn testXSwitch(u u8) {
+    a := 2
+    b u16 := 3
+    
+    x := $ u == {
+        420: 1
+        86: a
+        69: b
+        _: 0
+    }
+
+    println(fmt("{}", x))
+}
+
+fn testXSwitch2(u u8) {
+    a u8 := 2
+    b u16 := 3
+    
+    x := $ u == {
+        420: 1
+        86: a
+        69: b
+        _: 0
+    }
+
+    println(fmt("{}", x))
+}
+
+fn testBinary() {
+    a u8 := 1
+    b := 2
+
+    c := a + b
+
+    println(fmt("{}", c))
+}
+
+fn main() {
+    i u32 := 30 + 39
+    println(fmt("{}", i))
+    test1(30 - 39)
+
+    test2()
+
+    println(fmt("{}", test3()))
+
+    testXSwitch(69)
+
+    testXSwitch2(69)
+
+    testBinary()
+}

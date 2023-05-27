@@ -64,6 +64,14 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
         resolveForwardExpr(e.Expr, t)
 
     case *ast.XSwitch:
+        if t != nil && t.GetKind() == types.Infer {
+            for _,c := range e.Cases {
+                if c.GetType().GetKind() != types.Infer && (t.GetKind() == types.Infer || types.Equal(c.GetType(), t)) {
+                    t = c.GetType()
+                }
+            }
+        }
+
         addResolved(e.Type, t)
         e.Type = getResolvedForwardType(e.Type)
         for _,c := range e.Cases {
