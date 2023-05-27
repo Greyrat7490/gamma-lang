@@ -43,16 +43,20 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
         e.Type = getResolvedForwardType(e.Type)
 
     case *ast.Binary:
-        if e.OperandL.GetType().GetKind() != types.Infer {
-            t = e.OperandL.GetType()
-        } else if e.OperandR.GetType().GetKind() != types.Infer {
-            t = e.OperandR.GetType()
+        if e.GetType().GetKind() == types.Ptr {
+            t = types.CreateUint(types.Ptr_Size)
+        } else {
+            if e.OperandL.GetType().GetKind() != types.Infer {
+                t = e.OperandL.GetType()
+            } else if e.OperandR.GetType().GetKind() != types.Infer {
+                t = e.OperandR.GetType()
+            }
         }
 
-        resolveForwardExpr(e.OperandL, t)
-        resolveForwardExpr(e.OperandR, t)
         addResolved(e.Type, t)
         e.Type = getResolvedForwardType(e.Type)
+        resolveForwardExpr(e.OperandL, t)
+        resolveForwardExpr(e.OperandR, t)
 
     case *ast.Paren:
         resolveForwardExpr(e.Expr, t)

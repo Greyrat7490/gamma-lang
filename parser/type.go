@@ -63,6 +63,9 @@ func getTypeBinary(e *ast.Binary) types.Type {
     if t2.GetKind() == types.Ptr {
         return t2
     }
+    if t1.GetKind() == types.Infer {
+        return t2
+    }
 
     return t1
 }
