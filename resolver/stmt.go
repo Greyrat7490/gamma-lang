@@ -5,14 +5,20 @@ import (
     "fmt"
     "reflect"
     "gamma/ast"
+    "gamma/types"
 )
 
 func resolveForwardStmt(s ast.Stmt) {
     switch s := s.(type) {
     case *ast.Assign:
-        addResolved(s.Value.GetType(), s.Dest.GetType())
-        resolveForwardExpr(s.Value, s.Dest.GetType())
-        resolveForwardExpr(s.Dest, s.Dest.GetType())
+        t := s.Dest.GetType()
+        if s.Dest.GetType().GetKind() == types.Infer {
+            t = s.Value.GetType()
+        }
+
+        addResolved(s.Value.GetType(), t)
+        resolveForwardExpr(s.Value, t)
+        resolveForwardExpr(s.Dest, t)
 
     case *ast.Block:
         for _,s := range s.Stmts {
@@ -74,6 +80,7 @@ func resolveBackwardStmt(s ast.Stmt) {
     switch s := s.(type) {
     case *ast.Assign:
         resolveBackwardExpr(s.Value)
+        resolveBackwardExpr(s.Dest)
 
     case *ast.Block:
         for _,s := range s.Stmts {
