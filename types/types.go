@@ -299,7 +299,11 @@ func (t VecType)        Size() uint { return Vec_Size }
 func (t StructType)     Size() uint { return t.size }
 func (t InterfaceType)  Size() uint { return Interface_Size }
 func (t FuncType)       Size() uint { return Func_Size }
-func (t InferType)      Size() uint { return 0 }
+func (t InferType)      Size() uint { 
+    fmt.Fprintln(os.Stderr, "[ERROR] (internal) InferType Size() should never get called")
+    os.Exit(1)
+    return 0 
+}
 func (t GenericType) Size() uint {
     if t.CurUsedType != nil {
         return t.CurUsedType.Size()
@@ -354,7 +358,7 @@ func (t VecType) String() string {
 }
 func (t StructType) String() string { return t.Name }
 func (t InterfaceType) String() string { return t.Name }
-func (t InferType) String() string { return "infered" }
+func (t InferType) String() string { return t.DefaultType.String() }
 func (t GenericType) String() string {
     if t.CurUsedType != nil {
         return t.CurUsedType.String()
