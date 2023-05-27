@@ -33,11 +33,19 @@ func (v *GlobalVar) GetType() types.Type {
     return v.typ
 }
 
-func (v *GlobalVar) ResolveType(t types.Type) {
-    if v.typ.GetKind() == types.Infer {
-        if inferType,ok := t.(types.InferType); ok {
-            v.typ = inferType.DefaultType
-        } else {
+func (v *GlobalVar) ResolveType(t types.Type, useDefault bool) {
+    if useDefault {
+        if typ,ok := v.typ.(types.InferType); ok {
+            if inferedType,ok := t.(types.InferType); ok {
+                v.typ = inferedType.DefaultType
+            } else if t != nil {
+                v.typ = t
+            } else {
+                v.typ = typ.DefaultType
+            }
+        }
+    } else {
+        if v.typ.GetKind() == types.Infer && t != nil {
             v.typ = t
         }
     }

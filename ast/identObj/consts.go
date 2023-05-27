@@ -36,11 +36,19 @@ func (c *Const) GetVal() constVal.ConstVal {
     return c.val
 }
 
-func (c *Const) ResolveType(t types.Type) {
-    if c.typ.GetKind() == types.Infer {
-        if inferType,ok := t.(types.InferType); ok {
-            c.typ = inferType.DefaultType
-        } else {
+func (c *Const) ResolveType(t types.Type, useDefault bool) {
+    if useDefault {
+        if typ,ok := c.typ.(types.InferType); ok {
+            if inferedType,ok := t.(types.InferType); ok {
+                c.typ = inferedType.DefaultType
+            } else if t != nil {
+                c.typ = t
+            } else {
+                c.typ = typ.DefaultType
+            }
+        }
+    } else {
+        if c.typ.GetKind() == types.Infer && t != nil {
             c.typ = t
         }
     }
