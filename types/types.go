@@ -242,6 +242,11 @@ func (t *StructType) GetFields() []string {
     return fields
 }
 
+func (t *EnumType) GetType(name string) Type {
+    res := t.types[name]
+    return res
+}
+
 func (t *EnumType) HasElem(name string) bool {
     _, ok := t.types[name]
     return ok
@@ -256,6 +261,11 @@ func (t *EnumType) GetElems() []string {
 
     return res
 }
+func (t *EnumType) GetID(name string) uint64 {
+    i := t.ids[name]
+    return i
+}
+
 func (t *InterfaceType) GetFunc(name string) *FuncType {
     for _,f := range t.Funcs {
         if f.Name == name {

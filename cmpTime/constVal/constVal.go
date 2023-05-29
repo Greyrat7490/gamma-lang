@@ -27,6 +27,13 @@ type StructConst struct {
     Fields []ConstVal
 }
 
+type EnumConst struct {
+    Id uint64
+    Type types.EnumType
+    ElemType types.Type
+    Elem ConstVal
+}
+
 type PtrConst struct {
     Addr addr.Addr
     Local bool
@@ -39,6 +46,7 @@ func (c *BoolConst)   GetKind() types.TypeKind { return types.Bool }
 func (c *StrConst)    GetKind() types.TypeKind { return types.Str }
 func (c *ArrConst)    GetKind() types.TypeKind { return types.Arr }
 func (c *StructConst) GetKind() types.TypeKind { return types.Struct }
+func (c *EnumConst)   GetKind() types.TypeKind { return types.Enum }
 func (c *PtrConst)    GetKind() types.TypeKind { return types.Ptr }
 
 
@@ -50,6 +58,11 @@ func (c *StrConst)    GetVal() string { return fmt.Sprintf("_str%d", uint64(*c))
 func (c *ArrConst)    GetVal() string { return fmt.Sprintf("_arr%d", c.Idx) }
 func (c *PtrConst)    GetVal() string { return c.Addr.String() }
 
+func (c *EnumConst)   GetVal() string { 
+    fmt.Fprintln(os.Stderr, "[ERROR] (internal) EnumConst.GetVal() got called")
+    os.Exit(1)
+    return ""
+}
 func (c *StructConst) GetVal() string {
     fmt.Fprintln(os.Stderr, "[ERROR] (internal) StructConst.GetVal() got called")
     os.Exit(1)
