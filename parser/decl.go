@@ -213,6 +213,10 @@ func isStruct(token token.Token) bool {
     _,ok := identObj.Get(token.Str).(*identObj.Struct)
     return ok
 }
+func isEnum(token token.Token) bool {
+    _,ok := identObj.Get(token.Str).(*identObj.Enum)
+    return ok
+}
 func isGenericFunc(token token.Token) bool {
     if f,ok := identObj.Get(token.Str).(*identObj.Func); ok {
         return f.GetGeneric() != nil
@@ -452,7 +456,21 @@ func prsEnum(tokens *token.Tokens) ast.Decl {
     elems := prsEnumElems(tokens)
     braceRPos := tokens.Cur().Pos
 
-    return &ast.DefEnum{ Pos: pos, IdType: idTyp, Name: name, BraceLPos: braceRPos, Elems: elems, BraceRPos: braceLPos }
+    var names []string
+    var types []types.Type
+    for _,e := range elems {
+        names = append(names, e.Name.Str)
+        if e.Type == nil {
+            types = append(types, nil)
+        } else {
+            types = append(types, e.Type.Type)
+        }
+    }
+
+    return &ast.DefEnum{ 
+        E: identObj.DecEnum(name,idTyp,names,types),
+        Pos: pos, IdType: idTyp, Name: name, BraceLPos: braceRPos, Elems: elems, BraceRPos: braceLPos,
+    }
 }
 func prsEnumElems(tokens *token.Tokens) []ast.EnumElem {
     res := make([]ast.EnumElem, 0, 3)

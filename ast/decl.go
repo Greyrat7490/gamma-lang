@@ -79,7 +79,7 @@ type DefInterface struct {
 }
 
 type DefEnum struct {
-    //E *identObj.Enum
+    E *identObj.Enum
     Pos token.Pos
     Name token.Token
     IdType types.Type

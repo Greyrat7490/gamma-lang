@@ -17,6 +17,7 @@ const (
     Vec         TypeKind = iota
     Str         TypeKind = iota
     Struct      TypeKind = iota
+    Enum        TypeKind = iota
     Generic     TypeKind = iota
     Func        TypeKind = iota
     Interface   TypeKind = iota
@@ -76,6 +77,13 @@ type StructType struct {
     names map[string]int
     isBigStruct bool
     isAligned bool
+    size uint
+}
+type EnumType struct {
+    Name string
+    IdType Type
+    names []string
+    types []Type        // nil for no type
     size uint
 }
 type FuncType struct {
@@ -171,6 +179,23 @@ func CreateStructType(name string, types []Type, names []string) StructType {
         size: size,
         names: ns,
     }
+}
+
+func CreateEnumType(name string, idType Type, names []string, types []Type) EnumType {
+    size := uint(0)
+    for _,t := range types {
+        if t != nil && t.Size() > size {
+            size = t.Size()
+        }
+    }
+    size += idType.Size()
+
+    if len(names) != len(types) {
+        fmt.Fprintln(os.Stderr, "[ERROR] (internal) CreateEnumType len names and types is not equal")
+        os.Exit(1)
+    }
+
+    return EnumType{ Name: name, IdType: idType, names: names, types: types, size: size }
 }
 
 func (t *StructType) GetOffset(field string) (offset int64) {
@@ -277,6 +302,7 @@ func (t PtrType)        GetKind() TypeKind { return Ptr  }
 func (t ArrType)        GetKind() TypeKind { return Arr  }
 func (t VecType)        GetKind() TypeKind { return Vec  }
 func (t StructType)     GetKind() TypeKind { return Struct }
+func (t EnumType)       GetKind() TypeKind { return Enum }
 func (t InterfaceType)  GetKind() TypeKind { return Interface }
 func (t FuncType)       GetKind() TypeKind { return Func }
 func (t InferType)      GetKind() TypeKind { return Infer }
@@ -297,6 +323,7 @@ func (t PtrType)        Size() uint { return Ptr_Size }
 func (t ArrType)        Size() uint { return Arr_Size }
 func (t VecType)        Size() uint { return Vec_Size }
 func (t StructType)     Size() uint { return t.size }
+func (t EnumType)       Size() uint { return t.size }
 func (t InterfaceType)  Size() uint { return Interface_Size }
 func (t FuncType)       Size() uint { return Func_Size }
 func (t InferType)      Size() uint { 
@@ -357,6 +384,7 @@ func (t VecType) String() string {
     return "[$]" + t.BaseType.String()
 }
 func (t StructType) String() string { return t.Name }
+func (t EnumType) String() string { return t.Name }
 func (t InterfaceType) String() string { return t.Name }
 func (t InferType) String() string { return t.DefaultType.String() }
 func (t GenericType) String() string {
@@ -532,6 +560,11 @@ func Equal(destType Type, srcType Type) bool {
 
     case StructType:
         if t2,ok := srcType.(StructType); ok {
+            return t.Name == t2.Name
+        }
+
+    case EnumType:
+        if t2,ok := srcType.(EnumType); ok {
             return t.Name == t2.Name
         }
 

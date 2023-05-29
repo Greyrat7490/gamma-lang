@@ -210,14 +210,31 @@ func DecInterface(name token.Token) *Interface {
 }
 
 func DecStruct(name token.Token, names []string, types []types.Type) *Struct {
-    if InGlobalScope() {
-        s := CreateStruct(name, names, types)
-        curScope.identObjs[name.Str] = &s
-        return &s
-    } else {
+    if !InGlobalScope() {
         fmt.Fprintln(os.Stderr, "[ERROR] you can only declare a struct in the global scope")
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
         return nil
     }
+
+    curScope.checkName(name)
+
+    s := CreateStruct(name, names, types)
+    curScope.identObjs[name.Str] = &s
+    return &s
+}
+
+func DecEnum(name token.Token, idType types.Type, names []string, types []types.Type) *Enum {
+    if !InGlobalScope() {
+        fmt.Fprintln(os.Stderr, "[ERROR] you can only declare an enum in the global scope")
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+        return nil
+    }
+
+    curScope.checkName(name)
+
+    e := CreateEnum(name, idType, names, types)
+    curScope.identObjs[name.Str] = &e
+    return &e
 }
