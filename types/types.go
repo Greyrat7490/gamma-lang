@@ -85,6 +85,7 @@ type EnumType struct {
     ids map[string]uint64
     types map[string]Type        // nil for no type
     size uint
+    isBigStruct bool
 }
 type FuncType struct {
     Name string
@@ -126,6 +127,8 @@ func isAligned(types []Type, size uint) (aligned bool, rest uint)  {
                 return false, 0
             }
             size += r
+
+        case nil:
 
         default:
             size += t.Size()
@@ -202,7 +205,17 @@ func CreateEnumType(name string, idType Type, names []string, types []Type) Enum
         ids[name] = uint64(i)
     }
 
-    return EnumType{ Name: name, IdType: idType, types: ts, ids: ids, size: size }
+    isBigStruct := false
+    if size > 16 {
+        isBigStruct = true
+    }
+
+    aligned,_ := isAligned(types, idType.Size())
+    if !aligned {
+        isBigStruct = true
+    }
+
+    return EnumType{ Name: name, IdType: idType, types: ts, ids: ids, size: size, isBigStruct: isBigStruct }
 }
 
 func (t *StructType) GetOffset(field string) (offset int64) {
@@ -261,6 +274,7 @@ func (t *EnumType) GetElems() []string {
 
     return res
 }
+
 func (t *EnumType) GetID(name string) uint64 {
     i := t.ids[name]
     return i
@@ -282,6 +296,10 @@ func IsBigStruct(t Type) bool {
     }
 
     if t,ok := t.(StructType); ok {
+        return t.isBigStruct
+    }
+
+    if t,ok := t.(EnumType); ok {
         return t.isBigStruct
     }
 

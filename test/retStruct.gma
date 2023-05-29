@@ -54,11 +54,6 @@ fn test2() -> Test {
     ret *p
 }
 
-struct Test2 {
-    i i32,
-    t Test
-}
-
 fn test3(t Test2) -> Test {
     ret t.t
 }

@@ -6,6 +6,34 @@ enum Test2 u8 {
     A(i64), B(str), C(bool) // 0, 1, 2 (u8)
 }
 
-fn main() {
+fn test1() {
+    a := Test::A
+    b := Test::B
+    c := Test::C
+}
 
+fn test2() {
+    s := "test string 2"
+    
+    a := Test2::A(86)
+    b := Test2::B("test string")
+    c := Test2::C(true)
+    b2 := Test2::B(s)
+
+    /*
+    if Test2::A(a) :: a {
+        print(fmt("i64: {}", a))
+    }
+
+    if b == {
+        A(a): print(fmt("i64: {}", a))
+        B(b): print(fmt("string: {}", b))
+        C(c): print(fmt("bool: {}", c))
+    }
+    */
+}
+
+fn main() {
+    test1()
+    test2()
 }

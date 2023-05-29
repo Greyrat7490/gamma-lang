@@ -628,6 +628,14 @@ func DerefSetBigStruct(file *bufio.Writer, address addr.Addr, e ast.Expr) {
             a.Offset += int64(e.StructType.Types[i].Size())
         }
 
+    case *ast.EnumLit:
+        asm.MovDerefVal(file, address, e.Type.IdType.Size(), fmt.Sprint(e.Type.GetID(e.ElemName.Str)))
+        if c := cmpTime.ConstEval(e.Content); c != nil {
+            DerefSetVal(file, address.Offseted(int64(e.Type.IdType.Size())), e.ContentType, c)
+        } else {
+            DerefSetExpr(file, address.Offseted(int64(e.Type.IdType.Size())), e.ContentType, e.Content)
+        }
+
     case *ast.VectorLit:
         if e.Len != nil {
             if c := cmpTime.ConstEval(e.Len); c != nil {

@@ -4,6 +4,7 @@ import (
     "os"
     "fmt"
     "bufio"
+    "reflect"
     "gamma/types"
     "gamma/types/str"
     "gamma/types/addr"
@@ -173,7 +174,7 @@ func DerefSetExpr(file *bufio.Writer, dst addr.Addr, t types.Type, val ast.Expr)
         asm.MovDerefReg(file, dst, types.Ptr_Size, asm.RegGroup(0))
         asm.MovDerefReg(file, dst.Offseted(int64(types.Ptr_Size)), types.I32_Size, asm.RegGroup(1))
 
-    case types.StructType:
+    case types.StructType, types.EnumType:
         if types.IsBigStruct(t) {
             DerefSetBigStruct(file, dst, val)
         } else {
@@ -202,7 +203,7 @@ func DerefSetExpr(file *bufio.Writer, dst addr.Addr, t types.Type, val ast.Expr)
         DerefSetBigStruct(file, dst, val)
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (DerefSetExpr)\n", t)
+        fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (DerefSetExpr)\n", reflect.TypeOf(t))
         os.Exit(1)
     }
 }
@@ -267,8 +268,11 @@ func DerefSetVal(file *bufio.Writer, addr addr.Addr, typ types.Type, val constVa
     case *constVal.PtrConst:
         derefSetPtrVal(file, addr, 0, val)
 
+    case *constVal.EnumConst:
+        derefSetEnumVal(file, typ.(types.EnumType), addr, 0, val)
+
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (derefSetStructVal)\n", typ)
+        fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (DerefSetVal)\n", reflect.TypeOf(val))
         os.Exit(1)
     }
 }
@@ -286,6 +290,13 @@ func derefSetStrVal(file *bufio.Writer, addr addr.Addr, offset int, val *constVa
     asm.MovDerefVal(file, addr.Offseted(int64(offset) + int64(types.Ptr_Size)), types.I32_Size, fmt.Sprint(str.GetSize(uint64(*val))))
 }
 
+func derefSetEnumVal(file *bufio.Writer, t types.EnumType, addr addr.Addr, offset int, val *constVal.EnumConst) {
+    asm.MovDerefVal(file, addr.Offseted(int64(offset)), t.IdType.Size(), fmt.Sprint(val.Id))
+    if val.Elem != nil {
+        DerefSetVal(file, addr.Offseted(int64(offset) + int64(t.IdType.Size())), val.ElemType, val.Elem)
+    }
+}
+
 func derefSetStructVal(file *bufio.Writer, t types.StructType, addr addr.Addr, offset int, val *constVal.StructConst) {
     for i,val := range val.Fields {
         switch val := val.(type) {
@@ -301,8 +312,11 @@ func derefSetStructVal(file *bufio.Writer, t types.StructType, addr addr.Addr, o
         case *constVal.PtrConst:
             derefSetPtrVal(file, addr, offset, val)
 
+        case *constVal.EnumConst:
+            derefSetEnumVal(file, t.Types[i].(types.EnumType), addr, offset, val)
+
         default:
-            fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (derefSetStructVal)\n", t.Types[i])
+            fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet (derefSetStructVal)\n", reflect.TypeOf(val))
             os.Exit(1)
         }
 
