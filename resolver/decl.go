@@ -51,7 +51,7 @@ func resolveForwardDecl(d ast.Decl) {
             resolveForwardDecl(d)
         }
 
-    case *ast.DefInterface, *ast.DefStruct:
+    case *ast.DefInterface, *ast.DefStruct, *ast.DefEnum:
         // nothing to do
 
     default:
@@ -85,7 +85,7 @@ func resolveBackwardDecl(d ast.Decl) {
             resolveBackwardDecl(d)
         }
 
-    case *ast.DefInterface, *ast.DefStruct:
+    case *ast.DefInterface, *ast.DefStruct, *ast.DefEnum:
         // nothing to do
 
     default:

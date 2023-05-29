@@ -31,6 +31,9 @@ func prsDecl(tokens *token.Tokens) ast.Decl {
         d := prsStruct(tokens)
         return &d
 
+    case token.Enum:
+        return prsEnum(tokens)
+
     case token.Interface:
         return prsInterface(tokens)
 
@@ -425,6 +428,74 @@ func prsInterface(tokens *token.Tokens) ast.Decl {
     identObj.CurSelfType = nil
 
     return &ast.DefInterface{ Pos: pos, Name: name, I: I, BraceLPos: braceLPos, BraceRPos: braceRPos, FnHeads: heads }
+}
+
+func prsEnum(tokens *token.Tokens) ast.Decl {
+    pos := tokens.Cur().Pos
+
+    name := tokens.Next()
+    if name.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+    }
+
+    var idTyp types.Type = nil
+    if tokens.Peek().Type != token.BraceL {
+        tokens.Next()
+        idTyp = prsType(tokens)
+    } else {
+        idTyp = types.CreateUint(types.Ptr_Size)
+    }
+
+    braceLPos := tokens.Next().Pos
+    elems := prsEnumElems(tokens)
+    braceRPos := tokens.Cur().Pos
+
+    return &ast.DefEnum{ Pos: pos, IdType: idTyp, Name: name, BraceLPos: braceRPos, Elems: elems, BraceRPos: braceLPos }
+}
+func prsEnumElems(tokens *token.Tokens) []ast.EnumElem {
+    res := make([]ast.EnumElem, 0, 3)
+
+    if tokens.Next().Type != token.BraceR {
+        res = append(res, prsEnumElem(tokens))
+
+        for tokens.Next().Type == token.Comma {
+            tokens.Next()
+            res = append(res, prsEnumElem(tokens))
+        }
+    }
+
+    if tokens.Cur().Type != token.BraceR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"}\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+
+    return res
+}
+func prsEnumElem(tokens *token.Tokens) ast.EnumElem {
+    name := tokens.Cur()
+    if name.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+    }
+
+    t := prsEnumElemType(tokens)
+
+    return ast.EnumElem{ Name: name, Type: t }
+}
+func prsEnumElemType(tokens *token.Tokens) *ast.EnumElemType {
+    if tokens.Peek().Type == token.ParenL {
+        posL := tokens.Next().Pos
+        tokens.Next()
+        typ := prsType(tokens)
+        posR := tokens.Next().Pos
+        return &ast.EnumElemType{ ParenL: posL, Type: typ, ParenR: posR }
+    }
+
+    return nil
 }
 
 func prsImpl(tokens *token.Tokens) ast.Decl {

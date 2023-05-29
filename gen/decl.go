@@ -35,7 +35,7 @@ func GenDecl(file *bufio.Writer, d ast.Decl) {
     case *ast.Impl:
         GenImpl(file, d)
 
-    case *ast.DefStruct, *ast.DecVar, *ast.DefConst, *ast.DefInterface:
+    case *ast.DefStruct, *ast.DecVar, *ast.DefConst, *ast.DefInterface, *ast.DefEnum:
         // nothing to generate
 
     case *ast.BadDecl:

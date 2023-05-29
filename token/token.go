@@ -79,6 +79,7 @@ const (
     Through         // through
     Struct          // struct
     Interface       // interface
+    Enum            // Enum
     Impl            // impl
     Self            // self
     SelfType        // Self
@@ -201,6 +202,8 @@ func ToTokenType(s string, p Pos) TokenType {
         return Struct
     case "interface":
         return Interface
+    case "enum":
+        return Enum
     case "impl":
         return Impl
     case "self":
@@ -352,6 +355,8 @@ func (t TokenType) String() string {
         return "Struct"
     case Interface:
         return "Interface"
+    case Enum:
+        return "Enum"
     case Impl:
         return "Impl"
     case Self:

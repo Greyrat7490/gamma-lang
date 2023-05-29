@@ -78,6 +78,25 @@ type DefInterface struct {
     BraceRPos token.Pos
 }
 
+type DefEnum struct {
+    //E *identObj.Enum
+    Pos token.Pos
+    Name token.Token
+    IdType types.Type
+    BraceLPos token.Pos
+    Elems []EnumElem
+    BraceRPos token.Pos
+}
+type EnumElem struct {
+    Name token.Token
+    Type *EnumElemType     // can be nil
+}
+type EnumElemType struct {
+    ParenL token.Pos
+    Type types.Type
+    ParenR token.Pos
+}
+
 type Impl struct {
     Impl identObj.Impl
     Pos token.Pos
@@ -190,6 +209,30 @@ func (o *DefInterface) Readable(indent int) string {
     return res
 }
 
+func (d *DefEnum) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) + "DEF_INTERFACE:\n" +
+        strings.Repeat("   ", indent+1) + d.IdType.String() + "\n" +
+        strings.Repeat("   ", indent+1) + d.Name.String() + "\n"
+
+    for _,e := range d.Elems {
+        res += e.Readable(indent+1)
+    }
+
+    return res
+}
+func (d *EnumElem) Readable(indent int) string {
+    s := strings.Repeat("   ", indent+1)
+    
+    res := strings.Repeat("   ", indent) + "ENUM_ELEM:\n" +
+        s + fmt.Sprintf("%v(Name)\n", d.Name.Str)
+
+    if d.Type != nil {
+        res += s + fmt.Sprintf("%v(Type)\n", d.Type.Type)
+    }
+
+    return res
+}
+
 func (o *Impl) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "IMPL:\n" +
         strings.Repeat("   ", indent+1) + "Struct: " + o.Impl.GetStructName() + "\n" +
@@ -229,6 +272,7 @@ func (d *DefConst)      decl() {}
 func (d *DefFn)         decl() {}
 func (d *DefStruct)     decl() {}
 func (d *DefInterface)  decl() {}
+func (d *DefEnum)       decl() {}
 func (d *Impl)          decl() {}
 func (d *DecField)      decl() {}
 func (d *FnHead)        decl() {}
@@ -241,6 +285,7 @@ func (d *DefConst)      At() string { return d.ColPos.At() }
 func (d *DefFn)         At() string { return d.Pos.At() }
 func (d *DefStruct)     At() string { return d.Pos.At() }
 func (d *DefInterface)  At() string { return d.Pos.At() }
+func (d *DefEnum)       At() string { return d.Pos.At() }
 func (d *Impl)          At() string { return d.Pos.At() }
 func (d *DecField)      At() string { return d.Name.At() }
 func (d *Import)        At() string { return d.Pos.At() }
@@ -252,6 +297,7 @@ func (d *DefConst)      End() string { return d.Value.End() }
 func (d *DefFn)         End() string { return d.Block.End() }
 func (d *DefStruct)     End() string { return d.BraceRPos.At() }
 func (d *DefInterface)  End() string { return d.BraceRPos.At() }
+func (d *DefEnum)       End() string { return d.BraceRPos.At() }
 func (d *Impl)          End() string { return d.BraceRPos.At() }
 func (d *DecField)      End() string { return d.TypePos.At() }
 func (d *Import)        End() string { return d.Path.At() }

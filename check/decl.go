@@ -26,7 +26,7 @@ func typeCheckDecl(d ast.Decl) {
     case *ast.Impl:
         typeCheckImpl(d)
 
-    case *ast.DefStruct, *ast.DefInterface:
+    case *ast.DefStruct, *ast.DefInterface, *ast.DefEnum:
         // nothing to do
 
     default:
