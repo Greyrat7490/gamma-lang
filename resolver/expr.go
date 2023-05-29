@@ -33,6 +33,11 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
             resolveForwardExpr(field.Value, t)
         }
 
+    case *ast.EnumLit:
+        if e.Content != nil {
+            resolveForwardExpr(e.Content.Expr, e.ContentType)
+        }
+
     case *ast.Indexed:
         resolveForwardExpr(e.ArrExpr, e.ArrType)
         resolveForwardExpr(e.Index, types.CreateUint(types.Ptr_Size))
@@ -139,6 +144,11 @@ func resolveBackwardExpr(e ast.Expr) {
     case *ast.StructLit:
         for _,e := range e.Fields {
             resolveBackwardExpr(e.Value)
+        }
+
+    case *ast.EnumLit:
+        if e.Content != nil {
+            resolveBackwardExpr(e.Content.Expr)
         }
 
     case *ast.Indexed:

@@ -82,8 +82,8 @@ type StructType struct {
 type EnumType struct {
     Name string
     IdType Type
-    names []string
-    types []Type        // nil for no type
+    ids map[string]uint64
+    types map[string]Type        // nil for no type
     size uint
 }
 type FuncType struct {
@@ -195,7 +195,14 @@ func CreateEnumType(name string, idType Type, names []string, types []Type) Enum
         os.Exit(1)
     }
 
-    return EnumType{ Name: name, IdType: idType, names: names, types: types, size: size }
+    ts := make(map[string]Type)
+    ids := make(map[string]uint64)
+    for i,name := range names {
+        ts[name] = types[i]
+        ids[name] = uint64(i)
+    }
+
+    return EnumType{ Name: name, IdType: idType, types: ts, ids: ids, size: size }
 }
 
 func (t *StructType) GetOffset(field string) (offset int64) {
@@ -235,6 +242,20 @@ func (t *StructType) GetFields() []string {
     return fields
 }
 
+func (t *EnumType) HasElem(name string) bool {
+    _, ok := t.types[name]
+    return ok
+}
+
+func (t *EnumType) GetElems() []string {
+    res := make([]string, 0, len(t.types))
+
+    for name := range t.types {
+        res = append(res, name)
+    }
+
+    return res
+}
 func (t *InterfaceType) GetFunc(name string) *FuncType {
     for _,f := range t.Funcs {
         if f.Name == name {

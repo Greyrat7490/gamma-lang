@@ -58,7 +58,11 @@ func prsExprWithPrecedence(tokens *token.Tokens, precedence precedence) ast.Expr
                 expr = prsCallGenericFn(tokens)
 
             } else if tokens.Peek2().Type == token.Name {
-                expr = prsCallInterfaceFn(tokens)
+                if isEnum(tokens.Cur()) {
+                    expr = prsEnumLit(tokens)
+                } else {
+                    expr = prsCallInterfaceFn(tokens)
+                }
 
             } else {
                 if isGenericFunc(tokens.Cur()) {
@@ -66,7 +70,7 @@ func prsExprWithPrecedence(tokens *token.Tokens, precedence precedence) ast.Expr
                     fmt.Fprintln(os.Stderr, "\t" + tokens.Peek2().At())
 
                 } else if isStruct(tokens.Cur()) {
-                    fmt.Fprintf(os.Stderr, "[ERROR] expected a interface func name after \"::\" for a struct but got %v\n", tokens.Peek2())
+                    fmt.Fprintf(os.Stderr, "[ERROR] expected an interface func name after \"::\" for a struct but got %v\n", tokens.Peek2())
                     fmt.Fprintln(os.Stderr, "\t" + tokens.Peek2().At())
 
                 } else {
@@ -691,6 +695,45 @@ func prsDotExpr(tokens *token.Tokens, obj ast.Expr) ast.Expr {
         field := &ast.Field{ Obj: obj, DotPos: dot.Pos, FieldName: name }
         setFieldType(field)
         return field
+    }
+}
+
+func prsEnumLit(tokens *token.Tokens) *ast.EnumLit {
+    name := tokens.Cur()
+    if name.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+
+    if tokens.Next().Type != token.DefConst {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a \"::\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+
+    elemName := tokens.Next()
+    if elemName.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", elemName)
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+
+    var content *ast.Paren = nil
+    if tokens.Peek().Type == token.ParenL {
+        tokens.Next()
+        content = prsParenExpr(tokens)
+    }
+
+    if enum,ok := identObj.Get(name.Str).(*identObj.Enum); ok {
+        enumType := enum.GetType().(types.EnumType)
+        t := enumType.GetType(elemName.Str)
+        return &ast.EnumLit{ Pos: name.Pos, Type: enumType, ElemName: elemName, ContentType: t, Content: content }
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] enum \"%s\" is not defined\n", name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+        return nil
     }
 }
 

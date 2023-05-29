@@ -25,6 +25,9 @@ func typeCheckExpr(e ast.Expr) {
     case *ast.Field:
         typeCheckField(e)
 
+    case *ast.EnumLit:
+        typeCheckEnumLit(e)
+
     case *ast.Unary:
         typeCheckUnary(e)
     case *ast.Binary:
@@ -124,6 +127,15 @@ func typeCheckField(e *ast.Field) {
             fmt.Fprintln(os.Stderr, "\t" + e.At())
             os.Exit(1)
         }
+    }
+}
+
+func typeCheckEnumLit(e *ast.EnumLit) {
+    if !e.Type.HasElem(e.ElemName.Str) {
+        fmt.Fprintf(os.Stderr, "[ERROR] enum %v has no %s field\n", e.Type, e.ElemName.Str)
+        fmt.Fprintf(os.Stderr, "\telems: %v\n", e.Type.GetElems())
+        fmt.Fprintln(os.Stderr, "\t" + e.At())
+        os.Exit(1)
     }
 }
 
