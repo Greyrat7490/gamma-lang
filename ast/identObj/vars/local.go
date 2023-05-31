@@ -56,6 +56,10 @@ func (v *LocalVar) ResolveType(t types.Type, useDefault bool) {
     }
 }
 
+func (v *LocalVar) SetAddr(addr addr.Addr) {
+    v.addr = addr
+}
+
 func (v *LocalVar) SetOffset(frameSize uint, fromStack bool) {
     offset := int64(0)
     if fromStack {

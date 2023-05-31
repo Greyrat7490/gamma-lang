@@ -105,6 +105,9 @@ func constEval(e ast.Expr, arrWithNils bool) constVal.ConstVal {
         }
         return &constVal.EnumConst{ Id: e.Type.GetID(e.ElemName.Str), Type: e.Type, ElemType: e.Type.GetType(e.ElemName.Str), Elem: elem } 
 
+    case *ast.Unwrap:
+        return ConstEvalUnwrap(e)
+
     case *ast.Ident:
         return ConstEvalIdent(e)
 
@@ -152,6 +155,14 @@ func constEval(e ast.Expr, arrWithNils bool) constVal.ConstVal {
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] ConstEval for %v is not implemente yet\n", reflect.TypeOf(e))
         os.Exit(1)
+    }
+
+    return nil
+}
+
+func ConstEvalUnwrap(e *ast.Unwrap) constVal.ConstVal {
+    if c,ok := ConstEval(e.SrcExpt).(*constVal.EnumConst); ok {
+        return c.Elem
     }
 
     return nil

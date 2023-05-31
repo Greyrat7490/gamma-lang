@@ -84,6 +84,19 @@ func GenExpr(file *bufio.Writer, e ast.Expr) {
     case *ast.Ident:
         GenIdent(file, e)
 
+    case *ast.Unwrap:
+        // TODO get addr from any expr (if not possible reserve stack)
+        addr := addr.Addr{}
+        if ident,ok :=  e.SrcExpt.(*ast.Ident); ok {
+            addr = ident.Obj.Addr()
+        }
+
+        idType := e.EnumType.IdType
+        asm.Eql(file, fmt.Sprintf("%s [%s]", asm.GetWord(idType.Size()),
+            addr.String()), fmt.Sprint(e.EnumType.GetID(e.ElemName.Str)))
+
+        e.DecVar.V.SetAddr(addr.Offseted(int64(idType.Size())))
+
     case *ast.FnCall:
         asm.SaveReg(file, asm.RegC)
         switch e.Ident.Name {

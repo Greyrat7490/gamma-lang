@@ -10,11 +10,12 @@ import (
 type GlobalVar struct {
     decPos token.Pos
     name string
+    addr addr.Addr
     typ types.Type
 }
 
 func CreateGlobalVar(name token.Token, t types.Type) GlobalVar {
-    return GlobalVar{ name: name.Str, decPos: name.Pos, typ: t }
+    return GlobalVar{ name: name.Str, decPos: name.Pos, typ: t, addr: addr.Addr{ BaseAddr: name.Str } }
 }
 
 func (v *GlobalVar) String() string {
@@ -51,6 +52,10 @@ func (v *GlobalVar) ResolveType(t types.Type, useDefault bool) {
     }
 }
 
+func (v *GlobalVar) SetAddr(addr addr.Addr) {
+    v.addr = addr
+}
+
 func (v *GlobalVar) Addr() addr.Addr {
-    return addr.Addr{ BaseAddr: v.name }
+    return v.addr
 }
