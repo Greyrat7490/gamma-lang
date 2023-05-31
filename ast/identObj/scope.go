@@ -31,16 +31,16 @@ func (s *Scope) ArgsSize() uint {
     return size
 }
 
-func (s *Scope) getInnerSize(size uint) uint {
+func (s *Scope) getInnerSize() uint {
+    size := uint(0)
     for _,obj := range s.identObjs {
         if _,ok := obj.(*vars.LocalVar); ok {
             size += obj.GetType().Size()
         }
     }
 
-    curSize := size
     for _,s := range s.children {
-        size += s.getInnerSize(curSize)
+        size += s.getInnerSize()
     }
 
     return size
@@ -52,7 +52,7 @@ func (s *Scope) GetInnerSize() uint {
         os.Exit(1)
     }
 
-    size := s.children[0].getInnerSize(0)
+    size := s.children[0].getInnerSize()
 
     // framesize has to be the multiple of 16byte
     return (size + 15) & ^uint(15)
