@@ -737,6 +737,59 @@ func prsEnumLit(tokens *token.Tokens) *ast.EnumLit {
     }
 }
 
+func prsUnwrap(tokens *token.Tokens, srcExpr ast.Expr) *ast.Unwrap {
+    colonPos := tokens.Next().Pos
+
+    name := tokens.Next()
+    if name.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+
+    if tokens.Next().Type != token.DefConst {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a \"::\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+
+    elemName := tokens.Next()
+    if elemName.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", elemName)
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+
+    if tokens.Next().Type != token.ParenL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+    parenLPos := tokens.Cur().Pos
+
+    tokens.Next()
+    ident := prsName(tokens)
+
+    if tokens.Next().Type != token.ParenR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+    parenRPos := tokens.Cur().Pos
+
+    if enum,ok := identObj.Get(name.Str).(*identObj.Enum); ok {
+        enumType := enum.GetType().(types.EnumType)
+        t := enumType.GetType(elemName.Str)
+        return &ast.Unwrap{ SrcExpt: srcExpr, ColonPos: colonPos, ElemName: elemName, EnumType: enumType,
+            ParenLPos: parenLPos, DecVar: ast.DecVar{ V: identObj.DecVar(ident, t)}, ParenRPos: parenRPos }
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] enum \"%s\" is not defined\n", name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
+        os.Exit(1)
+        return nil
+    }
+}
+
 func addSelfArg(values []ast.Expr, f *identObj.Func, obj ast.Expr) []ast.Expr {
     values = append(values, nil)
     copy(values[1:], values)

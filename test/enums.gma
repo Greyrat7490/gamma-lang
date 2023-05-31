@@ -6,26 +6,53 @@ enum Test2 u8 {
     A(i64), B(str), C(bool) // 0, 1, 2 (u8)
 }
 
+struct Test3 {
+    a u64,
+    b u64,
+    c u64
+}
+
 fn test1() {
     a := Test::A
     b := Test::B
     c := Test::C
 }
 
+fn test3() -> Test3 {
+    ret Test3{ 1, 2, 3 }
+}
+
 fn test2() {
     s := "test string 2"
-    
+
     a := Test2::A(86)
     b := Test2::B("test string")
     c := Test2::C(true)
     b2 := Test2::B(s)
 
-    /*
-    if Test2::A(a) :: a {
-        print(fmt("i64: {}", a))
+    if a : Test2::A(a) {
+        println(fmt("i64: {}", a))
     }
 
-    if b == {
+    if c : Test2::C(c) {
+        println(fmt("bool: {}", c))
+        c = false
+    }
+
+    if c : Test2::C(c) {
+        println(fmt("bool: {}", c))
+    }
+
+    if b : Test2::B(b) {
+        println(fmt("str: {}", b))
+    }
+
+    if b2 : Test2::B(b) {
+        println(fmt("str: {}", b))
+    }
+
+    /*
+    if a : Test2::{
         A(a): print(fmt("i64: {}", a))
         B(b): print(fmt("string: {}", b))
         C(c): print(fmt("bool: {}", c))

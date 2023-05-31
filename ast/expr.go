@@ -96,6 +96,16 @@ type EnumLit struct {
     Content *Paren          // can be nil
 }
 
+type Unwrap struct {
+    SrcExpt Expr
+    ColonPos token.Pos
+    ElemName token.Token
+    EnumType types.EnumType
+    ParenLPos token.Pos
+    DecVar DecVar
+    ParenRPos token.Pos
+}
+
 type Indexed struct {
     ArrType types.Type
     Type types.Type
@@ -247,6 +257,16 @@ func (e *EnumLit) Readable(indent int) string {
     return res
 }
 
+func (e *Unwrap) Readable(indent int) string {
+    s := strings.Repeat("   ", indent+1)
+
+    return strings.Repeat("   ", indent) + "UNWRAP:\n" +
+        e.SrcExpt.Readable(indent+1) +
+        fmt.Sprintf("%s%v\n", s, e.SrcExpt.GetType()) +
+        fmt.Sprintf("%s%s\n", s, e.ElemName.Str) +
+        fmt.Sprintf("%s%s\n", s, e.DecVar.V.GetName())
+}
+
 func (o *Ident) Readable(indent int) string {
     return strings.Repeat("   ", indent) + o.Name + "(Name)\n"
 }
@@ -385,7 +405,8 @@ func (e *VectorLit) GetType() types.Type { return e.Type }
 func (e *FnCall)    GetType() types.Type { return e.F.GetRetType() }
 func (e *Indexed)   GetType() types.Type { return e.Type }
 func (e *Field)     GetType() types.Type { return e.Type }
-func (e *EnumLit)  GetType() types.Type { return e.Type }
+func (e *EnumLit)   GetType() types.Type { return e.Type }
+func (e *Unwrap)    GetType() types.Type { return types.BoolType{} }
 func (e *Ident)     GetType() types.Type { return e.Obj.GetType() }
 func (e *Unary)     GetType() types.Type { return e.Type }
 func (e *Binary)    GetType() types.Type { return e.Type }
@@ -408,7 +429,8 @@ func (e *VectorLit) expr() {}
 func (e *FnCall)    expr() {}
 func (e *Indexed)   expr() {}
 func (e *Field)     expr() {}
-func (e *EnumLit)  expr() {}
+func (e *EnumLit)   expr() {}
+func (e *Unwrap)    expr() {}
 func (e *Ident)     expr() {}
 func (e *Unary)     expr() {}
 func (e *Binary)    expr() {}
@@ -430,7 +452,8 @@ func (e *VectorLit) At() string { return e.Pos.At() }
 func (e *FnCall)    At() string { return e.Ident.At() }
 func (e *Indexed)   At() string { return e.ArrExpr.At() }
 func (e *Field)     At() string { return e.Obj.At() }
-func (e *EnumLit)  At() string { return e.Pos.At() }
+func (e *EnumLit)   At() string { return e.Pos.At() }
+func (e *Unwrap)    At() string { return e.SrcExpt.At() }
 func (e *Ident)     At() string { return e.Pos.At() }
 func (e *Unary)     At() string { return e.Operator.At() }
 func (e *Binary)    At() string { return e.OperandL.At() }    // TODO: At() of Operand with higher precedence
@@ -452,7 +475,14 @@ func (e *VectorLit) End() string { return e.BraceRPos.At() }
 func (e *FnCall)    End() string { return e.ParenRPos.At() }
 func (e *Indexed)   End() string { return e.BrackRPos.At() }
 func (e *Field)     End() string { return e.FieldName.At() }
-func (e *EnumLit)  End() string { return e.ElemName.At() }
+func (e *EnumLit)   End() string { 
+    if e.Content != nil {
+        return e.Content.End()
+    } else {
+        return e.ElemName.At()
+    }
+}
+func (e *Unwrap)    End() string { return e.ParenRPos.At() }
 func (e *Ident)     End() string { return e.Pos.At() }
 func (e *Unary)     End() string { return e.Operand.At() }
 func (e *Binary)    End() string { return e.OperandR.At() }

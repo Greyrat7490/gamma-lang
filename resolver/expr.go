@@ -119,7 +119,7 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
         addResolved(e.Type, t)
         e.Type = getResolvedForwardType(e.Type)
 
-    case *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.Field:
+    case *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.Field, *ast.Unwrap:
         // nothing to do
 
     default:
@@ -189,7 +189,7 @@ func resolveBackwardExpr(e ast.Expr) {
     case *ast.Field:
         resolveBackwardExpr(e.Obj)
 
-    case *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.Ident:
+    case *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.Ident, *ast.Unwrap:
         // nothing to do
 
     default:

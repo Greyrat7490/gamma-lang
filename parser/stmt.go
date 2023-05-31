@@ -170,6 +170,11 @@ func prsIfStmt(tokens *token.Tokens) ast.If {
 
     cond := prsExpr(tokens)
 
+    // unwrap condition
+    if tokens.Peek().Type == token.Colon {
+        cond = prsUnwrap(tokens, cond)
+    }
+
     // cond-switch with condBase
     if tokens.Cur().Str == "{" {
         return ast.If{ Pos: pos, Cond: cond }
