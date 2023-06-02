@@ -217,7 +217,7 @@ func prsName(tokens *token.Tokens) token.Token {
         name.Type = token.Name
     }
 
-    if name.Type != token.Name {
+    if name.Type != token.Name && name.Type != token.UndScr {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
@@ -779,9 +779,13 @@ func prsUnwrap(tokens *token.Tokens, srcExpr ast.Expr) *ast.Unwrap {
 
     if enum,ok := identObj.Get(name.Str).(*identObj.Enum); ok {
         enumType := enum.GetType().(types.EnumType)
-        t := enumType.GetType(elemName.Str)
+        dec := ast.DecVar{}
+        if ident.Type != token.UndScr {
+            dec.V = identObj.DecVar(ident, enumType.GetType(elemName.Str))
+        }
+
         return &ast.Unwrap{ SrcExpt: srcExpr, ColonPos: colonPos, ElemName: elemName, EnumType: enumType,
-            ParenLPos: parenLPos, DecVar: ast.DecVar{ V: identObj.DecVar(ident, t)}, ParenRPos: parenRPos }
+            ParenLPos: parenLPos, DecVar: dec, ParenRPos: parenRPos }
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] enum \"%s\" is not defined\n", name.Str)
         fmt.Fprintln(os.Stderr, "\t" + name.At())

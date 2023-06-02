@@ -55,7 +55,6 @@ fn test2() {
         println(fmt("str: {}", b))
     }
 
-    // TODO !: (unequal unwrap)
     if b2 : Test2::C(b) {
         println(fmt("str: {}", b))
     } else {
@@ -79,8 +78,7 @@ fn test3() {
         println(fmt("A: {}", b))
     }
 
-    // TODO: allow Test2::C(_) and *b == Test2::C
-    if *b : Test2::C(b) {
+    if *b : Test2::C(_) {
         println("dead code")
     } else {
         println("*b is not a Test2::C")
