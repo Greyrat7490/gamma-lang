@@ -75,6 +75,7 @@ func typeCheckIf(s *ast.If) {
         os.Exit(1)
     }
 
+    typeCheckExpr(s.Cond)
     typeCheckBlock(&s.Block)
 }
 
