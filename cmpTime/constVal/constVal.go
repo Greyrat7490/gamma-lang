@@ -57,12 +57,14 @@ func (c *BoolConst)   GetVal() string { if bool(*c) { return "1" } else { return
 func (c *StrConst)    GetVal() string { return fmt.Sprintf("_str%d", uint64(*c)) }
 func (c *ArrConst)    GetVal() string { return fmt.Sprintf("_arr%d", c.Idx) }
 func (c *PtrConst)    GetVal() string { return c.Addr.String() }
-
 func (c *EnumConst)   GetVal() string { 
-    fmt.Fprintln(os.Stderr, "[ERROR] (internal) EnumConst.GetVal() got called")
-    os.Exit(1)
-    return ""
+    if c.Elem == nil {
+        return fmt.Sprint(c.Id)
+    } else {
+        return c.Elem.GetVal()
+    }
 }
+
 func (c *StructConst) GetVal() string {
     fmt.Fprintln(os.Stderr, "[ERROR] (internal) StructConst.GetVal() got called")
     os.Exit(1)

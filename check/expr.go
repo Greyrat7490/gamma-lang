@@ -27,6 +27,8 @@ func typeCheckExpr(e ast.Expr) {
 
     case *ast.EnumLit:
         typeCheckEnumLit(e)
+    case *ast.Unwrap:
+        typeCheckUnwrap(e)
 
     case *ast.Unary:
         typeCheckUnary(e)
@@ -136,6 +138,23 @@ func typeCheckEnumLit(e *ast.EnumLit) {
         fmt.Fprintf(os.Stderr, "\telems: %v\n", e.Type.GetElems())
         fmt.Fprintln(os.Stderr, "\t" + e.At())
         os.Exit(1)
+    }
+}
+
+func typeCheckUnwrap(e *ast.Unwrap) {
+    t := e.EnumType.GetType(e.ElemName.Str)
+    if t != nil {
+        if e.DecVar == nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] missing identifier (enum %s::%s expects an identifier for type %s) \n", e.EnumType, e.ElemName.Str, t)
+            fmt.Fprintln(os.Stderr, "\t" + e.ElemName.At())
+            os.Exit(1)
+        }
+    } else {
+        if e.DecVar != nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] Enum %s::%s has no type but got identifier %s \n", e.EnumType, e.ElemName.Str, e.DecVar.V.GetName())
+            fmt.Fprintln(os.Stderr, "\t" + e.DecVar.At())
+            os.Exit(1)
+        }
     }
 }
 

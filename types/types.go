@@ -256,8 +256,7 @@ func (t *StructType) GetFields() []string {
 }
 
 func (t *EnumType) GetType(name string) Type {
-    res := t.types[name]
-    return res
+    return t.types[name]
 }
 
 func (t *EnumType) HasElem(name string) bool {

@@ -102,7 +102,7 @@ type Unwrap struct {
     ElemName token.Token
     EnumType types.EnumType
     ParenLPos token.Pos
-    DecVar DecVar
+    DecVar *DecVar          // can be nil
     ParenRPos token.Pos
 }
 
@@ -246,7 +246,7 @@ func (o *Field) Readable(indent int) string {
 func (e *EnumLit) Readable(indent int) string {
     s := strings.Repeat("   ", indent+1)
 
-    res := strings.Repeat("   ", indent) + "ENUM_EXPR:\n" +
+    res := strings.Repeat("   ", indent) + "ENUM_LIT:\n" +
         fmt.Sprintf("%s%v\n", s, e.Type) +
         fmt.Sprintf("%s%s\n", s, e.ElemName.Str)
 
@@ -260,11 +260,15 @@ func (e *EnumLit) Readable(indent int) string {
 func (e *Unwrap) Readable(indent int) string {
     s := strings.Repeat("   ", indent+1)
 
-    return strings.Repeat("   ", indent) + "UNWRAP:\n" +
+    res := strings.Repeat("   ", indent) + "UNWRAP:\n" +
         e.SrcExpt.Readable(indent+1) +
-        fmt.Sprintf("%s%v\n", s, e.SrcExpt.GetType()) +
-        fmt.Sprintf("%s%s\n", s, e.ElemName.Str) +
-        fmt.Sprintf("%s%s\n", s, e.DecVar.V.GetName())
+        fmt.Sprintf("%s%v::%s\n", s, e.SrcExpt.GetType(), e.ElemName.Str)
+
+    if e.DecVar != nil && e.DecVar.V != nil {
+        res += fmt.Sprintf("%s%s\n", s, e.DecVar.V.GetName())
+    }
+
+    return res
 }
 
 func (o *Ident) Readable(indent int) string {

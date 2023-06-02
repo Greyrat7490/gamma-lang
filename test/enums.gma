@@ -11,19 +11,17 @@ fn test1() {
     b := Test::B
     c := Test::C
 
-    /*
-    if a == Test::A {
+    if a : Test::A {
         println("a == Test::A")
     }
 
-    if b == Test::B {
+    if b : Test::B {
         println("b == Test::B")
     }
 
-    if c == Test::C {
+    if c : Test::C {
         println("c == Test::C")
     }
-    */
 }
 
 fn test2() {
@@ -55,8 +53,8 @@ fn test2() {
         println(fmt("str: {}", b))
     }
 
-    if b2 : Test2::C(b) {
-        println(fmt("str: {}", b))
+    if b2 : Test2::C(_) {
+        println("dead code")
     } else {
         println("b2 is not a Test2::C")
     }

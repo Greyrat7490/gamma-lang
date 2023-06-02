@@ -760,37 +760,45 @@ func prsUnwrap(tokens *token.Tokens, srcExpr ast.Expr) *ast.Unwrap {
         os.Exit(1)
     }
 
-    if tokens.Next().Type != token.ParenL {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"(\" but got %v\n", tokens.Cur())
-        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+    var enum *identObj.Enum = nil
+    if obj := identObj.Get(name.Str); obj != nil {
+        if e,ok := obj.(*identObj.Enum); ok {
+            enum = e
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not an enum (got %v)\n", name.Str, reflect.TypeOf(obj))
+            fmt.Fprintln(os.Stderr, "\t" + name.At())
+            os.Exit(1)
+        }
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] enum \"%s\" is not defined\n", name.Str)
+        fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
-    parenLPos := tokens.Cur().Pos
+    enumType := enum.GetType().(types.EnumType)
 
-    tokens.Next()
-    ident := prsName(tokens)
+    if tokens.Peek().Type == token.ParenL {
+        parenLPos := tokens.Next().Pos
 
-    if tokens.Next().Type != token.ParenR {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got %v\n", tokens.Cur())
-        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-        os.Exit(1)
-    }
-    parenRPos := tokens.Cur().Pos
+        tokens.Next()
+        ident := prsName(tokens)
 
-    if enum,ok := identObj.Get(name.Str).(*identObj.Enum); ok {
-        enumType := enum.GetType().(types.EnumType)
-        dec := ast.DecVar{}
+        if tokens.Next().Type != token.ParenR {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got %v\n", tokens.Cur())
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+            os.Exit(1)
+        }
+        parenRPos := tokens.Cur().Pos
+
+        t := enumType.GetType(elemName.Str)
+        var dec *ast.DecVar = &ast.DecVar{ Type: t } 
         if ident.Type != token.UndScr {
-            dec.V = identObj.DecVar(ident, enumType.GetType(elemName.Str))
+            dec.V = identObj.DecVar(ident, t)
         }
 
         return &ast.Unwrap{ SrcExpt: srcExpr, ColonPos: colonPos, ElemName: elemName, EnumType: enumType,
             ParenLPos: parenLPos, DecVar: dec, ParenRPos: parenRPos }
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] enum \"%s\" is not defined\n", name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
-        return nil
+        return &ast.Unwrap{ SrcExpt: srcExpr, ColonPos: colonPos, ElemName: elemName, EnumType: enumType }
     }
 }
 
