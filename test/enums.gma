@@ -6,20 +6,24 @@ enum Test2 u8 {
     A(i64), B(str), C(bool) // 0, 1, 2 (u8)
 }
 
-struct Test3 {
-    a u64,
-    b u64,
-    c u64
-}
-
 fn test1() {
     a := Test::A
     b := Test::B
     c := Test::C
-}
 
-fn test3() -> Test3 {
-    ret Test3{ 1, 2, 3 }
+    /*
+    if a == Test::A {
+        println("a == Test::A")
+    }
+
+    if b == Test::B {
+        println("b == Test::B")
+    }
+
+    if c == Test::C {
+        println("c == Test::C")
+    }
+    */
 }
 
 fn test2() {
@@ -51,6 +55,13 @@ fn test2() {
         println(fmt("str: {}", b))
     }
 
+    // TODO !: (unequal unwrap)
+    if b2 : Test2::C(b) {
+        println(fmt("str: {}", b))
+    } else {
+        println("b2 is not a Test2::C")
+    }
+
     /*
     if a : Test2::{
         A(a): print(fmt("i64: {}", a))
@@ -60,7 +71,56 @@ fn test2() {
     */
 }
 
+fn test3() {
+    a := Test2::A(420)
+    b := &a
+
+    if *b : Test2::A(b) {
+        println(fmt("A: {}", b))
+    }
+
+    // TODO: allow Test2::C(_) and *b == Test2::C
+    if *b : Test2::C(b) {
+        println("dead code")
+    } else {
+        println("*b is not a Test2::C")
+    }
+}
+
+enum SmallEnum u32 {
+    A(u32), B(bool), C(u8)
+}
+
+struct Test3 {
+    a u64,
+    b u64,
+    t Test2
+}
+
+fn test4() {
+    t := Test3{ a: 86, b: 69, t: Test2::A(64) }
+    
+    if t.t : Test2::A(a) {
+        println(fmt("A: {}", a))
+    }
+}
+
+/*
+fn retStruct() -> Test3 {
+    ret Test3{ 1, 2, Test2::C(86) }
+}
+
+fn test5() {
+    if retStruct().t : Test2::C(c) {
+        println(fmt("C: {}", c))
+    }
+}
+*/
+
 fn main() {
     test1()
     test2()
+    test3()
+    test4()
+    // test5()
 }

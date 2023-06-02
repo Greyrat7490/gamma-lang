@@ -11,6 +11,7 @@ import (
     "gamma/cmpTime"
     "gamma/cmpTime/constVal"
     "gamma/ast"
+    "gamma/ast/identObj"
     "gamma/ast/identObj/vars"
     "gamma/gen/asm/x86_64"
     "gamma/gen/asm/x86_64/loops"
@@ -107,7 +108,37 @@ func GenBlock(file *bufio.Writer, s *ast.Block) {
     }
 }
 
+func GenIfCond(file *bufio.Writer, e ast.Expr, hasElse bool) uint {
+    switch e := e.(type) {
+    case *ast.Ident:
+        return cond.IfVar(file, e.Obj.Addr(), hasElse)
+
+    case *ast.Unwrap:
+        idType := e.EnumType.IdType
+        id := e.EnumType.GetID(e.ElemName.Str)
+
+        ExprAddrToReg(file, e.SrcExpt, asm.RegD)
+        asm.MovRegDeref(file, asm.RegA, asm.RegAsAddr(asm.RegD), idType.Size(), false)
+        asm.Eql(file, asm.GetAnyReg(asm.RegA, idType.Size()), fmt.Sprint(id))
+
+        count := cond.IfExpr(file, hasElse)
+
+        if v,ok := e.DecVar.V.(*vars.LocalVar); ok {
+            v.SetOffset(identObj.GetStackSize(), false)
+            identObj.IncStackSize(v.GetType())
+            DerefSetDeref(file, v.Addr(), v.GetType(), asm.RegAsAddr(asm.RegD).Offseted(int64(idType.Size())))
+        }
+
+        return count
+
+    default:
+        GenExpr(file, e)
+        return cond.IfExpr(file, hasElse)
+    }
+}
+
 func GenIf(file *bufio.Writer, s *ast.If) {
+    // TODO unwrap
     if val,ok := cmpTime.ConstEval(s.Cond).(*constVal.BoolConst); ok {
         if bool(*val) {
             GenBlock(file, &s.Block)
@@ -120,13 +151,7 @@ func GenIf(file *bufio.Writer, s *ast.If) {
 
     hasElse := s.Else != nil || s.Elif != nil
 
-    var count uint = 0
-    if ident,ok := s.Cond.(*ast.Ident); ok {
-        count = cond.IfVar(file, ident.Obj.Addr(), hasElse)
-    } else {
-        GenExpr(file, s.Cond)
-        count = cond.IfExpr(file, hasElse)
-    }
+    count := GenIfCond(file, s.Cond, hasElse)
 
     GenBlock(file, &s.Block)
 

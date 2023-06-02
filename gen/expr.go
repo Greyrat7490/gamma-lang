@@ -84,19 +84,6 @@ func GenExpr(file *bufio.Writer, e ast.Expr) {
     case *ast.Ident:
         GenIdent(file, e)
 
-    case *ast.Unwrap:
-        // TODO get addr from any expr (if not possible reserve stack)
-        addr := addr.Addr{}
-        if ident,ok :=  e.SrcExpt.(*ast.Ident); ok {
-            addr = ident.Obj.Addr()
-        }
-
-        idType := e.EnumType.IdType
-        asm.Eql(file, fmt.Sprintf("%s [%s]", asm.GetWord(idType.Size()),
-            addr.String()), fmt.Sprint(e.EnumType.GetID(e.ElemName.Str)))
-
-        e.DecVar.V.SetAddr(addr.Offseted(int64(idType.Size())))
-
     case *ast.FnCall:
         asm.SaveReg(file, asm.RegC)
         switch e.Ident.Name {
@@ -165,12 +152,7 @@ func GenStrLit(file *bufio.Writer, e *ast.StrLit) {
 }
 
 func GenStructLit(file *bufio.Writer, e *ast.StructLit) {
-    if len(e.StructType.Types) != 0 {
-        if types.IsBigStruct(e.StructType) {
-            fmt.Fprintf(os.Stderr, "[ERROR] (internal) called GenStructLit with a big struct type %v\n", e.StructType)
-            os.Exit(1)
-        }
-
+    if len(e.StructType.Types) != 0 && !types.IsBigStruct(e.StructType) {
         if c,ok := cmpTime.ConstEvalStructLit(e).(*constVal.StructConst); ok {
             vs := PackValues(e.StructType.Types, c.Fields)
             asm.MovRegVal(file, asm.RegA, types.Ptr_Size, vs[0])
