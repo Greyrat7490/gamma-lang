@@ -18,7 +18,7 @@ func prsStmt(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
     case token.If:
         ifStmt := prsIfStmt(tokens)
 
-        if tokens.Cur().Str == "{" {
+        if tokens.Cur().Type == token.BraceL {
             switchStmt := prsSwitch(tokens, ifStmt.Pos, ifStmt.Cond)
             return &switchStmt
         }
@@ -164,7 +164,7 @@ func prsIfStmt(tokens *token.Tokens) ast.If {
     pos := tokens.Cur().Pos
 
     // cond-switch without condBase
-    if tokens.Next().Str == "{" {
+    if tokens.Next().Type == token.BraceL {
         return ast.If{ Pos: pos }
     }
 
@@ -176,7 +176,7 @@ func prsIfStmt(tokens *token.Tokens) ast.If {
     }
 
     // cond-switch with condBase
-    if tokens.Cur().Str == "{" {
+    if tokens.Cur().Type == token.BraceL {
         return ast.If{ Pos: pos, Cond: cond }
     }
 

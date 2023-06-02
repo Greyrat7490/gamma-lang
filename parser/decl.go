@@ -91,6 +91,10 @@ func prsType(tokens *token.Tokens) types.Type {
             if interfc,ok := obj.(*identObj.Interface); ok {
                 return interfc.GetType()
             }
+
+            if enum,ok := obj.(*identObj.Enum); ok {
+                return enum.GetType()
+            }
         }
 
         if generic := identObj.GetGeneric(tokens.Cur().Str); generic != nil {
