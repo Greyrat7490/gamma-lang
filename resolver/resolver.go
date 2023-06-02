@@ -34,6 +34,10 @@ func getResolvedForwardType(t types.Type) types.Type {
 }
 
 func getResolvedBackwardType(t types.Type) types.Type {
+    if ptr,ok := t.(types.PtrType); ok {
+        return types.PtrType{ BaseType: getResolvedBackwardType(ptr.BaseType) }
+    }
+
     if inferType,ok := t.(types.InferType); ok {
         if resolvedType,ok := resolvedInfers[inferType.Idx]; ok {
             if t,ok := resolvedType.(types.InferType); ok {
@@ -53,6 +57,15 @@ func getResolvedBackwardType(t types.Type) types.Type {
 
 func addResolved(dstType types.Type, t types.Type) {
     if t == nil { return }
+
+    if ptr,ok := t.(types.PtrType); ok {
+        if dstPtr,ok := dstType.(types.PtrType); ok {
+            dstType = dstPtr.BaseType
+            t = ptr.BaseType
+        } else {
+            return
+        }
+    }
 
     switch t.GetKind() {
     case types.Infer, types.Uint, types.Int, types.Generic:

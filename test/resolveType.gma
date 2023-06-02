@@ -51,6 +51,20 @@ fn testBinary() {
     println(fmt("{}", c))
 }
 
+fn ptrFn(ptr *u8) {}
+
+fn testPointer() {
+    i := 0      // resolves to u8
+    ptr := &i   // resolves to *u8
+    ptrFn(ptr)
+}
+
+fn testDeref() {
+    i := 0x0
+    ptr := &i
+    println(fmt("{}", *ptr)) // takes default because not enough info from context
+}
+
 fn main() {
     i u32 := 30 + 39
     println(fmt("{}", i))
@@ -65,4 +79,6 @@ fn main() {
     testXSwitch2(69)
 
     testBinary()
+
+    testPointer()
 }

@@ -104,9 +104,9 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
         addResolved(e.GetType(), t)
         switch o := e.Obj.(type) {
         case *identObj.Const:
-            o.ResolveType(getResolvedForwardType(e.GetType()), false)
+            o.ResolveType(getResolvedForwardType(e.GetType()))
         case vars.Var:
-            o.ResolveType(getResolvedForwardType(e.GetType()), false)
+            o.ResolveType(getResolvedForwardType(e.GetType()))
         }
 
     case *ast.Cast:

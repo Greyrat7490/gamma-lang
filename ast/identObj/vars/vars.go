@@ -12,6 +12,6 @@ type Var interface {
     GetName() string
     GetPos() token.Pos
     String() string
-    ResolveType(t types.Type, useDefault bool)
+    ResolveType(t types.Type)
     SetAddr(addr addr.Addr)
 }
