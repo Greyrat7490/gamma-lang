@@ -24,6 +24,9 @@ func ExprAddrToReg(file *bufio.Writer, e ast.Expr, reg asm.RegGroup) {
     case *ast.Ident:
         asm.Lea(file, reg, e.Obj.Addr().String(), types.Ptr_Size)
 
+    case *ast.FnCall:
+        FnCallAddrToReg(file, e, reg)
+
     case *ast.Indexed:
         IndexedAddrToReg(file, e, reg)
 
@@ -42,7 +45,7 @@ func ExprAddrToReg(file *bufio.Writer, e ast.Expr, reg asm.RegGroup) {
     case *ast.Cast:
         ExprAddrToReg(file, e.Expr, reg)
 
-    case *ast.IntLit, *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.ArrayLit, *ast.StructLit, *ast.Binary, *ast.FnCall:
+    case *ast.IntLit, *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.ArrayLit, *ast.StructLit, *ast.Binary:
         fmt.Fprintf(os.Stderr, "[ERROR] cannot get address from %v\n", reflect.TypeOf(e))
         fmt.Fprintln(os.Stderr, "\t" + e.At())
         os.Exit(1)
@@ -534,6 +537,21 @@ func getVtableOffset(expr ast.Expr, funcName string) uint {
         os.Exit(1)
     }
     return 0
+}
+
+func FnCallAddrToReg(file *bufio.Writer, e *ast.FnCall, reg asm.RegGroup) {
+    if types.IsBigStruct(e.GetType()) {
+        identObj.IncStackSize(e.GetType())
+        strctDst := addr.Addr{ BaseAddr: "rbp", Offset: -int64(identObj.GetStackSize()) }
+
+        asm.Lea(file, asm.RegDi, strctDst.String(), types.Ptr_Size)
+        GenExpr(file, e)
+        asm.Lea(file, reg, strctDst.String(), types.Ptr_Size)
+    } else {
+        fmt.Fprintln(os.Stderr, "[ERROR] TODO in work (expr.go FnCallAddrToReg)")
+        fmt.Fprintln(os.Stderr, "\t" + e.At())
+        os.Exit(1)
+    }
 }
 
 func GenFnCall(file *bufio.Writer, e *ast.FnCall) {

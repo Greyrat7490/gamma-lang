@@ -588,6 +588,11 @@ func prsDotExprStruct(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ 
     if t := typ.GetType(name.Str); t != nil {
         field := &ast.Field{ Obj: obj, DotPos: dotPos, FieldName: name }
         setFieldType(field)
+        if f,ok := obj.(*ast.FnCall); ok {
+            if types.IsBigStruct(f.GetType()) {
+                identObj.ReserveTmpSpace(f.GetType())
+            }
+        }
         return field
     }
 

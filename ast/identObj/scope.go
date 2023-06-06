@@ -238,3 +238,14 @@ func DecEnum(name token.Token, idType types.Type, names []string, types []types.
     curScope.identObjs[name.Str] = &e
     return &e
 }
+
+func ReserveTmpSpace(t types.Type) {
+    if obj,ok := curScope.identObjs["_reserve"]; ok {
+        if obj.GetType().Size() >= t.Size() {
+            return
+        }
+    }
+
+    v := vars.CreateLocal(token.Token{}, t)
+    curScope.identObjs["_reserve"] = &v
+}
