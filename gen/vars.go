@@ -107,7 +107,7 @@ func DerefSetDeref(file *bufio.Writer, addr addr.Addr, t types.Type, otherAddr a
         asm.MovDerefDeref(file, addr, otherAddr, types.Ptr_Size, asm.RegB, false)
         asm.MovDerefDeref(file, addr.Offseted(int64(types.Ptr_Size)), otherAddr.Offseted(int64(types.Ptr_Size)), types.I32_Size, asm.RegB, false)
 
-    case types.StructType:
+    case types.StructType, types.EnumType:
         for i := 0; i < int(t.Size()/types.Ptr_Size); i++ {
             asm.MovDerefDeref(file, addr, otherAddr, types.Ptr_Size, asm.RegB, false)
 

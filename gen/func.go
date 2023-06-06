@@ -279,20 +279,31 @@ func PassRegStack(file *bufio.Writer, argType types.Type) {
 
 func passBigStructLit(file *bufio.Writer, t types.StructType, value constVal.StructConst, dstAddr addr.Addr) {
     for i,f := range value.Fields {
-        switch f := f.(type) {
-        case *constVal.StrConst:
-            asm.MovDerefVal(file, dstAddr, types.Ptr_Size, fmt.Sprintf("_str%d", uint64(*f)))
-            asm.MovDerefVal(file, dstAddr.Offseted(int64(types.Ptr_Size)), types.I32_Size, fmt.Sprint(str.GetSize(uint64(*f))))
-
-        case *constVal.StructConst:
-            passBigStructLit(file, t.Types[i].(types.StructType), *f, dstAddr)
-
-        default:
-            asm.MovDerefVal(file, dstAddr, t.Types[i].Size(), f.GetVal())
-        }
-
+        passConst(file, t.Types[i], f, dstAddr)
         dstAddr.Offset += int64(t.Types[i].Size())
     }
+}
+
+func passConst(file *bufio.Writer, t types.Type, value constVal.ConstVal, dstAddr addr.Addr) {
+    switch value := value.(type) {
+    case *constVal.StrConst:
+        asm.MovDerefVal(file, dstAddr, types.Ptr_Size, fmt.Sprintf("_str%d", uint64(*value)))
+        asm.MovDerefVal(file, dstAddr.Offseted(int64(types.Ptr_Size)), types.I32_Size, fmt.Sprint(str.GetSize(uint64(*value))))
+
+    case *constVal.StructConst:
+        passBigStructLit(file, t.(types.StructType), *value, dstAddr)
+        
+    case *constVal.EnumConst:
+        passEnumLit(file, *value, dstAddr)
+
+    default:
+        asm.MovDerefVal(file, dstAddr, t.Size(), value.GetVal())
+    }
+}
+
+func passEnumLit(file *bufio.Writer, value constVal.EnumConst, dstAddr addr.Addr) {
+    asm.MovDerefVal(file, dstAddr, value.Type.IdType.Size(), fmt.Sprint(value.Id))
+    passConst(file, value.ElemType, value.Elem, dstAddr.Offseted(int64(value.Type.IdType.Size())))
 }
 
 func PassBigStructLit(file *bufio.Writer, t types.StructType, value constVal.StructConst) {

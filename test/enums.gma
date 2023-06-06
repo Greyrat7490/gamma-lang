@@ -7,6 +7,8 @@ enum Test2 u8 {
 }
 
 fn test1() {
+    println("test1")
+
     a := Test::A
     b := Test::B
     c := Test::C
@@ -25,6 +27,8 @@ fn test1() {
 }
 
 fn test2() {
+    println("test2")
+
     s := "test string 2"
 
     a := Test2::A(86)
@@ -38,7 +42,7 @@ fn test2() {
 
     if c : Test2::C(c) {
         println(fmt("bool: {}", c))
-        c = false
+        c = false                   // no side effect c is a new var
     }
 
     if c : Test2::C(c) {
@@ -69,6 +73,8 @@ fn test2() {
 }
 
 fn test3() {
+    println("test3")
+
     a := Test2::A(420)
     b := &a
 
@@ -94,6 +100,8 @@ struct Test3 {
 }
 
 fn test4() {
+    println("test4")
+
     t := Test3{ a: 86, b: 69, t: Test2::A(64) }
     
     if t.t : Test2::A(a) {
@@ -101,14 +109,31 @@ fn test4() {
     }
 }
 
-/*
 fn retStruct() -> Test3 {
-    ret Test3{ 1, 2, Test2::C(86) }
+    // TODO typecheck and resolve EnumLit
+    ret Test3{ 1, 2, Test2::A(86) }
 }
 
 fn test5() {
-    if retStruct().t : Test2::C(c) {
-        println(fmt("C: {}", c))
+    println("test5")
+
+    if retStruct().t : Test2::A(a) {
+        println(fmt("A: {}", a))
+    }
+
+    if retStruct().t : Test2::B(_) {
+        println("dead code")
+    } else {
+        println("retStruct().t is not a Test2::B")
+    }
+}
+
+/*
+fn test6() {
+    a :: retStruct()
+    b :: a.t
+    if b : Test2::A(a) {
+        println(fmt("A: {}", a))
     }
 }
 */
@@ -118,5 +143,5 @@ fn main() {
     test2()
     test3()
     test4()
-    // test5()
+    test5()
 }
