@@ -196,7 +196,7 @@ func isDec(tokens *token.Tokens) bool {
     return isNextType(tokens)
 }
 func isDefInfer(tokens *token.Tokens) bool {
-    if tokens.Cur().Type != token.Name {
+    if tokens.Cur().Type != token.Name && tokens.Cur().Type != token.UndScr {
         return false
     }
 

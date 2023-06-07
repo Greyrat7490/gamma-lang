@@ -229,7 +229,7 @@ func prsName(tokens *token.Tokens) token.Token {
 func prsIdentExpr(tokens *token.Tokens) *ast.Ident {
     // if wildcard ("_")
     if tokens.Cur().Type == token.UndScr {
-        return &ast.Ident{ Name: "_", Pos: tokens.Cur().Pos, Obj: nil }
+        return &ast.Ident{ Name: tokens.Cur().Str, Pos: tokens.Cur().Pos, Obj: nil }
     }
 
     ident := prsName(tokens)
@@ -590,7 +590,7 @@ func prsDotExprStruct(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ 
         setFieldType(field)
         if f,ok := obj.(*ast.FnCall); ok {
             if types.IsBigStruct(f.GetType()) {
-                identObj.ReserveTmpSpace(f.GetType())
+                identObj.ReserveSpace(f.GetType())
             }
         }
         return field

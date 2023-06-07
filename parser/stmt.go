@@ -59,21 +59,7 @@ func prsStmt(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
         return &ast.ExprStmt{ Expr: e }
 
     case token.UndScr:
-        switch tokens.Peek().Type {
-        case token.DefVar, token.Assign:
-            tokens.Next()
-            tokens.Next()
-            return &ast.ExprStmt{ Expr: prsExpr(tokens) }
-        default:
-            if ignoreUnusedExpr {
-                return &ast.ExprStmt{ Expr: &ast.Ident{ Name: "_", Obj: nil } }
-            } else {
-                fmt.Fprintln(os.Stderr, "[ERROR] unused \"_\" token")
-                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-                os.Exit(1)
-                return &ast.BadStmt{}
-            }
-        }
+        return prsUnderScore(tokens, ignoreUnusedExpr)
 
     case token.Name:
         if isDec(tokens) || isDefInfer(tokens) {
@@ -155,6 +141,43 @@ func prsAssignVar(tokens *token.Tokens, dest ast.Expr) ast.Assign {
     val := prsExpr(tokens)
 
     return ast.Assign{ Pos: pos, Dest: dest, Value: val }
+}
+
+
+func prsUnderScore(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
+    name := tokens.Cur()
+
+    if ignoreUnusedExpr && !isDec(tokens) && !isDefInfer(tokens) {
+        return &ast.ExprStmt{ Expr: &ast.Ident{ Name: name.Str, Obj: nil } }
+    }
+
+    var decl *ast.DefVar = nil
+    if tokens.Next().Type == token.DefVar {
+        d := prsDefVarInfer(tokens, name)
+        decl = &d
+    } else {
+        if tokens.Cur().Type == token.Assign {
+            fmt.Fprintln(os.Stderr, "[ERROR] expected \":=\" but got \"=\"")
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+            os.Exit(1)
+        }
+
+        t := prsType(tokens)
+        if tokens.Next().Type != token.DefVar {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected \":=\" but got \"%s\"", tokens.Cur().Str)
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+            os.Exit(1)
+        }
+
+        d := prsDefVar(tokens, name, t)
+        decl = &d
+    }
+
+    if types.IsBigStruct(decl.Type) {
+        return &ast.DeclStmt{ Decl: decl }
+    } else {
+        return &ast.ExprStmt{ Expr: decl.Value }
+    }
 }
 
 func prsIfStmt(tokens *token.Tokens) ast.If {

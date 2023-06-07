@@ -1,0 +1,46 @@
+struct S {
+    a u64, b u64, c u64
+}
+
+fn retStruct() -> S {
+    ret S { 1, 2, 3 }
+}
+
+fn retWithSideEffect() -> S {
+    println("side effect")
+    ret S { 64, 64, 64 }
+}
+
+fn test1() {
+    a := retStruct().a
+    b := retStruct().b
+    c := retStruct().c
+
+    println(fmt("{}", a))
+    println(fmt("{}", b))
+    println(fmt("{}", c))
+}
+
+struct S2 {
+    s S, a u64
+}
+
+fn test2() {
+    s := S2{ s: retStruct(), a: 420 }
+}
+
+fn test3() {
+    _ S := retWithSideEffect()
+    _ := retWithSideEffect()
+}
+
+fn test4() {
+    _ := S2{ s: S { 64, 64, 64 }, a: 420 }
+}
+
+fn main() {
+    test1()
+    test2()
+    test3()
+    test4()
+}

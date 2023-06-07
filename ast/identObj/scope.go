@@ -13,6 +13,7 @@ type Scope struct {
     identObjs map[string]IdentObj
     parent *Scope
     children []Scope
+    unnamedVars uint
 }
 
 var globalScope = Scope{ identObjs: make(map[string]IdentObj), children: make([]Scope, 0) }
@@ -153,6 +154,10 @@ func AddGenBuildIn(name string, genericName string, argtype types.Type, retType 
 }
 
 func DecVar(name token.Token, t types.Type) vars.Var {
+    if name.Type == token.UndScr {
+        return ReserveSpace(t)
+    }
+
     curScope.checkName(name)
 
     if InGlobalScope() {
@@ -239,13 +244,15 @@ func DecEnum(name token.Token, idType types.Type, names []string, types []types.
     return &e
 }
 
-func ReserveTmpSpace(t types.Type) {
-    if obj,ok := curScope.identObjs["_reserve"]; ok {
-        if obj.GetType().Size() >= t.Size() {
-            return
-        }
+func ReserveSpace(t types.Type) vars.Var {
+    if types.IsBigStruct(t) {
+        name := fmt.Sprintf("_reserved%d", curScope.unnamedVars)
+        curScope.unnamedVars += 1
+
+        v := vars.CreateLocal(token.Token{ Str: name }, t)
+        curScope.identObjs[name] = &v
+        return &v
     }
 
-    v := vars.CreateLocal(token.Token{}, t)
-    curScope.identObjs["_reserve"] = &v
+    return nil
 }
