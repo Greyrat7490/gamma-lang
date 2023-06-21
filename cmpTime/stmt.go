@@ -75,7 +75,7 @@ func evalIf(s *ast.If) constVal.ConstVal {
                         return evalBlock(&s.Elif.Else.Block)
                     }
                 }
-            } else {
+            } else if s.Else != nil {
                 return evalBlock(&s.Else.Block)
             }
         }

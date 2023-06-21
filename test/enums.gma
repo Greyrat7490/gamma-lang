@@ -136,6 +136,15 @@ fn test6() {
     }
 }
 
+cfn test7() -> str {
+    b :: Test2::B("test string")
+    if b : Test2::A(b) {
+        ret "unreachable"
+    }
+
+    ret "test string"
+}
+
 fn main() {
     test1()
     test2()
@@ -143,4 +152,5 @@ fn main() {
     test4()
     test5()
     test6()
+    println(test7())
 }
