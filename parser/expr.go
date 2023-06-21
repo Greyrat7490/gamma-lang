@@ -795,13 +795,21 @@ func prsUnwrap(tokens *token.Tokens, srcExpr ast.Expr) *ast.Unwrap {
         parenRPos := tokens.Cur().Pos
 
         t := enumType.GetType(elemName.Str)
-        var dec *ast.DecVar = &ast.DecVar{ Type: t } 
-        if ident.Type != token.UndScr {
-            dec.V = identObj.DecVar(ident, t)
+        ununsedObj := ident.Type == token.UndScr
+
+        var obj identObj.IdentObj = nil
+        if !ununsedObj {
+            if c := cmpTime.ConstEval(srcExpr); c != nil {
+                if c,ok := c.(*constVal.EnumConst); ok {
+                    obj = identObj.DecConst(ident, t, c.Elem)
+                }
+            } else {
+                obj = identObj.DecVar(ident, t) 
+            }
         }
 
         return &ast.Unwrap{ SrcExpt: srcExpr, ColonPos: colonPos, ElemName: elemName, EnumType: enumType,
-            ParenLPos: parenLPos, DecVar: dec, ParenRPos: parenRPos }
+            ParenLPos: parenLPos, Obj: obj, UnusedObj: ununsedObj, ParenRPos: parenRPos }
     } else {
         return &ast.Unwrap{ SrcExpt: srcExpr, ColonPos: colonPos, ElemName: elemName, EnumType: enumType }
     }

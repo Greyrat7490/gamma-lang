@@ -123,12 +123,10 @@ func GenIfCond(file *bufio.Writer, e ast.Expr, hasElse bool) uint {
 
         count := cond.IfExpr(file, hasElse)
 
-        if e.DecVar != nil {
-            if v,ok := e.DecVar.V.(*vars.LocalVar); ok {
-                v.SetOffset(identObj.GetStackSize(), false)
-                identObj.IncStackSize(v.GetType())
-                DerefSetDeref(file, v.Addr(), v.GetType(), asm.RegAsAddr(asm.RegD).Offseted(int64(idType.Size())))
-            }
+        if v,ok := e.Obj.(*vars.LocalVar); ok {
+            v.SetOffset(identObj.GetStackSize(), false)
+            identObj.IncStackSize(v.GetType())
+            DerefSetDeref(file, v.Addr(), v.GetType(), asm.RegAsAddr(asm.RegD).Offseted(int64(idType.Size())))
         }
 
         return count
@@ -140,7 +138,6 @@ func GenIfCond(file *bufio.Writer, e ast.Expr, hasElse bool) uint {
 }
 
 func GenIf(file *bufio.Writer, s *ast.If) {
-    // TODO unwrap
     if val,ok := cmpTime.ConstEval(s.Cond).(*constVal.BoolConst); ok {
         if bool(*val) {
             GenBlock(file, &s.Block)

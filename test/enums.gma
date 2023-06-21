@@ -109,7 +109,7 @@ fn test4() {
     }
 }
 
-fn retStruct() -> Test3 {
+cfn retStruct() -> Test3 {
     // TODO typecheck and resolve EnumLit
     ret Test3{ 1, 2, Test2::A(86) }
 }
@@ -128,7 +128,6 @@ fn test5() {
     }
 }
 
-/*
 fn test6() {
     a :: retStruct()
     b :: a.t
@@ -136,7 +135,6 @@ fn test6() {
         println(fmt("A: {}", a))
     }
 }
-*/
 
 fn main() {
     test1()
@@ -144,4 +142,5 @@ fn main() {
     test3()
     test4()
     test5()
+    test6()
 }

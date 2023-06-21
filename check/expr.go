@@ -144,15 +144,15 @@ func typeCheckEnumLit(e *ast.EnumLit) {
 func typeCheckUnwrap(e *ast.Unwrap) {
     t := e.EnumType.GetType(e.ElemName.Str)
     if t != nil {
-        if e.DecVar == nil {
+        if !e.UnusedObj && e.Obj == nil {
             fmt.Fprintf(os.Stderr, "[ERROR] missing identifier (enum %s::%s expects an identifier for type %s) \n", e.EnumType, e.ElemName.Str, t)
             fmt.Fprintln(os.Stderr, "\t" + e.ElemName.At())
             os.Exit(1)
         }
     } else {
-        if e.DecVar != nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] Enum %s::%s has no type but got identifier %s \n", e.EnumType, e.ElemName.Str, e.DecVar.V.GetName())
-            fmt.Fprintln(os.Stderr, "\t" + e.DecVar.At())
+        if e.Obj != nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] Enum %s::%s has no type but got identifier %s \n", e.EnumType, e.ElemName.Str, e.Obj.GetName())
+            fmt.Fprintln(os.Stderr, "\t" + e.Obj.GetPos().At())
             os.Exit(1)
         }
     }

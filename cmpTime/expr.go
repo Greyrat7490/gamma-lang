@@ -161,11 +161,12 @@ func constEval(e ast.Expr, arrWithNils bool) constVal.ConstVal {
 }
 
 func ConstEvalUnwrap(e *ast.Unwrap) constVal.ConstVal {
+    res := false
     if c,ok := ConstEval(e.SrcExpt).(*constVal.EnumConst); ok {
-        return c.Elem
+        res = c.Id == e.EnumType.GetID(e.ElemName.Str)
     }
 
-    return nil
+    return (*constVal.BoolConst)(&res)
 }
 
 func ConstEvalIdent(e *ast.Ident) constVal.ConstVal {

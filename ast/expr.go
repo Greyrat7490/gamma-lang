@@ -102,7 +102,8 @@ type Unwrap struct {
     ElemName token.Token
     EnumType types.EnumType
     ParenLPos token.Pos
-    DecVar *DecVar          // can be nil
+    Obj identObj.IdentObj   // can be nil
+    UnusedObj bool
     ParenRPos token.Pos
 }
 
@@ -264,8 +265,8 @@ func (e *Unwrap) Readable(indent int) string {
         e.SrcExpt.Readable(indent+1) +
         fmt.Sprintf("%s%v::%s\n", s, e.SrcExpt.GetType(), e.ElemName.Str)
 
-    if e.DecVar != nil && e.DecVar.V != nil {
-        res += fmt.Sprintf("%s%s\n", s, e.DecVar.V.GetName())
+    if e.Obj != nil {
+        res += fmt.Sprintf("%s%s\n", s, e.Obj.GetName())
     }
 
     return res
