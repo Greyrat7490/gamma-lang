@@ -46,9 +46,9 @@ fn main() {
 
 
     // prepare socket for connections ------------------------------------------------
-    addr := sockaddr_in{ sin_family: AF_INET, sin_port: htons(PORT), sin_addr: INADDR_ANY, sin_zero: 0 }
+    addr := sockaddr_in{ sin_family: AF_INET as u16, sin_port: htons(PORT), sin_addr: INADDR_ANY, sin_zero: 0 }
 
-    err = bind(fd, &addr, sizeof::<sockaddr_in>())
+    err = bind(fd, &addr, sizeof::<sockaddr_in>() as u32)
     if err != 0 {
         println(fmt("{} bind error", err))
         exit(1)
@@ -60,7 +60,7 @@ fn main() {
         exit(1)
     }
 
-    sockaddr_in_size u32 := sizeof::<sockaddr_in>()
+    sockaddr_in_size := sizeof::<sockaddr_in>() as u32
     client_fd := accept(fd, &addr, &sockaddr_in_size)
     if client_fd == -1 {
         println(fmt("{} accept error", client_fd))
