@@ -17,12 +17,16 @@ fn test1() {
         println("a == Test::A")
     }
 
-    if b : Test::B {
+    if b == Test::B {
         println("b == Test::B")
     }
 
     if c : Test::C {
         println("c == Test::C")
+    }
+
+    if c != Test::B {
+        println("c != Test::B")
     }
 }
 

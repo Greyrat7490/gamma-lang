@@ -132,8 +132,23 @@ func BinaryOp(file *bufio.Writer, opType token.TokenType, src string, t types.Ty
             fmt.Fprintf(os.Stderr, "[ERROR] unknown binary operator %v\n", opType)
             os.Exit(1)
         }
+
+    case types.Enum:
+        t := t.(types.EnumType)
+
+        switch opType {
+        case token.Eql:
+            Eql(file, GetReg(RegA, t.IdType.Size()), src)
+        case token.Neq:
+            Neq(file, GetReg(RegA, t.IdType.Size()), src)
+        default:
+            fmt.Fprintln(os.Stderr, "[ERROR] unexpected binary operator for char expected (== or !=)")
+            os.Exit(1)
+        }
+        
+        
     case types.Str:
-        fmt.Fprintln(os.Stderr, "[ERROR] (internal) BinaryOpStrs shoulb be called instead of BinaryOp")
+        fmt.Fprintln(os.Stderr, "[ERROR] (internal) BinaryOpStrs should be called instead of BinaryOp")
         os.Exit(1)
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] unexpected type for binary operation %v\n", t)
