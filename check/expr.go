@@ -139,19 +139,39 @@ func typeCheckEnumLit(e *ast.EnumLit) {
         fmt.Fprintln(os.Stderr, "\t" + e.At())
         os.Exit(1)
     }
+
+    if e.ContentType == nil {
+        if e.Content != nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] enum %s::%s did not expect any content\n", e.Type.Name, e.ElemName.Str)
+            fmt.Fprintln(os.Stderr, "\t" + e.Content.At())
+            os.Exit(1)
+        }
+    } else {
+         if e.Content == nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] missing enum content for %s::%s (expects type %s)\n", e.Type.Name, e.ElemName.Str, e.ContentType)
+            fmt.Fprintln(os.Stderr, "\t" + e.ElemName.At())
+            os.Exit(1)
+        }
+
+        if !checkTypeExpr(e.ContentType, e.Content) {
+            fmt.Fprintf(os.Stderr, "[ERROR] enum %s::%s expected content of type %s\n", e.Type.Name, e.ElemName.Str, e.ContentType)
+            fmt.Fprintln(os.Stderr, "\t" + e.ElemName.At())
+            os.Exit(1)
+        }
+    }
 }
 
 func typeCheckUnwrap(e *ast.Unwrap) {
     t := e.EnumType.GetType(e.ElemName.Str)
     if t != nil {
         if !e.UnusedObj && e.Obj == nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] missing identifier (enum %s::%s expects an identifier for type %s) \n", e.EnumType, e.ElemName.Str, t)
+            fmt.Fprintf(os.Stderr, "[ERROR] missing identifier (enum %s::%s expects an identifier for type %s)\n", e.EnumType, e.ElemName.Str, t)
             fmt.Fprintln(os.Stderr, "\t" + e.ElemName.At())
             os.Exit(1)
         }
     } else {
         if e.Obj != nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] Enum %s::%s has no type but got identifier %s \n", e.EnumType, e.ElemName.Str, e.Obj.GetName())
+            fmt.Fprintf(os.Stderr, "[ERROR] enum %s::%s has no type but got identifier %s\n", e.EnumType, e.ElemName.Str, e.Obj.GetName())
             fmt.Fprintln(os.Stderr, "\t" + e.Obj.GetPos().At())
             os.Exit(1)
         }

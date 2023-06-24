@@ -110,7 +110,6 @@ fn test4() {
 }
 
 cfn retStruct() -> Test3 {
-    // TODO typecheck and resolve EnumLit
     ret Test3{ 1, 2, Test2::A(86) }
 }
 
