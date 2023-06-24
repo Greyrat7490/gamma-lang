@@ -164,6 +164,14 @@ func ConstEvalUnwrap(e *ast.Unwrap) constVal.ConstVal {
     res := false
     if c,ok := ConstEval(e.SrcExpt).(*constVal.EnumConst); ok {
         res = c.Id == e.EnumType.GetID(e.ElemName.Str)
+
+        if inConstEnv() {
+            if v,ok := e.Obj.(*vars.LocalVar); ok {
+                v.SetOffset(identObj.GetStackSize(), false)
+                identObj.IncStackSize(v.GetType())
+                defVar(e.Obj.GetName(), e.Obj.Addr(), e.Obj.GetType(), e.Obj.GetPos(), c.Elem)
+            }
+        }
     }
 
     return (*constVal.BoolConst)(&res)

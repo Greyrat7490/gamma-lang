@@ -259,6 +259,16 @@ func (t *EnumType) GetType(name string) Type {
     return t.types[name]
 }
 
+func (t *EnumType) GetTypeWithId(id uint64) Type {
+    for name,i := range t.ids {
+        if i == id {
+            return t.types[name]
+        }
+    }
+
+    return nil
+}
+
 func (t *EnumType) HasElem(name string) bool {
     _, ok := t.types[name]
     return ok
@@ -275,8 +285,7 @@ func (t *EnumType) GetElems() []string {
 }
 
 func (t *EnumType) GetID(name string) uint64 {
-    i := t.ids[name]
-    return i
+    return t.ids[name]
 }
 
 func (t *InterfaceType) GetFunc(name string) *FuncType {

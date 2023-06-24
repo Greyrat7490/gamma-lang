@@ -145,6 +145,25 @@ cfn test7() -> str {
     ret "test string"
 }
 
+cfn test8() -> i64 {
+    b := Test2::A(64)
+    if b : Test2::A(a) {
+        ret a
+    }
+
+    ret 0
+}
+
+cfn test9() -> i64 {
+    a := Test::A
+    if a : Test::A {
+        ret 1
+    }
+
+    ret 0
+}
+
+
 fn main() {
     test1()
     test2()
@@ -153,4 +172,6 @@ fn main() {
     test5()
     test6()
     println(test7())
+    println(fmt("{}", test8()))
+    println(fmt("{}", test9()))
 }

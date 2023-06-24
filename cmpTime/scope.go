@@ -192,6 +192,27 @@ func readStack(idx uint, t types.Type) constVal.ConstVal {
         }
         return &c
 
+    case types.EnumType:
+        idVal := readStack(idx, t.IdType)
+        idx += t.IdType.Size()
+
+        id := uint64(0)
+        switch c := idVal.(type) {
+        case *constVal.UintConst:
+            id = uint64(*c)
+        case *constVal.IntConst:
+            id = uint64(*c)
+        }
+
+        elemType := t.GetTypeWithId(id)
+        if elemType  != nil {
+            elem := readStack(idx, elemType)
+            idx += t.Size()
+            return &constVal.EnumConst{ Id: id, Type: t, ElemType: elemType, Elem: elem }
+        } else {
+            return &constVal.EnumConst{ Id: id, Type: t, ElemType: elemType }
+        }
+
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] reading %v from the const stack is not supported yet\n", t)
         os.Exit(1)
@@ -246,6 +267,15 @@ func writeStack(idx uint, typ types.Type, val constVal.ConstVal) {
             t := typ.(types.StructType).Types[i]
             writeStack(idx, t, field)
             idx += t.Size()
+        }
+
+    case *constVal.EnumConst:
+        id := constVal.UintConst(c.Id)
+        writeStack(idx, c.Type.IdType, &id)
+        idx += c.Type.IdType.Size()
+        if c.ElemType != nil {
+            writeStack(idx, c.ElemType, c.Elem)
+            idx += c.ElemType.Size()
         }
 
     default:
