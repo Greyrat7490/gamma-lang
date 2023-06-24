@@ -161,10 +161,7 @@ func constEval(e ast.Expr, arrWithNils bool) constVal.ConstVal {
 }
 
 func ConstEvalUnwrap(e *ast.Unwrap) constVal.ConstVal {
-    res := false
     if c,ok := ConstEval(e.SrcExpt).(*constVal.EnumConst); ok {
-        res = c.Id == e.EnumType.GetID(e.ElemName.Str)
-
         if inConstEnv() {
             if v,ok := e.Obj.(*vars.LocalVar); ok {
                 v.SetOffset(identObj.GetStackSize(), false)
@@ -172,9 +169,12 @@ func ConstEvalUnwrap(e *ast.Unwrap) constVal.ConstVal {
                 defVar(e.Obj.GetName(), e.Obj.Addr(), e.Obj.GetType(), e.Obj.GetPos(), c.Elem)
             }
         }
+
+        res := c.Id == e.EnumType.GetID(e.ElemName.Str)
+        return (*constVal.BoolConst)(&res)
     }
 
-    return (*constVal.BoolConst)(&res)
+    return nil
 }
 
 func ConstEvalIdent(e *ast.Ident) constVal.ConstVal {
