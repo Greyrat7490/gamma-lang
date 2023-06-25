@@ -321,7 +321,8 @@ func GenRet(file *bufio.Writer, s *ast.Ret) {
                 } else {
                     RetBigStructExpr(file, asm.RegAsAddr(asm.RegC), s.RetExpr)
                 }
-            case types.VecType:
+            case types.VecType, types.EnumType:
+                // TODO: Lit and Var
                 RetBigStructExpr(file, asm.RegAsAddr(asm.RegC), s.RetExpr)
             default:
                 fmt.Fprintln(os.Stderr, "[ERROR] (internal) unreachable GenRet")

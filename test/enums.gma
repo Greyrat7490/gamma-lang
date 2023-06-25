@@ -228,6 +228,9 @@ fn test12() {
     printTest2(t)
 }
 
+fn retEnum() -> Test2 {
+    ret Test2::B("some string")
+}
 
 fn ret1() -> u64 {
     t := Test::C
@@ -235,7 +238,8 @@ fn ret1() -> u64 {
 }
 
 fn ret2() -> u8 {
-    t := Test2::B("some string")
+    t := retEnum()
+    printTest2(t)
     ret *(&t as u64 as *u8)         // TODO: cast for enums with content
 }
 
