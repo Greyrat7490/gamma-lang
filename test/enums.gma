@@ -67,7 +67,7 @@ fn test2() {
         println("b2 is not a Test2::C")
     }
 
-    /*
+    /* TODO: unwrap switch
     if a : Test2::{
         A(a): print(fmt("i64: {}", a))
         B(b): print(fmt("string: {}", b))
@@ -166,6 +166,88 @@ cfn test9() -> i64 {
     ret 0
 }
 
+fn test10() {
+    println("test10")
+
+    a := Test2::A(64)
+
+    if a : Test2::A(a) {
+        println(fmt("{}", a))
+    }
+
+    a = Test2::C(false)
+    if a : Test2::C(a) {
+        println(fmt("{}", a))
+    }
+
+    a = Test2::B("string")
+    if a : Test2::B(a) {
+        println(fmt("{}", a))
+    }
+}
+
+fn printTest(t Test) {
+    println(fmt("{}", t as u64))
+}
+
+fn printTest2(t Test2) {
+    if t : Test2::A(a) {
+        println(fmt("t == Test2::A: {}", a))
+    }
+    if t : Test2::B(b) {
+        println(fmt("t == Test2::B: {}", b))
+    }
+    if t : Test2::C(c) {
+        println(fmt("t == Test2::C: {}", c))
+    }
+}
+
+fn test11() {
+    println("test11")
+
+    t2 := Test::A
+    printTest(t2)
+
+    t2 = Test::B
+    printTest(t2)
+
+    t2 = Test::C
+    printTest(t2)
+}
+
+fn test12() {
+    println("test12")
+
+    t := Test2::A(-64)
+    printTest2(t)
+
+    t = Test2::B("some string")
+    printTest2(t)
+
+    t = Test2::C(false)
+    printTest2(t)
+}
+
+
+fn ret1() -> u64 {
+    t := Test::C
+    ret t as u64
+}
+
+fn ret2() -> u8 {
+    t := Test2::B("some string")
+    ret *(&t as u64 as *u8)         // TODO: cast for enums with content
+}
+
+fn test13() {
+    println("test13")
+
+    a := ret1()
+    println(fmt("{}", a))
+    b := ret2()
+    println(fmt("{}", b))
+}
+
 
 fn main() {
     test1()
@@ -174,7 +256,14 @@ fn main() {
     test4()
     test5()
     test6()
+    println("test7")
     println(test7())
+    println("test8")
     println(fmt("{}", test8()))
+    println("test9")
     println(fmt("{}", test9()))
+    test10()
+    test11()
+    test12()
+    test13()
 }

@@ -1094,11 +1094,13 @@ func (args *passArgs) genPassArgsBigStruct(file *bufio.Writer) {
             } else {
                 PassBigStructReg(file, asm.RegAsAddr(asm.RegC), arg.value)
             }
-        case types.VecType:
+
+        case types.VecType, types.EnumType:
+            // TODO: Lit and Var
             PassBigStructReg(file, asm.RegAsAddr(asm.RegC), arg.value)
 
         default:
-            fmt.Fprintln(os.Stderr, "[ERROR] (internal) unreachable GenFnCall")
+            fmt.Fprintln(os.Stderr, "[ERROR] (internal) unreachable genPassArgsBigStruct")
             os.Exit(1)
         }
 
