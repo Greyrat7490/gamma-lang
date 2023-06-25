@@ -456,6 +456,14 @@ func typeCheckCast(e *ast.Cast) {
                 os.Exit(1)
             }
 
+        case types.Enum:
+            t := t.(types.EnumType)
+            if !types.Equal(e.DestType, t.IdType) {
+                fmt.Fprintf(os.Stderr, "[ERROR] id type of enum %s is %s (cannot cast into %v)\n", t.Name, t.IdType, e.DestType)
+                fmt.Fprintln(os.Stderr, "\t" + e.Expr.At())
+                os.Exit(1)
+            }
+
         case types.Bool, types.Uint, types.Int, types.Char:
 
         default:
