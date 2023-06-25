@@ -7,16 +7,17 @@
 
 A statically and strongly typed programming language similar to Go and Rust.
 
+## Goals
 * fast
 * easy
 * compiled
 * statically and strongly typed
 * lightweigth
 * important build-in functions
-* designed around hardware-near programming
+* general purpose language and good for low level tasks
 * crossplatform
 
-## Supported:
+## Supported
 * [x] Linux
 * [ ] MacOS
 * [ ] windows
@@ -105,8 +106,8 @@ impl Test :: Number {
     fn add(a u64, b u64) -> u64 {
         ret a + b
     }
-                // optinal: use explicitly Self type
-                // optinal: use explicitly actual Struct type
+                // optional: use explicitly Self type
+                // optional: use explicitly actual Struct type
     fn inc(self) -> u64 {
         ret self.a + 1
     }
@@ -123,10 +124,11 @@ res := Test::add(30, 39)
 // call like methods
 t := Test{ 64 }
 res := t.inc()
-res2 := t.dec()    // causes a side effect due of *self
+res2 := t.dec()    // causes a side effect due to *self
 
-Test::inc(t)       // is possible too
-Test::dec(&t)
+// calling like a function is possible too
+_ := Test::inc(t)
+_ := Test::dec(&t)
 ```
 
 ### methods
@@ -135,7 +137,7 @@ struct Test {
     a u64
 }
 
-// implment without an interface
+// implement without an interface
 impl Test {
     fn inc(self) -> u64 {
         ret self.a + 1
@@ -150,13 +152,35 @@ impl Test {
 t := Test{ 64 }
 res := t.inc()
 res2 := t.dec()
-Test::inc(t)
-Test::dec(&t)
+_ := Test::inc(t)
+_ := Test::dec(&t)
 ```
 
-### enums (like in rust)
+### enums
 ```v
-// in work
+enum Test {
+ // 0, 1, 2 (u64)
+    A, B, C
+}
+
+           // optional id type (default is u64)
+enum Test2 u8 {
+    // enums are like tagged unions
+    A(i64), B(str), C(bool)
+}
+
+a := Test::A
+b := Test2::A(64)
+b = Test2::B("string")
+
+if a == Test::A {
+    println("a == Test::A")
+}
+
+// unwrap b to get the string (creates a new var / not a reference)
+if b : Test::B(s) {
+    println("unwraped b contains: " + s)
+}
 ```
 
 ### const functions
@@ -221,7 +245,7 @@ if x == {
 }
 
 // cases in one-line-switches are seperated with ";" 
-if x { true: do_stuff(); false: do_stuff() }
+if x == { true: do_stuff(); false: do_stuff() }
 ```
 
 ### xswitches (eXpression switch)
