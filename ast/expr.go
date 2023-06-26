@@ -461,7 +461,7 @@ func (e *EnumLit)   At() string { return e.Pos.At() }
 func (e *Unwrap)    At() string { return e.SrcExpt.At() }
 func (e *Ident)     At() string { return e.Pos.At() }
 func (e *Unary)     At() string { return e.Operator.At() }
-func (e *Binary)    At() string { return e.OperandL.At() }    // TODO: At() of Operand with higher precedence
+func (e *Binary)    At() string { return e.OperandL.At() }
 func (e *Paren)     At() string { return e.ParenLPos.At() }
 func (e *XSwitch)   At() string { return e.Pos.At() }
 func (e *XCase)     At() string { return e.ColonPos.At() }
@@ -489,9 +489,9 @@ func (e *EnumLit)   End() string {
 }
 func (e *Unwrap)    End() string { return e.ParenRPos.At() }
 func (e *Ident)     End() string { return e.Pos.At() }
-func (e *Unary)     End() string { return e.Operand.At() }
-func (e *Binary)    End() string { return e.OperandR.At() }
+func (e *Unary)     End() string { return e.Operand.End() }
+func (e *Binary)    End() string { return e.OperandR.End() }
 func (e *Paren)     End() string { return e.ParenRPos.At() }
 func (e *XSwitch)   End() string { return e.BraceRPos.At() }
-func (e *XCase)     End() string { return e.Expr.At() }
+func (e *XCase)     End() string { return e.Expr.End() }
 func (e *Cast)      End() string { return e.AsPos.At() }
