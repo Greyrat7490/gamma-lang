@@ -231,30 +231,38 @@ cfn isBigEndian() -> bool {
 }
 ```
 
-### switches (syntax is still in work!!)
+### switches
 ```v
 if {
-    x == 0: do_stuff()
+    // cases only have one statement so use {} for multiple statements
+    x == 0: {
+        do_stuff()
+        do_stuff()
+    } 
     _: do_stuff()
 }
 
 if x == {
     0: do_stuff()
     1: do_stuff()
+    2, 3, 4: do_stuff() 
     _: do_stuff()
 }
 
 // cases in one-line-switches are seperated with ";" 
-if x == { true: do_stuff(); false: do_stuff() }
+if x == { 0: do_stuff(); _: do_stuff() }
 ```
 
 ### xswitches (eXpression switch)
 ```v
-// same as a normal switch but with a $ in front
-res := $ if {
+// same as a normal switch but with a $ instead of an "if"
+res := $ {
     x == 0: -1     // only an expression is allowed as case body (statments are allowed later too)
     _: 69
 }
+
+// assign to one of vars depending on a condition
+$ i <= { 1: v1; _: v2 } = 64
 ```
 
 ## Get Started
