@@ -36,21 +36,19 @@ ptr *i32 := &v1
 
 fn stmts(a1 i32) {
     if a1 < {
-        -86:
-             print(itos(a1)) print(" < -86\n")
-        420:
-             print(itos(a1)) print(" < 420\n")
-        86:
-             print(itos(a1)) print(" < 86\n")
-        _:
-             print("-----\n")
-             print(itos(a1)) print(" >= 420\n")
-             {
-                 print(itos(v1)) print("\n")
-                 *ptr = (87 - 1) * 10
-                 print(itos(v1)) print("\n")
-             }
-             print("-----\n")
+        -86: { print(itos(a1)) print(" < -86\n") }
+        420: { print(itos(a1)) print(" < 420\n") }
+        86: { 
+            print(itos(a1)) print(" < 86\n") 
+        }
+        _: {
+            print("-----\n")
+            print(itos(a1)) print(" >= 420\n")
+            print(itos(v1)) print("\n")
+            *ptr = (87 - 1) * 10
+            print(itos(v1)) print("\n")
+            print("-----\n")
+        }
     }
 }
 
@@ -79,7 +77,7 @@ fn noCondBase(a1 i32) {
 
 fn throughTest(a1 i32) {
     if {
-        a1 == 86: print("through ") through                   // fall through to next case
+        a1 == 86: { print("through ") through }                   // fall through to next case
         a1 == 69: print("69\n")
                _: print("default\n")
     }
@@ -110,7 +108,7 @@ fn main() {
     lss(420)
     lss(69)
 
-    print("---- multiple stmts ----\n")
+    print("---- \"multiple\" stmts ----\n")
     stmts(86)
     stmts(-87)
     stmts(420)

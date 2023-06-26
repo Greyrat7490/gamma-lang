@@ -64,35 +64,36 @@ fn parse_hex(s str, valid *bool) -> u64 {
     for i u32, s.len, 2 {
         digit := str_at(s, i) as u8
         if digit <= {
-        ('0' as u8)-1:
-            *valid = false
-            ret 0
-
-        // 0-9
-        ('9' as u8): 
-            digit = digit - ('0' as u8)
-
-        // A-F
-        ('F' as u8):
-            if digit < ('A' as u8) {
+            ('0' as u8)-1: {
                 *valid = false
                 ret 0
-            } 
-            
-            digit = digit - ('A' as u8) + 10
-
-        // a-f
-        ('f' as u8):
-            if digit < ('a' as u8) {
+            }
+            // 0-9
+            ('9' as u8): {
+                digit = digit - ('0' as u8)
+            }
+            // A-F
+            ('F' as u8): {
+                if digit < ('A' as u8) {
+                    *valid = false
+                    ret 0
+                } 
+                
+                digit = digit - ('A' as u8) + 10
+            }
+            // a-f
+            ('f' as u8): {
+                if digit < ('a' as u8) {
+                    *valid = false
+                    ret 0
+                } 
+                
+                digit = digit - ('a' as u8) + 10
+            }
+            _: {
                 *valid = false
                 ret 0
-            } 
-            
-            digit = digit - ('a' as u8) + 10
-
-        _:
-            *valid = false
-            ret 0
+            }
         }
 
         res = res * 16 + (digit as u64)

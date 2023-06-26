@@ -20,21 +20,17 @@ fn system(cmd str) -> i32 {
     childPid := fork()
 
     if childPid == {            // TODO switch execute only once
-    -1: break
+        // in child process
+        0: {
+            exe :: "/bin/sh\0"
+            args := [4]*char{ exe as *char, "-c\0" as *char, cmd as *char, 0x0 as *char }
 
-    // in child process
-    0:
-        exe :: "/bin/sh\0"
-        args := [4]*char{ exe as *char, "-c\0" as *char, cmd as *char, 0x0 as *char }
-
-        _ := execve(exe as *char, args as **char, 0x0 as **char)
-        exit(127)   // could not execute shell
-
-    // in parent process
-    _:
-        if waitpid(childPid, &status, 0) != -1 {
-            ret WEXITSTATUS(status)
+            _ := execve(exe as *char, args as **char, 0x0 as **char)
+            exit(127)   // could not execute shell
         }
+        -1: break
+        // in parent process
+        _: if waitpid(childPid, &status, 0) != -1 { ret WEXITSTATUS(status) }
     }
 
     ret -1

@@ -115,13 +115,12 @@ fn read_file(reader *Reader) -> str {
 
         pos := read(reader.fd, (reader.buffer as *char)+reader.buffer.len, sz)
         if pos == {
-            -1:
+            -1: {
                 print("[ERROR] could not read file\n")
                 exit(1)
-            0:
-                break
-            _:
-                reader.buffer.len = reader.buffer.len + (pos as u64)
+            }
+            0: break
+            _: reader.buffer.len = reader.buffer.len + (pos as u64)
         }
     }
 
@@ -136,18 +135,20 @@ fn read_line(reader *Reader) -> str {
     // find line break
     for i u64, reader.buffer.len, reader.pos {
         c := reader.buffer[i]
-        if c == {
-        '\r':
-            size := i - reader.pos
-            if i+1 < reader.buffer.cap && (reader.buffer[i+1] == '\n') {
-                i = i + 1
+            if c == {
+            '\r': {
+                size := i - reader.pos
+                if i+1 < reader.buffer.cap && (reader.buffer[i+1] == '\n') {
+                    i = i + 1
+                }
+                reader.pos = i + 1
+                ret from_pchar(size as u32, cstr)
             }
-            reader.pos = i + 1
-            ret from_pchar(size as u32, cstr)
-        '\n':
-            size = i - reader.pos
-            reader.pos = i + 1
-            ret from_pchar(size as u32, cstr)
+            '\n': {
+                size := i - reader.pos
+                reader.pos = i + 1
+                ret from_pchar(size as u32, cstr)
+            }
         }
     }
 
@@ -170,31 +171,34 @@ fn read_line(reader *Reader) -> str {
         old_len := reader.buffer.len
         pos := read(reader.fd, (reader.buffer as *char)+reader.buffer.len, sz)
         if pos == {
-        -1:
-            print("[ERROR] could not read file\n")
-            exit(1)
-        0:
-            reader.isEOF = true
-            ret ""
-        _:
-            reader.buffer.len = reader.buffer.len + (pos as u64)
+            -1: {
+                print("[ERROR] could not read file\n")
+                exit(1)
+            }
+            0: {
+                reader.isEOF = true
+                ret ""
+            }
+            _: reader.buffer.len = reader.buffer.len + (pos as u64)
         }
 
         // find line break
         for i u64, reader.buffer.len, old_len {
             c := reader.buffer[i]
             if c == {
-            '\r':
-                size := i - reader.pos
-                if i+1 < reader.buffer.cap && (reader.buffer[i+1] == '\n') {
-                    i = i + 1
+                '\r': {
+                    size := i - reader.pos
+                    if i+1 < reader.buffer.cap && (reader.buffer[i+1] == '\n') {
+                        i = i + 1
+                    }
+                    reader.pos = i + 1
+                    ret from_pchar(size as u32, cstr)
                 }
-                reader.pos = i + 1
-                ret from_pchar(size as u32, cstr)
-            '\n':
-                size = i - reader.pos
-                reader.pos = i + 1
-                ret from_pchar(size as u32, cstr)
+                '\n': {
+                    size := i - reader.pos
+                    reader.pos = i + 1
+                    ret from_pchar(size as u32, cstr)
+                }
             }
         }
     }
