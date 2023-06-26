@@ -59,7 +59,7 @@ type Switch struct {
 type Case struct {
     Cond Expr         // nil -> default
     ColonPos token.Pos
-    Stmts []Stmt
+    Stmt Stmt
 }
 
 type Through struct {
@@ -146,14 +146,12 @@ func (o *Else) Readable(indent int) string {
 func (o *Case) Readable(indent int) string {
     var s string
     if o.Cond == nil {
-        s = strings.Repeat("   ", indent) + "DEFAULT:\n"
+        s = strings.Repeat("   ", indent) + "DEFAULT:\n" +
+            o.Stmt.Readable(indent+1)
     } else {
         s = strings.Repeat("   ", indent) + "CASE:\n" +
-            o.Cond.Readable(indent+1)
-    }
-
-    for _,stmt := range o.Stmts {
-        s += stmt.Readable(indent+1)
+            o.Cond.Readable(indent+1) +
+            o.Stmt.Readable(indent+1)
     }
 
     return s
@@ -273,7 +271,7 @@ func (s *Else)     End() string { return s.Block.End() }
 func (s *Elif)     End() string { return s.Block.End() }
 func (s *Switch)   End() string { return s.BraceRPos.At() }
 func (s *Through)  End() string { return s.Pos.At() }
-func (s *Case)     End() string { return s.Stmts[len(s.Stmts)-1].End() }
+func (s *Case)     End() string { return s.Stmt.End() }
 func (s *For)      End() string { return s.Block.End() }
 func (s *While)    End() string { return s.Block.End() }
 func (s *Break)    End() string { return s.Pos.At() }

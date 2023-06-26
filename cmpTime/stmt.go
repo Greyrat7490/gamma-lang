@@ -87,16 +87,16 @@ func evalIf(s *ast.If) constVal.ConstVal {
 func evalSwitch(s *ast.Switch) constVal.ConstVal {
     for i,c := range s.Cases {
         if c.Cond == nil {
-            return evalStmts(c.Stmts)
+            return EvalStmt(c.Stmt)
         }
 
         if cond := ConstEval(c.Cond); cond != nil {
             if val,ok := cond.(*constVal.BoolConst); ok && bool(*val) {
-                res := evalStmts(c.Stmts)
+                res := EvalStmt(c.Stmt)
 
                 if res == nil && through {
                     through = false
-                    return evalStmts(s.Cases[i+1].Stmts)
+                    return EvalStmt(s.Cases[i+1].Stmt)
                 }
 
                 return res

@@ -151,7 +151,5 @@ func typeCheckCase(s *ast.Case) {
         }
     }
 
-    for _,s := range s.Stmts {
-        typeCheckStmt(s)
-    }
+    typeCheckStmt(s.Stmt)
 }

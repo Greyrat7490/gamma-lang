@@ -109,7 +109,7 @@ func prsExprWithPrecedence(tokens *token.Tokens, precedence precedence) ast.Expr
         expr = prsUnaryExpr(tokens)
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] no valid expression (got type %v)\n", tokens.Cur().Type)
+        fmt.Fprintf(os.Stderr, "[ERROR] no valid expression (got \"%v\")\n", tokens.Cur().Str)
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
 
@@ -920,11 +920,11 @@ func prsUnaryExpr(tokens *token.Tokens) *ast.Unary {
     return &expr
 }
 
-func prsCaseExpr(tokens *token.Tokens, condBase ast.Expr, placeholder *ast.Expr, lastCaseEnd token.Pos) (caseExpr ast.XCase) {
+func prsCaseCond(tokens *token.Tokens, condBase ast.Expr, placeholder *ast.Expr) (conds ast.Expr, colonPos token.Pos) {
     if tokens.Cur().Type == token.Colon {
         if tokens.Last().Pos.Line == tokens.Cur().Pos.Line {
-            fmt.Fprintln(os.Stderr, "[ERROR] missing case body(expr) for this case")
-            fmt.Fprintln(os.Stderr, "\t" + lastCaseEnd.At())
+            fmt.Fprintln(os.Stderr, "[ERROR] missing case body for this case")
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Last2().Pos.At())
         } else {
             fmt.Fprintln(os.Stderr, "[ERROR] invalid case condition: nothing before \":\"")
             fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
@@ -942,12 +942,10 @@ func prsCaseExpr(tokens *token.Tokens, condBase ast.Expr, placeholder *ast.Expr,
         os.Exit(1)
     }
 
-    // parse case cond(s) ----------------
-    expr := prsExpr(tokens)
-    var conds ast.Expr = nil
-    for tokens.Next().Type == token.Comma {
-        conds = completeCond(placeholder, condBase, expr, conds)
+    cond := prsExpr(tokens)
+    conds = completeCond(placeholder, condBase, cond, conds)
 
+    for tokens.Next().Type == token.Comma {
         if tokens.Peek().Type == token.Colon || tokens.Peek().Type == token.Comma {
             fmt.Fprintln(os.Stderr, "[ERROR] invalid case condition: no expr after \",\"")
             fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
@@ -955,79 +953,77 @@ func prsCaseExpr(tokens *token.Tokens, condBase ast.Expr, placeholder *ast.Expr,
         }
 
         tokens.Next()
-        expr = prsExpr(tokens)
+        cond = prsExpr(tokens)
+        conds = completeCond(placeholder, condBase, cond, conds)
     }
 
-    caseExpr.ColonPos = tokens.Cur().Pos
-    caseExpr.Cond = completeCond(placeholder, condBase, expr, conds)
-
     if tokens.Cur().Type != token.Colon {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \":\" but got %v\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "[ERROR] missing \":\" at the end of case condition")
+        fmt.Fprintln(os.Stderr, "\t" + conds.End())
+        os.Exit(1)
+    }
+    colonPos = tokens.Cur().Pos
+
+    return
+}
+
+func prsXCase(tokens *token.Tokens, condBase ast.Expr, placeholder *ast.Expr) ast.XCase {
+    cond, colonPos := prsCaseCond(tokens, condBase, placeholder)
+
+    tokens.Next()
+    expr := prsExpr(tokens)
+
+    if colonPos.Line == tokens.Peek().Pos.Line && tokens.Peek().Type != token.SemiCol && tokens.Peek().Type != token.BraceR {
+        fmt.Fprintln(os.Stderr, "[ERROR] multiple cases in a line should be separated with a \";\"")
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Peek().At())
+        os.Exit(1)
+    }
+
+    if tokens.Peek().Type == token.SemiCol { tokens.Next() }
+
+    return ast.XCase{ Cond: cond, ColonPos: colonPos, Expr: expr }
+}
+
+func prsXCases(tokens *token.Tokens, condBase ast.Expr) (cases []ast.XCase) {
+    placeholder := getPlaceholder(condBase)
+
+    if tokens.Cur().Type != token.BraceL {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" at the end of the switch (got \"%s\")\n", tokens.Cur().Str)
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
-    if nextColon := tokens.FindNext(token.Colon); tokens.Cur().Pos.Line == nextColon.Line {
-        nextSemiCol := tokens.FindNext(token.SemiCol)
 
-        if nextSemiCol.Line == -1 || (nextSemiCol.Line == nextColon.Line && nextSemiCol.Col > nextColon.Col) {
-            fmt.Fprintln(os.Stderr, "[ERROR] multiple cases in a line should be separated with a \";\"")
-            fmt.Fprintln(os.Stderr, "\t" + nextColon.At())
-            os.Exit(1)
-        }
+    for tokens.Next().Type != token.BraceR {
+        cases = append(cases, prsXCase(tokens, condBase, placeholder))
     }
 
-
-    // parse case body -------------------
-    if tokens.Peek().Type == token.SemiCol {
-        fmt.Fprintln(os.Stderr, "[ERROR] missing case body(expr) for this case")
-        fmt.Fprintln(os.Stderr, "\t" + tokens.Last().At())
+    if tokens.Cur().Type != token.BraceR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"}\" at the end of the switch (got \"%s\")\n", tokens.Cur().Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
-
-    tokens.Next()
-    caseExpr.Expr = prsExpr(tokens)
-
-    if tokens.Peek().Type == token.SemiCol { tokens.Next() }
 
     return
 }
 
 func prsXSwitch(tokens *token.Tokens) *ast.XSwitch {
     switchExpr := ast.XSwitch{ Pos: tokens.Cur().Pos }
-    var condBase ast.Expr = nil
-    var placeholder *ast.Expr = nil
 
-    // set condBase -----------------------
+    var condBase ast.Expr = nil
     if tokens.Next().Type != token.BraceL {
         condBase = prsExpr(tokens)
-        placeholder = getPlaceholder(condBase)
     }
 
-    // parse cases ------------------------
-    if tokens.Cur().Type != token.BraceL {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" at the beginning of the xswitch " +
-            "but got \"%s\"(%v)\n", tokens.Cur().Str, tokens.Cur().Type)
+    if tokens.Peek().Type == token.BraceR {
+        fmt.Fprintln(os.Stderr, "[ERROR] empty switch")
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
+
     switchExpr.BraceLPos = tokens.Cur().Pos
-
-    lastCaseEnd := token.Pos{}
-    for tokens.Next().Type != token.BraceR {
-        expr := prsCaseExpr(tokens, condBase, placeholder, lastCaseEnd)
-        lastCaseEnd = expr.ColonPos
-        switchExpr.Cases = append(switchExpr.Cases, expr)
-    }
-
+    switchExpr.Cases = prsXCases(tokens, condBase)
     switchExpr.BraceRPos = tokens.Cur().Pos
 
-
-    // catch some syntax errors -----------
-    if len(switchExpr.Cases) == 0 {
-        fmt.Fprintln(os.Stderr, "[ERROR] empty xswitch")
-        fmt.Fprintln(os.Stderr, "\t" + switchExpr.BraceLPos.At())
-        os.Exit(1)
-    }
     for i,c := range switchExpr.Cases {
         if c.Cond == nil && i != len(switchExpr.Cases)-1 {
             i = len(switchExpr.Cases)-1 - i

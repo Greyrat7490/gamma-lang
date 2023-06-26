@@ -181,9 +181,7 @@ func GenCase(file *bufio.Writer, s *ast.Case) {
     if s.Cond == nil {
         cond.CaseStart(file)
         cond.CaseBody(file)
-        for _,s := range s.Stmts {
-            GenStmt(file, s)
-        }
+        GenStmt(file, s.Stmt)
         return
     }
 
@@ -191,9 +189,7 @@ func GenCase(file *bufio.Writer, s *ast.Case) {
         if bool(*val) {
             cond.CaseStart(file)
             cond.CaseBody(file)
-            for _,s := range s.Stmts {
-                GenStmt(file, s)
-            }
+            GenStmt(file, s.Stmt)
             cond.CaseBodyEnd(file)
         }
 
@@ -209,9 +205,7 @@ func GenCase(file *bufio.Writer, s *ast.Case) {
     }
 
     cond.CaseBody(file)
-    for _,s := range s.Stmts {
-        GenStmt(file, s)
-    }
+    GenStmt(file, s.Stmt)
     cond.CaseBodyEnd(file)
 }
 

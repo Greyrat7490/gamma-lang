@@ -42,10 +42,10 @@ func resolveForwardStmt(s ast.Stmt) {
             resolveForwardStmt(&s)
         }
     case *ast.Case:
-        resolveForwardExpr(s.Cond, nil)
-        for _,s := range s.Stmts {
-            resolveForwardStmt(s)
+        if s.Cond != nil {
+            resolveForwardExpr(s.Cond, nil)
         }
+        resolveForwardStmt(s.Stmt)
 
     case *ast.For:
         resolveForwardDecl(&s.Def)
@@ -104,10 +104,10 @@ func resolveBackwardStmt(s ast.Stmt) {
             resolveBackwardStmt(&s)
         }
     case *ast.Case:
-        resolveBackwardExpr(s.Cond)
-        for _,s := range s.Stmts {
-            resolveBackwardStmt(s)
+        if s.Cond != nil {
+            resolveBackwardExpr(s.Cond)
         }
+        resolveBackwardStmt(s.Stmt)
 
     case *ast.For:
         resolveBackwardDecl(&s.Def)

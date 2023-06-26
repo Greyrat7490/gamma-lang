@@ -9,7 +9,7 @@ import (
     "gamma/ast/identObj"
 )
 
-func prsStmt(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
+func prsStmt(tokens *token.Tokens) ast.Stmt {
     switch t := tokens.Next(); t.Type {
     case token.BraceL:
         b := prsBlock(tokens)
@@ -51,7 +51,7 @@ func prsStmt(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
 
     case token.Number, token.Str, token.Char, token.Boolean, token.ParenL:
         e := prsExpr(tokens)
-        if !ignoreUnusedExpr && e.GetType() != nil {
+        if e.GetType() != nil {
             fmt.Fprintln(os.Stderr, "[ERROR] unused expr")
             fmt.Fprintln(os.Stderr, "\t" + e.At())
             os.Exit(1)
@@ -59,7 +59,7 @@ func prsStmt(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
         return &ast.ExprStmt{ Expr: e }
 
     case token.UndScr:
-        return prsUnderScore(tokens, ignoreUnusedExpr)
+        return prsUnderScore(tokens)
 
     case token.Name:
         if isDec(tokens) || isDefInfer(tokens) {
@@ -74,7 +74,7 @@ func prsStmt(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
             a := prsAssignVar(tokens, e)
             return &a
         } else {
-            if !ignoreUnusedExpr && e.GetType() != nil {
+            if e.GetType() != nil {
                 fmt.Fprintln(os.Stderr, "[ERROR] unused expr")
                 fmt.Fprintln(os.Stderr, "\t" + e.At())
                 os.Exit(1)
@@ -126,7 +126,7 @@ func prsBlock(tokens *token.Tokens) ast.Block {
     block := ast.Block{ BraceLPos: tokens.Cur().Pos }
 
     for tokens.Peek().Type != token.BraceR {
-        block.Stmts = append(block.Stmts, prsStmt(tokens, false))
+        block.Stmts = append(block.Stmts, prsStmt(tokens))
     }
 
     block.BraceRPos = tokens.Next().Pos
@@ -144,12 +144,8 @@ func prsAssignVar(tokens *token.Tokens, dest ast.Expr) ast.Assign {
 }
 
 
-func prsUnderScore(tokens *token.Tokens, ignoreUnusedExpr bool) ast.Stmt {
+func prsUnderScore(tokens *token.Tokens) ast.Stmt {
     name := tokens.Cur()
-
-    if ignoreUnusedExpr && !isDec(tokens) && !isDefInfer(tokens) {
-        return &ast.ExprStmt{ Expr: &ast.Ident{ Name: name.Str, Obj: nil } }
-    }
 
     var decl *ast.DefVar = nil
     if tokens.Next().Type == token.DefVar {
@@ -417,125 +413,31 @@ func completeCond(placeholder *ast.Expr, condBase ast.Expr, expr1 ast.Expr, expr
     }
 }
 
-func prsCases(tokens *token.Tokens, condBase ast.Expr) (cases []ast.Case) {
-    placeholder := getPlaceholder(condBase)
-    var conds ast.Expr = nil
-    cur := -1
+func prsCase(tokens *token.Tokens, condBase ast.Expr, placeholder *ast.Expr) ast.Case {
+    cond, colonPos := prsCaseCond(tokens, condBase, placeholder)
 
-    expectColon := false
-    lastStmtLine := 0
+    stmt := prsStmt(tokens)
 
-    for tokens.Peek().Type != token.BraceR {
-        stmt := prsStmt(tokens, true)
-
-        // comma-separated condition ----------
-        for tokens.Peek().Type == token.Comma {
-            tokens.Next()
-
-            if cond, ok := stmt.(*ast.ExprStmt); ok {
-                conds = completeCond(placeholder, condBase, cond.Expr, conds)
-
-                tokens.Next()
-                stmt = &ast.ExprStmt{ Expr: prsExpr(tokens) }
-                expectColon = true
-            } else {
-                fmt.Fprintln(os.Stderr, "[ERROR] invalid case condition: expected an expr before \",\"")
-                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-                os.Exit(1)
-            }
-        }
-
-        if expectColon && tokens.Peek().Type != token.Colon {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected end of case condition(\":\") but got %v\n", tokens.Peek())
-            fmt.Fprintln(os.Stderr, "\t" + tokens.Peek().At())
-            os.Exit(1)
-        }
-
-        // case end without ";" before --------
-        if tokens.Peek().Type == token.Colon {
-            if tokens.Cur().Pos.Line == lastStmtLine {
-                fmt.Fprintln(os.Stderr, "[ERROR] cases should always start in a new line or after a \";\"")
-                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-                os.Exit(1)
-            }
-
-            tokens.Next()
-            if nextColon := tokens.FindNext(token.Colon); tokens.Cur().Pos.Line == nextColon.Line {
-                nextSemiCol := tokens.FindNext(token.SemiCol)
-
-                if nextSemiCol.Line == -1 || (nextSemiCol.Line == nextColon.Line && nextSemiCol.Col > nextColon.Col) {
-                    fmt.Fprintln(os.Stderr, "[ERROR] multiple cases in a line should be separated with a \";\"")
-                    fmt.Fprintln(os.Stderr, "\t" + nextColon.At())
-                    os.Exit(1)
-                }
-            }
-
-            if tokens.Last().Pos.Line < tokens.Cur().Pos.Line {
-                fmt.Fprintln(os.Stderr, "[ERROR] invalid case condition: nothing before \":\"")
-                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-                os.Exit(1)
-            }
-
-            if cond, ok := stmt.(*ast.ExprStmt); ok {
-                cond.Expr = completeCond(placeholder, condBase, cond.Expr, conds)
-                cases = append(cases, ast.Case{ Cond: cond.Expr, ColonPos: tokens.Cur().Pos })
-                cur++
-            } else {
-                fmt.Fprintln(os.Stderr, "[ERROR] invalid case condition: expected an expr before \":\"")
-                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-                os.Exit(1)
-            }
-
-            conds = nil
-            expectColon = false
-        // case stmts --------
-        } else {
-            if cur == -1 {
-                fmt.Fprintln(os.Stderr, "[ERROR] missing case at the beginning of the cond-switch(or missing \":\")")
-                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-                os.Exit(1)
-            }
-
-            lastStmtLine = tokens.Cur().Pos.Line
-            cases[cur].Stmts = append(cases[cur].Stmts, stmt)
-
-            // case end with before ";" -------
-            if tokens.Peek().Type == token.SemiCol {
-                pos := tokens.Next().Pos
-
-                if tokens.Peek().Type == token.Colon {
-                    fmt.Fprintln(os.Stderr, "[ERROR] invalid case condition: nothing before \":\"")
-                    fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-                    os.Exit(1)
-                }
-
-                stmt := prsStmt(tokens, true)
-
-                if tokens.Next().Type != token.Colon {
-                    fmt.Fprintln(os.Stderr, "[ERROR] \";\" should be at the end of the case")
-                    fmt.Fprintln(os.Stderr, "\t" + pos.At())
-                    os.Exit(1)
-                }
-
-                if cond, ok := stmt.(*ast.ExprStmt); ok {
-                    cond.Expr = completeCond(placeholder, condBase, cond.Expr, conds)
-                    cases = append(cases, ast.Case{ Cond: cond.Expr, ColonPos: tokens.Cur().Pos })
-                    cur++
-                } else {
-                    fmt.Fprintln(os.Stderr, "[ERROR] invalid case condition: expected an expr before \":\"")
-                    fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-                    os.Exit(1)
-                }
-
-                conds = nil
-                expectColon = false
-            }
-        }
+    if colonPos.Line == tokens.Peek().Pos.Line && tokens.Peek().Type != token.SemiCol && tokens.Peek().Type != token.BraceR {
+        fmt.Fprintln(os.Stderr, "[ERROR] multiple cases in a line should be separated with a \";\"")
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Peek().At())
+        os.Exit(1)
     }
 
-    if tokens.Next().Type != token.BraceR {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"}\" at the end of the cond-switch " +
-            "but got \"%s\"(%v)\n", tokens.Cur().Str, tokens.Cur().Type)
+    if tokens.Peek().Type == token.SemiCol { tokens.Next() }
+
+    return ast.Case{ Cond: cond, ColonPos: colonPos, Stmt: stmt }
+}
+
+func prsCases(tokens *token.Tokens, condBase ast.Expr) (cases []ast.Case) {
+    placeholder := getPlaceholder(condBase)
+
+    for tokens.Next().Type != token.BraceR {
+        cases = append(cases, prsCase(tokens, condBase, placeholder))
+    }
+
+    if tokens.Cur().Type != token.BraceR {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"}\" at the end of the switch (got \"%s\")\n", tokens.Cur().Str)
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
@@ -547,7 +449,7 @@ func prsSwitch(tokens *token.Tokens, pos token.Pos, condBase ast.Expr) ast.Switc
     switchStmt := ast.Switch{ BraceLPos: pos }
 
     if tokens.Peek().Type == token.BraceR {
-        fmt.Fprintln(os.Stderr, "[ERROR] empty cond-switch")
+        fmt.Fprintln(os.Stderr, "[ERROR] empty switch")
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
@@ -555,16 +457,9 @@ func prsSwitch(tokens *token.Tokens, pos token.Pos, condBase ast.Expr) ast.Switc
     identObj.StartScope()
     switchStmt.Cases = prsCases(tokens, condBase)
     identObj.EndScope()
-
     switchStmt.BraceRPos = tokens.Cur().Pos
 
     for i,c := range switchStmt.Cases {
-        if len(c.Stmts) == 0 {
-            fmt.Fprintln(os.Stderr, "[ERROR] no stmts provided for this case")
-            fmt.Fprintln(os.Stderr, "\t" + c.ColonPos.At())
-            os.Exit(1)
-        }
-
         // is default case last
         if c.Cond == nil && i != len(switchStmt.Cases)-1 {
             i = len(switchStmt.Cases)-1 - i
