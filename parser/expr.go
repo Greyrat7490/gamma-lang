@@ -742,7 +742,50 @@ func prsEnumLit(tokens *token.Tokens) *ast.EnumLit {
     }
 }
 
-func prsUnwrap(tokens *token.Tokens, srcExpr ast.Expr) *ast.Unwrap {
+func prsUnwrapElem(tokens *token.Tokens, unwrap *ast.Unwrap) *ast.Unwrap {
+    if unwrap.ElemName.Type != token.Name {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", unwrap.ElemName)
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+
+    if tokens.Peek().Type == token.ParenL {
+        parenLPos := tokens.Next().Pos
+
+        tokens.Next()
+        ident := prsName(tokens)
+
+        if tokens.Next().Type != token.ParenR {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got %v\n", tokens.Cur())
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+            os.Exit(1)
+        }
+        parenRPos := tokens.Cur().Pos
+
+        t := unwrap.EnumType.GetType(unwrap.ElemName.Str)
+        ununsedObj := ident.Type == token.UndScr
+
+        var obj identObj.IdentObj = nil
+        if !ununsedObj {
+            if c := cmpTime.ConstEval(unwrap.SrcExpr); c != nil {
+                if c,ok := c.(*constVal.EnumConst); ok {
+                    obj = identObj.DecConst(ident, t, c.Elem)
+                }
+            } else {
+                obj = identObj.DecVar(ident, t) 
+            }
+        }
+
+        unwrap.ParenLPos = parenLPos
+        unwrap.ParenRPos = parenRPos
+        unwrap.Obj = obj
+        unwrap.UnusedObj = ununsedObj
+    }
+
+    return unwrap
+}
+
+func prsUnwrapHead(tokens *token.Tokens, srcExpr ast.Expr) *ast.Unwrap {
     colonPos := tokens.Next().Pos
 
     name := tokens.Next()
@@ -754,13 +797,6 @@ func prsUnwrap(tokens *token.Tokens, srcExpr ast.Expr) *ast.Unwrap {
 
     if tokens.Next().Type != token.DefConst {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a \"::\" but got %v\n", tokens.Cur())
-        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-        os.Exit(1)
-    }
-
-    elemName := tokens.Next()
-    if elemName.Type != token.Name {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", elemName)
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
@@ -781,37 +817,18 @@ func prsUnwrap(tokens *token.Tokens, srcExpr ast.Expr) *ast.Unwrap {
     }
     enumType := enum.GetType().(types.EnumType)
 
-    if tokens.Peek().Type == token.ParenL {
-        parenLPos := tokens.Next().Pos
+    return &ast.Unwrap{ SrcExpr: srcExpr, ColonPos: colonPos, EnumType: enumType }
+}
 
-        tokens.Next()
-        ident := prsName(tokens)
+func prsUnwrap(tokens *token.Tokens, srcExpr ast.Expr) *ast.Unwrap {
+    unwrap := prsUnwrapHead(tokens, srcExpr)
 
-        if tokens.Next().Type != token.ParenR {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected \")\" but got %v\n", tokens.Cur())
-            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-            os.Exit(1)
-        }
-        parenRPos := tokens.Cur().Pos
-
-        t := enumType.GetType(elemName.Str)
-        ununsedObj := ident.Type == token.UndScr
-
-        var obj identObj.IdentObj = nil
-        if !ununsedObj {
-            if c := cmpTime.ConstEval(srcExpr); c != nil {
-                if c,ok := c.(*constVal.EnumConst); ok {
-                    obj = identObj.DecConst(ident, t, c.Elem)
-                }
-            } else {
-                obj = identObj.DecVar(ident, t) 
-            }
-        }
-
-        return &ast.Unwrap{ SrcExpt: srcExpr, ColonPos: colonPos, ElemName: elemName, EnumType: enumType,
-            ParenLPos: parenLPos, Obj: obj, UnusedObj: ununsedObj, ParenRPos: parenRPos }
+    elemName := tokens.Next()
+    if elemName.Type == token.BraceL {
+        return unwrap
     } else {
-        return &ast.Unwrap{ SrcExpt: srcExpr, ColonPos: colonPos, ElemName: elemName, EnumType: enumType }
+        unwrap.ElemName = elemName
+        return prsUnwrapElem(tokens, unwrap)
     }
 }
 
@@ -967,6 +984,23 @@ func prsCaseCond(tokens *token.Tokens, condBase ast.Expr, placeholder *ast.Expr)
     return
 }
 
+func prsXCaseUnwrap(tokens *token.Tokens, condBase ast.Expr) ast.XCase {
+    cond, colonPos := prsUnwrapCaseCond(tokens, condBase)
+
+    tokens.Next()
+    expr := prsExpr(tokens)
+
+    if colonPos.Line == tokens.Peek().Pos.Line && tokens.Peek().Type != token.SemiCol && tokens.Peek().Type != token.BraceR {
+        fmt.Fprintln(os.Stderr, "[ERROR] multiple cases in a line should be separated with a \";\"")
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Peek().At())
+        os.Exit(1)
+    }
+
+    if tokens.Peek().Type == token.SemiCol { tokens.Next() }
+
+    return ast.XCase{ Cond: cond, ColonPos: colonPos, Expr: expr }
+}
+
 func prsXCase(tokens *token.Tokens, condBase ast.Expr, placeholder *ast.Expr) ast.XCase {
     cond, colonPos := prsCaseCond(tokens, condBase, placeholder)
 
@@ -985,16 +1019,21 @@ func prsXCase(tokens *token.Tokens, condBase ast.Expr, placeholder *ast.Expr) as
 }
 
 func prsXCases(tokens *token.Tokens, condBase ast.Expr) (cases []ast.XCase) {
-    placeholder := getPlaceholder(condBase)
-
     if tokens.Cur().Type != token.BraceL {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" at the end of the switch (got \"%s\")\n", tokens.Cur().Str)
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" at the end of conditon for the xswitch (got \"%s\")\n", tokens.Cur().Str)
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
 
-    for tokens.Next().Type != token.BraceR {
-        cases = append(cases, prsXCase(tokens, condBase, placeholder))
+    if _,ok := condBase.(*ast.Unwrap); ok { 
+        for tokens.Next().Type != token.BraceR {
+            cases = append(cases, prsXCaseUnwrap(tokens, condBase))
+        }
+    } else {
+        placeholder := getPlaceholder(condBase)
+        for tokens.Next().Type != token.BraceR {
+            cases = append(cases, prsXCase(tokens, condBase, placeholder))
+        }
     }
 
     if tokens.Cur().Type != token.BraceR {
@@ -1020,9 +1059,16 @@ func prsXSwitch(tokens *token.Tokens) *ast.XSwitch {
         os.Exit(1)
     }
 
+    if tokens.Peek().Type == token.Colon {
+        condBase = prsUnwrapHead(tokens, condBase)
+        tokens.Next()
+    }
+
+    identObj.StartScope()
     switchExpr.BraceLPos = tokens.Cur().Pos
     switchExpr.Cases = prsXCases(tokens, condBase)
     switchExpr.BraceRPos = tokens.Cur().Pos
+    identObj.EndScope()
 
     for i,c := range switchExpr.Cases {
         if c.Cond == nil && i != len(switchExpr.Cases)-1 {

@@ -1,0 +1,34 @@
+enum Test u8 {
+    A(i64), B(str), C(bool)
+}
+
+fn test1() {
+    println("test1")
+
+    a := Test::A(-64)
+
+    // TODO: check exhausted cases, field exists, resolve
+    if a : Test::{
+        A(a): println(fmt("i64: {}", a))
+        B(b): println(fmt("string: {}", b))
+        C(c): println(fmt("bool: {}", c))
+    }
+
+    b := Test::B("b is a string")
+    if b : Test::{
+        A(a): println(fmt("i64: {}", a))
+        C(c): println(fmt("bool: {}", c))
+        B(b): println(fmt("string: {}", b))
+    }
+
+    c := Test::C(true)
+    if c : Test::{
+        A(a): println(fmt("i64: {}", a))
+        B(b): println(fmt("string: {}", b))
+        _: println("bool")
+    }
+}
+
+fn main() {
+    test1()
+}

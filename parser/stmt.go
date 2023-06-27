@@ -413,6 +413,45 @@ func completeCond(placeholder *ast.Expr, condBase ast.Expr, expr1 ast.Expr, expr
     }
 }
 
+func copyUnwrap(unwrapExpr ast.Expr, newElemName token.Token) *ast.Unwrap {
+    if unwrap, ok := unwrapExpr.(*ast.Unwrap); ok {
+        unwrapCopy := *unwrap
+        unwrapCopy.ElemName = newElemName
+        return &unwrapCopy
+    } else {
+        fmt.Fprintln(os.Stderr, "[ERROR] (internal) expected condition to be an Unwrap")
+        fmt.Fprintln(os.Stderr, "\t" + unwrapExpr.At())
+        os.Exit(1)
+        return nil
+    }
+}
+
+func prsUnwrapCaseCond(tokens *token.Tokens, condBase ast.Expr) (cond ast.Expr, colonPos token.Pos) {
+    elemName := tokens.Cur()
+    if elemName.Type != token.UndScr {
+        cond = prsUnwrapElem(tokens, copyUnwrap(condBase, elemName))
+    }
+    colonPos = tokens.Next().Pos
+
+    return
+}
+
+func prsUnwrapCase(tokens *token.Tokens, condBase ast.Expr) ast.Case {
+    cond, colonPos := prsUnwrapCaseCond(tokens, condBase)
+
+    stmt := prsStmt(tokens)
+
+    if colonPos.Line == tokens.Peek().Pos.Line && tokens.Peek().Type != token.SemiCol && tokens.Peek().Type != token.BraceR {
+        fmt.Fprintln(os.Stderr, "[ERROR] multiple cases in a line should be separated with a \";\"")
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Peek().At())
+        os.Exit(1)
+    }
+
+    if tokens.Peek().Type == token.SemiCol { tokens.Next() }
+
+    return ast.Case{ Cond: cond, ColonPos: colonPos, Stmt: stmt }
+}
+
 func prsCase(tokens *token.Tokens, condBase ast.Expr, placeholder *ast.Expr) ast.Case {
     cond, colonPos := prsCaseCond(tokens, condBase, placeholder)
 
@@ -430,10 +469,15 @@ func prsCase(tokens *token.Tokens, condBase ast.Expr, placeholder *ast.Expr) ast
 }
 
 func prsCases(tokens *token.Tokens, condBase ast.Expr) (cases []ast.Case) {
-    placeholder := getPlaceholder(condBase)
-
-    for tokens.Next().Type != token.BraceR {
-        cases = append(cases, prsCase(tokens, condBase, placeholder))
+    if _,ok := condBase.(*ast.Unwrap); ok { 
+        for tokens.Next().Type != token.BraceR {
+            cases = append(cases, prsUnwrapCase(tokens, condBase))
+        }
+    } else {
+        placeholder := getPlaceholder(condBase)
+        for tokens.Next().Type != token.BraceR {
+            cases = append(cases, prsCase(tokens, condBase, placeholder))
+        }
     }
 
     if tokens.Cur().Type != token.BraceR {

@@ -1,0 +1,60 @@
+enum Test u8 {
+    A(i64), B(str), C(bool)
+}
+
+            // TODO: check id Type (allow int, uint, bool and char)
+            // TODO: check overflow
+enum Option char {
+    Val(u64), None
+}
+
+fn retOpt(a u64) -> Option {
+    ret $ a <= {
+        2: Option::Val(420)
+        _: Option::None
+    }
+}
+
+fn printContent(t Test) {
+    println(fmt("{}", $ t : Test::{
+        A(a): a as u64
+        B(b): b.len
+        C(c): c as u64
+        _: 0            // only tmp
+    }))
+}
+
+fn test1() {
+    println("test1")
+
+    a := Test::A(69)
+    b := Test::B("string\n")
+    c := Test::C(true)
+
+    printContent(a)
+    printContent(b)
+    printContent(c)
+}
+
+fn test2() {
+    println("\ntest2")
+
+    a := retOpt(1)
+    b := retOpt(2)
+    c := retOpt(3)
+
+    if a : Option::Val(a) {
+        println(fmt("{}", a))
+    }
+    if b : Option::Val(b) {
+        println(fmt("{}", b))
+    }
+    if c : Option::None {
+        println("c has no value")
+    }
+}
+
+fn main() {
+    test1()
+    test2()
+}

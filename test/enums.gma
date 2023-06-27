@@ -66,14 +66,6 @@ fn test2() {
     } else {
         println("b2 is not a Test2::C")
     }
-
-    /* TODO: unwrap switch
-    if a : Test2::{
-        A(a): print(fmt("i64: {}", a))
-        B(b): print(fmt("string: {}", b))
-        C(c): print(fmt("bool: {}", c))
-    }
-    */
 }
 
 fn test3() {
@@ -251,7 +243,6 @@ fn test13() {
     b := ret2()
     println(fmt("{}", b))
 }
-
 
 fn main() {
     test1()
