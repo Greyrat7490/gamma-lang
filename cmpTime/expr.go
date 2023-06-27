@@ -161,7 +161,7 @@ func constEval(e ast.Expr, arrWithNils bool) constVal.ConstVal {
 }
 
 func ConstEvalUnwrap(e *ast.Unwrap) constVal.ConstVal {
-    if c,ok := ConstEval(e.SrcExpt).(*constVal.EnumConst); ok {
+    if c,ok := ConstEval(e.SrcExpr).(*constVal.EnumConst); ok {
         if inConstEnv() {
             if v,ok := e.Obj.(*vars.LocalVar); ok {
                 v.SetOffset(identObj.GetStackSize(), false)

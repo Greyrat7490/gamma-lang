@@ -210,7 +210,7 @@ func (o *DefInterface) Readable(indent int) string {
 }
 
 func (d *DefEnum) Readable(indent int) string {
-    res := strings.Repeat("   ", indent) + "DEF_INTERFACE:\n" +
+    res := strings.Repeat("   ", indent) + "DEF_ENUM:\n" +
         strings.Repeat("   ", indent+1) + d.IdType.String() + "\n" +
         strings.Repeat("   ", indent+1) + d.Name.String() + "\n"
 

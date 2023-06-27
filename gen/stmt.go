@@ -117,7 +117,7 @@ func GenIfCond(file *bufio.Writer, e ast.Expr, hasElse bool) uint {
         idType := e.EnumType.IdType
         id := e.EnumType.GetID(e.ElemName.Str)
 
-        ExprAddrToReg(file, e.SrcExpt, asm.RegD)
+        ExprAddrToReg(file, e.SrcExpr, asm.RegD)
         asm.MovRegDeref(file, asm.RegA, asm.RegAsAddr(asm.RegD), idType.Size(), false)
         asm.Eql(file, asm.GetAnyReg(asm.RegA, idType.Size()), fmt.Sprint(id))
 

@@ -97,7 +97,7 @@ type EnumLit struct {
 }
 
 type Unwrap struct {
-    SrcExpt Expr
+    SrcExpr Expr
     ColonPos token.Pos
     ElemName token.Token
     EnumType types.EnumType
@@ -262,8 +262,8 @@ func (e *Unwrap) Readable(indent int) string {
     s := strings.Repeat("   ", indent+1)
 
     res := strings.Repeat("   ", indent) + "UNWRAP:\n" +
-        e.SrcExpt.Readable(indent+1) +
-        fmt.Sprintf("%s%v::%s\n", s, e.SrcExpt.GetType(), e.ElemName.Str)
+        e.SrcExpr.Readable(indent+1) +
+        fmt.Sprintf("%s%v::%s\n", s, e.SrcExpr.GetType(), e.ElemName.Str)
 
     if e.Obj != nil {
         res += fmt.Sprintf("%s%s\n", s, e.Obj.GetName())
@@ -458,7 +458,7 @@ func (e *FnCall)    At() string { return e.Ident.At() }
 func (e *Indexed)   At() string { return e.ArrExpr.At() }
 func (e *Field)     At() string { return e.Obj.At() }
 func (e *EnumLit)   At() string { return e.Pos.At() }
-func (e *Unwrap)    At() string { return e.SrcExpt.At() }
+func (e *Unwrap)    At() string { return e.SrcExpr.At() }
 func (e *Ident)     At() string { return e.Pos.At() }
 func (e *Unary)     At() string { return e.Operator.At() }
 func (e *Binary)    At() string { return e.OperandL.At() }
