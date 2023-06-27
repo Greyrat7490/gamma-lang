@@ -579,9 +579,8 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
 }
 
 func GenXCase(file *bufio.Writer, e *ast.XCase) {
-    cond.CaseStart(file)
-
     if e.Cond == nil {
+        cond.CaseStart(file)
         cond.CaseBody(file)
         GenExpr(file, e.Expr)
         return
@@ -589,6 +588,7 @@ func GenXCase(file *bufio.Writer, e *ast.XCase) {
 
     if val,ok := cmpTime.ConstEval(e.Cond).(*constVal.BoolConst); ok {
         if bool(*val) {
+            cond.CaseStart(file)
             cond.CaseBody(file)
             GenExpr(file, e.Expr)
             cond.CaseBodyEnd(file)
@@ -597,12 +597,7 @@ func GenXCase(file *bufio.Writer, e *ast.XCase) {
         return
     }
 
-    if i,ok := e.Cond.(*ast.Ident); ok {
-        cond.CaseVar(file, i.Obj.Addr())
-    } else {
-        GenExpr(file, e.Cond)
-        cond.CaseExpr(file)
-    }
+    GenCaseCond(file, e.Cond)
 
     cond.CaseBody(file)
     GenExpr(file, e.Expr)

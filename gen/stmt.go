@@ -177,6 +177,35 @@ func GenElse(file *bufio.Writer, s *ast.Else) {
     GenBlock(file, &s.Block)
 }
 
+func GenCaseCond(file *bufio.Writer, condExpr ast.Expr) {
+    cond.CaseStart(file)
+
+    switch e := condExpr.(type) {
+    case *ast.Ident:
+        cond.CaseVar(file, e.Obj.Addr())
+
+    case *ast.Unwrap:
+        idType := e.EnumType.IdType
+        id := e.EnumType.GetID(e.ElemName.Str)
+
+        ExprAddrToReg(file, e.SrcExpr, asm.RegD)
+        asm.MovRegDeref(file, asm.RegA, asm.RegAsAddr(asm.RegD), idType.Size(), false)
+        asm.Eql(file, asm.GetAnyReg(asm.RegA, idType.Size()), fmt.Sprint(id))
+
+        cond.CaseExpr(file)
+
+        if v,ok := e.Obj.(*vars.LocalVar); ok {
+            v.SetOffset(identObj.GetStackSize(), false)
+            identObj.IncStackSize(v.GetType())
+            DerefSetDeref(file, v.Addr(), v.GetType(), asm.RegAsAddr(asm.RegD).Offseted(int64(idType.Size())))
+        }
+
+    default:
+        GenExpr(file, e)
+        cond.CaseExpr(file)
+    }
+}
+
 func GenCase(file *bufio.Writer, s *ast.Case) {
     if s.Cond == nil {
         cond.CaseStart(file)
@@ -196,13 +225,7 @@ func GenCase(file *bufio.Writer, s *ast.Case) {
         return
     }
 
-    cond.CaseStart(file)
-    if i,ok := s.Cond.(*ast.Ident); ok {
-        cond.CaseVar(file, i.Obj.Addr())
-    } else {
-        GenExpr(file, s.Cond)
-        cond.CaseExpr(file)
-    }
+    GenCaseCond(file, s.Cond)
 
     cond.CaseBody(file)
     GenStmt(file, s.Stmt)
