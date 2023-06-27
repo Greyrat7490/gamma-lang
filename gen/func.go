@@ -303,7 +303,9 @@ func passConst(file *bufio.Writer, t types.Type, value constVal.ConstVal, dstAdd
 
 func passEnumLit(file *bufio.Writer, value constVal.EnumConst, dstAddr addr.Addr) {
     asm.MovDerefVal(file, dstAddr, value.Type.IdType.Size(), fmt.Sprint(value.Id))
-    passConst(file, value.ElemType, value.Elem, dstAddr.Offseted(int64(value.Type.IdType.Size())))
+    if value.Elem != nil {
+        passConst(file, value.ElemType, value.Elem, dstAddr.Offseted(int64(value.Type.IdType.Size())))
+    }
 }
 
 func PassBigStructLit(file *bufio.Writer, t types.StructType, value constVal.StructConst) {

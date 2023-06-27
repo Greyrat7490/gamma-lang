@@ -31,7 +31,7 @@ type EnumConst struct {
     Id uint64
     Type types.EnumType
     ElemType types.Type
-    Elem ConstVal
+    Elem ConstVal           // can be nil
 }
 
 type PtrConst struct {
