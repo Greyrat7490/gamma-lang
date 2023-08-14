@@ -1,0 +1,15 @@
+enum Test u32 {
+    A(u8), B(str), C(u32)
+}
+
+fn test(t Test) {
+    println(fmt("{}", $ t : Test::{
+        A(a): a as u64
+        B(b): b.len
+        // C(c): c as u64
+    }))
+}
+
+fn main() {
+
+}

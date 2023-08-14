@@ -2,8 +2,6 @@ enum Test u8 {
     A(i64), B(str), C(bool)
 }
 
-            // TODO: check id Type (allow int, uint, bool and char)
-            // TODO: check overflow
 enum Option char {
     Val(u64), None
 }
@@ -20,7 +18,6 @@ fn printContent(t Test) {
         A(a): a as u64
         B(b): b.len
         C(c): c as u64
-        _: 0            // only tmp
     }))
 }
 

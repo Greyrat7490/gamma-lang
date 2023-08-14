@@ -362,6 +362,51 @@ func typeCheckXSwitch(o *ast.XSwitch) {
     for _,c := range o.Cases {
         typeCheckXCase(&c)
     }
+
+    for i,c := range o.Cases {
+        if c.Cond == nil && i != len(o.Cases)-1 {
+            i = len(o.Cases)-1 - i
+            if i == 1 {
+                fmt.Fprintln(os.Stderr, "[ERROR] one case after the default case (unreachable code)")
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] %d cases after the default case (unreachable code)\n", i)
+            }
+            fmt.Fprintln(os.Stderr, "\t" + c.ColonPos.At())
+            os.Exit(1)
+        }
+    }
+
+    exhaustedXCases(o)
+}
+
+func exhaustedXCases(e *ast.XSwitch) {
+    if e.Cases[len(e.Cases)-1].Cond != nil {
+        if u,ok := e.Cases[0].Cond.(*ast.Unwrap); ok {
+            exhaustedUnwrap(u, e)
+        } else {
+            fmt.Fprintln(os.Stderr, "[ERROR] every xswitch requires a default case")
+            fmt.Fprintln(os.Stderr, "\t" + e.End())
+            os.Exit(1)
+        }
+    }
+}
+
+func exhaustedUnwrap(firstUnwrap *ast.Unwrap, e *ast.XSwitch) {
+    expectedElems := firstUnwrap.EnumType.GetElems()
+    if len(e.Cases) != len(expectedElems) {
+        elems := make([]string, 0, len(e.Cases))
+        for _,c := range e.Cases {
+            if u,ok := c.Cond.(*ast.Unwrap); ok {
+                elems = append(elems, u.ElemName.Str)
+            }
+        }
+
+        fmt.Fprintln(os.Stderr, "[ERROR] xswitch cases are not exhausted")
+        fmt.Fprintf(os.Stderr, "\texpected: %v\n", expectedElems)
+        fmt.Fprintf(os.Stderr, "\tgot: %v\n", elems)
+        fmt.Fprintln(os.Stderr, "\t" + e.End())
+        os.Exit(1)
+    }
 }
 
 func typeCheckFnCall(o *ast.FnCall) {

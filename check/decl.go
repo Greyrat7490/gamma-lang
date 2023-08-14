@@ -26,7 +26,10 @@ func typeCheckDecl(d ast.Decl) {
     case *ast.Impl:
         typeCheckImpl(d)
 
-    case *ast.DefStruct, *ast.DefInterface, *ast.DefEnum:
+    case *ast.DefEnum:
+        typeCheckDefEnum(d)
+
+    case *ast.DefStruct, *ast.DefInterface:
         // nothing to do
 
     default:
@@ -149,6 +152,34 @@ func typeCheckImpl(d *ast.Impl) {
         typeCheckInterfaceImplemented(d)
     } else {
         typeCheckImplNoInterface(d)
+    }
+}
+
+func typeCheckDefEnum(d *ast.DefEnum) {
+    switch d.IdType.GetKind() {
+    case types.Bool:
+        if len(d.Elems) > 2 {
+            fmt.Fprintf(os.Stderr, "[ERROR] too many elements for enum with id type %s (got %d)\n", d.IdType, len(d.Elems))
+            fmt.Fprintln(os.Stderr, "\t" + d.At())
+            os.Exit(1)
+        }
+    case types.Uint, types.Char:
+        if uint(len(d.Elems)) >> (d.IdType.Size()*8) > 0 {
+            fmt.Fprintf(os.Stderr, "[ERROR] too many elements for enum with id type %s (got %d)\n", d.IdType, len(d.Elems))
+            fmt.Fprintln(os.Stderr, "\t" + d.At())
+            os.Exit(1)
+        }
+    case types.Int:
+        if uint(len(d.Elems)) >> ((d.IdType.Size()-1)*8) > 0 {
+            fmt.Fprintf(os.Stderr, "[ERROR] too many elements for enum with id type %s (got %d)\n", d.IdType, len(d.Elems))
+            fmt.Fprintln(os.Stderr, "\t" + d.At())
+            os.Exit(1)
+        }
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] expected uint, int, char or bool as enum id type (got %s)\n", d.IdType)
+        fmt.Fprintln(os.Stderr, "\t" + d.At())
+        os.Exit(1)
     }
 }
 

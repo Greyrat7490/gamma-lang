@@ -1,0 +1,5 @@
+enum Option str {
+    Val(u64), None
+}
+
+fn main() {}

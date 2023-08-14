@@ -1070,24 +1070,6 @@ func prsXSwitch(tokens *token.Tokens) *ast.XSwitch {
     switchExpr.BraceRPos = tokens.Cur().Pos
     identObj.EndScope()
 
-    for i,c := range switchExpr.Cases {
-        if c.Cond == nil && i != len(switchExpr.Cases)-1 {
-            i = len(switchExpr.Cases)-1 - i
-            if i == 1 {
-                fmt.Fprintln(os.Stderr, "[ERROR] one case after the default case (unreachable code)")
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] %d cases after the default case (unreachable code)\n", i)
-            }
-            fmt.Fprintln(os.Stderr, "\t" + c.ColonPos.At())
-            os.Exit(1)
-        }
-    }
-    if switchExpr.Cases[len(switchExpr.Cases)-1].Cond != nil {
-        fmt.Fprintln(os.Stderr, "[ERROR] every xswitch requires a default case")
-        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-        os.Exit(1)
-    }
-
     switchExpr.Type = switchExpr.Cases[0].GetType()
     return &switchExpr
 }

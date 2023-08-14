@@ -91,6 +91,20 @@ func typeCheckSwitch(s *ast.Switch) {
     for _,c := range s.Cases {
         typeCheckCase(&c)
     }
+
+    for i,c := range s.Cases {
+        // is default case last
+        if c.Cond == nil && i != len(s.Cases)-1 {
+            i = len(s.Cases)-1 - i
+            if i == 1 {
+                fmt.Fprintln(os.Stderr, "[ERROR] one case after the default case (unreachable code)")
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] %d cases after the default case (unreachable code)\n", i)
+            }
+            fmt.Fprintln(os.Stderr, "\t" + c.ColonPos.At())
+            os.Exit(1)
+        }
+    }
 }
 
 func typeCheckFor(s *ast.For) {

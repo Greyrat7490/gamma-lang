@@ -503,20 +503,6 @@ func prsSwitch(tokens *token.Tokens, pos token.Pos, condBase ast.Expr) ast.Switc
     identObj.EndScope()
     switchStmt.BraceRPos = tokens.Cur().Pos
 
-    for i,c := range switchStmt.Cases {
-        // is default case last
-        if c.Cond == nil && i != len(switchStmt.Cases)-1 {
-            i = len(switchStmt.Cases)-1 - i
-            if i == 1 {
-                fmt.Fprintln(os.Stderr, "[ERROR] one case after the default case (unreachable code)")
-            } else {
-                fmt.Fprintf(os.Stderr, "[ERROR] %d cases after the default case (unreachable code)\n", i)
-            }
-            fmt.Fprintln(os.Stderr, "\t" + c.ColonPos.At())
-            os.Exit(1)
-        }
-    }
-
     return switchStmt
 }
 
