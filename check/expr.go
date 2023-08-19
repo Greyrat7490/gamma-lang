@@ -386,31 +386,29 @@ func typeCheckXSwitch(o *ast.XSwitch) {
     }
 }
 
-func xcasesToUnwraps(e *ast.XSwitch) []*ast.Unwrap {
-    res := make([]*ast.Unwrap, 0, len(e.Cases))
+func xcasesToUnwraps(e *ast.XSwitch) (unwraps []*ast.Unwrap, lastPost string) {
+    unwraps = make([]*ast.Unwrap, 0, len(e.Cases))
 
     for _,c := range e.Cases {
         if u,ok := c.Cond.(*ast.Unwrap); ok || c.Cond == nil {
-            res = append(res, u)
+            unwraps = append(unwraps, u)
         }
     }
 
-    return res
+    return unwraps, e.Cases[len(e.Cases)-1].At()
 }
 
 func exhaustedXCases(e *ast.XSwitch) {
-    if e.Cases[len(e.Cases)-1].Cond != nil {
-        if _,ok := e.Cases[0].Cond.(*ast.Unwrap); ok {
-            exhaustedUnwraps(xcasesToUnwraps(e))
-        } else {
-            fmt.Fprintln(os.Stderr, "[ERROR] every xswitch requires a default case")
-            fmt.Fprintln(os.Stderr, "\t" + e.End())
-            os.Exit(1)
-        }
+    if _,ok := e.Cases[0].Cond.(*ast.Unwrap); ok {
+        exhaustedUnwraps(xcasesToUnwraps(e))
+    } else if e.Cases[len(e.Cases)-1].Cond != nil {
+        fmt.Fprintln(os.Stderr, "[ERROR] every xswitch requires a default case")
+        fmt.Fprintln(os.Stderr, "\t" + e.End())
+        os.Exit(1)
     }
 }
 
-func exhaustedUnwraps(unwraps []*ast.Unwrap) {
+func exhaustedUnwraps(unwraps []*ast.Unwrap, lastPost string) {
     expectedElems := unwraps[0].EnumType.GetElems()
     usedElems := make(map[string]bool, len(expectedElems))
 
@@ -420,6 +418,11 @@ func exhaustedUnwraps(unwraps []*ast.Unwrap) {
 
     for _,u := range unwraps {
         if u == nil {
+            if len(unwraps) > len(expectedElems) {
+                fmt.Fprintln(os.Stderr, "[ERROR] redundant default case")
+                fmt.Fprintln(os.Stderr, "\t" + lastPost)
+                os.Exit(1)
+            }
             return
         }
 
@@ -428,10 +431,11 @@ func exhaustedUnwraps(unwraps []*ast.Unwrap) {
             fmt.Fprintln(os.Stderr, "\t" + u.ElemName.At())
             os.Exit(1)
         }
+
         usedElems[u.ElemName.Str] = true
     }
 
-    if len(unwraps) != len(expectedElems) {
+    if len(unwraps) < len(expectedElems) {
         missing := make([]string, 0, len(expectedElems))
         for elem,used := range usedElems {
             if !used {

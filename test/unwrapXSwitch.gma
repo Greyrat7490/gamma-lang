@@ -18,7 +18,6 @@ fn printContent(t Test) {
         A(a): a as u64
         B(b): b.len
         C(c): c as u64
-        _: 0            // TODO: cause error
     }))
 }
 

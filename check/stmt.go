@@ -111,16 +111,16 @@ func typeCheckSwitch(s *ast.Switch) {
     }
 }
 
-func casesToUnwraps(e *ast.Switch) []*ast.Unwrap {
-    res := make([]*ast.Unwrap, 0, len(e.Cases))
+func casesToUnwraps(s *ast.Switch) (unwraps []*ast.Unwrap, end string) {
+    unwraps = make([]*ast.Unwrap, 0, len(s.Cases))
 
-    for _,c := range e.Cases {
+    for _,c := range s.Cases {
         if u,ok := c.Cond.(*ast.Unwrap); ok || c.Cond == nil {
-            res = append(res, u)
+            unwraps = append(unwraps, u)
         }
     }
 
-    return res
+    return unwraps, s.Cases[len(s.Cases)-1].At()
 }
 
 func typeCheckFor(s *ast.For) {
