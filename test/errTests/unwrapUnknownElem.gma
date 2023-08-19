@@ -1,0 +1,11 @@
+enum Test {
+    A, B, C
+}
+
+fn main() {
+    if Test::A : Test::{
+        A: println("A")
+        B: println("B")
+        D: println("D")
+    }
+}

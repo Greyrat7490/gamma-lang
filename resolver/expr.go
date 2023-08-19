@@ -101,6 +101,8 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
         }
 
     case *ast.Ident:
+        if e.GetType() == nil { return }
+
         addResolved(e.GetType(), t)
         switch o := e.Obj.(type) {
         case *identObj.Const:

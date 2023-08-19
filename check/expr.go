@@ -162,6 +162,13 @@ func typeCheckEnumLit(e *ast.EnumLit) {
 }
 
 func typeCheckUnwrap(e *ast.Unwrap) {
+    if !e.EnumType.HasElem(e.ElemName.Str) {
+        fmt.Fprintf(os.Stderr, "[ERROR] enum %s has not element named %s\n", e.EnumType, e.ElemName.Str)
+        fmt.Fprintf(os.Stderr, "\telems: %v\n", e.EnumType.GetElems())
+        fmt.Fprintln(os.Stderr, "\t" + e.ElemName.At())
+        os.Exit(1)
+    }
+
     t := e.EnumType.GetType(e.ElemName.Str)
     if t != nil {
         if !e.UnusedObj && e.Obj == nil {
@@ -363,6 +370,8 @@ func typeCheckXSwitch(o *ast.XSwitch) {
         typeCheckXCase(&c)
     }
 
+    exhaustedXCases(o)
+
     for i,c := range o.Cases {
         if c.Cond == nil && i != len(o.Cases)-1 {
             i = len(o.Cases)-1 - i
@@ -375,14 +384,24 @@ func typeCheckXSwitch(o *ast.XSwitch) {
             os.Exit(1)
         }
     }
+}
 
-    exhaustedXCases(o)
+func xcasesToUnwraps(e *ast.XSwitch) []*ast.Unwrap {
+    res := make([]*ast.Unwrap, 0, len(e.Cases))
+
+    for _,c := range e.Cases {
+        if u,ok := c.Cond.(*ast.Unwrap); ok || c.Cond == nil {
+            res = append(res, u)
+        }
+    }
+
+    return res
 }
 
 func exhaustedXCases(e *ast.XSwitch) {
     if e.Cases[len(e.Cases)-1].Cond != nil {
-        if u,ok := e.Cases[0].Cond.(*ast.Unwrap); ok {
-            exhaustedUnwrap(u, e)
+        if _,ok := e.Cases[0].Cond.(*ast.Unwrap); ok {
+            exhaustedUnwraps(xcasesToUnwraps(e))
         } else {
             fmt.Fprintln(os.Stderr, "[ERROR] every xswitch requires a default case")
             fmt.Fprintln(os.Stderr, "\t" + e.End())
@@ -391,20 +410,39 @@ func exhaustedXCases(e *ast.XSwitch) {
     }
 }
 
-func exhaustedUnwrap(firstUnwrap *ast.Unwrap, e *ast.XSwitch) {
-    expectedElems := firstUnwrap.EnumType.GetElems()
-    if len(e.Cases) != len(expectedElems) {
-        elems := make([]string, 0, len(e.Cases))
-        for _,c := range e.Cases {
-            if u,ok := c.Cond.(*ast.Unwrap); ok {
-                elems = append(elems, u.ElemName.Str)
+func exhaustedUnwraps(unwraps []*ast.Unwrap) {
+    expectedElems := unwraps[0].EnumType.GetElems()
+    usedElems := make(map[string]bool, len(expectedElems))
+
+    for _,expectedElem := range expectedElems {
+        usedElems[expectedElem] = false
+    }
+
+    for _,u := range unwraps {
+        if u == nil {
+            return
+        }
+
+        if used := usedElems[u.ElemName.Str]; used {
+            fmt.Fprintf(os.Stderr, "[ERROR] duplicate enum field %s::%s\n", u.EnumType, u.ElemName.Str)
+            fmt.Fprintln(os.Stderr, "\t" + u.ElemName.At())
+            os.Exit(1)
+        }
+        usedElems[u.ElemName.Str] = true
+    }
+
+    if len(unwraps) != len(expectedElems) {
+        missing := make([]string, 0, len(expectedElems))
+        for elem,used := range usedElems {
+            if !used {
+                missing = append(missing, elem)
             }
         }
 
-        fmt.Fprintln(os.Stderr, "[ERROR] xswitch cases are not exhausted")
+        fmt.Fprintln(os.Stderr, "[ERROR] cases are not exhausted")
         fmt.Fprintf(os.Stderr, "\texpected: %v\n", expectedElems)
-        fmt.Fprintf(os.Stderr, "\tgot: %v\n", elems)
-        fmt.Fprintln(os.Stderr, "\t" + e.End())
+        fmt.Fprintf(os.Stderr, "\tmissing: %v\n", missing)
+        fmt.Fprintln(os.Stderr, "\t" + unwraps[len(unwraps)-1].End())
         os.Exit(1)
     }
 }

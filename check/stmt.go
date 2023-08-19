@@ -88,10 +88,6 @@ func typeCheckElif(s *ast.Elif) {
 }
 
 func typeCheckSwitch(s *ast.Switch) {
-    for _,c := range s.Cases {
-        typeCheckCase(&c)
-    }
-
     for i,c := range s.Cases {
         // is default case last
         if c.Cond == nil && i != len(s.Cases)-1 {
@@ -105,6 +101,26 @@ func typeCheckSwitch(s *ast.Switch) {
             os.Exit(1)
         }
     }
+
+    for _,c := range s.Cases {
+        typeCheckCase(&c)
+    }
+
+    if _,ok := s.Cases[0].Cond.(*ast.Unwrap); ok {
+        exhaustedUnwraps(casesToUnwraps(s))
+    }
+}
+
+func casesToUnwraps(e *ast.Switch) []*ast.Unwrap {
+    res := make([]*ast.Unwrap, 0, len(e.Cases))
+
+    for _,c := range e.Cases {
+        if u,ok := c.Cond.(*ast.Unwrap); ok || c.Cond == nil {
+            res = append(res, u)
+        }
+    }
+
+    return res
 }
 
 func typeCheckFor(s *ast.For) {

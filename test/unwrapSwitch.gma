@@ -7,7 +7,6 @@ fn test1() {
 
     a := Test::A(-64)
 
-    // TODO: check exhausted cases, field exists, resolve
     if a : Test::{
         A(a): println(fmt("i64: {}", a))
         B(b): println(fmt("string: {}", b))
