@@ -235,8 +235,8 @@ func (d *EnumElem) Readable(indent int) string {
 
 func (o *Impl) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "IMPL:\n" +
-        strings.Repeat("   ", indent+1) + "Struct: " + o.Impl.GetStructName() + "\n" +
-        strings.Repeat("   ", indent+1) + "Interface: " + o.Impl.GetInterfaceName() + "\n"
+        strings.Repeat("   ", indent+1) + "Interface: " + o.Impl.GetInterfaceName() + "\n" +
+        strings.Repeat("   ", indent+1) + "DestType: " + o.Impl.GetImplName() + "\n"
 
     for _,f := range o.FnDefs {
         res += f.Readable(indent+1)

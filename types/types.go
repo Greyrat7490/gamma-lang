@@ -82,6 +82,7 @@ type StructType struct {
 type EnumType struct {
     Name string
     IdType Type
+    Interfaces map[string]InterfaceType
     ids map[string]uint64
     types map[string]Type        // nil for no type
     size uint
@@ -215,7 +216,7 @@ func CreateEnumType(name string, idType Type, names []string, types []Type) Enum
         isBigStruct = true
     }
 
-    return EnumType{ Name: name, IdType: idType, types: ts, ids: ids, size: size, isBigStruct: isBigStruct }
+    return EnumType{ Name: name, Interfaces: make(map[string]InterfaceType), IdType: idType, types: ts, ids: ids, size: size, isBigStruct: isBigStruct }
 }
 
 func (t *StructType) GetOffset(field string) (offset int64) {
@@ -635,6 +636,12 @@ func Equal(destType Type, srcType Type) bool {
 
     case InterfaceType:
         if t2,ok := srcType.(StructType); ok {
+            if t,ok := t2.Interfaces[t.Name]; ok {
+                return Equal(destType, t)
+            }
+            return false
+        }
+        if t2,ok := srcType.(EnumType); ok {
             if t,ok := t2.Interfaces[t.Name]; ok {
                 return Equal(destType, t)
             }

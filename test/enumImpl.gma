@@ -1,0 +1,45 @@
+enum Enum {
+    A, B, C
+}
+
+interface I {
+    fn show(self)
+}
+
+impl Enum :: I {
+    fn show(self) {
+        println(fmt("id: {}", self as u64))
+    }
+}
+
+struct S { a u8 }
+
+impl S :: I {
+    fn show(self) {
+        println("S::show(s)")
+    }
+}
+
+fn show1(s S) {
+    // I::show(s)       // TODO: allow interface instead of struct
+    S::show(s)
+}
+
+fn show2(e Enum) {
+    e.show()
+    // Enum::show(e)
+}
+
+fn main() {
+    a := Enum::A
+    a.show()
+
+    b := Enum::B
+    b.show()
+
+    s := S{ 64 }
+    show1(s)
+
+    c := Enum::C
+    show2(c)
+}

@@ -1,21 +1,21 @@
 package gen
 
 import (
-    "os"
-    "fmt"
-    "bufio"
-    "reflect"
-    "gamma/token"
-    "gamma/types"
-    "gamma/types/str"
-    "gamma/types/addr"
-    "gamma/cmpTime"
-    "gamma/cmpTime/constVal"
-    "gamma/ast"
-    "gamma/ast/identObj"
-    "gamma/ast/identObj/vars"
-    "gamma/gen/asm/x86_64"
-    "gamma/gen/asm/x86_64/conditions"
+	"bufio"
+	"fmt"
+	"gamma/ast"
+	"gamma/ast/identObj"
+	"gamma/ast/identObj/vars"
+	"gamma/cmpTime"
+	"gamma/cmpTime/constVal"
+	"gamma/gen/asm/x86_64"
+	"gamma/gen/asm/x86_64/conditions"
+	"gamma/token"
+	"gamma/types"
+	"gamma/types/addr"
+	"gamma/types/str"
+	"os"
+	"reflect"
 )
 
 // TODO vister pattern
@@ -521,19 +521,19 @@ func GenBinary(file *bufio.Writer, e *ast.Binary) {
     }
 }
 
-func getVtableOffset(expr ast.Expr, funcName string) uint {
-    if interfaceType,ok := expr.GetType().(types.InterfaceType); ok {
+func getVtableOffset(ident ast.Ident, funcName string) uint {
+    if interfaceType,ok := ident.GetType().(types.InterfaceType); ok {
         if i,ok := identObj.Get(interfaceType.Name).(*identObj.Interface); ok {
             return i.GetVTableOffset(funcName)
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] interface %v is not defined\n", interfaceType.Name)
-            fmt.Fprintln(os.Stderr, "\t" + expr.At())
+            fmt.Fprintln(os.Stderr, "\t" + ident.At())
             os.Exit(1)
         }
 
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] (internal) expected interface type but got %v\n", expr.GetType())
-        fmt.Fprintln(os.Stderr, "\t" + expr.At())
+        fmt.Fprintf(os.Stderr, "[ERROR] (internal) expected interface type but got %v\n", reflect.TypeOf(ident.GetType()))
+        fmt.Fprintln(os.Stderr, "\t" + ident.At())
         os.Exit(1)
     }
     return 0
@@ -568,7 +568,7 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
     passArgs.genPassArgsReg(file)
 
     if e.StructIdent != nil && e.StructIdent.GetType().GetKind() == types.Interface {
-        offset := getVtableOffset(passArgs.regArgs[0].value, e.F.GetName())
+        offset := getVtableOffset(*e.StructIdent, e.F.GetName())
         GenExpr(file, passArgs.regArgs[0].value)
         CallVTableFn(file, offset)
     } else {

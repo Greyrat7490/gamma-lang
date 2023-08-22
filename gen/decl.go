@@ -140,7 +140,7 @@ func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
 
 func createVTable(file *bufio.Writer, d *ast.Impl) {
     fnNames := d.Impl.GetVTableFuncNames()
-    implName := d.Impl.GetStructName()
+    implName := d.Impl.GetImplName()
     interfaceName := d.Impl.GetInterfaceName()
     vtable.Create(implName, interfaceName, fnNames)
 }

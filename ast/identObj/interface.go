@@ -75,15 +75,31 @@ func (i *Interface) GetVTableOffset(funcName string) uint {
     return 0
 }
 
+func (i *Interface) AddImpl(impl Impl) { 
+    fmt.Fprintln(os.Stderr, "[ERROR] (internal) Cannot add impl to an interface")
+    os.Exit(1)
+}
+
+func (i *Interface) GetFuncNames() []string {
+    res := make([]string, 0, len(i.funcs)) 
+
+    for _,f := range i.funcs {
+        res = append(res, f.GetName())
+    }
+
+    return res
+}
+
+
 type Impl struct {
     decPos token.Pos
     interface_ *Interface // can be nil
-    struct_ *Struct
+    dstType types.Type
     scope *Scope
 }
 
-func CreateImpl(decPos token.Pos, interface_ *Interface, struct_ *Struct) Impl {
-    return Impl{ decPos: decPos, interface_: interface_, struct_: struct_, scope: curScope }
+func CreateImpl(decPos token.Pos, interface_ *Interface, dstType types.Type) Impl {
+    return Impl{ decPos: decPos, interface_: interface_, dstType: dstType, scope: curScope }
 }
 
 func (i *Impl) HasInterface() bool {
@@ -98,12 +114,8 @@ func (i *Impl) GetInterfaceName() string {
     return i.interface_.name
 }
 
-func (i *Impl) GetStructName() string {
-    if i.interface_ == nil {
-        return ""
-    }
-
-    return i.struct_.name
+func (i *Impl) GetImplName() string {
+    return i.dstType.String()
 }
 
 func (i *Impl) GetInterfaceFuncs() []types.FuncType {

@@ -1,14 +1,14 @@
 package prs
 
 import (
-    "os"
-    "fmt"
-    "gamma/types"
-    "gamma/token"
-    "gamma/import"
-    "gamma/cmpTime"
-    "gamma/ast"
-    "gamma/ast/identObj"
+	"fmt"
+	"gamma/ast"
+	"gamma/ast/identObj"
+	"gamma/cmpTime"
+	"gamma/import"
+	"gamma/token"
+	"gamma/types"
+	"os"
 )
 
 func prsDecl(tokens *token.Tokens) ast.Decl {
@@ -205,7 +205,7 @@ func isDefInfer(tokens *token.Tokens) bool {
     }
 
     if tokens.Peek().Type == token.DefConst {
-        if tokens.Peek2().Type == token.Lss || isStruct(tokens.Cur()) {
+        if tokens.Peek2().Type == token.Lss || isImplementable(tokens.Cur()) {
             return false
         }
         return true
@@ -220,6 +220,21 @@ func isStruct(token token.Token) bool {
 func isEnum(token token.Token) bool {
     _,ok := identObj.Get(token.Str).(*identObj.Enum)
     return ok
+}
+func isImplementable(token token.Token) bool {
+    _,ok := identObj.Get(token.Str).(identObj.Implementable)
+    return ok
+}
+func isEnumLit(enumName token.Token, funcName token.Token) bool {
+    if enumName.Type == token.SelfType {
+        enumName.Str = identObj.CurSelfType.String()
+    }
+
+    if e,ok := identObj.Get(enumName.Str).(*identObj.Enum); ok {
+        return e.GetFunc(funcName.Str) == nil
+    }
+
+    return false
 }
 func isGenericFunc(token token.Token) bool {
     if f,ok := identObj.Get(token.Str).(*identObj.Func); ok {
@@ -523,11 +538,8 @@ func prsEnumElemType(tokens *token.Tokens) *ast.EnumElemType {
 func prsImpl(tokens *token.Tokens) ast.Decl {
     pos := tokens.Cur().Pos
 
-    StructName := tokens.Next()
-    if StructName.Type != token.Name {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", StructName)
-        fmt.Fprintln(os.Stderr, "\t" + StructName.At())
-        os.Exit(1)
+    DstName := tokens.Next()
+    if DstName.Type != token.Name {
     }
 
     var I *identObj.Interface = nil
@@ -549,14 +561,31 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
         I = i
     }
 
-    S,ok := identObj.Get(StructName.Str).(*identObj.Struct)
-    if !ok || S == nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" is not defined\n", StructName.Str)
-        fmt.Fprintln(os.Stderr, "\t" + StructName.At())
+    var dstType types.Type = nil
+    var implementable identObj.Implementable = nil
+    switch DstName.Type {
+    case token.Name:
+        obj := identObj.Get(DstName.Str)
+        if obj == nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not defined\n", DstName.Str)
+            fmt.Fprintln(os.Stderr, "\t" + DstName.At())
+            os.Exit(1)
+        }
+        implementable = obj.(identObj.Implementable)
+        dstType = obj.GetType()
+
+    case token.Typename:
+        // TODO: GetPrimitiveByName
+        fmt.Fprintln(os.Stderr, "[ERROR] in work...")
+        os.Exit(1)
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name or an TypeName but got %v\n", DstName)
+        fmt.Fprintln(os.Stderr, "\t" + DstName.At())
         os.Exit(1)
     }
 
-    identObj.CurSelfType = S.GetType()
+    identObj.CurSelfType = dstType
 
     braceLPos := tokens.Next().Pos
     if tokens.Cur().Type != token.BraceL {
@@ -566,8 +595,8 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
     }
     identObj.StartScope()
 
-    impl := identObj.CreateImpl(pos, I, S)
-    S.AddImpl(impl)
+    impl := identObj.CreateImpl(pos, I, dstType)
+    implementable.AddImpl(impl)
 
     funcsReservedLen := 5
     if I != nil { funcsReservedLen = len(I.GetFuncs()) }

@@ -1,19 +1,19 @@
 package prs
 
 import (
-    "os"
-    "fmt"
-    "reflect"
-    "strconv"
-    "gamma/token"
-    "gamma/types"
-    "gamma/types/str"
-    "gamma/types/char"
-    "gamma/types/array"
-    "gamma/cmpTime"
-    "gamma/cmpTime/constVal"
-    "gamma/ast"
-    "gamma/ast/identObj"
+	"fmt"
+	"gamma/ast"
+	"gamma/ast/identObj"
+	"gamma/cmpTime"
+	"gamma/cmpTime/constVal"
+	"gamma/token"
+	"gamma/types"
+	"gamma/types/array"
+	"gamma/types/char"
+	"gamma/types/str"
+	"os"
+	"reflect"
+	"strconv"
 )
 
 type precedence int
@@ -58,7 +58,7 @@ func prsExprWithPrecedence(tokens *token.Tokens, precedence precedence) ast.Expr
                 expr = prsCallGenericFn(tokens)
 
             } else if tokens.Peek2().Type == token.Name {
-                if isEnum(tokens.Cur()) {
+                if isEnumLit(tokens.Cur(), tokens.Peek2()) {
                     expr = prsEnumLit(tokens)
                 } else {
                     expr = prsCallInterfaceFn(tokens)
@@ -584,6 +584,44 @@ func getStructFromExpr(expr ast.Expr) *identObj.Struct {
     return nil
 }
 
+func prsDotExprEnum(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ types.EnumType, name token.Token) ast.Expr {
+    if e,ok := identObj.Get(typ.Name).(*identObj.Enum); ok {
+        if f := e.GetFunc(name.Str); f != nil {
+            tokens.Next()
+            usedType := prsGenericUsedType(tokens)
+
+            posL := tokens.Cur().Pos
+            vals := prsPassArgs(tokens)
+            posR := tokens.Cur().Pos
+
+            vals = addSelfArg(vals, f, obj)
+
+            if usedType != nil {
+                if !f.IsGeneric() {
+                    fmt.Fprintf(os.Stderr, "[ERROR] %s (from %s) is not generic\n", name.Str, typ.Name)
+                    fmt.Fprintln(os.Stderr, "\t" + name.At())
+                    os.Exit(1)
+                }
+                f.AddTypeToGeneric(usedType)
+            }
+
+            ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
+            structIdent := ast.Ident{ Name: typ.Name, Pos: dotPos, Obj: e }
+            return &ast.FnCall{ Ident: ident, StructIdent: &structIdent, F: f, GenericUsedType: usedType,
+                Values: vals, ParenLPos: posL, ParenRPos: posR }
+        }
+        
+        fmt.Fprintf(os.Stderr, "[ERROR] enum \"%s\" has no func called \"%s\"\n", typ.Name, name.Str)
+        fmt.Fprintf(os.Stderr, "\tfuncs: %v\n", e.GetFuncNames())
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] enum \"%s\" is not defined\n", typ.Name)
+    }
+
+    fmt.Fprintln(os.Stderr, "\t" + obj.At())
+    os.Exit(1)
+    return nil
+}
+
 func prsDotExprStruct(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ types.StructType, name token.Token) ast.Expr {
     if t := typ.GetType(name.Str); t != nil {
         field := &ast.Field{ Obj: obj, DotPos: dotPos, FieldName: name }
@@ -692,6 +730,11 @@ func prsDotExpr(tokens *token.Tokens, obj ast.Expr) ast.Expr {
         return prsDotExprStruct(tokens, obj, dot.Pos, *typ, name)
     case types.StructType:
         return prsDotExprStruct(tokens, obj, dot.Pos, typ, name)
+
+    case *types.EnumType:
+        return prsDotExprEnum(tokens, obj, dot.Pos, *typ, name)
+    case types.EnumType:
+        return prsDotExprEnum(tokens, obj, dot.Pos, typ, name)
 
     case types.InterfaceType:
         return prsDotExprInterface(tokens, obj, dot.Pos, typ, name)
@@ -1160,45 +1203,52 @@ func prsCallGenericFn(tokens *token.Tokens) *ast.FnCall {
 }
 
 func prsCallInterfaceFn(tokens *token.Tokens) *ast.FnCall {
-    structIdent := prsIdentExpr(tokens)
+    objIdent := prsIdentExpr(tokens)
 
-    if S,ok := structIdent.Obj.(*identObj.Struct); ok {
-        if tokens.Next().Type != token.DefConst {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected \"::\" but got %s\n", tokens.Cur())
-            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-            os.Exit(1)
-        }
+    if tokens.Next().Type != token.DefConst {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected \"::\" but got %s\n", tokens.Cur())
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
 
-        name := tokens.Next()
+    name := tokens.Next()
 
-        tokens.Next()
-        usedType := prsGenericUsedType(tokens)
+    tokens.Next()
+    usedType := prsGenericUsedType(tokens)
 
-        posL := tokens.Cur().Pos
-        vals := prsPassArgs(tokens)
-        posR := tokens.Cur().Pos
+    posL := tokens.Cur().Pos
+    vals := prsPassArgs(tokens)
+    posR := tokens.Cur().Pos
 
-        if f := S.GetFunc(name.Str); f != nil {
-            if usedType != nil {
-                if !f.IsGeneric() {
-                    fmt.Fprintf(os.Stderr, "[ERROR] function %s is not generic\n", name.Str)
-                    fmt.Fprintln(os.Stderr, "\t" + name.At())
-                    os.Exit(1)
-                }
-                f.AddTypeToGeneric(usedType)
+    var f *identObj.Func = nil
+    switch obj := objIdent.Obj.(type) {
+    case identObj.Implementable:
+        f = obj.GetFunc(name.Str)
+    case *identObj.Interface:
+        f = obj.GetFunc(name.Str)
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] expected an interface or implementeable obj before %s but got %s\n", objIdent.Name, reflect.TypeOf(objIdent.Obj))
+        fmt.Fprintln(os.Stderr, "\t" + objIdent.At())
+        os.Exit(1)
+    }
+
+    if f != nil {
+        if usedType != nil {
+            if !f.IsGeneric() {
+                fmt.Fprintf(os.Stderr, "[ERROR] function %s is not generic\n", name.Str)
+                fmt.Fprintln(os.Stderr, "\t" + name.At())
+                os.Exit(1)
             }
-
-            ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
-
-            return &ast.FnCall{ Ident: ident, StructIdent: structIdent, F: f, GenericUsedType: usedType, Values: vals, ParenLPos: posL, ParenRPos: posR }
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared in %s\n", name, structIdent.Name)
-            fmt.Fprintln(os.Stderr, "\t" + structIdent.At())
-            os.Exit(1)
+            f.AddTypeToGeneric(usedType)
         }
+
+        ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
+
+        return &ast.FnCall{ Ident: ident, StructIdent: objIdent, F: f, GenericUsedType: usedType, Values: vals, ParenLPos: posL, ParenRPos: posR }
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a struct before %s but got %s\n", structIdent.Name, reflect.TypeOf(structIdent.Obj))
-        fmt.Fprintln(os.Stderr, "\t" + structIdent.At())
+        fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared in %s\n", name, objIdent.Name)
+        fmt.Fprintln(os.Stderr, "\t" + objIdent.At())
         os.Exit(1)
     }
 
