@@ -1222,9 +1222,11 @@ func prsCallInterfaceFn(tokens *token.Tokens) *ast.FnCall {
 
     var f *identObj.Func = nil
     switch obj := objIdent.Obj.(type) {
-    case identObj.Implementable:
-        f = obj.GetFunc(name.Str)
     case *identObj.Interface:
+        f = obj.GetFunc(name.Str)
+        f = f.UpdateReceiver(vals[0].GetType())
+
+    case identObj.Implementable:
         f = obj.GetFunc(name.Str)
 
     default:

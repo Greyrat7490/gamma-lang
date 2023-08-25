@@ -1,9 +1,9 @@
 package identObj
 
 import (
-    "gamma/token"
-    "gamma/types"
-    "gamma/types/addr"
+	"gamma/token"
+	"gamma/types"
+	"gamma/types/addr"
 )
 
 type Func struct {
@@ -12,7 +12,7 @@ type Func struct {
     typ types.FuncType
     retAddr addr.Addr   // TODO remove
     Scope *Scope
-    funcOfStruct string
+    receiver types.Type
     isConst bool
 }
 
@@ -26,8 +26,8 @@ func CreateFunc(name token.Token, isConst bool) Func {
     return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, typ: types.FuncType{ Name: name.Str } }
 }
 
-func CreateInterfaceFunc(name token.Token, isConst bool, structName string) Func {
-    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, funcOfStruct: structName, typ: types.FuncType{ Name: name.Str } }
+func CreateInterfaceFunc(name token.Token, isConst bool, receiver types.Type) Func {
+    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, receiver: receiver, typ: types.FuncType{ Name: name.Str } }
 }
 
 func (f *Func) GetArgs() []types.Type {
@@ -65,8 +65,8 @@ func (f *Func) GetRetAddr() addr.Addr {
 func (f *Func) GetMangledName() string {
     name := f.name
 
-    if f.funcOfStruct != "" {
-        name = f.funcOfStruct + "." + name
+    if f.receiver != nil {
+        name = f.receiver.String() + "." + name
     }
 
     if f.GetGeneric() != nil {
@@ -91,6 +91,15 @@ func (f *Func) SetArgs(args []types.Type) {
 
 func (f *Func) SetGeneric(generic *types.GenericType) {
     f.typ.Generic = generic
+}
+
+func (f *Func) UpdateReceiver(recv types.Type) *Func {
+    res := *f
+    res.typ.Args = make([]types.Type, len(res.typ.Args))
+    copy(res.typ.Args, f.typ.Args)
+    res.typ.Args[0] = recv
+    res.receiver = recv
+    return &res
 }
 
 func (f *Func) IsGeneric() bool {

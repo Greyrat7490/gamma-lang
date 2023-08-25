@@ -130,11 +130,12 @@ fn interface_arg(t Test, t2 Test2) {
 
 interface Interface {
     fn test_append(*self)
-    // TODO allow another func with same name?
     fn inc2(*self) -> u64
     fn new() -> Self
 }
 
+// TODO: allow impl another interface with a func which is already implemented
+// on name collision (when calling) show affected interfaces and give hint to use one of them explicitly if possible
 impl Test3 :: Interface {
     fn new() -> Self {
         ret Self{ 0, "test", [$]i32{ cap: 5 } }  

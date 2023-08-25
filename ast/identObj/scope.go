@@ -191,10 +191,10 @@ func DecFunc(name token.Token, isConst bool) *Func {
     return curFunc
 }
 
-func DecInterfaceFunc(name token.Token, isConst bool, structName string) *Func {
+func DecInterfaceFunc(name token.Token, isConst bool, receiver types.Type) *Func {
     curScope.parent.checkName(name)
 
-    f := CreateInterfaceFunc(name, isConst, structName)
+    f := CreateInterfaceFunc(name, isConst, receiver)
     f.Scope = curScope
 
     curScope.parent.identObjs[name.Str] = &f

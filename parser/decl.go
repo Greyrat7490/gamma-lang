@@ -643,7 +643,7 @@ func prsFnHead(tokens *token.Tokens, isInterfaceFn bool) ast.FnHead {
 
     var f *identObj.Func = nil
     if isInterfaceFn && identObj.CurSelfType != nil {
-        f = identObj.DecInterfaceFunc(name, isConst, identObj.CurSelfType.String())
+        f = identObj.DecInterfaceFunc(name, isConst, identObj.CurSelfType)
     } else {
         f = identObj.DecFunc(name, isConst)
     }

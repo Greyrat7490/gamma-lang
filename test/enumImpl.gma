@@ -3,43 +3,66 @@ enum Enum {
 }
 
 interface I {
-    fn show(self)
+    fn show1(self)
+    fn show2(self, u u32)
 }
 
 impl Enum :: I {
-    fn show(self) {
+    fn show1(self) {
         println(fmt("id: {}", self as u64))
+    }
+
+    fn show2(self, u u32) {
+        println(fmt("id: {} (arg: {})", self as u64, u as u64))
     }
 }
 
 struct S { a u8 }
 
 impl S :: I {
-    fn show(self) {
+    fn show1(self) {
         println("S::show(s)")
+    }
+
+    fn show2(self, u u32) {
+        println(fmt("S::show(s, {})", u))
     }
 }
 
-fn show1(s S) {
-    // I::show(s)       // TODO: allow interface instead of struct
-    S::show(s)
+fn struct_show(s S) {
+    println("\nshow1")
+    s.show1()
+    S::show1(s)
+    I::show1(s)
+
+    println("\nshow1")
+    s.show2(64)
+    S::show2(s, 64)
+    I::show2(s, 69)
 }
 
-fn show2(e Enum) {
-    e.show()
-    // Enum::show(e)
+fn enum_show(e Enum) {
+    println("\nshow1")
+    e.show1()
+    Enum::show1(e)
+    I::show1(e)
+
+    println("\nshow2")
+    e.show2(420)
+    Enum::show2(e, 64)
+    I::show2(e, 69)
 }
 
 fn main() {
     a := Enum::A
-    a.show()
+    a.show1()
 
     b := Enum::B
-    b.show()
+    b.show1()
 
     s := S{ 64 }
-    show1(s)
+    struct_show(s)
 
     c := Enum::C
-    show2(c)
+    enum_show(c)
 }

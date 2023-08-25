@@ -567,7 +567,7 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
     passArgs.genPassArgsBigStruct(file)
     passArgs.genPassArgsReg(file)
 
-    if e.StructIdent != nil && e.StructIdent.GetType().GetKind() == types.Interface {
+    if e.StructIdent != nil && e.StructIdent.GetType().GetKind() == types.Interface && passArgs.regArgs[0].typ.GetKind() == types.Interface {
         offset := getVtableOffset(*e.StructIdent, e.F.GetName())
         GenExpr(file, passArgs.regArgs[0].value)
         CallVTableFn(file, offset)
