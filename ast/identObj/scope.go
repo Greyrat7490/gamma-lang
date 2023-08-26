@@ -153,6 +153,22 @@ func AddGenBuildIn(name string, genericName string, argtype types.Type, retType 
     globalScope.identObjs[name] = &f
 }
 
+func AddPrimitives() {
+    AddPrimitive(types.CreateUint(types.U64_Size))
+    AddPrimitive(types.CreateUint(types.U32_Size))
+    AddPrimitive(types.CreateUint(types.U16_Size))
+    AddPrimitive(types.CreateUint(types.U8_Size))
+
+    AddPrimitive(types.CreateInt(types.I64_Size))
+    AddPrimitive(types.CreateInt(types.I32_Size))
+    AddPrimitive(types.CreateInt(types.I16_Size))
+    AddPrimitive(types.CreateInt(types.I8_Size))
+
+    AddPrimitive(types.BoolType{ Interfaces: make(map[string]types.InterfaceType) })
+    AddPrimitive(types.CharType{ Interfaces: make(map[string]types.InterfaceType) })
+    AddPrimitive(types.StrType{ Interfaces: make(map[string]types.InterfaceType) })
+}                                
+
 func DecVar(name token.Token, t types.Type) vars.Var {
     if name.Type == token.UndScr {
         return ReserveSpace(t)

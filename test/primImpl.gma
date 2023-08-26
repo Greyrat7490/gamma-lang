@@ -1,0 +1,29 @@
+interface I {
+    fn show(self)
+}
+
+impl u64 :: I {
+    fn show(self) {
+        println(fmt("{}", self))
+    }
+}
+
+impl i64 :: I {
+    fn show(self) {
+        println(fmt("{}", self))
+    }
+}
+
+fn main() {
+    u u64 := 420
+
+    I::show(u)
+    u64::show(u)
+    u.show()
+
+    i i64 := -64
+
+    I::show(i)
+    i64::show(i)
+    i.show()
+}

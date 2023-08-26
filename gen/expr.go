@@ -521,19 +521,19 @@ func GenBinary(file *bufio.Writer, e *ast.Binary) {
     }
 }
 
-func getVtableOffset(ident ast.Ident, funcName string) uint {
-    if interfaceType,ok := ident.GetType().(types.InterfaceType); ok {
+func getVtableOffset(receiverType types.Type, pos token.Pos, funcName string) uint {
+    if interfaceType,ok := receiverType.(types.InterfaceType); ok {
         if i,ok := identObj.Get(interfaceType.Name).(*identObj.Interface); ok {
             return i.GetVTableOffset(funcName)
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] interface %v is not defined\n", interfaceType.Name)
-            fmt.Fprintln(os.Stderr, "\t" + ident.At())
+            fmt.Fprintln(os.Stderr, "\t" + pos.At())
             os.Exit(1)
         }
 
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] (internal) expected interface type but got %v\n", reflect.TypeOf(ident.GetType()))
-        fmt.Fprintln(os.Stderr, "\t" + ident.At())
+        fmt.Fprintf(os.Stderr, "[ERROR] (internal) expected interface type but got %v\n", reflect.TypeOf(receiverType))
+        fmt.Fprintln(os.Stderr, "\t" + pos.At())
         os.Exit(1)
     }
     return 0
@@ -567,8 +567,8 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
     passArgs.genPassArgsBigStruct(file)
     passArgs.genPassArgsReg(file)
 
-    if e.StructIdent != nil && e.StructIdent.GetType().GetKind() == types.Interface && passArgs.regArgs[0].typ.GetKind() == types.Interface {
-        offset := getVtableOffset(*e.StructIdent, e.F.GetName())
+    if e.ReceiverType != nil && e.ReceiverType.GetKind() == types.Interface && passArgs.regArgs[0].typ.GetKind() == types.Interface {
+        offset := getVtableOffset(e.ReceiverType, e.Ident.Pos, e.F.GetName())
         GenExpr(file, passArgs.regArgs[0].value)
         CallVTableFn(file, offset)
     } else {

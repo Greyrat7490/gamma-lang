@@ -48,6 +48,9 @@ func prsExprWithPrecedence(tokens *token.Tokens, precedence precedence) ast.Expr
             expr = prsArrayLit(tokens)
         }
 
+    case token.Typename:
+        expr = prsCallInterfaceFn(tokens)
+
     case token.Name, token.Self, token.SelfType:
         switch tokens.Peek().Type {
         case token.ParenL:
@@ -217,7 +220,7 @@ func prsName(tokens *token.Tokens) token.Token {
         name.Type = token.Name
     }
 
-    if name.Type != token.Name && name.Type != token.UndScr {
+    if name.Type != token.Name && name.Type != token.UndScr && name.Type != token.Typename {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
@@ -584,130 +587,76 @@ func getStructFromExpr(expr ast.Expr) *identObj.Struct {
     return nil
 }
 
-func prsDotExprEnum(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ types.EnumType, name token.Token) ast.Expr {
-    if e,ok := identObj.Get(typ.Name).(*identObj.Enum); ok {
-        if f := e.GetFunc(name.Str); f != nil {
-            tokens.Next()
-            usedType := prsGenericUsedType(tokens)
+func prsDotCallFn(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ types.Type, name token.Token, f *identObj.Func) ast.Expr {
+    tokens.Next()
+    usedType := prsGenericUsedType(tokens)
 
-            posL := tokens.Cur().Pos
-            vals := prsPassArgs(tokens)
-            posR := tokens.Cur().Pos
+    posL := tokens.Cur().Pos
+    vals := prsPassArgs(tokens)
+    posR := tokens.Cur().Pos
 
-            vals = addSelfArg(vals, f, obj)
+    vals = addSelfArg(vals, f, obj)
 
-            if usedType != nil {
-                if !f.IsGeneric() {
-                    fmt.Fprintf(os.Stderr, "[ERROR] %s (from %s) is not generic\n", name.Str, typ.Name)
-                    fmt.Fprintln(os.Stderr, "\t" + name.At())
-                    os.Exit(1)
-                }
-                f.AddTypeToGeneric(usedType)
-            }
-
-            ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
-            structIdent := ast.Ident{ Name: typ.Name, Pos: dotPos, Obj: e }
-            return &ast.FnCall{ Ident: ident, StructIdent: &structIdent, F: f, GenericUsedType: usedType,
-                Values: vals, ParenLPos: posL, ParenRPos: posR }
+    if usedType != nil {
+        if !f.IsGeneric() {
+            fmt.Fprintf(os.Stderr, "[ERROR] %s (from %s) is not generic\n", name.Str, typ)
+            fmt.Fprintln(os.Stderr, "\t" + name.At())
+            os.Exit(1)
         }
-        
-        fmt.Fprintf(os.Stderr, "[ERROR] enum \"%s\" has no func called \"%s\"\n", typ.Name, name.Str)
-        fmt.Fprintf(os.Stderr, "\tfuncs: %v\n", e.GetFuncNames())
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] enum \"%s\" is not defined\n", typ.Name)
+        f.AddTypeToGeneric(usedType)
     }
 
-    fmt.Fprintln(os.Stderr, "\t" + obj.At())
-    os.Exit(1)
-    return nil
+    ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
+    return &ast.FnCall{ 
+        Ident: ident, ReceiverType: typ, F: f, GenericUsedType: usedType,
+        Values: vals, ParenLPos: posL, ParenRPos: posR, 
+    }
 }
 
-func prsDotExprStruct(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ types.StructType, name token.Token) ast.Expr {
-    if t := typ.GetType(name.Str); t != nil {
+func prsDotField(tokens *token.Tokens, t types.Type, obj ast.Expr, dotPos token.Pos, name token.Token) *ast.Field {
+    switch typ := t.(type) {
+    case *types.StructType:
         field := &ast.Field{ Obj: obj, DotPos: dotPos, FieldName: name }
-        setFieldType(field)
+        field.StructType = *typ
+        field.Type = field.StructType.GetType(field.FieldName.Str)
         if f,ok := obj.(*ast.FnCall); ok {
             if types.IsBigStruct(f.GetType()) {
                 identObj.ReserveSpace(f.GetType())
             }
         }
         return field
-    }
-
-    if s,ok := identObj.Get(typ.Name).(*identObj.Struct); ok {
-        if f := s.GetFunc(name.Str); f != nil {
-            tokens.Next()
-            usedType := prsGenericUsedType(tokens)
-
-            posL := tokens.Cur().Pos
-            vals := prsPassArgs(tokens)
-            posR := tokens.Cur().Pos
-
-            vals = addSelfArg(vals, f, obj)
-
-            if usedType != nil {
-                if !f.IsGeneric() {
-                    fmt.Fprintf(os.Stderr, "[ERROR] %s (from %s) is not generic\n", name.Str, typ.Name)
-                    fmt.Fprintln(os.Stderr, "\t" + name.At())
-                    os.Exit(1)
-                }
-                f.AddTypeToGeneric(usedType)
+    case types.StructType:
+        field := &ast.Field{ Obj: obj, DotPos: dotPos, FieldName: name }
+        field.StructType = typ
+        field.Type = field.StructType.GetType(field.FieldName.Str)
+        if f,ok := obj.(*ast.FnCall); ok {
+            if types.IsBigStruct(f.GetType()) {
+                identObj.ReserveSpace(f.GetType())
             }
-
-            ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
-            structIdent := ast.Ident{ Name: typ.Name, Pos: dotPos, Obj: s }
-            return &ast.FnCall{ Ident: ident, StructIdent: &structIdent, F: f, GenericUsedType: usedType,
-                Values: vals, ParenLPos: posL, ParenRPos: posR }
         }
-        
-        fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" has no field/func called \"%s\"\n", typ.Name, name.Str)
-        fmt.Fprintf(os.Stderr, "\tfuncs: %v\n", s.GetFuncNames())
-        fmt.Fprintf(os.Stderr, "\tfields: %v\n", typ.GetFields())
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" is not defined\n", typ.Name)
+        return field
+
+    case types.ArrType:
+        field := &ast.Field{ Obj: obj, DotPos: dotPos, FieldName: name }
+        field.Type = types.CreateUint(types.U64_Size)
+        return field
+
+    case types.VecType:
+        field := &ast.Field{ Obj: obj, DotPos: dotPos, FieldName: name }
+        field.Type = types.CreateUint(types.U64_Size)
+        return field
+
+    case types.StrType:
+        field := &ast.Field{ Obj: obj, DotPos: dotPos, FieldName: name }
+        field.Type = types.CreateUint(types.U32_Size)
+        return field
+
+    default:
+        fmt.Fprintf(os.Stderr, "[ERROR] type %s has no fields\n", typ)
+        fmt.Fprintln(os.Stderr, "\t" + obj.At())
+        os.Exit(1)
+        return nil
     }
-
-    fmt.Fprintln(os.Stderr, "\t" + obj.At())
-    os.Exit(1)
-    return nil
-}
-
-func prsDotExprInterface(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ types.InterfaceType, name token.Token) ast.Expr {
-    if i,ok := identObj.Get(typ.Name).(*identObj.Interface); ok {
-        if f := i.GetFunc(name.Str); f != nil {
-            tokens.Next()
-            usedType := prsGenericUsedType(tokens)
-
-            posL := tokens.Cur().Pos
-            vals := prsPassArgs(tokens)
-            posR := tokens.Cur().Pos
-
-            vals = addSelfArg(vals, f, obj)
-
-            if usedType != nil {
-                if !f.IsGeneric() {
-                    fmt.Fprintf(os.Stderr, "[ERROR] %s (from %s) is not generic\n", name.Str, typ.Name)
-                    fmt.Fprintln(os.Stderr, "\t" + name.At())
-                    os.Exit(1)
-                }
-                f.AddTypeToGeneric(usedType)
-            }
-
-            ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
-            structIdent := ast.Ident{ Name: typ.Name, Pos: dotPos, Obj: i }
-            return &ast.FnCall{ Ident: ident, StructIdent: &structIdent, F: f, GenericUsedType: usedType,
-                Values: vals, ParenLPos: posL, ParenRPos: posR }
-        }
-
-        fmt.Fprintf(os.Stderr, "[ERROR] interface \"%s\" has no func called \"%s\"\n", typ.Name, name.Str)
-        fmt.Fprintf(os.Stderr, "\tfuncs: %v\n", typ.Funcs)
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] interface \"%s\" is not defined\n", typ.Name)
-    }
-
-    fmt.Fprintln(os.Stderr, "\t" + obj.At())
-    os.Exit(1)
-    return nil
 }
 
 func prsDotExpr(tokens *token.Tokens, obj ast.Expr) ast.Expr {
@@ -725,24 +674,36 @@ func prsDotExpr(tokens *token.Tokens, obj ast.Expr) ast.Expr {
         os.Exit(1)
     }
 
-    switch typ := obj.GetType().(type) {
-    case *types.StructType:
-        return prsDotExprStruct(tokens, obj, dot.Pos, *typ, name)
-    case types.StructType:
-        return prsDotExprStruct(tokens, obj, dot.Pos, typ, name)
+    t := obj.GetType()
+    obj, t = autoDeref(obj, name.Pos, t)
 
-    case *types.EnumType:
-        return prsDotExprEnum(tokens, obj, dot.Pos, *typ, name)
-    case types.EnumType:
-        return prsDotExprEnum(tokens, obj, dot.Pos, typ, name)
+    if f := getImplFunc(t, name.Str); f != nil {
+        return prsDotCallFn(tokens, obj, dot.Pos, t, name, f)
+    } else {
+        return prsDotField(tokens, t, obj, dot.Pos, name)
+    }
+}
 
-    case types.InterfaceType:
-        return prsDotExprInterface(tokens, obj, dot.Pos, typ, name)
+func getImplFunc(t types.Type, name string) *identObj.Func {
+    if e,ok := identObj.Get(t.String()).(identObj.Implementable); ok {
+        return e.GetFunc(name)
+    }
 
-    default:
-        field := &ast.Field{ Obj: obj, DotPos: dot.Pos, FieldName: name }
-        setFieldType(field)
-        return field
+    return nil
+}
+
+func autoDeref(obj ast.Expr, pos token.Pos, t types.Type) (derefedObj ast.Expr, baseType types.Type)  {
+    if typ, ok := t.(types.PtrType); ok {
+        derefedObj := &ast.Unary{ 
+            Type: typ.BaseType,
+            Operator: token.Token{ Pos: pos,
+            Type: token.Mul, Str: "*" },
+            Operand: obj,
+        }
+
+        return autoDeref(derefedObj, pos, typ.BaseType)
+    } else {
+        return obj, t
     }
 }
 
@@ -892,35 +853,6 @@ func addSelfArg(values []ast.Expr, f *identObj.Func, obj ast.Expr) []ast.Expr {
     }
 
     return values
-}
-
-func setFieldType(field *ast.Field) {
-    switch t := field.Obj.GetType().(type) {
-    case types.ArrType:
-        field.Type = types.CreateUint(types.U64_Size)
-    case types.VecType:
-        field.Type = types.CreateUint(types.U64_Size)
-    case types.StrType:
-        field.Type = types.CreateUint(types.U32_Size)
-    case types.StructType:
-        field.StructType = t
-        field.Type = field.StructType.GetType(field.FieldName.Str)
-
-        if field.Type == nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" has no field called \"%s\"\n", field.StructType.Name, field.FieldName.Str)
-            fmt.Fprintf(os.Stderr, "\tfields: %v\n", t.GetFields())
-            fmt.Fprintln(os.Stderr, "\t" + field.At())
-            os.Exit(1)
-        }
-    // auto deref
-    case types.PtrType:
-        field.Obj = &ast.Unary{ Type: t.BaseType, Operator: token.Token{ Pos: field.FieldName.Pos, Type: token.Mul, Str: "*" }, Operand: field.Obj }
-        setFieldType(field)
-    default:
-        fmt.Fprintf(os.Stderr, "[ERROR] type %s has no fields\n", t)
-        fmt.Fprintln(os.Stderr, "\t" + field.Obj.At())
-        os.Exit(1)
-    }
 }
 
 func prsParenExpr(tokens *token.Tokens) *ast.Paren {
@@ -1230,7 +1162,7 @@ func prsCallInterfaceFn(tokens *token.Tokens) *ast.FnCall {
         f = obj.GetFunc(name.Str)
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] expected an interface or implementeable obj before %s but got %s\n", objIdent.Name, reflect.TypeOf(objIdent.Obj))
+        fmt.Fprintf(os.Stderr, "[ERROR] expected an interface or implementable obj before %s but got %s\n", objIdent.Name, reflect.TypeOf(objIdent.Obj))
         fmt.Fprintln(os.Stderr, "\t" + objIdent.At())
         os.Exit(1)
     }
@@ -1246,8 +1178,7 @@ func prsCallInterfaceFn(tokens *token.Tokens) *ast.FnCall {
         }
 
         ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
-
-        return &ast.FnCall{ Ident: ident, StructIdent: objIdent, F: f, GenericUsedType: usedType, Values: vals, ParenLPos: posL, ParenRPos: posR }
+        return &ast.FnCall{ Ident: ident, ReceiverType: objIdent.GetType(), F: f, GenericUsedType: usedType, Values: vals, ParenLPos: posL, ParenRPos: posR }
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared in %s\n", name, objIdent.Name)
         fmt.Fprintln(os.Stderr, "\t" + objIdent.At())

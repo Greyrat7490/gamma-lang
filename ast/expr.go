@@ -20,8 +20,8 @@ type BadExpr struct{}
 
 type FnCall struct {
     F *identObj.Func
-    GenericUsedType types.Type
-    StructIdent *Ident
+    GenericUsedType types.Type  // can be nil
+    ReceiverType types.Type     // can be nil
     Ident Ident
     ParenLPos token.Pos
     Values []Expr

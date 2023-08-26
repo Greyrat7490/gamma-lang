@@ -46,30 +46,38 @@ const (
 )
 
 type Type interface {
-    Size()        uint
-    String()      string
-    GetKind()     TypeKind
+    Size()          uint
+    String()        string
+    GetKind()       TypeKind
+    GetInterfaces() map[string]InterfaceType
 }
 
-type CharType struct {}
-type BoolType struct {}
+type CharType struct { Interfaces map[string]InterfaceType }
+type BoolType struct { Interfaces map[string]InterfaceType }
 type UintType struct {
     size uint
+    Interfaces map[string]InterfaceType
 }
 type IntType struct {
     size uint
+    Interfaces map[string]InterfaceType
 }
 type PtrType struct {
     BaseType Type
+    Interfaces map[string]InterfaceType
 }
 type ArrType struct {
     BaseType Type
     Len uint64
+    Interfaces map[string]InterfaceType
 }
 type VecType struct {
     BaseType Type
+    Interfaces map[string]InterfaceType
 }
-type StrType struct {}
+type StrType struct {
+    Interfaces map[string]InterfaceType
+}
 type StructType struct {
     Name string
     Types []Type
@@ -99,6 +107,7 @@ type GenericType struct {
     Name string
     CurUsedType Type
     UsedTypes []Type
+    Interfaces map[string]InterfaceType
 }
 type InterfaceType struct {
     Name string
@@ -146,11 +155,11 @@ func isAligned(types []Type, size uint) (aligned bool, rest uint)  {
 }
 
 func CreateInt(intSize uint) IntType {
-    return IntType{ size: intSize }
+    return IntType{ size: intSize, Interfaces: make(map[string]InterfaceType) }
 }
 
 func CreateUint(uintSize uint) UintType {
-    return UintType{ size: uintSize }
+    return UintType{ size: uintSize, Interfaces: make(map[string]InterfaceType) }
 }
 
 func CreateStructType(name string, types []Type, names []string) StructType {
@@ -405,6 +414,31 @@ func (t GenericType) Size() uint {
     return 0
 }
 
+func (t IntType)        GetInterfaces() map[string]InterfaceType { return t.Interfaces }
+func (t UintType)       GetInterfaces() map[string]InterfaceType { return t.Interfaces }
+func (t CharType)       GetInterfaces() map[string]InterfaceType { return t.Interfaces }
+func (t BoolType)       GetInterfaces() map[string]InterfaceType { return t.Interfaces }
+func (t StrType)        GetInterfaces() map[string]InterfaceType { return t.Interfaces }
+func (t PtrType)        GetInterfaces() map[string]InterfaceType { return t.Interfaces }
+func (t ArrType)        GetInterfaces() map[string]InterfaceType { return t.Interfaces }
+func (t VecType)        GetInterfaces() map[string]InterfaceType { return t.Interfaces }
+func (t StructType)     GetInterfaces() map[string]InterfaceType { return t.Interfaces }
+func (t EnumType)       GetInterfaces() map[string]InterfaceType { return t.Interfaces }
+func (t InterfaceType) GetInterfaces() map[string]InterfaceType { return nil }
+func (t FuncType) GetInterfaces() map[string]InterfaceType { return nil }
+func (t GenericType)    GetInterfaces() map[string]InterfaceType {
+    if t.CurUsedType != nil {
+        return t.CurUsedType.GetInterfaces()
+    }
+
+    return t.Interfaces
+}
+func (t InferType) GetInterfaces() map[string]InterfaceType { 
+    fmt.Fprintln(os.Stderr, "[ERROR] (internal) InferType has no interfaces")
+    os.Exit(1)
+    return nil
+}
+
 func (t IntType)  String() string {
     switch t.size {
     case I8_Size:
@@ -476,27 +510,27 @@ func (t FuncType) String() string {
 func ToBaseType(s string) Type {
     switch s {
     case "i8":
-        return IntType{ size: I8_Size }
+        return IntType{ size: I8_Size, Interfaces: make(map[string]InterfaceType) }
     case "i16":
-        return IntType{ size: I16_Size }
+        return IntType{ size: I16_Size, Interfaces: make(map[string]InterfaceType) }
     case "i32":
-        return IntType{ size: I32_Size }
+        return IntType{ size: I32_Size, Interfaces: make(map[string]InterfaceType) }
     case "i64":
-        return IntType{ size: I64_Size }
+        return IntType{ size: I64_Size, Interfaces: make(map[string]InterfaceType) }
     case "u8":
-        return UintType{ size: U8_Size }
+        return UintType{ size: U8_Size, Interfaces: make(map[string]InterfaceType) }
     case "u16":
-        return UintType{ size: U16_Size }
+        return UintType{ size: U16_Size, Interfaces: make(map[string]InterfaceType) }
     case "u32":
-        return UintType{ size: U32_Size }
+        return UintType{ size: U32_Size, Interfaces: make(map[string]InterfaceType) }
     case "u64":
-        return UintType{ size: U64_Size }
+        return UintType{ size: U64_Size, Interfaces: make(map[string]InterfaceType) }
     case "char":
-        return CharType{}
+        return CharType{ Interfaces: make(map[string]InterfaceType) }
     case "bool":
-        return BoolType{}
+        return BoolType{ Interfaces: make(map[string]InterfaceType) }
     case "str":
-        return StrType{}
+        return StrType{ Interfaces: make(map[string]InterfaceType) }
     default:
         return nil
     }
@@ -507,11 +541,11 @@ var inferIdx uint64 = 0
 func TypeOfVal(val string) Type {
     switch {
     case val[0] == '"' && val[len(val) - 1] == '"':
-        return StrType{}
+        return StrType{ Interfaces: make(map[string]InterfaceType) }
     case val[0] == '\'' && val[len(val) - 1] == '\'':
-        return CharType{}
+        return CharType{ Interfaces: make(map[string]InterfaceType) }
     case val == "true" || val == "false":
-        return BoolType{}
+        return BoolType{ Interfaces: make(map[string]InterfaceType) }
     case len(val) > 2 && val[:2] == "0x":
         if _, err := strconv.ParseUint(val, 0, 64); err == nil {
             t := InferType{ Idx: inferIdx, DefaultType: UintType{ size: U64_Size } } 
@@ -635,20 +669,11 @@ func Equal(destType Type, srcType Type) bool {
         }
 
     case InterfaceType:
-        if t2,ok := srcType.(StructType); ok {
-            if t,ok := t2.Interfaces[t.Name]; ok {
+        if interfaces := srcType.GetInterfaces(); interfaces != nil {
+            if t,ok := interfaces[t.Name]; ok {
                 return Equal(destType, t)
             }
-            return false
-        }
-        if t2,ok := srcType.(EnumType); ok {
-            if t,ok := t2.Interfaces[t.Name]; ok {
-                return Equal(destType, t)
-            }
-            return false
-        }
-
-        if t2,ok := srcType.(InterfaceType); ok {
+        } else if t2,ok := srcType.(InterfaceType); ok {
             return t.Name == t2.Name
         }
 
@@ -696,11 +721,11 @@ func Equal(destType Type, srcType Type) bool {
             return t2.Size() <= destType.Size()
         }
 
-    case StrType:
-        return destType.GetKind() == srcType.GetKind()
+    case nil:
+        return srcType == nil
 
     default:
-        return destType == srcType
+        return srcType != nil && destType.GetKind() == srcType.GetKind()
     }
 
     return false

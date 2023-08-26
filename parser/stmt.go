@@ -82,6 +82,9 @@ func prsStmt(tokens *token.Tokens) ast.Stmt {
             return &ast.ExprStmt{ Expr: e }
         }
 
+    case token.Typename:
+        return &ast.ExprStmt{ Expr: prsExpr(tokens) }
+
     case token.Elif:
         fmt.Fprintf(os.Stderr, "[ERROR] missing if (elif without an if before)\n")
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())

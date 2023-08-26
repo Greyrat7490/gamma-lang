@@ -564,7 +564,7 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
     var dstType types.Type = nil
     var implementable identObj.Implementable = nil
     switch DstName.Type {
-    case token.Name:
+    case token.Name, token.Typename:
         obj := identObj.Get(DstName.Str)
         if obj == nil {
             fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not defined\n", DstName.Str)
@@ -573,11 +573,6 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
         }
         implementable = obj.(identObj.Implementable)
         dstType = obj.GetType()
-
-    case token.Typename:
-        // TODO: GetPrimitiveByName
-        fmt.Fprintln(os.Stderr, "[ERROR] in work...")
-        os.Exit(1)
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name or an TypeName but got %v\n", DstName)
