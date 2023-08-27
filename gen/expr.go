@@ -877,40 +877,25 @@ func convertFmtArgs(args []ast.Expr) []ast.Expr {
 }
 
 func convertFmtArg(arg ast.Expr) ast.Expr {
-    typ := arg.GetType()
-
-    var name string
-    switch typ.GetKind() {
-    case types.Str:
-        return arg
-    case types.Uint:
-        name = "utos"
-    case types.Int:
-        name = "itos"
-    case types.Char:
-        name = "ctos"
-    case types.Bool:
-        name = "btos"
-    case types.Ptr:
+    // TODO: pointer have not implemented String yet (generic impl is needed)
+    if arg.GetType().GetKind() == types.Ptr {
         arg = &ast.Cast{ Expr: arg, DestType: types.CreateUint(types.Ptr_Size) }
-        name = "utos"
-    default:
-        fmt.Fprintf(os.Stderr, "[ERROR] %s has no format to string function\n", typ)
-        fmt.Fprintln(os.Stderr, "\t" + arg.At())
-        os.Exit(1)
+        name := "utos"
+
+        F := identObj.Get(name).(*identObj.Func)
+        ident := ast.Ident{ Name: name, Obj: identObj.Get(name) }
+
+        return &ast.FnCall{ F: F, Ident: ident, Values: []ast.Expr{ arg } }
+    } else {
+        funcName := "to_str"
+        recvObj := identObj.Get("String").(*identObj.Interface)
+
+        f := recvObj.GetFunc(funcName)
+        f = f.UpdateReceiver(arg.GetType())
+
+        ident := ast.Ident{ Name: funcName, Obj: f }
+        return &ast.FnCall{ F: f, ReceiverType: recvObj.GetType(), Ident: ident, Values: []ast.Expr{ arg } }
     }
-
-    values := []ast.Expr{ arg }
-    ident := ast.Ident{ Name: name, Obj: identObj.Get(name) }
-
-    var F *identObj.Func
-    if obj := identObj.Get(name); obj != nil {
-        if f,ok := obj.(*identObj.Func); ok {
-            F = f
-        }
-    }
-
-    return &ast.FnCall{ F: F, Ident: ident, Values: values }
 }
 
 func convertFmt(fmtStr token.Token, values []ast.Expr) ast.Expr {

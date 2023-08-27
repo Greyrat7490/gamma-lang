@@ -89,3 +89,15 @@ impl char :: String {
 impl str :: String {
     fn to_str(self) -> str { ret self }
 }
+
+/* TODO when pointer types allowed
+impl *char :: String {
+    fn to_str(self) -> str { ret "test" }
+}
+*/
+
+/* TODO when generic impl supported
+impl<T> *T :: String {
+    fn to_str(self) -> str { ret self }
+}
+*/
