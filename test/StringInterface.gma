@@ -1,7 +1,15 @@
-import "string.gma"
+enum E u64 {
+    A, B(u32)
+}
 
-enum a {
-    A
+impl E :: String {
+    fn to_str(self) -> str {
+        if self : E::B(b) {
+            ret fmt("E::B({})", b)
+        } else {
+            ret "E::A"
+        }
+    }
 }
 
 fn main() {
@@ -13,4 +21,9 @@ fn main() {
 
     b := true
     println(b.to_str())
+
+    e1 := E::A
+    println(e1.to_str())
+    e2 := E::B(420)
+    println(e2.to_str())
 }

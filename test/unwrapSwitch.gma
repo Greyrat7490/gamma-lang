@@ -28,6 +28,17 @@ fn test1() {
     }
 }
 
+fn test2(e Test) {
+    if e : Test::{
+        A(a): println(fmt("i64: {}", a))
+        C(c): println(fmt("bool: {}", c))
+        B(b): println(fmt("string: {}", b))
+    }
+}
+
 fn main() {
     test1()
+
+    e := Test::B("e is a string")
+    test2(e)
 }

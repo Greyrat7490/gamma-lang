@@ -75,7 +75,7 @@ func DefArg(file *bufio.Writer, regIdx uint, v vars.Var) {
         asm.MovDerefReg(file, v.Addr(), types.Ptr_Size, regs[regIdx])
         asm.MovDerefReg(file, v.Addr().Offseted(int64(types.Ptr_Size)), types.I32_Size, regs[regIdx+1])
 
-    case types.StructType:
+    case types.StructType, types.EnumType:
         if t.Size() > uint(8) {
             asm.MovDerefReg(file, v.Addr(), types.Ptr_Size, regs[regIdx])
             asm.MovDerefReg(file, v.Addr().Offseted(int64(types.Ptr_Size)), t.Size() - types.Ptr_Size, regs[regIdx+1])
@@ -110,7 +110,19 @@ func PassVal(file *bufio.Writer, regIdx uint, value constVal.ConstVal, valtype t
             vs := PackValues(t.Types, v.Fields)
             asm.MovRegVal(file, regs[regIdx], types.Ptr_Size, vs[0])
             if len(vs) == 2 {
-                asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vs[1])
+                asm.MovRegVal(file, regs[regIdx+1], t.Size() - types.Ptr_Size, vs[1])
+            }
+        }
+
+    case *constVal.EnumConst:
+        if v.Elem == nil {
+            asm.MovRegVal(file, regs[regIdx], v.Type.IdType.Size(), fmt.Sprint(v.Id))
+        } else {
+            idConst := constVal.UintConst(v.Id)
+            vs := PackValues([]types.Type{ v.Type.IdType, v.ElemType }, []constVal.ConstVal{ &idConst, v.Elem })
+            asm.MovRegVal(file, regs[regIdx], types.Ptr_Size, vs[0])
+            if len(vs) == 2 {
+                asm.MovRegVal(file, regs[regIdx+1], v.Type.Size() - types.Ptr_Size, vs[1])
             }
         }
 
@@ -132,7 +144,7 @@ func PassVar(file *bufio.Writer, regIdx uint, t types.Type, otherVar vars.Var) {
         asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(), types.Ptr_Size, false)
         asm.MovRegDeref(file, regs[regIdx+1], otherVar.Addr().Offseted(int64(types.Ptr_Size)), types.U32_Size, false)
 
-    case types.StructType:
+    case types.StructType, types.EnumType:
         if t.Size() > uint(8) {
             asm.MovRegDeref(file, regs[regIdx],   otherVar.Addr(), types.Ptr_Size, false)
             asm.MovRegDeref(file, regs[regIdx+1], otherVar.Addr().Offseted(int64(types.Ptr_Size)), t.Size() - 8, false)
@@ -169,7 +181,7 @@ func PassExpr(file *bufio.Writer, regIdx uint, argType types.Type, regSize uint,
         asm.MovRegReg(file, regs[regIdx],   asm.RegGroup(0), types.Ptr_Size)
         asm.MovRegReg(file, regs[regIdx+1], asm.RegGroup(1), types.U32_Size)
 
-    case types.StructType:
+    case types.StructType, types.EnumType:
         GenExpr(file, expr)
         if t.Size() > uint(8) {
             asm.MovRegReg(file, regs[regIdx], asm.RegGroup(0), types.Ptr_Size)
@@ -266,7 +278,7 @@ func PassRegStack(file *bufio.Writer, argType types.Type) {
         asm.PushReg(file, asm.RegGroup(1))
         asm.PushReg(file, asm.RegGroup(0))
 
-    case types.StructType:
+    case types.StructType, types.EnumType:
         if t.Size() > uint(8) {
             asm.PushReg(file, asm.RegGroup(1))
         }
