@@ -78,6 +78,8 @@ func GenExpr(file *bufio.Writer, e ast.Expr) {
         GenArrayLit(file, e)
     case *ast.StructLit:
         GenStructLit(file, e)
+    case *ast.EnumLit:
+        GenEnumLit(file, e)
 
     case *ast.Indexed:
         GenIndexed(file, e)
@@ -165,6 +167,17 @@ func GenStructLit(file *bufio.Writer, e *ast.StructLit) {
         } else {
             PackFields(file, e.StructType, e.Fields)
         }
+    }
+}
+
+func GenEnumLit(file *bufio.Writer, e *ast.EnumLit) {
+    id := e.Type.GetID(e.ElemName.Str)
+    if e.Content == nil {
+        asm.MovRegVal(file, asm.RegA, e.Type.Size(), fmt.Sprint(id))
+    } else {
+        GenExpr(file, e.Content)
+        asm.MovRegReg(file, asm.RegD, asm.RegA, e.ContentType.Size())
+        asm.MovRegVal(file, asm.RegA, e.Type.IdType.Size(), fmt.Sprint(id))
     }
 }
 
