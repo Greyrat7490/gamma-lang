@@ -40,3 +40,52 @@ fn concat<T>(lhs [$]T, rhs [$]T) -> [$]T {
 }
 
 // TODO resize (when closure functions implemented)
+
+
+interface String {
+    fn to_str(self) -> str
+}
+
+impl u64 :: String {
+    fn to_str(self) -> str { ret utos(self) }
+}
+
+impl u32 :: String {
+    fn to_str(self) -> str { ret utos(self) }
+}
+
+impl u16 :: String {
+    fn to_str(self) -> str { ret utos(self) }
+}
+
+impl u8 :: String {
+    fn to_str(self) -> str { ret utos(self) }
+}
+
+impl i64 :: String {
+    fn to_str(self) -> str { ret itos(self) }
+}
+
+impl i32 :: String {
+    fn to_str(self) -> str { ret itos(self) }
+}
+
+impl i16 :: String {
+    fn to_str(self) -> str { ret itos(self) }
+}
+
+impl i8 :: String {
+    fn to_str(self) -> str { ret itos(self) }
+}
+
+impl bool :: String {
+    fn to_str(self) -> str { ret btos(self) }
+}
+
+impl char :: String {
+    fn to_str(self) -> str { ret ctos(self) }
+}
+
+impl str :: String {
+    fn to_str(self) -> str { ret self }
+}

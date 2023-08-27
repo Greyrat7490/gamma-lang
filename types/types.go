@@ -49,6 +49,8 @@ type Type interface {
     Size()          uint
     String()        string
     GetKind()       TypeKind
+
+    // TODO: remove
     GetInterfaces() map[string]InterfaceType
 }
 

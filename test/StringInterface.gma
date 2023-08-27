@@ -1,0 +1,16 @@
+import "string.gma"
+
+enum a {
+    A
+}
+
+fn main() {
+    u u64 := 64
+    println(u.to_str())
+
+    i i64 := -69
+    println(i.to_str())
+
+    b := true
+    println(b.to_str())
+}
