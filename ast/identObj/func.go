@@ -30,6 +30,10 @@ func CreateInterfaceFunc(name token.Token, isConst bool, receiver types.Type) Fu
     return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, receiver: receiver, typ: types.FuncType{ Name: name.Str } }
 }
 
+func CreateUnresolvedFunc(name string, receiver types.Type) Func {
+    return Func{ typ: types.FuncType{ Ret: types.CreateInferType(nil) } }
+}
+
 func (f *Func) GetArgs() []types.Type {
     return f.typ.Args
 }
@@ -104,6 +108,10 @@ func (f *Func) UpdateReceiver(recv types.Type) *Func {
 
 func (f *Func) IsGeneric() bool {
     return f.typ.Generic != nil
+}
+
+func (f *Func) IsUnresolved() bool {
+    return f.name == ""
 }
 
 func (f *Func) AddTypeToGeneric(typ types.Type) {

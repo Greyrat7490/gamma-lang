@@ -1,13 +1,13 @@
 package resolver
 
 import (
-    "os"
-    "fmt"
-    "reflect"
-    "gamma/ast"
-    "gamma/ast/identObj"
-    "gamma/ast/identObj/vars"
-    "gamma/types"
+	"fmt"
+	"gamma/ast"
+	"gamma/ast/identObj"
+	"gamma/ast/identObj/vars"
+	"gamma/types"
+	"os"
+	"reflect"
 )
 
 func resolveForwardExpr(e ast.Expr, t types.Type) {
@@ -53,9 +53,9 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
         if e.GetType().GetKind() == types.Ptr {
             t = types.CreateUint(types.Ptr_Size)
         } else {
-            if e.OperandL.GetType().GetKind() != types.Infer {
+            if !types.IsResolvable(e.OperandL.GetType()) {
                 t = e.OperandL.GetType()
-            } else if e.OperandR.GetType().GetKind() != types.Infer {
+            } else if !types.IsResolvable(e.OperandR.GetType()) {
                 t = e.OperandR.GetType()
             }
         }
@@ -85,6 +85,8 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
         }
 
     case *ast.FnCall:
+        resolveFuncIdent(e)
+        
         if e.F.GetName() == "fmt" {
             for _,arg := range e.Values {
                 resolveForwardExpr(arg, nil)
@@ -197,5 +199,26 @@ func resolveBackwardExpr(e ast.Expr) {
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] resolveInferExpr for %v is not implemente yet\n", reflect.TypeOf(e))
         os.Exit(1)
+    }
+}
+
+func resolveFuncIdent(e *ast.FnCall) {
+    if e.F.IsUnresolved() {
+        if obj := identObj.Get(e.Ident.Name); obj != nil {
+            if f,ok := obj.(*identObj.Func); ok {
+                addResolved(e.F.GetRetType(), f.GetRetType())
+
+                e.F = f
+                e.Ident.Obj = obj
+            } else {
+                fmt.Fprintf(os.Stderr, "[ERROR] %s is not a function\n", e.Ident.Name)
+                fmt.Fprintln(os.Stderr, "\t" + e.At())
+                os.Exit(1)
+            }
+        } else {
+            fmt.Fprintf(os.Stderr, "[ERROR] %s is not defined\n", e.Ident.Name)
+            fmt.Fprintln(os.Stderr, "\t" + e.At())
+            os.Exit(1)
+        }
     }
 }

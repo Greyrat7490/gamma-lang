@@ -9,15 +9,13 @@ import (
 var resolvedInfers map[uint64]types.Type = make(map[uint64]types.Type)
 
 func Resolve(a ast.Ast) ast.Ast {
-    fmt.Println("[INFO] resolve types...")
+    fmt.Println("[INFO] resolve types/names...")
     for _,d := range a.Decls {
         resolveForwardDecl(d)
     }
 
     for _,d := range a.Decls {
         resolveBackwardDecl(d)
-        // TODO: move create identObj here (resolve names)
-        // TODO: allow calling functions before defining
     }
 
     return a
@@ -67,13 +65,10 @@ func addResolved(dstType types.Type, t types.Type) {
         }
     }
 
-    switch t.GetKind() {
-    case types.Infer, types.Uint, types.Int, types.Generic:
-        if dstType,ok := dstType.(types.InferType); ok {
-            resolvedType := resolvedInfers[dstType.Idx]
-            if resolvedType == nil || resolvedType.GetKind() == types.Infer {
-                resolvedInfers[dstType.Idx] = t
-            }
+    if dstType,ok := dstType.(types.InferType); ok {
+        resolvedType := resolvedInfers[dstType.Idx]
+        if resolvedType == nil || resolvedType.GetKind() == types.Infer {
+            resolvedInfers[dstType.Idx] = t
         }
     }
 }

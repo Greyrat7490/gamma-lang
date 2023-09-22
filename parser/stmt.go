@@ -50,13 +50,7 @@ func prsStmt(tokens *token.Tokens) ast.Stmt {
         return &r
 
     case token.Number, token.Str, token.Char, token.Boolean, token.ParenL:
-        e := prsExpr(tokens)
-        if e.GetType() != nil {
-            fmt.Fprintln(os.Stderr, "[ERROR] unused expr")
-            fmt.Fprintln(os.Stderr, "\t" + e.At())
-            os.Exit(1)
-        }
-        return &ast.ExprStmt{ Expr: e }
+        return &ast.ExprStmt{ Expr: prsExpr(tokens) }
 
     case token.UndScr:
         return prsUnderScore(tokens)
@@ -73,14 +67,8 @@ func prsStmt(tokens *token.Tokens) ast.Stmt {
         if tokens.Peek().Type == token.Assign {
             a := prsAssignVar(tokens, e)
             return &a
-        } else {
-            if e.GetType() != nil {
-                fmt.Fprintln(os.Stderr, "[ERROR] unused expr")
-                fmt.Fprintln(os.Stderr, "\t" + e.At())
-                os.Exit(1)
-            }
-            return &ast.ExprStmt{ Expr: e }
         }
+        return &ast.ExprStmt{ Expr: e }
 
     case token.Typename:
         return &ast.ExprStmt{ Expr: prsExpr(tokens) }

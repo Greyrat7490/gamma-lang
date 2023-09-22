@@ -11,11 +11,11 @@ import (
 func resolveForwardDecl(d ast.Decl) {
     switch d := d.(type) {
     case *ast.DefVar:
-        if dstType,ok := d.Type.(types.InferType); ok {
-            if t,ok := d.Value.GetType().(types.InferType); !ok {
-                addResolved(dstType, t)
-                d.Type = getResolvedForwardType(d.Type)
-            }
+        if types.IsResolvable(d.Type) {
+            t := d.Value.GetType()
+            addResolved(d.Type, t)
+            d.Type = getResolvedForwardType(d.Type)
+            d.V.ResolveType(d.Type)
         }
 
         addResolved(d.Value.GetType(), d.Type)
@@ -25,11 +25,11 @@ func resolveForwardDecl(d ast.Decl) {
         }
 
     case *ast.DefConst:
-        if dstType,ok := d.Type.(types.InferType); ok {
-            if t,ok := d.Value.GetType().(types.InferType); !ok {
-                addResolved(dstType, t)
-                d.Type = getResolvedForwardType(d.Type)
-            }
+        if types.IsResolvable(d.Type) {
+            t := d.Value.GetType()
+            addResolved(d.Type, t)
+            d.Type = getResolvedForwardType(d.Type)
+            d.C.ResolveType(d.Type)
         }
 
         addResolved(d.Value.GetType(), d.Type)

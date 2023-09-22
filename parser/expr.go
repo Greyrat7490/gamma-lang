@@ -247,6 +247,11 @@ func prsIdentExpr(tokens *token.Tokens) *ast.Ident {
     return nil
 }
 
+func prsFuncIdent(tokens *token.Tokens) ast.Ident {
+    ident := prsName(tokens)
+    return ast.Ident{ Name: ident.Str, Pos: ident.Pos, Obj: identObj.Get(ident.Str) }
+}
+
 func prsBasicLit(tokens *token.Tokens) ast.Expr {
     val := tokens.Cur()
     t := types.TypeOfVal(val.Str)
@@ -1189,27 +1194,23 @@ func prsCallInterfaceFn(tokens *token.Tokens) *ast.FnCall {
 }
 
 func prsCallFn(tokens *token.Tokens) *ast.FnCall {
-    ident := prsIdentExpr(tokens)
+    ident := prsFuncIdent(tokens)
     posL := tokens.Next().Pos
     vals := prsPassArgs(tokens)
     posR := tokens.Cur().Pos
 
-    if obj := identObj.Get(ident.Name); obj != nil {
-        if f,ok := obj.(*identObj.Func); ok {
-            return &ast.FnCall{ Ident: *ident, F: f, Values: vals, ParenLPos: posL, ParenRPos: posR }
-
+    if ident.Obj != nil {
+        if f,ok := ident.Obj.(*identObj.Func); ok {
+            return &ast.FnCall{ Ident: ident, F: f, Values: vals, ParenLPos: posL, ParenRPos: posR }
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] you can only call a function (%s is not a function)\n", ident.Name)
             fmt.Fprintln(os.Stderr, "\t" + ident.At())
             os.Exit(1)
         }
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared\n", ident.Name)
-        fmt.Fprintln(os.Stderr, "\t" + ident.At())
-        os.Exit(1)
     }
 
-    return nil
+    f := identObj.CreateUnresolvedFunc(ident.Name, nil)
+    return &ast.FnCall{ Ident: ident, F: &f, Values: vals, ParenLPos: posL, ParenRPos: posR }
 }
 
 func prsPassArgs(tokens *token.Tokens) []ast.Expr {

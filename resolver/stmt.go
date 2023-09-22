@@ -12,7 +12,7 @@ func resolveForwardStmt(s ast.Stmt) {
     switch s := s.(type) {
     case *ast.Assign:
         t := s.Dest.GetType()
-        if s.Dest.GetType().GetKind() == types.Infer {
+        if types.IsResolvable(s.Dest.GetType()) {
             t = s.Value.GetType()
         }
 

@@ -325,15 +325,6 @@ func prsDefVarInfer(tokens *token.Tokens, name token.Token) ast.DefVar {
     val := prsExpr(tokens)
 
     t := val.GetType()
-    if t == nil {
-        if f,ok := val.(*ast.FnCall); ok {
-            fmt.Fprintf(os.Stderr, "[ERROR] %s returns nothing\n", f.Ident.Name)
-        } else {
-            fmt.Fprintln(os.Stderr, "[ERROR] could not get Type of the expr")
-        }
-        fmt.Fprintln(os.Stderr, "\t" + val.At())
-        os.Exit(1)
-    }
     v := identObj.DecVar(name, t)
     return ast.DefVar{ V: v, Type: t, ColPos: pos, Value: val }
 }
@@ -344,15 +335,6 @@ func prsDefConstInfer(tokens *token.Tokens, name token.Token) ast.DefConst {
     val := prsExpr(tokens)
 
     t := val.GetType()
-    if t == nil {
-        if f,ok := val.(*ast.FnCall); ok {
-            fmt.Fprintf(os.Stderr, "[ERROR] %s returns nothing\n", f.Ident.Name)
-        } else {
-            fmt.Fprintln(os.Stderr, "[ERROR] could not get Type of the expr")
-        }
-        fmt.Fprintln(os.Stderr, "\t" + val.At())
-        os.Exit(1)
-    }
     v := cmpTime.ConstEval(val)
     if v == nil {
         fmt.Fprintln(os.Stderr, "[ERROR] expected a const expr")

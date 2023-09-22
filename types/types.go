@@ -230,6 +230,14 @@ func CreateEnumType(name string, idType Type, names []string, types []Type) Enum
     return EnumType{ Name: name, Interfaces: make(map[string]InterfaceType), IdType: idType, types: ts, ids: ids, size: size, isBigStruct: isBigStruct }
 }
 
+var inferIdx uint64 = 0
+
+func CreateInferType(defaultType Type) InferType {
+    t := InferType{ DefaultType: defaultType, Idx: inferIdx } 
+    inferIdx++
+    return t
+}
+
 func (t *StructType) GetOffset(field string) (offset int64) {
     if fieldNum, ok := t.names[field]; ok {
         for i := 0; i < fieldNum; i++ {
@@ -538,8 +546,6 @@ func ToBaseType(s string) Type {
     }
 }
 
-var inferIdx uint64 = 0
-
 func TypeOfVal(val string) Type {
     switch {
     case val[0] == '"' && val[len(val) - 1] == '"':
@@ -550,25 +556,17 @@ func TypeOfVal(val string) Type {
         return BoolType{ Interfaces: make(map[string]InterfaceType) }
     case len(val) > 2 && val[:2] == "0x":
         if _, err := strconv.ParseUint(val, 0, 64); err == nil {
-            t := InferType{ Idx: inferIdx, DefaultType: UintType{ size: U64_Size } } 
-            inferIdx++
-            return t
+            return CreateInferType(UintType{ size: U64_Size })
         }
     default:
         if _, err := strconv.ParseInt(val, 10, 32); err == nil {
-            t := InferType{ Idx: inferIdx, DefaultType: IntType{ size: I32_Size } } 
-            inferIdx++
-            return t
+            return CreateInferType(IntType{ size: I32_Size })
         }
         if _, err := strconv.ParseInt(val, 10, 64); err == nil {
-            t := InferType{ Idx: inferIdx, DefaultType: IntType{ size: I64_Size } } 
-            inferIdx++
-            return t
+            return CreateInferType(IntType{ size: I64_Size })
         }
         if _, err := strconv.ParseUint(val, 0, 64); err == nil {
-            t := InferType{ Idx: inferIdx, DefaultType: UintType{ size: U64_Size } } 
-            inferIdx++
-            return t
+            return CreateInferType(UintType{ size: U64_Size })
         }
     }
 
