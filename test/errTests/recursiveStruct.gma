@@ -1,0 +1,5 @@
+struct S {
+    s S
+}
+
+fn main() {}

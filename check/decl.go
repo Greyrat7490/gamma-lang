@@ -1,12 +1,12 @@
 package check
 
 import (
-    "os"
-    "fmt"
-    "reflect"
-    "gamma/ast"
-    "gamma/ast/identObj"
-    "gamma/types"
+	"fmt"
+	"gamma/ast"
+	"gamma/ast/identObj"
+	"gamma/types"
+	"os"
+	"reflect"
 )
 
 func typeCheckDecl(d ast.Decl) {
@@ -29,7 +29,10 @@ func typeCheckDecl(d ast.Decl) {
     case *ast.DefEnum:
         typeCheckDefEnum(d)
 
-    case *ast.DefStruct, *ast.DefInterface:
+    case *ast.DefStruct:
+        typeCheckDefStruct(d)
+
+    case *ast.DefInterface:
         // nothing to do
 
     default:
@@ -180,6 +183,16 @@ func typeCheckDefEnum(d *ast.DefEnum) {
         fmt.Fprintf(os.Stderr, "[ERROR] expected uint, int, char or bool as enum id type (got %s)\n", d.IdType)
         fmt.Fprintln(os.Stderr, "\t" + d.At())
         os.Exit(1)
+    }
+}
+
+func typeCheckDefStruct(d *ast.DefStruct) {
+    for _,f := range d.Fields {
+        if s,ok := f.Type.(types.StructType); ok && s.Name == d.Name.Str {
+            fmt.Fprintf(os.Stderr, "[ERROR] infinitely growing recursive struct (use *%s instead)\n", s.Name)
+            fmt.Fprintln(os.Stderr, "\t" + f.TypePos.At())
+            os.Exit(1)
+        }
     }
 }
 
