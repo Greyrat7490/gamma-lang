@@ -5,6 +5,7 @@ import (
 	"gamma/ast"
 	"gamma/ast/identObj"
 	"gamma/ast/identObj/vars"
+	"gamma/token"
 	"gamma/types"
 	"os"
 	"reflect"
@@ -45,7 +46,17 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
         e.Type = getResolvedForwardType(e.Type)
 
     case *ast.Unary:
-        resolveForwardExpr(e.Operand, t)
+        switch e.Operator.Type {
+        case token.Amp:
+            if t,ok := t.(types.PtrType); ok {
+                resolveForwardExpr(e.Operand, t.BaseType)
+            }
+        case token.Mul:
+            resolveForwardExpr(e.Operand, types.PtrType{ BaseType: t })
+        default:
+            resolveForwardExpr(e.Operand, t)
+        }
+
         addResolved(e.Type, t)
         e.Type = getResolvedForwardType(e.Type)
 

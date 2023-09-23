@@ -58,9 +58,7 @@ func addResolved(dstType types.Type, t types.Type) {
 
     if ptr,ok := t.(types.PtrType); ok {
         if dstPtr,ok := dstType.(types.PtrType); ok {
-            dstType = dstPtr.BaseType
-            t = ptr.BaseType
-        } else {
+            addResolved(dstPtr.BaseType, ptr.BaseType)
             return
         }
     }
