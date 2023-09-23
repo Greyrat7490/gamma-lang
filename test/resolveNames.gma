@@ -1,20 +1,43 @@
-// struct S {
-//     s *S
-// }
+struct S {
+    s *S,
+    u u32
+}
+
+impl S {
+    fn show(self, indent u32) {
+        for i u32, indent { print("  ") }
+        println(fmt("u: {}", self.u))
+
+        if self.s != (0x0 as *S) {
+            // TODO: fix no parentheses
+            (self.s).show(indent+1)
+        }
+    }
+}
 
 fn main() {
+    println("resolve func name")
+    resolveFuncName()
+
+    println("\nrecursive struct")
+    recursiveStruct()
+}
+
+fn resolveFuncName() {
     a := retNum()
     b u32 := 5
     println(fmt("a + b: {}", a + b))
-
-    test()
-}
-
-fn test() {
-    // s := S{ 0x0 as *S }
-    println("here")
 }
 
 fn retNum() -> u32 {
     ret 64
+}
+
+fn recursiveStruct() {
+    s2 := S{ 0x0 as *S, 2 }
+    s1 := S{ &s2, 1 }
+    s := S{ &s1, 0 }
+
+    s.show(0)
+    println(fmt("sizeof S: {}", sizeof::<S>()))
 }

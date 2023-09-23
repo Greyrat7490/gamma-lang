@@ -230,7 +230,7 @@ func DecInterface(name token.Token) *Interface {
     return &I
 }
 
-func DecStruct(name token.Token, names []string, types []types.Type) *Struct {
+func DecStruct(name token.Token) *Struct {
     if !InGlobalScope() {
         fmt.Fprintln(os.Stderr, "[ERROR] you can only declare a struct in the global scope")
         fmt.Fprintln(os.Stderr, "\t" + name.At())
@@ -240,7 +240,7 @@ func DecStruct(name token.Token, names []string, types []types.Type) *Struct {
 
     curScope.checkName(name)
 
-    s := CreateStruct(name, names, types)
+    s := CreateStruct(name)
     curScope.identObjs[name.Str] = &s
     return &s
 }

@@ -101,7 +101,7 @@ func prsType(tokens *token.Tokens) types.Type {
             return generic
         }
 
-        fmt.Fprintf(os.Stderr, "[ERROR] unknown struct type \"%s\"\n", tokens.Cur().Str)
+        fmt.Fprintf(os.Stderr, "[ERROR] type \"%s\" is not defined\n", tokens.Cur().Str)
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
         return nil
@@ -380,6 +380,8 @@ func prsStruct(tokens *token.Tokens) ast.DefStruct {
         os.Exit(1)
     }
 
+    s := identObj.DecStruct(name)
+
     braceLPos := tokens.Next().Pos
     fields := prsDecFields(tokens)
     braceRPos := tokens.Cur().Pos
@@ -390,9 +392,9 @@ func prsStruct(tokens *token.Tokens) ast.DefStruct {
         names = append(names, f.Name.Str)
         types = append(types, f.Type)
     }
+    s.SetFields(names, types)
 
-    return ast.DefStruct{ S: identObj.DecStruct(name, names, types), Pos: pos, 
-        Name: name, BraceLPos: braceLPos, Fields: fields, BraceRPos: braceRPos }
+    return ast.DefStruct{ S: s, Pos: pos, Name: name, BraceLPos: braceLPos, Fields: fields, BraceRPos: braceRPos }
 }
 
 func prsInterface(tokens *token.Tokens) ast.Decl {

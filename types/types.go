@@ -164,6 +164,9 @@ func CreateUint(uintSize uint) UintType {
     return UintType{ size: uintSize, Interfaces: make(map[string]InterfaceType) }
 }
 
+func CreateEmptyStructType(name string) StructType {
+    return StructType{ Name: name }
+}
 func CreateStructType(name string, types []Type, names []string) StructType {
     ns := map[string]int{}
     for i, n := range names {

@@ -15,12 +15,8 @@ type Struct struct {
     impls []Impl
 }
 
-func CreateStruct(name token.Token, fieldNames []string, fieldTypes []types.Type) Struct {
-    return Struct{
-        decPos: name.Pos,
-        name: name.Str,
-        typ: types.CreateStructType(name.Str, fieldTypes, fieldNames),
-    }
+func CreateStruct(name token.Token) Struct {
+    return Struct{ decPos: name.Pos, name: name.Str, typ: types.CreateEmptyStructType(name.Str) }
 }
 
 func (s *Struct) GetName() string {
@@ -35,6 +31,33 @@ func (s *Struct) Addr() addr.Addr {
     fmt.Fprintln(os.Stderr, "[ERROR] Cannot get the addr of a struct type definition (not allocated anywhere)")
     os.Exit(1)
     return addr.Addr{}
+}
+
+func (s *Struct) resolveRecursiveField_(t types.PtrType) types.Type {
+    switch t := t.BaseType.(type) {
+    case types.PtrType:
+        return s.resolveRecursiveField_(t)
+
+    case types.StructType:
+        if t.Name == s.typ.Name {
+            return types.PtrType{ BaseType: s.typ }
+        }
+    }
+
+    return t
+}
+
+func (s *Struct) resolveRecursiveField() {
+    for i,t := range s.typ.Types {
+        if t,ok := t.(types.PtrType); ok {
+            s.typ.Types[i] = s.resolveRecursiveField_(t)
+        }
+    }
+}
+
+func (s *Struct) SetFields(fieldNames []string, fieldTypes []types.Type) {
+    s.typ = types.CreateStructType(s.name, fieldTypes, fieldNames)
+    s.resolveRecursiveField()
 }
 
 func (s *Struct) GetType() types.Type {
