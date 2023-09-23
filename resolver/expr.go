@@ -66,7 +66,7 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
         } else {
             if !types.IsResolvable(e.OperandL.GetType()) {
                 t = e.OperandL.GetType()
-            } else if !types.IsResolvable(e.OperandR.GetType()) {
+            } else if !types.IsResolvable(e.OperandR.GetType()) || e.GetType().GetKind() == types.Bool {
                 t = e.OperandR.GetType()
             }
         }
