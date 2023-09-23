@@ -72,6 +72,22 @@ fn test_deref_deref() {
     print(itos(**ptr2)) print(ctos('\n'))
 }
 
+fn test_deref_deref2() {
+    var2 := 86
+    ptr := &var2
+    ptr2 **u8 := &ptr
+
+    println(utos(var2))
+    println(utos(*ptr))
+    println(utos(**ptr2))
+
+    **ptr2 = 64
+
+    println(utos(var2))
+    println(utos(*ptr))
+    println(utos(**ptr2))
+}
+
 fn main() {
     print("global pointer\n")
     test_deref_global()
@@ -81,4 +97,7 @@ fn main() {
 
     print("\ntest **var\n")
     test_deref_deref()
+
+    print("\ntest **var2\n")
+    test_deref_deref2()
 }

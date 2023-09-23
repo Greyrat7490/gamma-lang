@@ -243,35 +243,23 @@ func isGenericFunc(token token.Token) bool {
 
     return false
 }
-func isNextType(tokens *token.Tokens) bool {
-    tokens.SaveIdx()
-    defer tokens.ResetIdx()
-
+func isNextType_(tokens *token.Tokens) bool {
     switch tokens.Next().Type {
     case token.Mul:
-        typename := tokens.Next()
-
-        if typename.Type != token.Typename {
-            return false
-        }
-
-        return types.ToBaseType(typename.Str) != nil
+        return isNextType_(tokens)
 
     case token.BrackL:
         tokens.Next()
-        expr := prsExpr(tokens)
+        idxKind := prsExpr(tokens).GetType().GetKind()
+        if idxKind != types.Int && idxKind != types.Uint {
+            return false
+        }
 
         if tokens.Next().Type != token.BrackR {
             return false
         }
 
-        typename := tokens.Next()
-        if typename.Type != token.Typename {
-            return false
-        }
-
-        kind := cmpTime.ConstEval(expr).GetKind()
-        return kind == types.Int || kind == types.Uint
+        return isNextType_(tokens)
 
     case token.Name:
         if obj := identObj.Get(tokens.Cur().Str); obj != nil {
@@ -293,6 +281,11 @@ func isNextType(tokens *token.Tokens) bool {
     default:
         return types.ToBaseType(tokens.Cur().Str) != nil
     }
+}
+func isNextType(tokens *token.Tokens) bool {
+    tokens.SaveIdx()
+    defer tokens.ResetIdx()
+    return isNextType_(tokens)
 }
 
 func prsDefVar(tokens *token.Tokens, name token.Token, t types.Type) ast.DefVar {
