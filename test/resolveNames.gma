@@ -9,8 +9,7 @@ impl S {
         println(fmt("u: {}", self.u))
 
         if self.s != (0x0 as *S) {
-            // TODO: fix no parentheses
-            (self.s).show(indent+1)
+            self.s.show(indent+1)
         }
     }
 }

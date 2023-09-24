@@ -188,32 +188,15 @@ func typeCheckUnwrap(e *ast.Unwrap) {
 func typeCheckUnary(e *ast.Unary) {
     switch e.Operator.Type {
     case token.Mul:
-        if u,ok := e.Operand.(*ast.Unary); ok {
-            if u.Operator.Type != token.Mul {
-                fmt.Fprintf(os.Stderr, "[ERROR] expected another \"*\" but got %s\n", u.Operator.Str)
-                fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
-                os.Exit(1)
-            }
-            return
-        }
-        if _,ok := e.Operand.(*ast.Ident); ok {
-            return
-        }
-        if _,ok := e.Operand.(*ast.Paren); ok {
-            return
-        }
-
-        fmt.Fprintln(os.Stderr, "[ERROR] expected a variable or parentheses after \"*\"")
-        fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
-        os.Exit(1)
+        // already handled in getTypeUnary
 
     case token.Amp:
-        if _,ok := e.Operand.(*ast.Ident); !ok {
-            if _,ok := e.Operand.(*ast.Field); !ok {
-                fmt.Fprintln(os.Stderr, "[ERROR] expected an ident or field after \"&\"")
-                fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
-                os.Exit(1)
-            }
+        switch e.Operand.(type) {
+        case *ast.Ident, *ast.Field:
+        default:
+            fmt.Fprintln(os.Stderr, "[ERROR] expected an ident or field after \"&\"")
+            fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
+            os.Exit(1)
         }
 
     case token.Minus:

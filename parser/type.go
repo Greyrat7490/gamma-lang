@@ -18,8 +18,8 @@ func getTypeUnary(e *ast.Unary) types.Type {
         if ptr, ok := e.Operand.GetType().(types.PtrType); ok {
             return ptr.BaseType
         } else {
-            fmt.Fprintln(os.Stderr, "[ERROR] you cannot deref this expr (expected a pointer/address)")
-            fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
+            fmt.Fprintf(os.Stderr, "[ERROR] expected a pointer to deref but got %s\n", e.Operand.GetType())
+            fmt.Fprintln(os.Stderr, "\t" + e.Operand.At())
             os.Exit(1)
         }
     }
