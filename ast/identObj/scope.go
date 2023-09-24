@@ -268,7 +268,14 @@ func ReserveSpace(t types.Type) vars.Var {
         v := vars.CreateLocal(token.Token{ Str: name }, t)
         curScope.identObjs[name] = &v
         return &v
-    }
+    } else {
+        name := "_"
+        v := vars.CreateLocal(token.Token{ Str: name }, t)
 
-    return nil
+        if obj,ok := curScope.identObjs[name]; !ok || obj.GetType().Size() < t.Size() {
+            curScope.identObjs[name] = &v
+        }
+
+        return &v
+    }
 }

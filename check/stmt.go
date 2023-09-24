@@ -38,6 +38,11 @@ func typeCheckStmt(s ast.Stmt) {
     case *ast.DeclStmt:
         typeCheckDecl(s.Decl)
     case *ast.ExprStmt:
+        if s.Expr.GetType() != nil {
+            fmt.Fprintln(os.Stderr, "[ERROR] unused expr (explictly ignore with \"_ := \")")
+            fmt.Fprintln(os.Stderr, "\t" + s.At())
+            os.Exit(1)
+        }
         typeCheckExpr(s.Expr)
 
     case *ast.Through, *ast.Break, *ast.Continue:
