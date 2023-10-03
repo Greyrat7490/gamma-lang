@@ -56,7 +56,7 @@ type FnHead struct {
     Args []DecVar
     RetType types.Type
     IsConst bool
-    Generic token.Token // empty when IsGeneric == false
+    Generic token.Token // empty if IsGeneric == false
     IsGeneric bool
 }
 
@@ -64,6 +64,7 @@ type DefStruct struct {
     S *identObj.Struct
     Pos token.Pos
     Name token.Token
+    Generic token.Token // empty if IsGeneric == false
     BraceLPos token.Pos
     Fields []DecField
     BraceRPos token.Pos
@@ -73,6 +74,7 @@ type DefInterface struct {
     I *identObj.Interface
     Pos token.Pos
     Name token.Token
+    Generic token.Token // empty if IsGeneric == false
     BraceLPos token.Pos
     FnHeads []FnHead
     BraceRPos token.Pos
@@ -82,6 +84,7 @@ type DefEnum struct {
     E *identObj.Enum
     Pos token.Pos
     Name token.Token
+    Generic token.Token // empty if IsGeneric == false
     IdType types.Type
     BraceLPos token.Pos
     Elems []EnumElem
@@ -100,6 +103,7 @@ type EnumElemType struct {
 type Impl struct {
     Impl identObj.Impl
     Pos token.Pos
+    Generic token.Token // empty if IsGeneric == false
     BraceLPos token.Pos
     FnDefs []DefFn
     BraceRPos token.Pos
@@ -172,7 +176,12 @@ func (o *FnHead) Readable(indent int) string {
 
     s := strings.Repeat("   ", indent+1)
 
-    res += fmt.Sprintf("%sName: %s\n%sArgs: [%s]\n", s, o.Name, s, args)
+    generic := ""
+    if o.Generic.Type != 0 {
+        generic = fmt.Sprintf("%sGeneric: %s\n", s, o.Generic.Str)
+    }
+
+    res += fmt.Sprintf("%sName: %s\n%s%sArgs: [%s]\n", s, o.Name, generic, s, args)
 
     if o.RetType != nil {
         res += fmt.Sprintf("%sRet: %v\n", s, o.RetType)
@@ -191,6 +200,10 @@ func (o *DefStruct) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "DEF_STRUCT:\n" +
         strings.Repeat("   ", indent+1) + o.Name.String() + "\n"
 
+    if o.Generic.Type != 0 {
+        res += fmt.Sprintf("%sGeneric: %s\n", strings.Repeat("   ", indent+1), o.Generic.Str)
+    }
+
     for _,f := range o.Fields {
         res += f.Readable(indent+1)
     }
@@ -201,6 +214,10 @@ func (o *DefStruct) Readable(indent int) string {
 func (o *DefInterface) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "DEF_INTERFACE:\n" +
         strings.Repeat("   ", indent+1) + o.Name.String() + "\n"
+
+    if o.Generic.Type != 0 {
+        res += fmt.Sprintf("%sGeneric: %s\n", strings.Repeat("   ", indent+1), o.Generic.Str)
+    }
 
     for _,f := range o.FnHeads {
         res += f.Readable(indent+1)
@@ -213,6 +230,10 @@ func (d *DefEnum) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "DEF_ENUM:\n" +
         strings.Repeat("   ", indent+1) + d.IdType.String() + "\n" +
         strings.Repeat("   ", indent+1) + d.Name.String() + "\n"
+
+    if d.Generic.Type != 0 {
+        res += fmt.Sprintf("%sGeneric: %s\n", strings.Repeat("   ", indent+1), d.Generic.Str)
+    }
 
     for _,e := range d.Elems {
         res += e.Readable(indent+1)
@@ -233,12 +254,17 @@ func (d *EnumElem) Readable(indent int) string {
     return res
 }
 
-func (o *Impl) Readable(indent int) string {
-    res := strings.Repeat("   ", indent) + "IMPL:\n" +
-        strings.Repeat("   ", indent+1) + "Interface: " + o.Impl.GetInterfaceName() + "\n" +
-        strings.Repeat("   ", indent+1) + "DestType: " + o.Impl.GetImplName() + "\n"
+func (d *Impl) Readable(indent int) string {
+    res := strings.Repeat("   ", indent) + "IMPL:\n"
 
-    for _,f := range o.FnDefs {
+    if d.Generic.Type != 0 {
+        res += fmt.Sprintf("%sGeneric: %s\n", strings.Repeat("   ", indent+1), d.Generic.Str)
+    }
+
+    res += strings.Repeat("   ", indent+1) + "Interface: " + d.Impl.GetInterfaceName() + "\n" +
+        strings.Repeat("   ", indent+1) + "DestType: " + d.Impl.GetImplName() + "\n"
+
+    for _,f := range d.FnDefs {
         res += f.Readable(indent+1)
     }
 
