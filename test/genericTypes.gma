@@ -1,0 +1,40 @@
+enum<T> Option {
+    Val(T), None
+}
+
+struct<T> S {
+    u1 u64,
+    u2 u32,
+    t T
+}
+
+fn test_enum() {
+    a := Option::<u64>::Val(69)
+    b := Option::<u64>::None
+    c := Option::<i8>::Val(-64)
+
+/*
+    if a : Option::<u64>::Val(a) {
+        println(fmt("a: {}", a))
+    }
+
+    if b : Option::<u64>::Val(a) {
+        println(fmt("(dead code) a: {}", a))
+    } else {
+        println("b: None")
+    }
+*/
+}
+
+fn test_struct() {
+    s1 := S::<u8>{ 0, 1, 2 }
+    s2 := S::<u64>{ 3, 4, 5 }
+}
+
+fn main() {
+    println("enum: ")
+    test_enum()
+
+    println("struct: ")
+    test_struct()
+}

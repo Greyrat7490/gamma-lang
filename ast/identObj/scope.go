@@ -89,18 +89,6 @@ func Get(name string) IdentObj {
     return nil
 }
 
-func GetGeneric(name string) *types.GenericType {
-    if curFunc != nil {
-        t := curFunc.GetGeneric()
-
-        if t != nil && t.Name == name {
-            return t
-        }
-    }
-
-    return nil
-}
-
 func GetStackSize() uint {
     return stackSize
 }
@@ -245,7 +233,7 @@ func DecStruct(name token.Token) *Struct {
     return &s
 }
 
-func DecEnum(name token.Token, idType types.Type, names []string, types []types.Type) *Enum {
+func DecEnum(name token.Token) *Enum {
     if !InGlobalScope() {
         fmt.Fprintln(os.Stderr, "[ERROR] you can only declare an enum in the global scope")
         fmt.Fprintln(os.Stderr, "\t" + name.At())
@@ -255,7 +243,7 @@ func DecEnum(name token.Token, idType types.Type, names []string, types []types.
 
     curScope.checkName(name)
 
-    e := CreateEnum(name, idType, names, types)
+    e := CreateEnum(name)
     curScope.identObjs[name.Str] = &e
     return &e
 }

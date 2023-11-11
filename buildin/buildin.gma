@@ -90,14 +90,14 @@ impl str :: String {
     fn to_str(self) -> str { ret self }
 }
 
-/* TODO when pointer types allowed
-impl *char :: String {
-    fn to_str(self) -> str { ret "test" }
+/* TODO when generic and pointer impl supported
+impl<T> *T :: String {
+    fn to_str(self) -> str { ret utos(self as u64) }
 }
 */
 
-/* TODO when generic impl supported
-impl<T> *T :: String {
-    fn to_str(self) -> str { ret self }
+/* TODO when generic structs/enums
+enum<T> Option bool {
+    Val(T), None
 }
 */

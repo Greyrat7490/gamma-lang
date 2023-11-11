@@ -49,55 +49,13 @@ func prsExprWithPrecedence(tokens *token.Tokens, precedence precedence) ast.Expr
         }
 
     case token.Typename:
-        expr = prsCallInterfaceFn(tokens)
+        ident := prsIdentExpr(tokens)
+        tokens.Next()
+        expr = prsCallInterfaceFn(tokens, ident, nil)
 
     case token.Name, token.Self, token.SelfType:
-        switch tokens.Peek().Type {
-        case token.ParenL:
-            expr = prsCallFn(tokens)
-
-        case token.DefConst:
-            if tokens.Peek2().Type == token.Lss {
-                expr = prsCallGenericFn(tokens)
-
-            } else if tokens.Peek2().Type == token.Name {
-                if isEnumLit(tokens.Cur(), tokens.Peek2()) {
-                    expr = prsEnumLit(tokens)
-                } else {
-                    expr = prsCallInterfaceFn(tokens)
-                }
-
-            } else {
-                if isGenericFunc(tokens.Cur()) {
-                    fmt.Fprintf(os.Stderr, "[ERROR] expected \"<\" after \"::\" for a generic function but got %v\n", tokens.Peek2())
-                    fmt.Fprintln(os.Stderr, "\t" + tokens.Peek2().At())
-
-                } else if isStruct(tokens.Cur()) {
-                    fmt.Fprintf(os.Stderr, "[ERROR] expected an interface func name after \"::\" for a struct but got %v\n", tokens.Peek2())
-                    fmt.Fprintln(os.Stderr, "\t" + tokens.Peek2().At())
-
-                } else {
-                    fmt.Fprintln(os.Stderr, "[ERROR] unexpected \"::\"")
-                    fmt.Fprintln(os.Stderr, "\t" + tokens.Peek().At())
-                }
-
-                os.Exit(1)
-            }
-
-        case token.Dot:
-            obj := prsIdentExpr(tokens)
-            expr = prsDotExpr(tokens, obj)
-
-        case token.BraceL:
-            if isStruct(tokens.Cur()) || tokens.Cur().Type == token.SelfType {
-                expr = prsStructLit(tokens)
-            } else {
-                expr = prsIdentExpr(tokens)
-            }
-
-        default:
-            expr = prsIdentExpr(tokens)
-        }
+        ident := prsIdentExpr(tokens)
+        expr = prsPostNameExpr(tokens, ident, nil)
 
     case token.XSwitch:
         expr = prsXSwitch(tokens)
@@ -128,6 +86,7 @@ func prsExprWithPrecedence(tokens *token.Tokens, precedence precedence) ast.Expr
             tokens.Next()
             expr = prsIndexExpr(tokens, expr)
         } else if tokens.Peek().Type == token.Dot {
+            tokens.Next()
             expr = prsDotExpr(tokens, expr)
         } else if tokens.Peek().Type == token.As && CAST_PRECEDENCE >= precedence {
             tokens.Next()
@@ -229,6 +188,68 @@ func prsName(tokens *token.Tokens) token.Token {
     return name
 }
 
+func checkDefined(ident *ast.Ident) {
+    if ident.Obj == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] %v is not defined\n", ident.Name)
+        fmt.Fprintln(os.Stderr, "\t" + ident.At())
+        os.Exit(1)
+    }
+}
+
+func prsPostNameExpr(tokens *token.Tokens, ident *ast.Ident, usedType types.Type) ast.Expr {
+    switch tokens.Peek().Type {
+    case token.ParenL:
+        tokens.Next()
+        return prsCallFn(tokens, ident, usedType)
+
+    case token.Dot:
+        checkDefined(ident)
+        tokens.Next()
+        // TODO generic
+        return prsDotExpr(tokens, ident)
+
+    case token.BraceL:
+        checkDefined(ident)
+        if isStruct(ident.Obj) {
+            tokens.Next()
+            return prsStructLit(tokens, ident, usedType)
+        }
+
+    case token.DefConst:
+        tokens.Next()
+        if tokens.Peek().Type == token.Lss {
+            usedType := prsGenericUsedType(tokens)
+            return prsPostNameExpr(tokens, ident, usedType)
+
+        } else if tokens.Peek().Type == token.Name {
+            checkDefined(ident)
+            if isEnumLit(ident.Name, tokens.Peek().Str) {
+                return prsEnumLit(tokens, ident, usedType)
+            } else {
+                return prsCallInterfaceFn(tokens, ident, usedType)
+            }
+
+        } else {
+            if isGenericFunc(ident.Name) {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected \"<\" after \"::\" for a generic function but got %v\n", tokens.Peek())
+                fmt.Fprintln(os.Stderr, "\t" + tokens.Peek().At())
+
+            } else if isStruct(ident.Obj) {
+                fmt.Fprintf(os.Stderr, "[ERROR] expected an interface func name after \"::\" for a struct but got %v\n", tokens.Peek())
+                fmt.Fprintln(os.Stderr, "\t" + tokens.Peek().At())
+
+            } else {
+                fmt.Fprintln(os.Stderr, "[ERROR] unexpected \"::\"")
+                fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+            }
+
+            os.Exit(1)
+        }
+    }
+
+    return ident
+}
+
 func prsIdentExpr(tokens *token.Tokens) *ast.Ident {
     // if wildcard ("_")
     if tokens.Cur().Type == token.UndScr {
@@ -236,20 +257,9 @@ func prsIdentExpr(tokens *token.Tokens) *ast.Ident {
     }
 
     ident := prsName(tokens)
+    obj := identObj.Get(ident.Str)
 
-    if obj := identObj.Get(ident.Str); obj != nil {
-        return &ast.Ident{ Name: ident.Str, Pos: ident.Pos, Obj: obj }
-    }
-
-    fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared\n", ident.Str)
-    fmt.Fprintln(os.Stderr, "\t" + ident.At())
-    os.Exit(1)
-    return nil
-}
-
-func prsFuncIdent(tokens *token.Tokens) ast.Ident {
-    ident := prsName(tokens)
-    return ast.Ident{ Name: ident.Str, Pos: ident.Pos, Obj: identObj.Get(ident.Str) }
+    return &ast.Ident{ Name: ident.Str, Pos: ident.Pos, Obj: obj }
 }
 
 func prsBasicLit(tokens *token.Tokens) ast.Expr {
@@ -369,23 +379,11 @@ func prsVecLitField(tokens *token.Tokens, lit *ast.VectorLit) {
     }
 }
 
-func prsStructLit(tokens *token.Tokens) *ast.StructLit {
-    name := prsName(tokens)
+func prsStructLit(tokens *token.Tokens, ident *ast.Ident, usedGeneric types.Type) *ast.StructLit {
+    s := ident.Obj.(*identObj.Struct)
+    t := types.ReplaceGeneric(ident.GetType(), usedGeneric).(types.StructType)
 
-    var t types.StructType
-    var s *identObj.Struct
-    if obj := identObj.Get(name.Str); obj != nil {
-        if strct,ok := obj.(*identObj.Struct); ok {
-            t = strct.GetType().(types.StructType)
-            s = strct
-        }
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] struct %s is not defined\n", name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
-    }
-
-    braceL := tokens.Next()
+    braceL := tokens.Cur()
     if braceL.Type != token.BraceL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"{\" but got %v\n", tokens.Cur())
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
@@ -393,7 +391,7 @@ func prsStructLit(tokens *token.Tokens) *ast.StructLit {
     }
     if tokens.Peek().Type == token.BraceR {
         return &ast.StructLit{
-            Pos: name.Pos,
+            Pos: ident.Pos,
             StructType: t,
             BraceLPos: braceL.Pos,
             BraceRPos: tokens.Next().Pos,
@@ -419,7 +417,7 @@ func prsStructLit(tokens *token.Tokens) *ast.StructLit {
         orderedFields := make([]ast.FieldLit, len(fields))
         for _,f := range fields {
             if idx := t.GetFieldNum(f.Name.Str); idx == -1 {
-                fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" has no field called \"%s\"\n", name.Str, f.Name.Str)
+                fmt.Fprintf(os.Stderr, "[ERROR] struct \"%s\" has no field called \"%s\"\n", ident.Name, f.Name.Str)
                 fmt.Fprintf(os.Stderr, "\tfields: %v\n", s.GetFieldNames())
                 fmt.Fprintln(os.Stderr, "\t" + f.At())
                 os.Exit(1)
@@ -445,7 +443,7 @@ func prsStructLit(tokens *token.Tokens) *ast.StructLit {
     }
 
     return &ast.StructLit{
-        Pos: name.Pos,
+        Pos: ident.Pos,
         StructType: t,
         BraceLPos: braceL.Pos,
         BraceRPos: tokens.Cur().Pos,
@@ -665,7 +663,7 @@ func prsDotField(tokens *token.Tokens, t types.Type, obj ast.Expr, dotPos token.
 }
 
 func prsDotExpr(tokens *token.Tokens, obj ast.Expr) ast.Expr {
-    dot := tokens.Next()
+    dot := tokens.Cur()
     if dot.Type != token.Dot {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \".\" but got %v\n", dot)
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
@@ -712,15 +710,8 @@ func autoDeref(obj ast.Expr, pos token.Pos, t types.Type) (derefedObj ast.Expr, 
     }
 }
 
-func prsEnumLit(tokens *token.Tokens) *ast.EnumLit {
-    name := tokens.Cur()
-    if name.Type != token.Name {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
-        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-        os.Exit(1)
-    }
-
-    if tokens.Next().Type != token.DefConst {
+func prsEnumLit(tokens *token.Tokens, ident *ast.Ident, usedGeneric types.Type) *ast.EnumLit {
+    if tokens.Cur().Type != token.DefConst {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a \"::\" but got %v\n", tokens.Cur())
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
@@ -739,16 +730,9 @@ func prsEnumLit(tokens *token.Tokens) *ast.EnumLit {
         content = prsParenExpr(tokens)
     }
 
-    if enum,ok := identObj.Get(name.Str).(*identObj.Enum); ok {
-        enumType := enum.GetType().(types.EnumType)
-        t := enumType.GetType(elemName.Str)
-        return &ast.EnumLit{ Pos: name.Pos, Type: enumType, ElemName: elemName, ContentType: t, Content: content }
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] enum \"%s\" is not defined\n", name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
-        return nil
-    }
+    enumType := types.ReplaceGeneric(ident.GetType(), usedGeneric).(types.EnumType)
+    t := enumType.GetType(elemName.Str)
+    return &ast.EnumLit{ Pos: ident.Pos, Type: enumType, ElemName: elemName, ContentType: t, Content: content }
 }
 
 func prsUnwrapElem(tokens *token.Tokens, unwrap *ast.Unwrap) *ast.Unwrap {
@@ -1090,59 +1074,20 @@ func prsGenericUsedType(tokens *token.Tokens) types.Type {
         tokens.Next()
         typ := prsType(tokens)
 
-
         if tokens.Next().Type != token.Grt {
             fmt.Fprintf(os.Stderr, "[ERROR] expected \">\" but got %v\n", tokens.Cur())
             fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
             os.Exit(1)
         }
 
-        tokens.Next()
         return typ
     }
 
     return nil
 }
 
-func prsCallGenericFn(tokens *token.Tokens) *ast.FnCall {
-    ident := prsIdentExpr(tokens)
-
-    tokens.Next()
-    usedType := prsGenericUsedType(tokens)
-
-    posL := tokens.Cur().Pos
-    vals := prsPassArgs(tokens)
-    posR := tokens.Cur().Pos
-
-    if obj := identObj.Get(ident.Name); obj != nil {
-        if f,ok := obj.(*identObj.Func); ok {
-            if !f.IsGeneric() {
-                fmt.Fprintf(os.Stderr, "[ERROR] function %s is not generic\n", ident.Name)
-                fmt.Fprintln(os.Stderr, "\t" + ident.At())
-                os.Exit(1)
-            }
-
-            f.AddTypeToGeneric(usedType)
-            return &ast.FnCall{ Ident: *ident, F: f, GenericUsedType: usedType, Values: vals, ParenLPos: posL, ParenRPos: posR }
-
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] you can only call a function (%s is not a function)\n", ident.Name)
-            fmt.Fprintln(os.Stderr, "\t" + ident.At())
-            os.Exit(1)
-        }
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared\n", ident.Name)
-        fmt.Fprintln(os.Stderr, "\t" + ident.At())
-        os.Exit(1)
-    }
-
-    return nil
-}
-
-func prsCallInterfaceFn(tokens *token.Tokens) *ast.FnCall {
-    objIdent := prsIdentExpr(tokens)
-
-    if tokens.Next().Type != token.DefConst {
+func prsCallInterfaceFn(tokens *token.Tokens, ident *ast.Ident, usedGeneric types.Type) *ast.FnCall {
+    if tokens.Cur().Type != token.DefConst {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"::\" but got %s\n", tokens.Cur())
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
@@ -1150,15 +1095,12 @@ func prsCallInterfaceFn(tokens *token.Tokens) *ast.FnCall {
 
     name := tokens.Next()
 
-    tokens.Next()
-    usedType := prsGenericUsedType(tokens)
-
-    posL := tokens.Cur().Pos
+    posL := tokens.Next().Pos
     vals := prsPassArgs(tokens)
     posR := tokens.Cur().Pos
 
     var f *identObj.Func = nil
-    switch obj := objIdent.Obj.(type) {
+    switch obj := ident.Obj.(type) {
     case *identObj.Interface:
         f = obj.GetFunc(name.Str)
         f = f.UpdateReceiver(vals[0].GetType())
@@ -1167,41 +1109,49 @@ func prsCallInterfaceFn(tokens *token.Tokens) *ast.FnCall {
         f = obj.GetFunc(name.Str)
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] expected an interface or implementable obj before %s but got %s\n", objIdent.Name, reflect.TypeOf(objIdent.Obj))
-        fmt.Fprintln(os.Stderr, "\t" + objIdent.At())
+        fmt.Fprintf(os.Stderr, "[ERROR] expected an interface or implementable obj before %s but got %s\n", ident.Name, reflect.TypeOf(ident.Obj))
+        fmt.Fprintln(os.Stderr, "\t" + ident.At())
         os.Exit(1)
     }
 
     if f != nil {
-        if usedType != nil {
+        if usedGeneric != nil {
             if !f.IsGeneric() {
-                fmt.Fprintf(os.Stderr, "[ERROR] function %s is not generic\n", name.Str)
-                fmt.Fprintln(os.Stderr, "\t" + name.At())
+                fmt.Fprintf(os.Stderr, "[ERROR] function %s is not generic\n", ident.Name)
+                fmt.Fprintln(os.Stderr, "\t" + ident.At())
                 os.Exit(1)
             }
-            f.AddTypeToGeneric(usedType)
+            f.AddTypeToGeneric(usedGeneric)
         }
 
         ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
-        return &ast.FnCall{ Ident: ident, ReceiverType: objIdent.GetType(), F: f, GenericUsedType: usedType, Values: vals, ParenLPos: posL, ParenRPos: posR }
+        return &ast.FnCall{ Ident: ident, ReceiverType: ident.GetType(), F: f, GenericUsedType: usedGeneric, Values: vals, ParenLPos: posL, ParenRPos: posR }
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared in %s\n", name, objIdent.Name)
-        fmt.Fprintln(os.Stderr, "\t" + objIdent.At())
+        fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared in %s\n", name, ident.Name)
+        fmt.Fprintln(os.Stderr, "\t" + ident.At())
         os.Exit(1)
     }
 
     return nil
 }
 
-func prsCallFn(tokens *token.Tokens) *ast.FnCall {
-    ident := prsFuncIdent(tokens)
-    posL := tokens.Next().Pos
+func prsCallFn(tokens *token.Tokens, ident *ast.Ident, usedGeneric types.Type) *ast.FnCall {
+    posL := tokens.Cur().Pos
     vals := prsPassArgs(tokens)
     posR := tokens.Cur().Pos
 
     if ident.Obj != nil {
         if f,ok := ident.Obj.(*identObj.Func); ok {
-            return &ast.FnCall{ Ident: ident, F: f, Values: vals, ParenLPos: posL, ParenRPos: posR }
+            if usedGeneric != nil {
+                if !f.IsGeneric() {
+                    fmt.Fprintf(os.Stderr, "[ERROR] function %s is not generic\n", ident.Name)
+                    fmt.Fprintln(os.Stderr, "\t" + ident.At())
+                    os.Exit(1)
+                }
+                f.AddTypeToGeneric(usedGeneric)
+            }
+
+            return &ast.FnCall{ Ident: *ident, F: f, GenericUsedType: usedGeneric, Values: vals, ParenLPos: posL, ParenRPos: posR }
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] you can only call a function (%s is not a function)\n", ident.Name)
             fmt.Fprintln(os.Stderr, "\t" + ident.At())
@@ -1210,7 +1160,7 @@ func prsCallFn(tokens *token.Tokens) *ast.FnCall {
     }
 
     f := identObj.CreateUnresolvedFunc(ident.Name, nil)
-    return &ast.FnCall{ Ident: ident, F: &f, Values: vals, ParenLPos: posL, ParenRPos: posR }
+    return &ast.FnCall{ Ident: *ident, F: &f, Values: vals, ParenLPos: posL, ParenRPos: posR }
 }
 
 func prsPassArgs(tokens *token.Tokens) []ast.Expr {

@@ -12,6 +12,7 @@ type Struct struct {
     decPos token.Pos
     name string
     typ types.StructType
+    generic *types.GenericType
     impls []Impl
 }
 
@@ -108,4 +109,16 @@ func (s *Struct) GetFunc(name string) *Func {
     }
 
     return nil
+}
+
+func (s *Struct) GetGeneric() *types.GenericType {
+    return s.generic
+}
+
+func (s *Struct) IsGeneric() bool {
+    return s.generic != nil
+}
+
+func (s *Struct) SetGeneric(t *types.GenericType) {
+    s.generic = t
 }

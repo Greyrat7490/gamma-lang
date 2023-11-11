@@ -1,0 +1,12 @@
+struct S {
+    u u64
+}
+
+fn main() {
+    s := S{ 69 }
+    S::test()
+}
+
+impl S {
+    fn test() { }
+}

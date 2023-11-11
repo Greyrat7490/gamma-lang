@@ -206,6 +206,9 @@ func CreateEnumType(name string, idType Type, names []string, types []Type) Enum
             size = t.Size()
         }
     }
+
+    isBigStruct := size > 8
+
     size += idType.Size()
 
     if len(names) != len(types) {
@@ -220,16 +223,6 @@ func CreateEnumType(name string, idType Type, names []string, types []Type) Enum
         ids[name] = uint64(i)
     }
 
-    isBigStruct := false
-    if size > 16 {
-        isBigStruct = true
-    }
-
-    aligned,_ := isAligned(types, idType.Size())
-    if !aligned {
-        isBigStruct = true
-    }
-
     return EnumType{ Name: name, Interfaces: make(map[string]InterfaceType), IdType: idType, types: ts, ids: ids, size: size, isBigStruct: isBigStruct }
 }
 
@@ -239,6 +232,10 @@ func CreateInferType(defaultType Type) InferType {
     t := InferType{ DefaultType: defaultType, Idx: inferIdx } 
     inferIdx++
     return t
+}
+
+func CreateGeneric(name string) GenericType {
+    return GenericType{ Name: name, UsedTypes: make([]Type, 0) }
 }
 
 func (t *StructType) GetOffset(field string) (offset int64) {
@@ -345,8 +342,58 @@ func IsResolvable(t Type) bool {
     return t.GetKind() == Infer
 }
 
+func ReplaceGeneric(t Type, usedType Type) Type {
+    if usedType == nil {
+        return t
+    }
+    
+    switch t := t.(type) {
+    case PtrType:
+        t.BaseType = ReplaceGeneric(t.BaseType, usedType)
+        return t
 
-func ReplaceGeneric(t Type) Type {
+    case EnumType:
+        ts := make(map[string]Type)
+        for name, elemType := range t.types {
+            ts[name] = ReplaceGeneric(elemType, usedType)
+        }
+        t.types = ts
+
+        if totalSize := t.IdType.Size() + usedType.Size(); totalSize > t.Size() {
+            t.size = totalSize
+            t.isBigStruct = usedType.Size() > 8
+        }
+
+        return t
+
+    case StructType:
+        ts := make([]Type, len(t.Types))
+        size := uint(0)
+        for i := range t.Types {
+            t2 := ReplaceGeneric(t.Types[i], usedType)
+            ts[i] = t2
+            size += t2.Size()
+        }
+        t.size = size
+        t.Types = ts
+
+        if !t.isBigStruct {
+            aligned,_ := isAligned(t.Types, 0)
+            t.isAligned = aligned
+            t.isBigStruct = aligned && t.Size() <= 16
+        }
+
+        return t
+
+    case GenericType, *GenericType:
+        return usedType
+
+    default:
+        return t
+    }
+}
+
+func ReplaceFuncGeneric(t Type) Type {
     if t,ok := t.(*GenericType); ok && t.CurUsedType != nil {
         return t.CurUsedType
     }
@@ -437,8 +484,8 @@ func (t ArrType)        GetInterfaces() map[string]InterfaceType { return t.Inte
 func (t VecType)        GetInterfaces() map[string]InterfaceType { return t.Interfaces }
 func (t StructType)     GetInterfaces() map[string]InterfaceType { return t.Interfaces }
 func (t EnumType)       GetInterfaces() map[string]InterfaceType { return t.Interfaces }
-func (t InterfaceType) GetInterfaces() map[string]InterfaceType { return nil }
-func (t FuncType) GetInterfaces() map[string]InterfaceType { return nil }
+func (t InterfaceType)  GetInterfaces() map[string]InterfaceType { return nil }
+func (t FuncType)       GetInterfaces() map[string]InterfaceType { return nil }
 func (t GenericType)    GetInterfaces() map[string]InterfaceType {
     if t.CurUsedType != nil {
         return t.CurUsedType.GetInterfaces()
@@ -640,8 +687,8 @@ func EqualBinary(t1 Type, t2 Type) bool {
 }
 
 func Equal(destType Type, srcType Type) bool {
-    srcType = ReplaceGeneric(srcType)
-    destType = ReplaceGeneric(destType)
+    srcType = ReplaceFuncGeneric(srcType)
+    destType = ReplaceFuncGeneric(destType)
 
     switch t := destType.(type) {
     case VecType:

@@ -115,11 +115,7 @@ func (f *Func) IsUnresolved() bool {
 }
 
 func (f *Func) AddTypeToGeneric(typ types.Type) {
-    for _,t := range f.typ.Generic.UsedTypes {
-        if types.Equal(typ, t) { return }
-    }
-
-    f.typ.Generic.UsedTypes = append(f.typ.Generic.UsedTypes, typ)
+   AddTypeToGeneric(f.typ.Generic, typ) 
 }
 
 func (f Func) String() string {

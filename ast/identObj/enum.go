@@ -12,15 +12,12 @@ type Enum struct {
     decPos token.Pos
     name string
     typ types.EnumType
+    generic *types.GenericType
     impls []Impl
 }
 
-func CreateEnum(name token.Token, idType types.Type, elemNames []string, elemTypes []types.Type) Enum {
-    return Enum{
-        decPos: name.Pos,
-        name: name.Str,
-        typ: types.CreateEnumType(name.Str, idType, elemNames, elemTypes),
-    }
+func CreateEnum(name token.Token) Enum {
+    return Enum{ decPos: name.Pos, name: name.Str }
 }
 
 func (e *Enum) GetName() string {
@@ -67,4 +64,20 @@ func (e *Enum) GetFuncNames() []string {
     }
 
     return funcs
+}
+
+func (e *Enum) GetGeneric() *types.GenericType {
+    return e.generic
+}
+
+func (e *Enum) IsGeneric() bool {
+    return e.generic != nil
+}
+
+func (e *Enum) SetGeneric(t *types.GenericType) {
+    e.generic = t
+}
+
+func (e *Enum) SetElems(idType types.Type, elemNames []string, elemTypes []types.Type) {
+    e.typ = types.CreateEnumType(e.name, idType, elemNames, elemTypes)
 }
