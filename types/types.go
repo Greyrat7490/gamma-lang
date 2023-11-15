@@ -86,7 +86,6 @@ type StructType struct {
     Interfaces map[string]InterfaceType
     names map[string]int
     isBigStruct bool
-    isAligned bool
     size uint
 }
 type EnumType struct {
@@ -131,25 +130,27 @@ func isAligned(types []Type, size uint) (aligned bool, rest uint)  {
             size += r
 
         case VecType:
-            return false, 0
-
-        case StrType:
-            a,r := isAligned([]Type{ PtrType{}, UintType{ size: U32_Size } }, size)
-            if !a {
+            if size != 0 {
                 return false, 0
             }
-            size += r
+
+        case StrType:
+            if size != 0 {
+                return false, 0
+            }
+            size += U32_Size
 
         case nil:
 
         default:
+            if size != 0 && size < t.Size() {
+                return false, 0
+            }
             size += t.Size()
         }
 
-        if size > 8 {
-            return false, 0
-        } else if size == 8 {
-            size = 0
+        if size >= 8 {
+            size -= 8
         }
     }
 
@@ -178,14 +179,10 @@ func CreateStructType(name string, types []Type, names []string) StructType {
         size += t.Size()
     }
 
-    isBigStruct := false
-    if size > 16 {
-        isBigStruct = true
-    }
-
-    aligned,_ := isAligned(types, 0)
-    if !aligned {
-        isBigStruct = true
+    isBigStruct := true
+    if size <= 16 {
+        aligned,_ := isAligned(types, 0)
+        isBigStruct = !aligned
     }
 
     return StructType{ 
@@ -193,7 +190,6 @@ func CreateStructType(name string, types []Type, names []string) StructType {
         Types: types,
         Interfaces: make(map[string]InterfaceType),
         isBigStruct: isBigStruct,
-        isAligned: aligned,
         size: size,
         names: ns,
     }
@@ -207,7 +203,7 @@ func CreateEnumType(name string, idType Type, names []string, types []Type) Enum
         }
     }
 
-    isBigStruct := size > 8
+    isBigStruct := size > 0
 
     size += idType.Size()
 
@@ -361,7 +357,7 @@ func ReplaceGeneric(t Type, usedType Type) Type {
 
         if totalSize := t.IdType.Size() + usedType.Size(); totalSize > t.Size() {
             t.size = totalSize
-            t.isBigStruct = usedType.Size() > 8
+            t.isBigStruct = usedType.Size() > 0
         }
 
         return t
@@ -379,7 +375,6 @@ func ReplaceGeneric(t Type, usedType Type) Type {
 
         if !t.isBigStruct {
             aligned,_ := isAligned(t.Types, 0)
-            t.isAligned = aligned
             t.isBigStruct = aligned && t.Size() <= 16
         }
 
