@@ -12,6 +12,16 @@ struct BigStruct {
     a5 i32
 }
 
+struct UnalignedStruct {
+    a u16,
+    b u32
+}
+
+struct AlignedStruct {
+    a i32,
+    b i16
+}
+
 struct Vec2 { x i32, y i32 }
 
 struct Test {
@@ -254,6 +264,14 @@ fn testOmitedNames() {
     print("\nb: ") print(btos(t.b)) print(ctos('\n'))
 }
 
+fn retUnalignedStruct() -> UnalignedStruct {
+    ret UnalignedStruct{ 64, 69 }
+}
+
+fn retAlignedStruct() -> AlignedStruct {
+    ret AlignedStruct{ -64, -69 }
+}
+
 fn main() {
     print("global ---------\n")
     test_global()
@@ -294,4 +312,14 @@ fn main() {
 
     print("\nreturn struct -----\n")
     testRet()
+
+    println("\nreturn unaligned struct -----")
+    s1 := retUnalignedStruct()
+    println(fmt("s.a: {}", s1.a))
+    println(fmt("s.b: {}", s1.b))
+
+    println("\nreturn aligned struct -----")
+    s2 := retAlignedStruct()
+    println(fmt("s.a: {}", s2.a))
+    println(fmt("s.b: {}", s2.b))
 }

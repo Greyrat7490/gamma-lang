@@ -110,35 +110,19 @@ func DerefSetDeref(file *bufio.Writer, addr addr.Addr, t types.Type, otherAddr a
     case types.StructType, types.EnumType:
         for i := 0; i < int(t.Size()/types.Ptr_Size); i++ {
             asm.MovDerefDeref(file, addr, otherAddr, types.Ptr_Size, asm.RegB, false)
-
-            addr.Offset += int64(types.Ptr_Size)
-            otherAddr.Offset += int64(types.Ptr_Size)
+            addr = addr.Offseted(int64(types.Ptr_Size))
+            otherAddr = otherAddr.Offseted(int64(types.Ptr_Size))
         }
 
         if size := t.Size() % types.Ptr_Size; size != 0 {
-            if size == 3 {
-                asm.MovDerefDeref(file, addr, otherAddr, 2, asm.RegB, false)
-                addr.Offset += 2
-                otherAddr.Offset += 2
-                asm.MovDerefDeref(file, addr, otherAddr, size - 2, asm.RegB, false)
-
-            } else if size == 5 || size == 6 {
-                asm.MovDerefDeref(file, addr, otherAddr, 4, asm.RegB, false)
-                addr.Offset += 4
-                otherAddr.Offset += 4
-                asm.MovDerefDeref(file, addr, otherAddr, size - 4, asm.RegB, false)
-
-            } else if size == 7 {
-                asm.MovDerefDeref(file, addr, otherAddr, 4, asm.RegB, false)
-                addr.Offset += 4
-                otherAddr.Offset += 4
-                asm.MovDerefDeref(file, addr, otherAddr, size - 4, asm.RegB, false)
-                addr.Offset += 2
-                otherAddr.Offset += 2
-                asm.MovDerefDeref(file, addr, otherAddr, size - 4 - 2, asm.RegB, false)
-
-            } else {
-                asm.MovDerefDeref(file, addr, otherAddr, size, asm.RegB, false)
+            for i := 2; i >= 0; i-- {
+                sz := uint(1 << i)
+                if sz <= size {
+                    size -= sz
+                    asm.MovDerefDeref(file, addr, otherAddr, sz, asm.RegB, false)
+                    addr = addr.Offseted(int64(sz))
+                    otherAddr = otherAddr.Offseted(int64(sz))
+                }
             }
         }
 
@@ -179,11 +163,26 @@ func DerefSetExpr(file *bufio.Writer, dst addr.Addr, t types.Type, val ast.Expr)
             DerefSetBigStruct(file, dst, val)
         } else {
             GenExpr(file, val)
-            if t.Size() > uint(8) {
-                asm.MovDerefReg(file, dst, types.Ptr_Size, asm.RegGroup(0))
-                asm.MovDerefReg(file, dst.Offseted(int64(types.Ptr_Size)), t.Size() - 8, asm.RegGroup(1))
-            } else {
-                asm.MovDerefReg(file, dst, t.Size(), asm.RegGroup(0))
+            size := t.Size() 
+            reg := asm.RegGroup(0)
+
+            if size > types.Ptr_Size {
+                asm.MovDerefReg(file, dst, types.Ptr_Size, reg)
+                size -= types.Ptr_Size
+                dst = dst.Offseted(int64(types.Ptr_Size))
+                reg += 1
+            }
+
+            for i := 3; i >= 0; i-- {
+                sz := uint(1 << i)
+                if sz <= size {
+                    size -= sz
+                    asm.MovDerefReg(file, dst, sz, reg)
+                    if size > 0 {
+                        dst = dst.Offseted(int64(sz))
+                        asm.Shr(file, fmt.Sprint(sz*8), types.Ptr_Size)
+                    }
+                }
             }
         }
 
