@@ -503,6 +503,6 @@ func pack(packed []string, newVal string, offset uint, t types.Type) []string {
         return append(packed, newVal)
     }
 
-    packed[len(packed)-1] = fmt.Sprintf("(%s<<%d)+%s", newVal, offset*8, packed[len(packed)-1])
+    packed[len(packed)-1] = fmt.Sprintf("(%s<<%d)|(%s&%d)", newVal, offset*8, packed[len(packed)-1], (1 << (offset*8))-1)
     return packed
 }
