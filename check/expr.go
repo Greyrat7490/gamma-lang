@@ -169,6 +169,12 @@ func typeCheckUnwrap(e *ast.Unwrap) {
         os.Exit(1)
     }
 
+    if !types.Equal(e.SrcExpr.GetType(), e.EnumType) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected enum %s but got %s\n", e.SrcExpr.GetType(), e.EnumType)
+        fmt.Fprintln(os.Stderr, "\t" + e.ElemName.At())
+        os.Exit(1)
+    }
+
     t := e.EnumType.GetType(e.ElemName.Str)
     if t != nil {
         if !e.UnusedObj && e.Obj == nil {
