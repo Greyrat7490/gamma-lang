@@ -788,6 +788,12 @@ func prsUnwrapHead(tokens *token.Tokens, srcExpr ast.Expr) *ast.Unwrap {
         os.Exit(1)
     }
 
+    var genUsedType types.Type = nil
+    if tokens.Peek2().Type == token.Lss {
+        tokens.Next()
+        genUsedType = prsGenericUsedType(tokens)
+    }
+
     if tokens.Next().Type != token.DefConst {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a \"::\" but got %v\n", tokens.Cur())
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
@@ -808,7 +814,7 @@ func prsUnwrapHead(tokens *token.Tokens, srcExpr ast.Expr) *ast.Unwrap {
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
-    enumType := enum.GetType().(types.EnumType)
+    enumType := types.ReplaceGeneric(enum.GetType(), genUsedType).(types.EnumType)
 
     return &ast.Unwrap{ SrcExpr: srcExpr, ColonPos: colonPos, EnumType: enumType }
 }

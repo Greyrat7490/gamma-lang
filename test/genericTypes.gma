@@ -13,7 +13,6 @@ fn test_enum() {
     b := Option::<u64>::None
     c := Option::<i8>::Val(-64)
 
-/*
     if a : Option::<u64>::Val(a) {
         println(fmt("a: {}", a))
     }
@@ -23,18 +22,26 @@ fn test_enum() {
     } else {
         println("b: None")
     }
-*/
+
+    if c : Option::<i8>::Val(c) {
+        println(fmt("c: {}", c))
+    }
 }
 
 fn test_struct() {
     s1 := S::<u8>{ 0, 1, 2 }
     s2 := S::<u64>{ 3, 4, 5 }
+    s3 := S::<str>{ 6, 7, "8 (str)" }
+
+    println(fmt("S::<u8> s1.t: {}", s1.t))
+    println(fmt("S::<u64> s2.t: {}", s2.t))
+    println(fmt("S::<str> s3.t: {}", s3.t))
 }
 
 fn main() {
     println("enum: ")
     test_enum()
 
-    println("struct: ")
+    println("\nstruct: ")
     test_struct()
 }
