@@ -84,6 +84,8 @@ type StructType struct {
     Name string
     Types []Type
     Interfaces map[string]InterfaceType
+    genericName string          // empty string means not generic
+    genericUsedType Type
     names map[string]int
     isBigStruct bool
     size uint
@@ -92,8 +94,10 @@ type EnumType struct {
     Name string
     IdType Type
     Interfaces map[string]InterfaceType
+    genericName string          // empty string means not generic
+    genericUsedType Type
     ids map[string]uint64
-    types map[string]Type        // nil for no type
+    types map[string]Type       // nil for no type
     size uint
     isBigStruct bool
 }
@@ -168,7 +172,7 @@ func CreateUint(uintSize uint) UintType {
 func CreateEmptyStructType(name string) StructType {
     return StructType{ Name: name }
 }
-func CreateStructType(name string, types []Type, names []string) StructType {
+func CreateStructType(name string, types []Type, names []string, genericName string) StructType {
     ns := map[string]int{}
     for i, n := range names {
         ns[n] = i
@@ -190,12 +194,13 @@ func CreateStructType(name string, types []Type, names []string) StructType {
         Types: types,
         Interfaces: make(map[string]InterfaceType),
         isBigStruct: isBigStruct,
+        genericName: genericName,
         size: size,
         names: ns,
     }
 }
 
-func CreateEnumType(name string, idType Type, names []string, types []Type) EnumType {
+func CreateEnumType(name string, idType Type, names []string, types []Type, genericName string) EnumType {
     size := uint(0)
     for _,t := range types {
         if t != nil && t.Size() > size {
@@ -219,7 +224,16 @@ func CreateEnumType(name string, idType Type, names []string, types []Type) Enum
         ids[name] = uint64(i)
     }
 
-    return EnumType{ Name: name, Interfaces: make(map[string]InterfaceType), IdType: idType, types: ts, ids: ids, size: size, isBigStruct: isBigStruct }
+    return EnumType{ 
+        Name: name,
+        Interfaces: make(map[string]InterfaceType),
+        IdType: idType,
+        types: ts,
+        ids: ids,
+        size: size,
+        isBigStruct: isBigStruct,
+        genericName: genericName,
+    }
 }
 
 var inferIdx uint64 = 0
@@ -349,6 +363,8 @@ func ReplaceGeneric(t Type, usedType Type) Type {
         return t
 
     case EnumType:
+        t.genericUsedType = usedType
+
         ts := make(map[string]Type)
         for name, elemType := range t.types {
             ts[name] = ReplaceGeneric(elemType, usedType)
@@ -363,6 +379,8 @@ func ReplaceGeneric(t Type, usedType Type) Type {
         return t
 
     case StructType:
+        t.genericUsedType = usedType
+
         ts := make([]Type, len(t.Types))
         size := uint(0)
         for i := range t.Types {
@@ -538,8 +556,24 @@ func (t ArrType)  String() string {
 func (t VecType) String() string {
     return "[$]" + t.BaseType.String()
 }
-func (t StructType) String() string { return t.Name }
-func (t EnumType) String() string { return t.Name }
+func (t StructType) String() string { 
+    if t.genericName != "" {
+        if t.genericUsedType != nil {
+            return fmt.Sprintf("%s::<%s>", t.Name, t.genericUsedType)
+        }
+        return fmt.Sprintf("%s::<%s>", t.Name, t.genericName)
+    }
+    return t.Name
+}
+func (t EnumType) String() string { 
+    if t.genericName != "" {
+        if t.genericUsedType != nil {
+            return fmt.Sprintf("%s::<%s>", t.Name, t.genericUsedType)
+        }
+        return fmt.Sprintf("%s::<%s>", t.Name, t.genericName)
+    }
+    return t.Name
+}
 func (t InterfaceType) String() string { return t.Name }
 func (t InferType) String() string { return t.DefaultType.String() }
 func (t GenericType) String() string {
@@ -705,12 +739,12 @@ func Equal(destType Type, srcType Type) bool {
 
     case StructType:
         if t2,ok := srcType.(StructType); ok {
-            return t.Name == t2.Name
+            return t.Name == t2.Name && Equal(t.genericUsedType, t2.genericUsedType)
         }
 
     case EnumType:
         if t2,ok := srcType.(EnumType); ok {
-            return t.Name == t2.Name
+            return t.Name == t2.Name && Equal(t.genericUsedType, t2.genericUsedType)
         }
 
     case InterfaceType:

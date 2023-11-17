@@ -1,0 +1,11 @@
+enum<T> Option {
+    Val(T), None
+}
+
+fn main() {
+    a := Option::<i8>::Val(-64)
+
+    if a : Option::<u64>::Val(a) {
+        println(fmt("a: {}", a))
+    }
+}

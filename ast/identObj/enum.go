@@ -79,5 +79,9 @@ func (e *Enum) SetGeneric(t *types.GenericType) {
 }
 
 func (e *Enum) SetElems(idType types.Type, elemNames []string, elemTypes []types.Type) {
-    e.typ = types.CreateEnumType(e.name, idType, elemNames, elemTypes)
+    if e.IsGeneric() {
+        e.typ = types.CreateEnumType(e.name, idType, elemNames, elemTypes, e.generic.Name)
+    } else {
+        e.typ = types.CreateEnumType(e.name, idType, elemNames, elemTypes, "")
+    }
 }

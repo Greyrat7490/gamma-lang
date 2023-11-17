@@ -57,7 +57,12 @@ func (s *Struct) resolveRecursiveField() {
 }
 
 func (s *Struct) SetFields(fieldNames []string, fieldTypes []types.Type) {
-    s.typ = types.CreateStructType(s.name, fieldTypes, fieldNames)
+    if s.IsGeneric() {
+        s.typ = types.CreateStructType(s.name, fieldTypes, fieldNames, s.generic.Name)
+    } else {
+        s.typ = types.CreateStructType(s.name, fieldTypes, fieldNames, "")
+    }
+
     s.resolveRecursiveField()
 }
 
