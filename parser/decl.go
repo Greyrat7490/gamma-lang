@@ -369,16 +369,16 @@ func prsDefine(tokens *token.Tokens) ast.Decl {
 func prsStruct(tokens *token.Tokens) ast.DefStruct {
     pos := tokens.Cur().Pos
 
-    tokens.Next()
-    generic := prsGeneric(tokens)
-    isGeneric := generic.Str != ""
-
-    name := tokens.Cur()
+    name := tokens.Next()
     if name.Type != token.Name {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
+
+    tokens.Next()
+    generic := prsGeneric(tokens)
+    isGeneric := generic.Str != ""
 
     s := identObj.DecStruct(name)
 
@@ -388,7 +388,7 @@ func prsStruct(tokens *token.Tokens) ast.DefStruct {
         s.SetGeneric(&genericType)
     }
 
-    braceLPos := tokens.Next().Pos
+    braceLPos := tokens.Cur().Pos
     fields := prsDecFields(tokens)
     braceRPos := tokens.Cur().Pos
 
@@ -449,21 +449,21 @@ func prsInterface(tokens *token.Tokens) ast.Decl {
 func prsEnum(tokens *token.Tokens) ast.Decl {
     pos := tokens.Cur().Pos
 
-    tokens.Next()
-    generic := prsGeneric(tokens)
-    isGeneric := generic.Str != ""
-
-    name := tokens.Cur()
+    name := tokens.Next()
     if name.Type != token.Name {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
         fmt.Fprintln(os.Stderr, "\t" + name.At())
         os.Exit(1)
     }
 
+    tokens.Next()
+    generic := prsGeneric(tokens)
+    isGeneric := generic.Str != ""
+
     var idTyp types.Type = nil
-    if tokens.Peek().Type != token.BraceL {
-        tokens.Next()
+    if tokens.Cur().Type != token.BraceL {
         idTyp = prsType(tokens)
+        tokens.Next()
     } else {
         idTyp = types.CreateUint(types.Ptr_Size)
     }
@@ -475,7 +475,7 @@ func prsEnum(tokens *token.Tokens) ast.Decl {
         e.SetGeneric(&genericType)
     }
 
-    braceLPos := tokens.Next().Pos
+    braceLPos := tokens.Cur().Pos
     elems := prsEnumElems(tokens)
     braceRPos := tokens.Cur().Pos
 

@@ -1,8 +1,8 @@
-enum<T> Option {
+enum Option<T> {
     Val(T), None
 }
 
-struct<T> S {
+struct S<T> {
     u1 u64,
     u2 u32,
     t T
