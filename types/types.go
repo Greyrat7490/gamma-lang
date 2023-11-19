@@ -329,19 +329,18 @@ func (t *InterfaceType) GetFunc(name string) *FuncType {
 }
 
 func IsBigStruct(t Type) bool {
-    if _,ok := t.(VecType); ok {
+    switch t := t.(type) {
+    case VecType:
         return true
-    }
-
-    if t,ok := t.(StructType); ok {
+    case StructType:
         return t.isBigStruct
-    }
-
-    if t,ok := t.(EnumType); ok {
+    case EnumType:
         return t.isBigStruct
+    case *GenericType:
+        return IsBigStruct(t.CurUsedType)
+    default:
+        return false
     }
-
-    return false
 }
 
 func IsResolvable(t Type) bool {
@@ -353,10 +352,10 @@ func IsResolvable(t Type) bool {
 }
 
 func ReplaceGeneric(t Type, usedType Type) Type {
-    if usedType == nil {
+    if usedType == nil || usedType == (*GenericType)(nil) {
         return t
     }
-    
+
     switch t := t.(type) {
     case PtrType:
         t.BaseType = ReplaceGeneric(t.BaseType, usedType)
@@ -369,12 +368,10 @@ func ReplaceGeneric(t Type, usedType Type) Type {
         for name, elemType := range t.types {
             ts[name] = ReplaceGeneric(elemType, usedType)
         }
-        t.types = ts
 
-        if totalSize := t.IdType.Size() + usedType.Size(); totalSize > t.Size() {
-            t.size = totalSize
-            t.isBigStruct = usedType.Size() > 0
-        }
+        t.types = ts
+        t.size = t.IdType.Size() + usedType.Size()
+        t.isBigStruct = usedType.Size() > 0
 
         return t
 

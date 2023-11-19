@@ -322,7 +322,10 @@ func GenContinue(file *bufio.Writer, s *ast.Continue) {
 
 func GenRet(file *bufio.Writer, s *ast.Ret) {
     if s.RetExpr != nil {
-        t := s.F.GetRetType()
+        t := s.F.GetRetType() 
+        if s.F.GetGeneric() != nil {
+            t = types.ReplaceGeneric(t, s.F.GetGeneric().CurUsedType) 
+        }
 
         if types.IsBigStruct(t) {
             asm.MovRegDeref(file,

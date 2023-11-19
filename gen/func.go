@@ -69,8 +69,8 @@ func CallVTableFn(file *bufio.Writer, offset uint) {
     file.WriteString(fmt.Sprintf("call QWORD [%s]\n", addr))
 }
 
-func DefArg(file *bufio.Writer, regIdx uint, v vars.Var) {
-    switch t := v.GetType().(type) {
+func DefArg(file *bufio.Writer, regIdx uint, v vars.Var, t types.Type) {
+    switch t := t.(type) {
     case types.StrType:
         asm.MovDerefReg(file, v.Addr(), types.Ptr_Size, regs[regIdx])
         asm.MovDerefReg(file, v.Addr().Offseted(int64(types.Ptr_Size)), types.I32_Size, regs[regIdx+1])
@@ -86,6 +86,9 @@ func DefArg(file *bufio.Writer, regIdx uint, v vars.Var) {
     case types.InterfaceType:
         asm.MovDerefReg(file, v.Addr(), types.Ptr_Size, regs[regIdx])
         asm.MovDerefReg(file, v.Addr().Offseted(int64(types.Ptr_Size)), t.Size() - types.Ptr_Size, regs[regIdx+1])
+
+    case *types.GenericType:
+        DefArg(file, regIdx, v, t.CurUsedType)
 
     default:
         asm.MovDerefReg(file, v.Addr(), t.Size(), regs[regIdx])
@@ -155,26 +158,28 @@ func PassVar(file *bufio.Writer, regIdx uint, t types.Type, otherVar vars.Var) {
     case types.InterfaceType:
         asm.MovRegDeref(file, regs[regIdx], otherVar.Addr(), types.Ptr_Size, false)
 
-        switch otherVar.GetType().(type) {
-        case types.InterfaceType:
+        switch otherVar.GetType().GetKind() {
+        case types.Interface:
             asm.MovRegDeref(file, regs[regIdx+1], otherVar.Addr().Offseted(int64(types.Ptr_Size)), types.Ptr_Size, false)
-        case types.StructType, types.EnumType:
+        case types.Struct, types.Enum:
             asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vtable.GetVTableName(otherVar.GetType().String(), t.String()))
         default:
-            fmt.Fprintf(os.Stderr, "[ERROR] (internal) expected %v to be an interface or implementable but got %v\n", 
-                otherVar.GetName(), otherVar.GetType())
+            fmt.Fprintf(os.Stderr, "[ERROR] (internal) expected %v to be an interface or implementable but got %v\n", otherVar.GetName(), otherVar.GetType())
             os.Exit(1)
         }
 
     case types.IntType:
         asm.MovRegDerefExtend(file, regs[regIdx], t.Size(), otherVar.Addr(), otherVar.GetType().Size(), true)
 
+    case *types.GenericType:
+        PassVar(file, regIdx, t.CurUsedType, otherVar)
+
     default:
         asm.MovRegDerefExtend(file, regs[regIdx], t.Size(), otherVar.Addr(), otherVar.GetType().Size(), false)
     }
 }
 
-func PassExpr(file *bufio.Writer, regIdx uint, argType types.Type, regSize uint, expr ast.Expr) {
+func PassExpr(file *bufio.Writer, regIdx uint, argType types.Type, srcSize uint, expr ast.Expr) {
     switch t := argType.(type) {
     case types.StrType:
         GenExpr(file, expr)
@@ -197,7 +202,7 @@ func PassExpr(file *bufio.Writer, regIdx uint, argType types.Type, regSize uint,
 
     case types.IntType:
         GenExpr(file, expr)
-        asm.MovRegRegExtend(file, regs[regIdx], t.Size(), asm.RegGroup(0), regSize, true)
+        asm.MovRegRegExtend(file, regs[regIdx], t.Size(), asm.RegGroup(0), srcSize, true)
 
     case types.ArrType:
         if lit,ok := expr.(*ast.ArrayLit); ok {
@@ -207,15 +212,18 @@ func PassExpr(file *bufio.Writer, regIdx uint, argType types.Type, regSize uint,
                     DerefSetExpr(file, arrAddr.Offseted(int64(i) * int64(t.BaseType.Size())), t.BaseType, lit.Values[i])
                 }
             }
-            asm.MovRegVal(file, regs[regIdx], regSize, fmt.Sprint(arrAddr))
+            asm.MovRegVal(file, regs[regIdx], srcSize, fmt.Sprint(arrAddr))
         } else {
             GenExpr(file, expr)
-            asm.MovRegRegExtend(file, regs[regIdx], t.Size(), asm.RegGroup(0), regSize, false)
+            asm.MovRegRegExtend(file, regs[regIdx], t.Size(), asm.RegGroup(0), srcSize, false)
         }
+
+    case *types.GenericType:
+        PassExpr(file, regIdx, t.CurUsedType, srcSize, expr)
 
     default:
         GenExpr(file, expr)
-        asm.MovRegRegExtend(file, regs[regIdx], t.Size(), asm.RegGroup(0), regSize, false)
+        asm.MovRegRegExtend(file, regs[regIdx], t.Size(), asm.RegGroup(0), srcSize, false)
     }
 }
 

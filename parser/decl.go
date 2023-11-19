@@ -84,17 +84,31 @@ func prsType(tokens *token.Tokens) types.Type {
 
     case token.Name:
         if obj := identObj.Get(tokens.Cur().Str); obj != nil {
+            var t types.Type = nil
             if strct,ok := obj.(*identObj.Struct); ok {
-                return strct.GetType()
+                t = strct.GetType()
             }
 
             if interfc,ok := obj.(*identObj.Interface); ok {
-                return interfc.GetType()
+                t = interfc.GetType()
             }
 
             if enum,ok := obj.(*identObj.Enum); ok {
-                return enum.GetType()
+                t = enum.GetType()
             }
+
+            if tokens.Peek().Type == token.Lss {
+                tokens.Next()
+                tokens.Next()
+                t = types.ReplaceGeneric(t, prsType(tokens))
+                if tokens.Next().Type != token.Grt {
+                    fmt.Fprintf(os.Stderr, "[ERROR] expected \">\" but got %s\n", tokens.Cur().Str)
+                    fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+                    os.Exit(1)
+                }
+            }
+
+            return t
         }
 
         if generic := identObj.GetGeneric(tokens.Cur().Str); generic != nil {

@@ -85,11 +85,13 @@ func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
 
     Define(file, d.FnHead.F, framesize)
 
+    generic := d.FnHead.F.GetGeneric()
+
     regIdx := uint(0)
     argsFromStackOffset := uint(8)
     regArgsOffset := innersize
 
-    if types.IsBigStruct(d.FnHead.F.GetRetType()) {
+    if types.IsBigStruct(types.ReplaceGeneric(d.FnHead.F.GetRetType(), generic)) {
         regArgsOffset += types.Ptr_Size
         addr := addr.Addr{ BaseAddr: "rbp", Offset: -int64(regArgsOffset) }
         asm.MovDerefReg(file, addr, types.Ptr_Size, asm.RegDi)
@@ -99,7 +101,8 @@ func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
 
     for _,a := range d.FnHead.Args {
         if v,ok := a.V.(*vars.LocalVar); ok {
-            if types.IsBigStruct(v.GetType()) {
+            t := types.ReplaceGeneric(v.GetType(), generic)
+            if types.IsBigStruct(t) {
                 v.SetOffset(argsFromStackOffset, true) 
                 argsFromStackOffset += v.GetType().Size()
             }
@@ -108,17 +111,18 @@ func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
 
     for _,a := range d.FnHead.Args {
         if v,ok := a.V.(*vars.LocalVar); ok {
-            if !types.IsBigStruct(v.GetType()) {
-                needed := types.RegCount(v.GetType())
+            t := types.ReplaceGeneric(v.GetType(), generic) 
+            if !types.IsBigStruct(t) {
+                needed := types.RegCount(t)
 
                 if regIdx + needed <= 6 {
                     v.SetOffset(regArgsOffset, false) 
-                    DefArg(file, regIdx, v)
+                    DefArg(file, regIdx, v, t)
                     regIdx += needed
-                    regArgsOffset += v.GetType().Size() 
+                    regArgsOffset += t.Size() 
                 } else {
                     v.SetOffset(argsFromStackOffset, true) 
-                    argsFromStackOffset += v.GetType().Size()
+                    argsFromStackOffset += t.Size()
                 }
             }
         } else {

@@ -1,4 +1,4 @@
-enum<T> Option {
+enum Option<T> {
     Val(T), None
 }
 

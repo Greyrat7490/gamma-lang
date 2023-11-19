@@ -87,7 +87,7 @@ func GenExpr(file *bufio.Writer, e ast.Expr) {
         GenField(file, e)
 
     case *ast.Ident:
-        GenIdent(file, e)
+        GenIdent(file, e, e.GetType())
 
     case *ast.FnCall:
         asm.SaveReg(file, asm.RegC)
@@ -314,14 +314,14 @@ func GenField(file *bufio.Writer, e *ast.Field) {
     }
 }
 
-func GenIdent(file *bufio.Writer, e *ast.Ident) {
+func GenIdent(file *bufio.Writer, e *ast.Ident, t types.Type) {
     if c,ok := e.Obj.(*identObj.Const); ok {
-        GenConstVal(file, e.GetType(), c.GetVal())
+        GenConstVal(file, t, c.GetVal())
         return
     }
 
     if v,ok := e.Obj.(vars.Var); ok {
-        switch t := v.GetType().(type) {
+        switch t := t.(type) {
         case types.StrType:
             asm.MovRegDeref(file, asm.RegA, v.Addr(), types.Ptr_Size, false)
             asm.MovRegDeref(file, asm.RegD, v.Addr().Offseted(int64(types.Ptr_Size)), types.I32_Size, false)
@@ -343,6 +343,9 @@ func GenIdent(file *bufio.Writer, e *ast.Ident) {
 
         case types.IntType:
             asm.MovRegDeref(file, asm.RegA, v.Addr(), t.Size(), false)
+
+        case *types.GenericType:
+            GenIdent(file, e, t.CurUsedType)
 
         default:
             asm.MovRegDeref(file, asm.RegA, v.Addr(), t.Size(), false)
@@ -1024,10 +1027,12 @@ func createPassArgs(f *identObj.Func, values []ast.Expr) passArgs {
 
     // rdi contains addr to return big struct to
     regsCount := uint(0)
-    if types.IsBigStruct(f.GetRetType()) { regsCount = 1 }
+    retType := types.ReplaceGeneric(f.GetRetType(), f.GetGeneric()) 
+    if types.IsBigStruct(retType) { regsCount = 1 }
 
     stackSize := uint(0)
     for i,t := range f.GetArgs() {
+        t = types.ReplaceGeneric(t, f.GetGeneric()) 
         if types.IsBigStruct(t) {
             bigStructArgs = prepend(bigStructArgs, t, values[i])
             stackSize += (t.Size() + 7) & ^uint(7)

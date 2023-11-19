@@ -1,0 +1,73 @@
+enum Option<T> {
+    Val(T), None
+}
+
+fn show<T>(opt Option<T>) {
+    if opt : Option::<T>::Val(v) {
+        println(fmt("valid ({})", v))
+    } else {
+        println("none")
+    }
+}
+
+fn Add<T>(a T, b T) -> T {
+    ret a + b
+}
+
+fn testGenericType() {
+    a := Option::<u64>::Val(64)
+    b := Option::<bool>::None
+    c := Option::<u8>::Val(255)
+
+    show::<u64>(a)
+    show::<bool>(b)
+    show::<u8>(c)
+}
+
+fn testAdd() {
+    a u32 := 30
+    b u32 := 34
+    println(fmt("Add::<u32>: {}", Add::<u32>(a, b)))
+
+    c i32 := -30
+    d i32 := -34
+    println(fmt("Add::<i32>: {}", Add::<i32>(c, d)))
+
+    e i8 := 69
+    println(fmt("Add::<i8>: {}", Add::<i8>(e, -5 as i8)))
+
+    res := Add::<str>("test", " string")
+    println(fmt("Add::<str>: {}", res))
+}
+
+fn packVal<T>(val T) -> Option<T> {
+    ret Option::<T>::Val(val)
+}
+
+enum Test {
+    Val(u8), None
+}
+
+fn retTest() -> Test {
+    ret Test::Val(64)
+}
+
+fn testEnum() {
+    // TODO: fix wrong framesize
+    a := packVal::<u64>(420)
+    if a : Option::<u64>::Val(a) {
+        println(fmt("a = {}", a))
+    }
+
+    if retTest() : Test::Val(z) {
+        println(fmt("retTest() = {}", z))
+    }
+}
+
+fn main() {
+    testGenericType()
+    println("")
+    testAdd()
+    println("")
+    testEnum()
+}
