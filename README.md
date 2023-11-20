@@ -367,7 +367,9 @@ oooooooo oo   ooo
   * [x] proof with Rule 110 programm
 * [x] type checking
 * [x] tests
-* [x] examples
+* [ ] examples
   * [x] simple http server
+  * [ ] game of life
+  * [ ] doom
 * [ ] self-hosted
 * [ ] cross-platform
