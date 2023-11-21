@@ -244,6 +244,26 @@ fn test13() {
     println(fmt("{}", b))
 }
 
+enum Test4 {
+    Val(u8), None
+}
+
+fn retTest4() -> Test4 {
+    ret Test4::Val(69)
+}
+
+fn test14() {
+    println("test14")
+    a := retTest4()
+    if a : Test4::Val(a) {
+        println(fmt("a = {}", a))
+    }
+
+    if retTest4() : Test4::Val(a) {
+        println(fmt("retTest4() = {}", a))
+    }
+}
+
 fn main() {
     test1()
     test2()
@@ -261,4 +281,5 @@ fn main() {
     test11()
     test12()
     test13()
+    test14()
 }

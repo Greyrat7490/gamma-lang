@@ -53,7 +53,6 @@ fn retTest() -> Test {
 }
 
 fn testEnum() {
-    // TODO: fix wrong framesize
     a := packVal::<u64>(420)
     if a : Option::<u64>::Val(a) {
         println(fmt("a = {}", a))

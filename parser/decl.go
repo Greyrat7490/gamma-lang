@@ -299,11 +299,15 @@ func isNextType(tokens *token.Tokens) bool {
 }
 
 func prsDefVar(tokens *token.Tokens, name token.Token, t types.Type) ast.DefVar {
-    v := identObj.DecVar(name, t)
+    identObj.SetReuseSpace(true)
 
     pos := tokens.Cur().Pos
     tokens.Next()
     val := prsExpr(tokens)
+
+    identObj.SetReuseSpace(false)
+
+    v := identObj.DecVar(name, t)
     return ast.DefVar{ V: v, Type: t, ColPos: pos, Value: val }
 }
 
@@ -323,9 +327,13 @@ func prsDefConst(tokens *token.Tokens, name token.Token, t types.Type) ast.DefCo
 }
 
 func prsDefVarInfer(tokens *token.Tokens, name token.Token) ast.DefVar {
+    identObj.SetReuseSpace(true)
+
     pos := tokens.Cur().Pos
     tokens.Next()
     val := prsExpr(tokens)
+
+    identObj.SetReuseSpace(false)
 
     t := val.GetType()
     v := identObj.DecVar(name, t)

@@ -19,6 +19,7 @@ type Scope struct {
 var globalScope = Scope{ identObjs: make(map[string]IdentObj), children: make([]Scope, 0) }
 var curScope = &globalScope
 var stackSize uint = 0
+var reusableSpace bool = false
 
 func (s *Scope) ArgsSize() uint {
     size := uint(0)
@@ -246,6 +247,15 @@ func DecEnum(name token.Token) *Enum {
     e := CreateEnum(name)
     curScope.identObjs[name.Str] = &e
     return &e
+}
+
+
+func GetReuseSpace() bool {
+    return reusableSpace
+}
+
+func SetReuseSpace(b bool) {
+    reusableSpace = b
 }
 
 func ReserveSpace(t types.Type) vars.Var {

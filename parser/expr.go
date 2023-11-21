@@ -622,21 +622,11 @@ func prsDotField(tokens *token.Tokens, t types.Type, obj ast.Expr, dotPos token.
         field := &ast.Field{ Obj: obj, DotPos: dotPos, FieldName: name }
         field.StructType = *typ
         field.Type = field.StructType.GetType(field.FieldName.Str)
-        if f,ok := obj.(*ast.FnCall); ok {
-            if types.IsBigStruct(f.GetType()) {
-                identObj.ReserveSpace(f.GetType())
-            }
-        }
         return field
     case types.StructType:
         field := &ast.Field{ Obj: obj, DotPos: dotPos, FieldName: name }
         field.StructType = typ
         field.Type = field.StructType.GetType(field.FieldName.Str)
-        if f,ok := obj.(*ast.FnCall); ok {
-            if types.IsBigStruct(f.GetType()) {
-                identObj.ReserveSpace(f.GetType())
-            }
-        }
         return field
 
     case types.ArrType:
@@ -1130,6 +1120,10 @@ func prsCallInterfaceFn(tokens *token.Tokens, ident *ast.Ident, usedGeneric type
             f.AddTypeToGeneric(usedGeneric)
         }
 
+        if !identObj.GetReuseSpace() && types.IsBigStruct(f.GetRetType()) {
+            identObj.ReserveSpace(f.GetRetType())
+        }
+
         ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
         return &ast.FnCall{ Ident: ident, ReceiverType: ident.GetType(), F: f, GenericUsedType: usedGeneric, Values: vals, ParenLPos: posL, ParenRPos: posR }
     } else {
@@ -1155,6 +1149,10 @@ func prsCallFn(tokens *token.Tokens, ident *ast.Ident, usedGeneric types.Type) *
                     os.Exit(1)
                 }
                 f.AddTypeToGeneric(usedGeneric)
+            }
+
+            if !identObj.GetReuseSpace() && types.IsBigStruct(f.GetRetType()) {
+                identObj.ReserveSpace(f.GetRetType())
             }
 
             return &ast.FnCall{ Ident: *ident, F: f, GenericUsedType: usedGeneric, Values: vals, ParenLPos: posL, ParenRPos: posR }

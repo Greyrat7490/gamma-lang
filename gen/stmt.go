@@ -117,16 +117,21 @@ func GenIfCond(file *bufio.Writer, e ast.Expr, hasElse bool) uint {
         idType := e.EnumType.IdType
         id := e.EnumType.GetID(e.ElemName.Str)
 
+        stackSize := identObj.GetStackSize()
         ExprAddrToReg(file, e.SrcExpr, asm.RegD)
+        reuseableSpace := stackSize < identObj.GetStackSize()
+
         asm.MovRegDeref(file, asm.RegA, asm.RegAsAddr(asm.RegD), idType.Size(), false)
         asm.Eql(file, asm.GetAnyReg(asm.RegA, idType.Size()), fmt.Sprint(id))
 
         count := cond.IfExpr(file, hasElse)
 
         if v,ok := e.Obj.(*vars.LocalVar); ok {
-            v.SetOffset(identObj.GetStackSize(), false)
-            identObj.IncStackSize(v.GetType())
-            DerefSetDeref(file, v.Addr(), v.GetType(), asm.RegAsAddr(asm.RegD).Offseted(int64(idType.Size())))
+            v.SetOffset(stackSize, false)
+            if !reuseableSpace {
+                identObj.IncStackSize(v.GetType())
+                DerefSetDeref(file, v.Addr(), v.GetType(), asm.RegAsAddr(asm.RegD).Offseted(int64(idType.Size())))
+            }
         }
 
         return count
