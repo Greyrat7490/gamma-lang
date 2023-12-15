@@ -1,0 +1,41 @@
+struct Test {
+    b bool,
+    s str,
+    i i32
+}
+
+struct Test2 {
+    i i32,
+    t Test
+}
+
+fn printTest(t Test) {
+    // println(fmt("Test:\nb: {}\ni: {}\ns: {}", t.b, t.i, t.s))
+     print("Test:")
+     print("\ni: ") print(itos(t.i))
+     print("\n")
+}
+
+fn printTest2(t Test) {
+    // println(fmt("Test:\nb: {}\ni: {}\ns: {}", t.b, t.i, t.s))
+    print("Test:")
+    print("\ni: ") print(itos(t.i))
+    print("\n")
+}
+
+fn test3(t Test2) -> Test {
+    ret t.t
+}
+
+fn test5() -> Test {
+    t := Test2{ i: -69, t: Test{ b: false, i: 64, s: "string" } }
+    ret test3(t)
+}
+
+fn main() {
+    print("ret fnCall ------\n")
+    printTest(test5())
+
+    print("ret fnCall ------\n")
+    printTest2(test5())
+}

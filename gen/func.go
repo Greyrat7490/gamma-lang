@@ -335,17 +335,7 @@ func PassBigStructLit(file *bufio.Writer, t types.StructType, value constVal.Str
 func PassBigStructVar(file *bufio.Writer, t types.StructType, v vars.Var, offset int64) {
     dstAddr := asm.RegAsAddr(asm.RegC).Offseted(offset)
     srcAddr := v.Addr().Offseted(offset)
-
-    for i := 0; i < int(t.Size()/types.Ptr_Size); i++ {
-        asm.MovDerefDeref(file, dstAddr, srcAddr, types.Ptr_Size, asm.RegA, false)
-
-        dstAddr.Offset += int64(types.Ptr_Size)
-        srcAddr.Offset += int64(types.Ptr_Size)
-    }
-
-    if size := t.Size() % types.Ptr_Size; size != 0 {
-        asm.MovDerefDeref(file, dstAddr, srcAddr, size, asm.RegA, false)
-    }
+    DerefSetDeref(file, dstAddr, t, srcAddr)
 }
 
 func PassBigStructReg(file *bufio.Writer, addr addr.Addr, e ast.Expr) {
