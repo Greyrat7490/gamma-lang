@@ -1,13 +1,13 @@
 package ast
 
 import (
-    "os"
-    "fmt"
-    "strings"
-    "gamma/token"
-    "gamma/types"
-    "gamma/types/addr"
-    "gamma/ast/identObj"
+	"fmt"
+	"gamma/ast/identObj"
+	"gamma/token"
+	"gamma/types"
+	"gamma/types/addr"
+	"os"
+	"strings"
 )
 
 type Expr interface {
@@ -20,6 +20,7 @@ type BadExpr struct{}
 
 type FnCall struct {
     F *identObj.Func
+    ResvSpace *addr.Addr        // can be nil
     GenericUsedType types.Type  // can be nil
     ReceiverType types.Type     // can be nil
     Ident Ident

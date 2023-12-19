@@ -1,12 +1,13 @@
 package identObj
 
 import (
-    "os"
-    "fmt"
-    "gamma/token"
-    "gamma/types"
-    "gamma/cmpTime/constVal"
-    "gamma/ast/identObj/vars"
+	"fmt"
+	"gamma/ast/identObj/vars"
+	"gamma/cmpTime/constVal"
+	"gamma/token"
+	"gamma/types"
+	"gamma/types/addr"
+	"os"
 )
 
 type Scope struct {
@@ -14,12 +15,19 @@ type Scope struct {
     parent *Scope
     children []Scope
     unnamedVars uint
+    lastReserved *ReservedSpace
+    reservedSpace uint
+}
+
+type ReservedSpace struct {
+    used bool 
+    address addr.Addr
+    typ types.Type
 }
 
 var globalScope = Scope{ identObjs: make(map[string]IdentObj), children: make([]Scope, 0) }
 var curScope = &globalScope
 var stackSize uint = 0
-var reusableSpace bool = false
 
 func (s *Scope) ArgsSize() uint {
     size := uint(0)
@@ -45,6 +53,8 @@ func (s *Scope) getInnerSize() uint {
         size += s.getInnerSize()
     }
 
+    size += s.reservedSpace
+
     return size
 }
 
@@ -56,7 +66,7 @@ func (s *Scope) GetInnerSize() uint {
 
     size := s.children[0].getInnerSize()
 
-    // framesize has to be the multiple of 16byte
+    // framesize has to be the multiple of 16bits
     return (size + 15) & ^uint(15)
 }
 
@@ -159,8 +169,8 @@ func AddPrimitives() {
 }                                
 
 func DecVar(name token.Token, t types.Type) vars.Var {
-    if name.Type == token.UndScr {
-        return ReserveSpace(t)
+    if name.Type == token.UndScr && !InGlobalScope() {
+        return createUnnamedVar(t)
     }
 
     curScope.checkName(name)
@@ -172,6 +182,7 @@ func DecVar(name token.Token, t types.Type) vars.Var {
     } else {
         v := vars.CreateLocal(name, t)
         curScope.identObjs[name.Str] = &v
+        reuseSpace(&v)
         return &v
     }
 }
@@ -249,18 +260,47 @@ func DecEnum(name token.Token) *Enum {
     return &e
 }
 
-
-func GetReuseSpace() bool {
-    return reusableSpace
-}
-
-func SetReuseSpace(b bool) {
-    reusableSpace = b
-}
-
-func ReserveSpace(t types.Type) vars.Var {
+func ReserveSpace(t types.Type) *addr.Addr {
     if types.IsBigStruct(t) {
-        name := fmt.Sprintf("_reserved%d", curScope.unnamedVars)
+        if curScope.lastReserved != nil && !curScope.lastReserved.used {
+            if curScope.lastReserved.typ.Size() < t.Size() {
+                curScope.lastReserved = &ReservedSpace{ used: false, typ: t }
+                curScope.reservedSpace += t.Size() - curScope.lastReserved.typ.Size()
+            }
+
+            return &curScope.lastReserved.address
+        }
+
+        curScope.lastReserved = &ReservedSpace{ used: false, typ: t }
+        curScope.reservedSpace += t.Size()
+        return &curScope.lastReserved.address
+    }
+
+    return nil
+}
+
+func AllocReservedSpaceIfNeeded(t types.Type, reservedSpace *addr.Addr) {
+    if reservedSpace.BaseAddr == "" {
+        IncStackSize(t)
+        *reservedSpace = addr.Addr{ BaseAddr: "rbp", Offset: -int64(stackSize) }
+    }
+}
+
+func reuseSpace(v vars.Var) {
+    if curScope.lastReserved == nil {
+        return
+    }
+
+    if types.Equal(v.GetType(), curScope.lastReserved.typ) {
+        curScope.reservedSpace -= v.GetType().Size()
+        curScope.lastReserved.used = true
+        curScope.lastReserved.address = v.Addr()
+    }
+}
+
+func createUnnamedVar(t types.Type) vars.Var {
+    if types.IsBigStruct(t) {
+        name := fmt.Sprintf("_%d", curScope.unnamedVars)
         curScope.unnamedVars += 1
 
         v := vars.CreateLocal(token.Token{ Str: name }, t)

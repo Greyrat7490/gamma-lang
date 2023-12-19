@@ -1120,12 +1120,10 @@ func prsCallInterfaceFn(tokens *token.Tokens, ident *ast.Ident, usedGeneric type
             f.AddTypeToGeneric(usedGeneric)
         }
 
-        if !identObj.GetReuseSpace() && types.IsBigStruct(f.GetRetType()) {
-            identObj.ReserveSpace(f.GetRetType())
-        }
+        resvSpace := identObj.ReserveSpace(f.GetRetType())
 
         ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
-        return &ast.FnCall{ Ident: ident, ReceiverType: ident.GetType(), F: f, GenericUsedType: usedGeneric, Values: vals, ParenLPos: posL, ParenRPos: posR }
+        return &ast.FnCall{ Ident: ident, ReceiverType: ident.GetType(), F: f, ResvSpace: resvSpace, GenericUsedType: usedGeneric, Values: vals, ParenLPos: posL, ParenRPos: posR }
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared in %s\n", name, ident.Name)
         fmt.Fprintln(os.Stderr, "\t" + ident.At())
@@ -1151,11 +1149,9 @@ func prsCallFn(tokens *token.Tokens, ident *ast.Ident, usedGeneric types.Type) *
                 f.AddTypeToGeneric(usedGeneric)
             }
 
-            if !identObj.GetReuseSpace() && types.IsBigStruct(f.GetRetType()) {
-                identObj.ReserveSpace(f.GetRetType())
-            }
+            resvSpace := identObj.ReserveSpace(f.GetRetType())
 
-            return &ast.FnCall{ Ident: *ident, F: f, GenericUsedType: usedGeneric, Values: vals, ParenLPos: posL, ParenRPos: posR }
+            return &ast.FnCall{ Ident: *ident, F: f, ResvSpace: resvSpace, GenericUsedType: usedGeneric, Values: vals, ParenLPos: posL, ParenRPos: posR }
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] you can only call a function (%s is not a function)\n", ident.Name)
             fmt.Fprintln(os.Stderr, "\t" + ident.At())

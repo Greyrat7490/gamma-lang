@@ -1,0 +1,31 @@
+struct S {
+    a u64, b u64, c u64
+}
+
+fn retStruct() -> S {
+    ret S { 1, 2, 3 }
+}
+
+fn test1() {
+    a := retStruct().a
+    b := retStruct().b
+    c := retStruct().c
+
+    println(fmt("{}", a))
+    println(fmt("{}", b))
+    println(fmt("{}", c))
+}
+
+fn test2() {
+    a := retStruct()
+
+    println(fmt("{}", a.a))
+    println(fmt("{}", a.b))
+    println(fmt("{}", a.c))
+}
+
+fn main() {
+    test1()
+    println("-----")
+    test2()
+}

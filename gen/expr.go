@@ -557,12 +557,11 @@ func getVtableOffset(receiverType types.Type, pos token.Pos, funcName string) ui
 
 func FnCallAddrToReg(file *bufio.Writer, e *ast.FnCall, reg asm.RegGroup) {
     if types.IsBigStruct(e.GetType()) {
-        identObj.IncStackSize(e.GetType())
-        strctDst := addr.Addr{ BaseAddr: "rbp", Offset: -int64(identObj.GetStackSize()) }
+        identObj.AllocReservedSpaceIfNeeded(e.GetType(), e.ResvSpace)
 
-        asm.Lea(file, asm.RegDi, strctDst.String(), types.Ptr_Size)
+        asm.Lea(file, asm.RegDi, e.ResvSpace.String(), types.Ptr_Size)
         GenExpr(file, e)
-        asm.Lea(file, reg, strctDst.String(), types.Ptr_Size)
+        asm.Lea(file, reg, e.ResvSpace.String(), types.Ptr_Size)
     } else {
         fmt.Fprintln(os.Stderr, "[ERROR] TODO in work (expr.go FnCallAddrToReg)")
         fmt.Fprintln(os.Stderr, "\t" + e.At())
