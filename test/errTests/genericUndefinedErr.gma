@@ -1,0 +1,13 @@
+fn find(arr [$]T, elem T) -> Opt<u64> {
+    for i u64, arr.len {
+        if arr[i] == elem {
+            ret Opt::<u64>::Val(i)
+        }
+    }
+
+    ret Opt::<u64>::None
+}
+
+fn main() {
+
+}

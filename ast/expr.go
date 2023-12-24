@@ -413,7 +413,10 @@ func (e *Indexed)   GetType() types.Type { return e.Type }
 func (e *Field)     GetType() types.Type { return e.Type }
 func (e *EnumLit)   GetType() types.Type { return e.Type }
 func (e *Unwrap)    GetType() types.Type { return types.BoolType{} }
-func (e *Ident)     GetType() types.Type { return e.Obj.GetType() }
+func (e *Ident)     GetType() types.Type { 
+    if e.Obj == nil { return nil }
+    return e.Obj.GetType()
+}
 func (e *Unary)     GetType() types.Type { return e.Type }
 func (e *Binary)    GetType() types.Type { return e.Type }
 func (e *Paren)     GetType() types.Type { return e.Expr.GetType() }

@@ -351,6 +351,16 @@ func IsResolvable(t Type) bool {
     return t.GetKind() == Infer
 }
 
+func IsGeneric(t Type) bool {
+    if _,ok := t.(GenericType); ok {
+        return true
+    }
+    if _,ok := t.(*GenericType); ok {
+        return true
+    }
+    return false
+}
+
 func ReplaceGeneric(t Type, usedType Type) Type {
     if usedType == nil || usedType == (*GenericType)(nil) {
         return t
@@ -362,35 +372,39 @@ func ReplaceGeneric(t Type, usedType Type) Type {
         return t
 
     case EnumType:
-        t.genericUsedType = usedType
+        if t.genericUsedType == nil || IsGeneric(t.genericUsedType) {
+            t.genericUsedType = usedType
 
-        ts := make(map[string]Type)
-        for name, elemType := range t.types {
-            ts[name] = ReplaceGeneric(elemType, usedType)
+            ts := make(map[string]Type)
+            for name, elemType := range t.types {
+                ts[name] = ReplaceGeneric(elemType, usedType)
+            }
+
+            t.types = ts
+            t.size = t.IdType.Size() + usedType.Size()
+            t.isBigStruct = usedType.Size() > 0
         }
-
-        t.types = ts
-        t.size = t.IdType.Size() + usedType.Size()
-        t.isBigStruct = usedType.Size() > 0
 
         return t
 
     case StructType:
-        t.genericUsedType = usedType
+        if t.genericUsedType == nil || IsGeneric(t.genericUsedType) {
+            t.genericUsedType = usedType
 
-        ts := make([]Type, len(t.Types))
-        size := uint(0)
-        for i := range t.Types {
-            t2 := ReplaceGeneric(t.Types[i], usedType)
-            ts[i] = t2
-            size += t2.Size()
-        }
-        t.size = size
-        t.Types = ts
+            ts := make([]Type, len(t.Types))
+            size := uint(0)
+            for i := range t.Types {
+                t2 := ReplaceGeneric(t.Types[i], usedType)
+                ts[i] = t2
+                size += t2.Size()
+            }
+            t.size = size
+            t.Types = ts
 
-        if !t.isBigStruct {
-            aligned,_ := isAligned(t.Types, 0)
-            t.isBigStruct = aligned && t.Size() <= 16
+            if !t.isBigStruct {
+                aligned,_ := isAligned(t.Types, 0)
+                t.isBigStruct = aligned && t.Size() <= 16
+            }
         }
 
         return t
@@ -455,7 +469,7 @@ func (t GenericType)    GetKind() TypeKind {
     if t.CurUsedType != nil {
         return t.CurUsedType.GetKind()
     }
-
+    // TODO: always generic
     return Generic
 }
 

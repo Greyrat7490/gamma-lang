@@ -16,6 +16,10 @@ func SetGeneric(t *types.GenericType) {
     curGeneric = t
 }
 
+func UnsetGeneric() {
+    curGeneric = nil
+}
+
 func AddTypeToGeneric(generic *types.GenericType, typ types.Type) {
     for _,t := range generic.UsedTypes {
         if types.Equal(typ, t) { return }

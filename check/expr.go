@@ -54,7 +54,7 @@ func typeCheckExpr(e ast.Expr) {
         // nothing to check
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] typeCheckExpr for %v is not implemente yet\n", reflect.TypeOf(e))
+        fmt.Fprintf(os.Stderr, "[ERROR] typeCheckExpr for %v is not implement yet\n", reflect.TypeOf(e))
         os.Exit(1)
     }
 }
@@ -154,7 +154,7 @@ func typeCheckEnumLit(e *ast.EnumLit) {
         }
 
         if !checkTypeExpr(e.ContentType, e.Content) {
-            fmt.Fprintf(os.Stderr, "[ERROR] enum %s::%s expected content of type %s\n", e.Type.Name, e.ElemName.Str, e.ContentType)
+            fmt.Fprintf(os.Stderr, "[ERROR] enum %s::%s expected content of type %s but got %s\n", e.Type.Name, e.ElemName.Str, e.ContentType, e.Content.GetType())
             fmt.Fprintln(os.Stderr, "\t" + e.ElemName.At())
             os.Exit(1)
         }
@@ -605,7 +605,7 @@ func typeCheckCast(e *ast.Cast) {
         fmt.Fprintln(os.Stderr, "\t" + e.AsPos.At())
         os.Exit(1)
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] typeCheckCast for %v is not implemente yet\n", e.DestType)
+        fmt.Fprintf(os.Stderr, "[ERROR] typeCheckCast for %v is not implement yet\n", e.DestType)
         os.Exit(1)
     }
 

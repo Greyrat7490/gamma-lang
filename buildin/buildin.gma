@@ -1,47 +1,5 @@
 import "memory.gma"
 
-fn vtos<T>(v [$]T) -> str {
-    s := "{ "
-
-    for i u64, v.len {
-        s = s + fmt("{} ", v[i])
-    }
-
-    ret s + "}"
-}
-
-fn append<T>(v [$]T, elem T) -> [$]T {
-    if v.len >= v.cap {
-        new_v := [$]T{ len: v.len, cap: v.cap * 2 }
-
-        memcpy(new_v as *T as u64, v as *T as u64, v.cap * sizeof::<T>())
-
-        v = new_v
-    }
-    
-    v[v.len] = elem
-    v.len = v.len+1
-    ret v
-}
-
-fn reserve<T>(v [$]T, cap u64) -> [$]T {
-    new_v := [$]T{ len: v.len, cap: cap * sizeof::<T>() }
-    memcpy(new_v as *T as u64, v as *T as u64, v.cap * sizeof::<T>())
-    ret new_v
-}
-
-fn concat<T>(lhs [$]T, rhs [$]T) -> [$]T {
-    v := [$]T{ len: lhs.len + rhs.len }
-
-    memcpy(v as *T as u64, lhs as *T as u64, lhs.len * sizeof::<T>())
-    memcpy(v as *T as u64 + lhs.len * sizeof::<T>(), rhs as *T as u64, rhs.len * sizeof::<T>())
-
-    ret v
-}
-
-// TODO resize (when closure functions implemented)
-
-
 interface String {
     fn to_str(self) -> str
 }
@@ -96,8 +54,47 @@ impl<T> *T :: String {
 }
 */
 
-/* TODO when generic structs/enums
-enum<T> Option bool {
+enum Opt<T> bool {
     Val(T), None
 }
-*/
+
+fn vtos<T>(v [$]T) -> str {
+    s := "{ "
+
+    for i u64, v.len {
+        s = s + fmt("{} ", v[i])
+    }
+
+    ret s + "}"
+}
+
+fn append<T>(v [$]T, elem T) -> [$]T {
+    if v.len >= v.cap {
+        new_v := [$]T{ len: v.len, cap: v.cap * 2 }
+
+        memcpy(new_v as *T as u64, v as *T as u64, v.cap * sizeof::<T>())
+
+        v = new_v
+    }
+    
+    v[v.len] = elem
+    v.len = v.len+1
+    ret v
+}
+
+fn reserve<T>(v [$]T, cap u64) -> [$]T {
+    new_v := [$]T{ len: v.len, cap: cap * sizeof::<T>() }
+    memcpy(new_v as *T as u64, v as *T as u64, v.cap * sizeof::<T>())
+    ret new_v
+}
+
+fn concat<T>(lhs [$]T, rhs [$]T) -> [$]T {
+    v := [$]T{ len: lhs.len + rhs.len }
+
+    memcpy(v as *T as u64, lhs as *T as u64, lhs.len * sizeof::<T>())
+    memcpy(v as *T as u64 + lhs.len * sizeof::<T>(), rhs as *T as u64, rhs.len * sizeof::<T>())
+
+    ret v
+}
+
+// TODO resize (when closure functions implemented)

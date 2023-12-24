@@ -66,71 +66,6 @@ func createSelfType() types.Type {
     return types.StructType{ Name: "Self" }
 }
 
-func prsType(tokens *token.Tokens) types.Type {
-    switch tokens.Cur().Type {
-    case token.Mul:
-        tokens.Next()
-        return types.PtrType{ BaseType: prsType(tokens) }
-
-    case token.BrackL:
-        if tokens.Peek().Type == token.XSwitch {
-            return prsVecType(tokens)
-        } else {
-            return prsArrType(tokens)
-        }
-
-    case token.SelfType:
-        return createSelfType()
-
-    case token.Name:
-        if obj := identObj.Get(tokens.Cur().Str); obj != nil {
-            var t types.Type = nil
-            if strct,ok := obj.(*identObj.Struct); ok {
-                t = strct.GetType()
-            }
-
-            if interfc,ok := obj.(*identObj.Interface); ok {
-                t = interfc.GetType()
-            }
-
-            if enum,ok := obj.(*identObj.Enum); ok {
-                t = enum.GetType()
-            }
-
-            if tokens.Peek().Type == token.Lss {
-                tokens.Next()
-                tokens.Next()
-                t = types.ReplaceGeneric(t, prsType(tokens))
-                if tokens.Next().Type != token.Grt {
-                    fmt.Fprintf(os.Stderr, "[ERROR] expected \">\" but got %s\n", tokens.Cur().Str)
-                    fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-                    os.Exit(1)
-                }
-            }
-
-            return t
-        }
-
-        if generic := identObj.GetGeneric(tokens.Cur().Str); generic != nil {
-            return generic
-        }
-
-        fmt.Fprintf(os.Stderr, "[ERROR] type \"%s\" is not defined\n", tokens.Cur().Str)
-        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-        os.Exit(1)
-        return nil
-
-    default:
-        t := types.ToBaseType(tokens.Cur().Str)
-        if t == nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] %s is not a valid type\n", tokens.Cur().Str)
-            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
-            os.Exit(1)
-        }
-        return t
-    }
-}
-
 func prsVecType(tokens *token.Tokens) types.VecType {
     if tokens.Cur().Type != token.BrackL {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \"[\" but got %v\n", tokens.Cur())
@@ -261,7 +196,7 @@ func isNextType_(tokens *token.Tokens) bool {
     case token.BrackL:
         tokens.Next()
         idxKind := prsExpr(tokens).GetType().GetKind()
-        if idxKind != types.Int && idxKind != types.Uint {
+        if idxKind != types.Int && idxKind != types.Uint && idxKind != types.Infer {
             return false
         }
 
@@ -280,6 +215,10 @@ func isNextType_(tokens *token.Tokens) bool {
             if _,ok := obj.(*identObj.Interface); ok {
                 return true
             }
+
+            if _,ok := obj.(*identObj.Enum); ok {
+                return true
+            }
         }
 
         if generic := identObj.GetGeneric(tokens.Cur().Str); generic != nil {
@@ -296,6 +235,71 @@ func isNextType(tokens *token.Tokens) bool {
     tokens.SaveIdx()
     defer tokens.ResetIdx()
     return isNextType_(tokens)
+}
+
+func prsType(tokens *token.Tokens) types.Type {
+    switch tokens.Cur().Type {
+    case token.Mul:
+        tokens.Next()
+        return types.PtrType{ BaseType: prsType(tokens) }
+
+    case token.BrackL:
+        if tokens.Peek().Type == token.XSwitch {
+            return prsVecType(tokens)
+        } else {
+            return prsArrType(tokens)
+        }
+
+    case token.SelfType:
+        return createSelfType()
+
+    case token.Name:
+        if obj := identObj.Get(tokens.Cur().Str); obj != nil {
+            var t types.Type = nil
+            if strct,ok := obj.(*identObj.Struct); ok {
+                t = strct.GetType()
+            }
+
+            if interfc,ok := obj.(*identObj.Interface); ok {
+                t = interfc.GetType()
+            }
+
+            if enum,ok := obj.(*identObj.Enum); ok {
+                t = enum.GetType()
+            }
+
+            if tokens.Peek().Type == token.Lss {
+                tokens.Next()
+                tokens.Next()
+                t = types.ReplaceGeneric(t, prsType(tokens))
+                if tokens.Next().Type != token.Grt {
+                    fmt.Fprintf(os.Stderr, "[ERROR] expected \">\" but got %s\n", tokens.Cur().Str)
+                    fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+                    os.Exit(1)
+                }
+            }
+
+            return t
+        }
+
+        if generic := identObj.GetGeneric(tokens.Cur().Str); generic != nil {
+            return generic
+        }
+
+        fmt.Fprintf(os.Stderr, "[ERROR] type \"%s\" is not defined\n", tokens.Cur().Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+        return nil
+
+    default:
+        t := types.ToBaseType(tokens.Cur().Str)
+        if t == nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] %s is not a valid type\n", tokens.Cur().Str)
+            fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+            os.Exit(1)
+        }
+        return t
+    }
 }
 
 func prsDefVar(tokens *token.Tokens, name token.Token, t types.Type) ast.DefVar {
@@ -352,10 +356,12 @@ func prsDefine(tokens *token.Tokens) ast.Decl {
     name := tokens.Cur()
 
     var t types.Type = nil
-    tokens.Next()
-    if tokens.Cur().Type != token.DefVar && tokens.Cur().Type != token.DefConst {
+    if isNextType(tokens) {
+        tokens.Next()
         t = prsType(tokens)
     }
+
+    tokens.Next()
 
     if t == nil {       // infer the type with the value
         if tokens.Cur().Type == token.DefVar {
@@ -367,7 +373,7 @@ func prsDefine(tokens *token.Tokens) ast.Decl {
             return &d
         }
     } else {            // type is given
-        if tokens.Next().Type == token.DefVar {
+        if tokens.Cur().Type == token.DefVar {
             d := prsDefVar(tokens, name, t)
             return &d
         }
@@ -414,6 +420,8 @@ func prsStruct(tokens *token.Tokens) ast.DefStruct {
     }
     s.SetFields(names, ts)
 
+    identObj.UnsetGeneric()
+
     return ast.DefStruct{ S: s, Pos: pos, Name: name, BraceLPos: braceLPos, Fields: fields, BraceRPos: braceRPos }
 }
 
@@ -456,6 +464,8 @@ func prsInterface(tokens *token.Tokens) ast.Decl {
     braceRPos := tokens.Cur().Pos
     identObj.EndScope()
     identObj.CurSelfType = nil
+
+    identObj.UnsetGeneric()
 
     return &ast.DefInterface{ Pos: pos, Name: name, I: I, BraceLPos: braceLPos, BraceRPos: braceRPos, FnHeads: heads }
 }
@@ -504,6 +514,8 @@ func prsEnum(tokens *token.Tokens) ast.Decl {
         }
     }
     e.SetElems(idTyp, names, ts)
+
+    identObj.UnsetGeneric()
 
     return &ast.DefEnum{ E: e, Pos: pos, IdType: idTyp, Name: name, BraceLPos: braceRPos, Elems: elems, BraceRPos: braceLPos }
 }
@@ -645,6 +657,8 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
     identObj.EndScope()
     identObj.CurSelfType = nil
 
+    identObj.UnsetGeneric()
+
     return &ast.Impl{ Pos: pos, Impl: impl, BraceLPos: braceLPos, BraceRPos: braceRPos, FnDefs: funcs }
 }
 
@@ -729,6 +743,8 @@ func prsDefFn(tokens *token.Tokens, isInterfaceFn bool) ast.DefFn {
     if fnHead.IsConst {
         cmpTime.AddConstFunc(def)
     }
+
+    identObj.UnsetGeneric()
 
     return def
 }

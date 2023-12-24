@@ -114,6 +114,12 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
         }
 
     case *ast.Ident:
+        if e.Obj == nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] %s is not defined\n", e.Name)
+            fmt.Fprintln(os.Stderr, "\t" + e.At())
+            os.Exit(1)
+        }
+        
         if e.GetType() == nil { return }
 
         addResolved(e.GetType(), t)
