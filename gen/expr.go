@@ -879,25 +879,14 @@ func convertFmtArgs(args []ast.Expr) []ast.Expr {
 }
 
 func convertFmtArg(arg ast.Expr) ast.Expr {
-    // TODO: pointer have not implemented String yet (generic impl is needed)
-    if arg.GetType().GetKind() == types.Ptr {
-        arg = &ast.Cast{ Expr: arg, DestType: types.CreateUint(types.Ptr_Size) }
-        name := "utos"
+    funcName := "to_str"
+    recvObj := identObj.Get("String").(*identObj.Interface)
 
-        F := identObj.Get(name).(*identObj.Func)
-        ident := ast.Ident{ Name: name, Obj: identObj.Get(name) }
+    f := recvObj.GetFunc(funcName)
+    f = f.UpdateReceiver(arg.GetType())
 
-        return &ast.FnCall{ F: F, Ident: ident, Values: []ast.Expr{ arg } }
-    } else {
-        funcName := "to_str"
-        recvObj := identObj.Get("String").(*identObj.Interface)
-
-        f := recvObj.GetFunc(funcName)
-        f = f.UpdateReceiver(arg.GetType())
-
-        ident := ast.Ident{ Name: funcName, Obj: f }
-        return &ast.FnCall{ F: f, ReceiverType: recvObj.GetType(), Ident: ident, Values: []ast.Expr{ arg } }
-    }
+    ident := ast.Ident{ Name: funcName, Obj: f }
+    return &ast.FnCall{ F: f, ReceiverType: recvObj.GetType(), Ident: ident, Values: []ast.Expr{ arg } }
 }
 
 func convertFmt(fmtStr token.Token, values []ast.Expr) ast.Expr {

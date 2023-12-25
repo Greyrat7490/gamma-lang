@@ -16,7 +16,7 @@ fn testEscape(i i32, u u8, b bool, c char) {
 }
 
 fn testPtr(i i32) {
-    println(fmt("i: {} (at {})", i, &i))
+    println(fmt("i: {} (at {})", i, &i as u64))
 }
 
 fn main() {
