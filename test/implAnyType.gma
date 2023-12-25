@@ -1,0 +1,50 @@
+import "string.gma"
+
+interface TestInterface {
+    fn show(self)
+}
+
+struct TestStruct<T> {
+    a T
+}
+
+impl TestStruct<u64> :: TestInterface {
+    fn show(self) {
+        println(fmt("TestStruct<u64>: {}", self.a))
+    }
+}
+
+impl *char :: String {
+    fn to_str(self) -> str {
+        size := 0
+        while size < 0xffffff as u32 {
+            if *(self+(size as u64)) == '\0' {
+                break
+            }
+            size = size+1
+        }
+        ret from_pchar(size, self)
+    }
+}
+
+fn ptrTest() {
+    // TODO fix segfault
+    // s := "test string\0" as *char
+    // println(fmt("{}", s))
+
+    s := "test string\0"
+    println(fmt("{}", s as *char))
+}
+
+fn genericStructTest() {
+    t := TestStruct::<u64>{ a: 64 }
+    t.show()
+}
+
+fn main() {
+    println("generic struct test")
+    genericStructTest()
+
+    println("\nptr test")
+    ptrTest()
+}

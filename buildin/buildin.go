@@ -41,9 +41,6 @@ func Declare() {
     // basic inline assembly
     identObj.AddBuildIn("_asm", types.StrType{}, nil)
     identObj.AddBuildIn("_syscall", types.CreateInt(types.I64_Size), types.CreateInt(types.I64_Size))
-
-    // add all primitive types to global scope (for impl)
-    identObj.AddPrimitives()
 }
 
 func Define(file *bufio.Writer) {

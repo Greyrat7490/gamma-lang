@@ -13,8 +13,6 @@ type Enum struct {
     name string
     typ types.EnumType
     generic *types.GenericType
-    impls []Impl
-    interfaces []string
 }
 
 func CreateEnum(name token.Token) Enum {
@@ -39,43 +37,6 @@ func (e *Enum) GetType() types.Type {
     return e.typ
 }
 
-func (e *Enum) AddImpl(impl Impl) {
-    e.impls = append(e.impls, impl)
-    if impl.interface_ != nil {
-        e.interfaces = append(e.interfaces, impl.interface_.name)
-    }
-}
-
-func (e *Enum) HasInterface(name string) bool {
-    for _,interfaceName := range e.interfaces {
-        if interfaceName == name {
-            return true
-        }
-    }
-    return false
-}
-
-func (e *Enum) GetFunc(name string) *Func {
-    for _,i := range e.impls {
-        f := i.GetFunc(name)
-        if f != nil {
-            return f
-        }
-    }
-
-    return nil
-}
-
-func (e *Enum) GetFuncNames() []string {
-    funcs := []string{}
-
-    for _,i := range e.impls {
-        funcs = append(funcs, i.GetInterfaceFuncNames()...)
-    }
-
-    return funcs
-}
-
 func (e *Enum) GetGeneric() *types.GenericType {
     return e.generic
 }
@@ -94,4 +55,8 @@ func (e *Enum) SetElems(idType types.Type, elemNames []string, elemTypes []types
     } else {
         e.typ = types.CreateEnumType(e.name, idType, elemNames, elemTypes, "")
     }
+}
+
+func (e *Enum) HasElem(name string) bool {
+    return e.typ.HasElem(name)
 }

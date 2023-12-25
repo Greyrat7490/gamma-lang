@@ -12,6 +12,7 @@ import (
 
 type Scope struct {
     identObjs map[string]IdentObj
+    implObj map[string]*Implementable
     parent *Scope
     children []Scope
     unnamedVars uint
@@ -25,7 +26,7 @@ type ReservedSpace struct {
     typ types.Type
 }
 
-var globalScope = Scope{ identObjs: make(map[string]IdentObj), children: make([]Scope, 0) }
+var globalScope = Scope{ identObjs: make(map[string]IdentObj), implObj: make(map[string]*Implementable), children: make([]Scope, 0) }
 var curScope = &globalScope
 var stackSize uint = 0
 
@@ -100,6 +101,24 @@ func Get(name string) IdentObj {
     return nil
 }
 
+func CreateImplObj(t types.Type) *Implementable {
+    if obj,ok := globalScope.implObj[t.String()]; ok {
+        return obj
+    }
+
+    obj := &Implementable{ dstType: t, impls: make([]Impl, 0, 1), interfaces: make([]string, 0, 1) }
+    globalScope.implObj[t.String()] = obj
+    return obj
+}
+
+func GetImplObj(name string) *Implementable {
+    if obj,ok := globalScope.implObj[name]; ok {
+        return obj
+    }
+
+    return nil
+}
+
 func GetStackSize() uint {
     return stackSize
 }
@@ -152,21 +171,6 @@ func AddGenBuildIn(name string, genericName string, argtype types.Type, retType 
     globalScope.identObjs[name] = &f
 }
 
-func AddPrimitives() {
-    AddPrimitive(types.CreateUint(types.U64_Size))
-    AddPrimitive(types.CreateUint(types.U32_Size))
-    AddPrimitive(types.CreateUint(types.U16_Size))
-    AddPrimitive(types.CreateUint(types.U8_Size))
-
-    AddPrimitive(types.CreateInt(types.I64_Size))
-    AddPrimitive(types.CreateInt(types.I32_Size))
-    AddPrimitive(types.CreateInt(types.I16_Size))
-    AddPrimitive(types.CreateInt(types.I8_Size))
-
-    AddPrimitive(types.BoolType{})
-    AddPrimitive(types.CharType{})
-    AddPrimitive(types.StrType{})
-}                                
 
 func DecVar(name token.Token, t types.Type) vars.Var {
     if name.Type == token.UndScr && !InGlobalScope() {

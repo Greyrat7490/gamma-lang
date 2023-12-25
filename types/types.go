@@ -46,9 +46,10 @@ const (
 )
 
 type Type interface {
-    Size()          uint
-    String()        string
-    GetKind()       TypeKind
+    Size()           uint
+    String()         string
+    GetMangledName() string
+    GetKind()        TypeKind
 }
 
 type CharType struct {}
@@ -489,7 +490,7 @@ func (t InferType) GetInterfaces() map[string]InterfaceType {
     return nil
 }
 
-func (t IntType)  String() string {
+func (t IntType) String() string {
     switch t.size {
     case I8_Size:
         return "i8"
@@ -505,7 +506,7 @@ func (t IntType)  String() string {
         return ""
     }
 }
-func (t UintType)  String() string {
+func (t UintType) String() string {
     switch t.size {
     case U8_Size:
         return "u8"
@@ -523,11 +524,11 @@ func (t UintType)  String() string {
 }
 func (t CharType) String() string { return "char" }
 func (t BoolType) String() string { return "bool" }
-func (t StrType)  String() string { return "str"  }
-func (t PtrType)  String() string {
+func (t StrType) String() string { return "str"  }
+func (t PtrType) String() string {
     return "*" + t.BaseType.String()
 }
-func (t ArrType)  String() string {
+func (t ArrType) String() string {
     return fmt.Sprintf("[%d]%s", t.Len, t.BaseType)
 }
 func (t VecType) String() string {
@@ -536,18 +537,18 @@ func (t VecType) String() string {
 func (t StructType) String() string { 
     if t.genericName != "" {
         if t.genericUsedType != nil {
-            return fmt.Sprintf("%s::<%s>", t.Name, t.genericUsedType)
+            return fmt.Sprintf("%s<%s>", t.Name, t.genericUsedType)
         }
-        return fmt.Sprintf("%s::<%s>", t.Name, t.genericName)
+        return fmt.Sprintf("%s<%s>", t.Name, t.genericName)
     }
     return t.Name
 }
 func (t EnumType) String() string { 
     if t.genericName != "" {
         if t.genericUsedType != nil {
-            return fmt.Sprintf("%s::<%s>", t.Name, t.genericUsedType)
+            return fmt.Sprintf("%s<%s>", t.Name, t.genericUsedType)
         }
-        return fmt.Sprintf("%s::<%s>", t.Name, t.genericName)
+        return fmt.Sprintf("%s<%s>", t.Name, t.genericName)
     }
     return t.Name
 }
@@ -571,6 +572,63 @@ func (t FuncType) String() string {
     }
 
     return fmt.Sprintf("%s%s(%v)%s", t.Name, generic, t.Args, ret)
+}
+
+
+func (t IntType)        GetMangledName() string { return t.String() }
+func (t UintType)       GetMangledName() string { return t.String() }
+func (t CharType)       GetMangledName() string { return t.String() }
+func (t BoolType)       GetMangledName() string { return t.String() }
+func (t StrType)        GetMangledName() string { return t.String() }
+func (t InferType)      GetMangledName() string { return t.String() }
+func (t InterfaceType)  GetMangledName() string { return t.String() }
+func (t PtrType)        GetMangledName() string { return "$ptr_" + t.BaseType.GetMangledName() }
+func (t ArrType)        GetMangledName() string { return "$arr_" + t.BaseType.GetMangledName() }
+func (t VecType)        GetMangledName() string { return "$vec_" + t.BaseType.GetMangledName() }
+func (t GenericType)    GetMangledName() string {
+    if t.CurUsedType != nil {
+        return t.CurUsedType.GetMangledName()
+    }
+    return t.Name
+}
+func (t StructType)     GetMangledName() string { 
+    if t.genericName != "" {
+        if t.genericUsedType != nil {
+            return fmt.Sprintf("%s$%s", t.Name, t.genericUsedType)
+        }
+        return fmt.Sprintf("%s$%s", t.Name, t.genericName)
+    }
+    return t.Name
+}
+func (t EnumType)       GetMangledName() string {
+    if t.genericName != "" {
+        if t.genericUsedType != nil {
+            return fmt.Sprintf("%s$%s", t.Name, t.genericUsedType)
+        }
+        return fmt.Sprintf("%s$%s", t.Name, t.genericName)
+    }
+    return t.Name
+}
+func (t FuncType)       GetMangledName() string { 
+    generic := ""
+    if t.Generic != nil {
+        generic = "$gen_" + t.Generic.GetMangledName()
+    }
+
+    ret := ""
+    if t.Ret != nil {
+        ret = "$ret_" + t.Ret.GetMangledName()
+    }
+
+    args := ""
+    if len(t.Args) > 0 {
+        args = "$args_"
+    }
+    for _,a := range t.Args {
+        args += a.GetMangledName()
+    }
+
+    return t.Name + generic + args + ret
 }
 
 func ToBaseType(s string) Type {

@@ -75,15 +75,6 @@ func (i *Interface) GetVTableOffset(funcName string) uint {
     return 0
 }
 
-func (i *Interface) AddImpl(impl Impl) { 
-    fmt.Fprintln(os.Stderr, "[ERROR] (internal) Cannot add impl to an interface")
-    os.Exit(1)
-}
-
-func (i *Interface) HasInterface(name string) bool {
-    return name == i.name
-}
-
 func (i *Interface) GetFuncNames() []string {
     res := make([]string, 0, len(i.funcs)) 
 
@@ -120,6 +111,10 @@ func (i *Impl) GetInterfaceName() string {
 
 func (i *Impl) GetImplName() string {
     return i.dstType.String()
+}
+
+func (i *Impl) GetImplMangledName() string {
+    return i.dstType.GetMangledName()
 }
 
 func (i *Impl) GetInterfaceFuncs() []types.FuncType {

@@ -154,7 +154,7 @@ func isDefInfer(tokens *token.Tokens) bool {
     }
 
     if tokens.Peek().Type == token.DefConst {
-        if tokens.Peek2().Type == token.Lss || isImplementable(tokens.Cur()) {
+        if tokens.Peek2().Type == token.Lss || isImplementable(tokens.Cur()) || isInterface(tokens.Cur()) {
             return false
         }
         return true
@@ -171,12 +171,15 @@ func isEnum(token token.Token) bool {
     return ok
 }
 func isImplementable(token token.Token) bool {
-    _,ok := identObj.Get(token.Str).(identObj.Implementable)
+    return identObj.GetImplObj(token.Str) != nil
+}
+func isInterface(token token.Token) bool {
+    _,ok := identObj.Get(token.Str).(*identObj.Interface)
     return ok
 }
 func isEnumLit(enumName string, elemName string) bool {
     if e,ok := identObj.Get(enumName).(*identObj.Enum); ok {
-        return e.GetFunc(elemName) == nil
+        return e.HasElem(elemName)
     }
 
     return false
@@ -570,12 +573,7 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
     generic := prsGeneric(tokens)
     isGeneric := generic.Str != ""
 
-    DstName := tokens.Cur()
-    if DstName.Type != token.Name && DstName.Type != token.Typename {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a name or typename but got %v\n", DstName)
-        fmt.Fprintln(os.Stderr, "\t" + DstName.At())
-        os.Exit(1)
-    }
+    dstType := prsType(tokens)
 
     var I *identObj.Interface = nil
     if tokens.Peek().Type == token.DefConst {
@@ -596,24 +594,7 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
         I = i
     }
 
-    var dstType types.Type = nil
-    var implementable identObj.Implementable = nil
-    switch DstName.Type {
-    case token.Name, token.Typename:
-        obj := identObj.Get(DstName.Str)
-        if obj == nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] \"%s\" is not defined\n", DstName.Str)
-            fmt.Fprintln(os.Stderr, "\t" + DstName.At())
-            os.Exit(1)
-        }
-        implementable = obj.(identObj.Implementable)
-        dstType = obj.GetType()
-
-    default:
-        fmt.Fprintf(os.Stderr, "[ERROR] expected a Name or an TypeName but got %v\n", DstName)
-        fmt.Fprintln(os.Stderr, "\t" + DstName.At())
-        os.Exit(1)
-    }
+    implObj := identObj.CreateImplObj(dstType)
 
     identObj.CurSelfType = dstType
 
@@ -626,7 +607,7 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
     identObj.StartScope()
 
     impl := identObj.CreateImpl(pos, I, dstType)
-    implementable.AddImpl(impl)
+    implObj.AddImpl(impl)
 
     if isGeneric {
         genericType := types.CreateGeneric(generic.Str)

@@ -1,9 +1,46 @@
 package identObj
 
-type Implementable interface {
-    IdentObj
-    AddImpl(impl Impl)
-    GetFunc(name string) *Func
-    GetFuncNames() []string
-    HasInterface(name string) bool
+import "gamma/types"
+
+type Implementable struct {
+    dstType types.Type
+    impls []Impl
+    interfaces []string
+}
+
+func (s *Implementable) AddImpl(impl Impl) {
+    s.impls = append(s.impls, impl)
+    if impl.interface_ != nil {
+        s.interfaces = append(s.interfaces, impl.interface_.name) 
+    }
+}
+
+func (s *Implementable) HasInterface(name string) bool {
+    for _,interfaceName := range s.interfaces {
+        if interfaceName == name {
+            return true
+        }
+    }
+    return false
+}
+
+func (s *Implementable) GetFunc(name string) *Func {
+    for _,i := range s.impls {
+        f := i.GetFunc(name)
+        if f != nil {
+            return f
+        }
+    }
+
+    return nil
+}
+
+func (s *Implementable) GetFuncNames() []string {
+    funcs := []string{}
+
+    for _,i := range s.impls {
+        funcs = append(funcs, i.GetInterfaceFuncNames()...)
+    }
+
+    return funcs
 }

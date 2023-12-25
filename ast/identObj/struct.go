@@ -13,8 +13,6 @@ type Struct struct {
     name string
     typ types.StructType
     generic *types.GenericType
-    impls []Impl
-    interfaces []string
 }
 
 func CreateStruct(name token.Token) Struct {
@@ -77,53 +75,6 @@ func (s *Struct) GetFieldType(name string) types.Type {
 
 func (s *Struct) GetFieldNames() []string {
     return s.typ.GetFields()
-}
-
-func (s *Struct) GetFuncNames() []string {
-    funcs := []string{}
-
-    for _,i := range s.impls {
-        funcs = append(funcs, i.GetInterfaceFuncNames()...)
-    }
-
-    return funcs
-}
-
-func (s *Struct) AddImpl(impl Impl) {
-    s.impls = append(s.impls, impl)
-    if impl.interface_ != nil {
-        s.interfaces = append(s.interfaces, impl.interface_.name) 
-    }
-}
-
-func (s *Struct) HasInterface(name string) bool {
-    for _,interfaceName := range s.interfaces {
-        if interfaceName == name {
-            return true
-        }
-    }
-    return false
-}
-
-func (s *Struct) GetInterfaceType(interfaceName string) (hasImpl bool, typ types.InterfaceType) {
-    for _,impl := range s.impls {
-        if impl.interface_.name == interfaceName {
-            return true, impl.interface_.typ
-        }
-    }
-
-    return
-}
-
-func (s *Struct) GetFunc(name string) *Func {
-    for _,i := range s.impls {
-        f := i.GetFunc(name)
-        if f != nil {
-            return f
-        }
-    }
-
-    return nil
 }
 
 func (s *Struct) GetGeneric() *types.GenericType {

@@ -670,16 +670,20 @@ func prsDotExpr(tokens *token.Tokens, obj ast.Expr) ast.Expr {
     t := obj.GetType()
     obj, t = autoDeref(obj, name.Pos, t)
 
-    if f := getImplFunc(t, name.Str); f != nil {
+    if f := getInterfaceFunc(t, name.Str); f != nil {
         return prsDotCallFn(tokens, obj, dot.Pos, t, name, f)
     } else {
         return prsDotField(tokens, t, obj, dot.Pos, name)
     }
 }
 
-func getImplFunc(t types.Type, name string) *identObj.Func {
-    if e,ok := identObj.Get(t.String()).(identObj.Implementable); ok {
-        return e.GetFunc(name)
+func getInterfaceFunc(t types.Type, name string) *identObj.Func {
+    if impl := identObj.GetImplObj(t.String()); impl != nil {
+        return impl.GetFunc(name)
+    }
+
+    if I,ok := identObj.Get(t.String()).(*identObj.Interface); ok {
+        return I.GetFunc(name)
     }
 
     return nil
@@ -1096,16 +1100,15 @@ func prsCallInterfaceFn(tokens *token.Tokens, ident *ast.Ident, usedGeneric type
     posR := tokens.Cur().Pos
 
     var f *identObj.Func = nil
-    switch obj := ident.Obj.(type) {
-    case *identObj.Interface:
+    if obj,ok := ident.Obj.(*identObj.Interface); ok {
         f = obj.GetFunc(name.Str)
         f = f.UpdateReceiver(vals[0].GetType())
 
-    case identObj.Implementable:
+    } else if obj := identObj.GetImplObj(ident.Name); obj != nil {
         f = obj.GetFunc(name.Str)
 
-    default:
-        fmt.Fprintf(os.Stderr, "[ERROR] expected an interface or implementable obj before %s but got %s\n", ident.Name, reflect.TypeOf(ident.Obj))
+    } else {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected an interface or implementable obj before %s but got %s\n", ident.Name, ident.GetType())
         fmt.Fprintln(os.Stderr, "\t" + ident.At())
         os.Exit(1)
     }

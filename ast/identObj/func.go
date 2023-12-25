@@ -70,11 +70,11 @@ func (f *Func) GetMangledName() string {
     name := f.name
 
     if f.receiver != nil {
-        name = f.receiver.String() + "." + name
+        name = f.receiver.GetMangledName() + "." + name
     }
 
     if f.GetGeneric() != nil {
-        name += "$" + f.typ.Generic.CurUsedType.String()
+        name += "$" + f.typ.Generic.CurUsedType.GetMangledName()
     }
 
     return name
