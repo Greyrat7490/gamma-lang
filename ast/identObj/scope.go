@@ -163,9 +163,9 @@ func AddPrimitives() {
     AddPrimitive(types.CreateInt(types.I16_Size))
     AddPrimitive(types.CreateInt(types.I8_Size))
 
-    AddPrimitive(types.BoolType{ Interfaces: make(map[string]types.InterfaceType) })
-    AddPrimitive(types.CharType{ Interfaces: make(map[string]types.InterfaceType) })
-    AddPrimitive(types.StrType{ Interfaces: make(map[string]types.InterfaceType) })
+    AddPrimitive(types.BoolType{})
+    AddPrimitive(types.CharType{})
+    AddPrimitive(types.StrType{})
 }                                
 
 func DecVar(name token.Token, t types.Type) vars.Var {

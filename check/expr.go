@@ -62,7 +62,7 @@ func typeCheckExpr(e ast.Expr) {
 
 func checkTypeExpr(destType types.Type, e ast.Expr) bool {
     typeCheckExpr(e)
-    return types.Equal(destType, e.GetType())
+    return compatible(destType, e.GetType())
 }
 
 func typeCheckIndexed(e *ast.Indexed) {
@@ -169,7 +169,7 @@ func typeCheckUnwrap(e *ast.Unwrap) {
         os.Exit(1)
     }
 
-    if !types.Equal(e.SrcExpr.GetType(), e.EnumType) {
+    if !compatible(e.SrcExpr.GetType(), e.EnumType) {
         fmt.Fprintf(os.Stderr, "[ERROR] expected enum %s but got %s\n", e.SrcExpr.GetType(), e.EnumType)
         fmt.Fprintln(os.Stderr, "\t" + e.ElemName.At())
         os.Exit(1)
@@ -207,7 +207,7 @@ func typeCheckUnary(e *ast.Unary) {
 
     case token.Minus:
         t := e.Operand.GetType()
-        if !types.Equal(types.CreateInt(types.Ptr_Size), t) {
+        if !compatible(types.CreateInt(types.Ptr_Size), t) {
             // TODO print actual flexable type
             fmt.Fprintf(os.Stderr, "[ERROR] expected an int after - unary op but got %v\n", t)
             fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
@@ -311,7 +311,7 @@ func typeCheckBinary(e *ast.Binary) {
             }
         }
 
-        if !types.EqualBinary(t1, t2) {
+        if !compatibleBinaryOp(t1, t2) {
             fmt.Fprintf(os.Stderr, "[ERROR] binary operation %s has two incompatible types (left: %v right: %v)\n",
                 e.Operator.Str, t1, t2)
             fmt.Fprintln(os.Stderr, "\t" + e.Operator.At())
@@ -345,7 +345,7 @@ func typeCheckXSwitch(o *ast.XSwitch) {
 
     for _,c := range o.Cases {
         t := c.Expr.GetType()
-        if !types.Equal(o.Type, t) {
+        if !compatible(o.Type, t) {
             fmt.Fprintln(os.Stderr, "[ERROR] expected every case body to return the same type but got:")
             for i,c := range o.Cases {
                 fmt.Fprintf(os.Stderr, "\tcase%d: %v\n", i, c.Expr.GetType())
@@ -534,7 +534,7 @@ func typeCheckCast(e *ast.Cast) {
 
         case types.Enum:
             t := t.(types.EnumType)
-            if !types.Equal(e.DestType, t.IdType) {
+            if !compatible(e.DestType, t.IdType) {
                 fmt.Fprintf(os.Stderr, "[ERROR] id type of enum %s is %s (cannot cast into %v)\n", t.Name, t.IdType, e.DestType)
                 fmt.Fprintln(os.Stderr, "\t" + e.Expr.At())
                 os.Exit(1)
@@ -581,7 +581,7 @@ func typeCheckCast(e *ast.Cast) {
             }
 
         case types.Int, types.Uint:
-            if !types.Equal(types.CreateUint(types.Ptr_Size), t) {
+            if !compatible(types.CreateUint(types.Ptr_Size), t) {
                 fmt.Fprintf(os.Stderr, "[ERROR] you can only cast an u64 into a pointer (got %v)\n", t)
                 fmt.Fprintln(os.Stderr, "\t" + e.Expr.At())
                 os.Exit(1)

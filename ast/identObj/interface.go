@@ -80,6 +80,10 @@ func (i *Interface) AddImpl(impl Impl) {
     os.Exit(1)
 }
 
+func (i *Interface) HasInterface(name string) bool {
+    return name == i.name
+}
+
 func (i *Interface) GetFuncNames() []string {
     res := make([]string, 0, len(i.funcs)) 
 

@@ -14,6 +14,7 @@ type Struct struct {
     typ types.StructType
     generic *types.GenericType
     impls []Impl
+    interfaces []string
 }
 
 func CreateStruct(name token.Token) Struct {
@@ -91,8 +92,17 @@ func (s *Struct) GetFuncNames() []string {
 func (s *Struct) AddImpl(impl Impl) {
     s.impls = append(s.impls, impl)
     if impl.interface_ != nil {
-        s.typ.Interfaces[impl.interface_.name] = impl.interface_.typ
+        s.interfaces = append(s.interfaces, impl.interface_.name) 
     }
+}
+
+func (s *Struct) HasInterface(name string) bool {
+    for _,interfaceName := range s.interfaces {
+        if interfaceName == name {
+            return true
+        }
+    }
+    return false
 }
 
 func (s *Struct) GetInterfaceType(interfaceName string) (hasImpl bool, typ types.InterfaceType) {

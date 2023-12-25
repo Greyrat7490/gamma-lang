@@ -11,6 +11,7 @@ import (
 type Primitive struct {
     typ types.Type
     impls []Impl
+    interfaces []string
 }
 
 func AddPrimitive(t types.Type) {
@@ -51,8 +52,17 @@ func (p *Primitive) GetFuncNames() []string {
 func (p *Primitive) AddImpl(impl Impl) {
     p.impls = append(p.impls, impl)
     if impl.interface_ != nil {
-        p.typ.GetInterfaces()[impl.interface_.name] = impl.interface_.typ
+        p.interfaces = append(p.interfaces, impl.interface_.name) 
     }
+}
+
+func (p *Primitive) HasInterface(name string) bool {
+    for _,interfaceName := range p.interfaces {
+        if interfaceName == name {
+            return true
+        }
+    }
+    return false
 }
 
 func (p *Primitive) GetFunc(name string) *Func {

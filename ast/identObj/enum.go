@@ -14,6 +14,7 @@ type Enum struct {
     typ types.EnumType
     generic *types.GenericType
     impls []Impl
+    interfaces []string
 }
 
 func CreateEnum(name token.Token) Enum {
@@ -41,8 +42,17 @@ func (e *Enum) GetType() types.Type {
 func (e *Enum) AddImpl(impl Impl) {
     e.impls = append(e.impls, impl)
     if impl.interface_ != nil {
-        e.typ.Interfaces[impl.interface_.name] = impl.interface_.typ
+        e.interfaces = append(e.interfaces, impl.interface_.name)
     }
+}
+
+func (e *Enum) HasInterface(name string) bool {
+    for _,interfaceName := range e.interfaces {
+        if interfaceName == name {
+            return true
+        }
+    }
+    return false
 }
 
 func (e *Enum) GetFunc(name string) *Func {
