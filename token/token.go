@@ -33,6 +33,18 @@ const (
     BitOr           // |
     BitNot          // ~
 
+    PlusEq          // +=
+    MinusEq         // -=
+    MulEq           // *=
+    DivEq           // /=
+    ModEq           // %=
+
+    ShlEq           // <<=
+    ShrEq           // >>=
+    BitAndEq        // &=
+    BitOrEq         // |=
+    XorEq           // ^=
+
     And             // &&
     Or              // ||
 
@@ -116,6 +128,27 @@ func ToTokenType(s string, p Pos) TokenType {
         return Xor
     case "~":
         return BitNot
+
+    case "+=":
+        return PlusEq
+    case "-=":
+        return MinusEq
+    case "*=":
+        return MulEq
+    case "/=":
+        return DivEq
+    case "%=":
+        return ModEq
+    case "<<=":
+        return ShlEq
+    case ">>=":
+        return ShrEq
+    case "&=":
+        return BitAndEq
+    case "|=":
+        return BitOrEq
+    case "^=":
+       return XorEq
 
     case "&&":
         return And
@@ -269,6 +302,27 @@ func (t TokenType) String() string {
         return "Xor"
     case BitNot:
         return "BitNot"
+
+    case PlusEq:
+        return "PlusEq"
+    case MinusEq:
+        return "MinusEq"
+    case MulEq:
+        return "MulEq"
+    case DivEq:
+        return "DivEq"
+    case ModEq:
+        return "ModEq"
+    case ShlEq:
+        return "ShlEq"
+    case ShrEq:
+        return "ShrEq"
+    case BitAndEq:
+        return "BitAndEq"
+    case BitOrEq:
+        return "BitOrEq"
+    case XorEq:
+       return "XorEq"
 
     case And:
         return "And"
@@ -514,8 +568,24 @@ func Tokenize(path string, src *os.File) (tokens Tokens) {
                 tokens.split(line, start, i, lineNum, path)
                 start = i+1
 
-            // split at //, /*, :=, ::, <=, >=, ==, !=, &&, ->, <<, >>
-            case '/', ':', '<', '>', '=', '-', '!', '&', '|':
+            // split at <<=, >>=
+            case '<', '>':
+                if i+3 <= len(line) {
+                    s := line[i:i+3]
+                    switch s {
+                    case "<<=", ">>=":
+                        tokens.split(line, start, i, lineNum, path)
+                        tokens.tokens = append(tokens.tokens, Token{ ToTokenType(s, Pos{lineNum, i+1, path}), s, Pos{lineNum, i+1, path} })
+                        start = i+3
+                        i+=2
+                        continue
+                    }
+                }
+
+                fallthrough
+
+            // split at //, /*, :=, ::, <=, >=, ==, !=, &&, ->, <<, >>, +=, -=, *=, /=, &=, |=, %=, ^=
+            case '/', ':', '=', '-', '!', '&', '|', '+', '*', '%', '^':
                 if i+2 <= len(line) {
                     s := line[i:i+2]
                     switch s {
@@ -532,7 +602,7 @@ func Tokenize(path string, src *os.File) (tokens Tokens) {
                         i++
                         continue
 
-                    case "&&", "||", ":=", "::", "!=", "==", "<=", ">=", "->", "<<", ">>":
+                    case "&&", "||", ":=", "::", "!=", "==", "<=", ">=", "->", "<<", ">>", "+=", "-=", "*=", "/=", "&=", "|=", "%=", "^=":
                         tokens.split(line, start, i, lineNum, path)
                         tokens.tokens = append(tokens.tokens, Token{ ToTokenType(s, Pos{lineNum, i+1, path}), s, Pos{lineNum, i+1, path} })
                         start = i+2
@@ -544,9 +614,8 @@ func Tokenize(path string, src *os.File) (tokens Tokens) {
                 fallthrough
 
             // split at non space char (and keep char)
-            case '(', ')', '{', '}', '[', ']', '+', '*', '%', '.', ',', ';', '$', '^', '~':
+            case '(', ')', '{', '}', '[', ']', '.', ',', ';', '$', '~':
                 tokens.split(line, start, i, lineNum, path)
-
                 tokens.tokens = append(tokens.tokens, Token{ ToTokenType(string(line[i]), Pos{lineNum, i+1, path}), string(line[i]), Pos{lineNum, i+1, path} })
                 start = i+1
             }

@@ -64,14 +64,27 @@ func prsStmt(tokens *token.Tokens) ast.Stmt {
     case token.XSwitch, token.Plus, token.Minus, token.Mul, token.Amp, token.Self:
         e := prsExpr(tokens)
 
-        if tokens.Peek().Type == token.Assign {
+        switch tokens.Peek().Type {
+        case token.Assign:
             a := prsAssignVar(tokens, e)
             return &a
+
+        case token.PlusEq, token.MinusEq, token.MulEq, token.DivEq, token.ModEq, token.ShlEq,
+            token.ShrEq, token.BitAndEq, token.BitOrEq, token.XorEq:
+            return prsBinOpAssign(tokens, e)
+
+        default:
+            return &ast.ExprStmt{ Expr: e }
         }
-        return &ast.ExprStmt{ Expr: e }
 
     case token.Typename:
         return &ast.ExprStmt{ Expr: prsExpr(tokens) }
+
+    case token.PlusEq, token.MinusEq, token.MulEq, token.DivEq, token.ModEq, token.ShlEq, token.ShrEq, token.BitAndEq, token.BitOrEq, token.XorEq:
+        fmt.Fprintf(os.Stderr, "[ERROR] no destination for %s\n", tokens.Cur().Str)
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+        return &ast.BadStmt{}
 
     case token.Elif:
         fmt.Fprintf(os.Stderr, "[ERROR] missing if (elif without an if before)\n")
@@ -132,6 +145,23 @@ func prsAssignVar(tokens *token.Tokens, dest ast.Expr) ast.Assign {
     val := prsExpr(tokens)
 
     return ast.Assign{ Pos: pos, Dest: dest, Value: val }
+}
+
+func prsBinOpAssign(tokens *token.Tokens, dest ast.Expr) ast.Stmt {
+    binOpAssign := tokens.Next()
+    binOpStr := binOpAssign.Str[0:len(binOpAssign.Str)-1]
+    binOp := token.Token{ Pos: binOpAssign.Pos, Str: binOpStr, Type: token.ToTokenType(binOpStr, binOpAssign.Pos) }
+
+    tokens.Next()
+    val := &ast.Binary{ 
+        Pos: binOp.Pos,
+        Type: dest.GetType(),
+        OperandL: dest,
+        Operator: binOp,
+        OperandR: prsExpr(tokens),
+    }
+
+    return &ast.Assign{ Pos: binOp.Pos, Dest: dest, Value: val }
 }
 
 func prsIfStmt(tokens *token.Tokens) ast.If {
@@ -427,7 +457,7 @@ func prsCase(tokens *token.Tokens, condBase ast.Expr, placeholder *ast.Expr) ast
 }
 
 func prsCases(tokens *token.Tokens, condBase ast.Expr) (cases []ast.Case) {
-    if _,ok := condBase.(*ast.Unwrap); ok { 
+    if _,ok := condBase.(*ast.Unwrap); ok {
         for tokens.Next().Type != token.BraceR {
             cases = append(cases, prsUnwrapCase(tokens, condBase))
         }

@@ -1,0 +1,31 @@
+fn main() {
+    a := 34
+    b := 70
+    c := 32
+    d := 840
+
+    println("init values")
+    println(fmt("a: {} b: {} c: {} d: {}", a, b, c, d))
+
+    a += 35
+    b -= 6
+    c *= 2
+    d /= 2
+
+    println("\na += 35 b -= 6 c *= 2 d /= 2")
+    println(fmt("a: {}(69) b: {}(64) c: {}(64) d: {}(420)", a, b, c, d))
+
+    a &= ~0x1
+    b >>= 1
+    c |= 0x1
+    d <<= 1
+
+    println("\na &= ~0x1 b >>= 1 c |= 0x1 d <<= 1")
+    println(fmt("a: {}(68) b: {}(32) c: {}(65) d: {}(840)", a, b, c, d))
+
+    c %= 2
+    d ^= d
+
+    println("\nc %= 2 d ^= d")
+    println(fmt("c: {}(1) d: {}(0)", c, d))
+}
