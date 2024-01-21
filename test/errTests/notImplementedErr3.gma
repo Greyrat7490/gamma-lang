@@ -1,0 +1,20 @@
+interface I {
+    fn a(self)
+}
+
+impl *i32 :: I {
+    fn a(self) {
+        println(fmt("{}", self as u64))
+    }
+}
+
+impl i32 :: I {
+    fn a(self) {
+        println(fmt("{}", self))
+    }
+}
+
+fn main() {
+    i i64 := -69
+    i64::a(i)
+}

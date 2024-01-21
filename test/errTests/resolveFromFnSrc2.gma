@@ -1,0 +1,14 @@
+impl *i64 :: String {
+    fn to_str(self) -> str { ret utos(self as u64) }
+}
+
+fn main() {
+    // this will not cause an error because (&i) will be automatically dereferenced to just i
+    i i64 := -69
+    println(fmt("i: {} (at {})", i, (&i).to_str()))
+
+    // this will not be automatically dereferenced and therefore will cause an error
+    // resolving types from implicit function source (String) is not supported (use explicit source like u64::to_str() instead)
+    i2 := -69
+    println(fmt("i2: {} (at {})", i2, String::to_str(&i2)))
+}

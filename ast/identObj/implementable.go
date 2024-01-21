@@ -44,3 +44,30 @@ func (s *Implementable) GetFuncNames() []string {
 
     return funcs
 }
+
+func HasFunc(t types.Type, name string) bool {
+    if t == nil { return false }
+
+    if t,ok := t.(types.InterfaceType); ok {
+        return t.GetFunc(name) != nil
+    }
+
+    implObj := GetImplObj(t.String())
+    return implObj != nil && implObj.GetFunc(name) != nil
+}
+
+func HasInterface(t types.Type, name string) bool {
+    if t == nil { return false }
+
+    if _,ok := t.(*types.GenericType); ok {
+        // TODO: generic guards (required interfaces list)
+        return true
+    }
+
+    if t,ok := t.(types.InterfaceType); ok {
+        return t.Name == name
+    }
+
+    implObj := GetImplObj(t.String())
+    return implObj != nil && implObj.HasInterface(name)
+}

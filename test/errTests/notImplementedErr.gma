@@ -1,0 +1,11 @@
+fn main() {
+    // this will not cause an error because (&i) will be automatically dereferenced to just i
+    i i64 := -69
+    println(fmt("i: {} (at {})", i, (&i).to_str()))
+
+    // *i64 does not implement String
+    println(fmt("i: {} (at {})", i, &i))
+
+    // TODO use . to access function (String.to_str(i) instead of String::to_str(i))
+    // TODO same for enums
+}

@@ -13,6 +13,7 @@ type Func struct {
     retAddr addr.Addr   // TODO remove
     Scope *Scope
     receiver types.Type
+    hasSrcObj bool
     isConst bool
 }
 
@@ -91,6 +92,14 @@ func (f *Func) SetRetAddr(addr addr.Addr) {
 
 func (f *Func) SetArgs(args []types.Type) {
     f.typ.Args = args
+
+    if f.receiver != nil && len(args) > 0 {
+        if t,ok := args[0].(types.PtrType); ok {
+            f.hasSrcObj = types.Equal(f.receiver, t.BaseType)
+        } else {
+            f.hasSrcObj = types.Equal(f.receiver, args[0])
+        }
+    }
 }
 
 func (f *Func) SetGeneric(generic *types.GenericType) {
@@ -119,6 +128,13 @@ func (f *Func) IsGeneric() bool {
 
 func (f *Func) IsUnresolved() bool {
     return f.name == ""
+}
+
+func (f *Func) GetSrcObj() types.Type {
+    if f.hasSrcObj {
+        return f.typ.Args[0]
+    }
+    return nil
 }
 
 func (f *Func) AddTypeToGeneric(typ types.Type) {

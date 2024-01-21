@@ -1,0 +1,6 @@
+fn main() {
+    i := -69
+
+    // resolves the type of i as u64
+    println(fmt("i: {} (at {})", i, u64::to_str(i))) 
+}
