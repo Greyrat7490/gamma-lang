@@ -879,6 +879,8 @@ func convertFmtArgs(args []ast.Expr) []ast.Expr {
 }
 
 func convertFmtArg(arg ast.Expr) ast.Expr {
+    if (arg.GetType().GetKind() == types.Str) { return arg }
+
     funcName := "to_str"
     recvObj := identObj.Get("String").(*identObj.Interface)
 

@@ -526,7 +526,7 @@ func (t CharType) String() string { return "char" }
 func (t BoolType) String() string { return "bool" }
 func (t StrType) String() string { return "str"  }
 func (t PtrType) String() string {
-    return "*" + t.BaseType.String()
+    return fmt.Sprintf("*%v", t.BaseType)
 }
 func (t ArrType) String() string {
     return fmt.Sprintf("[%d]%s", t.Len, t.BaseType)

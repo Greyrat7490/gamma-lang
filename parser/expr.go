@@ -189,7 +189,7 @@ func prsName(tokens *token.Tokens) token.Token {
 }
 
 func checkDefined(ident *ast.Ident) {
-    if ident.Obj == nil {
+    if ident.Obj == nil && ident.Name == "_" {
         fmt.Fprintf(os.Stderr, "[ERROR] %v is not defined\n", ident.Name)
         fmt.Fprintln(os.Stderr, "\t" + ident.At())
         os.Exit(1)
@@ -247,6 +247,12 @@ func prsPostNameExpr(tokens *token.Tokens, ident *ast.Ident, usedType types.Type
         }
     }
 
+    if ident.Obj == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] %s is not defined\n", ident.Name)
+        fmt.Fprintln(os.Stderr, "\t" + ident.At())
+        os.Exit(1)
+    }
+    
     return ident
 }
 
@@ -645,7 +651,7 @@ func prsDotField(tokens *token.Tokens, t types.Type, obj ast.Expr, dotPos token.
         return field
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] type %s has no fields\n", typ)
+        fmt.Fprintf(os.Stderr, "[ERROR] type %s has no field/function called %s\n", typ, name.Str)
         fmt.Fprintln(os.Stderr, "\t" + obj.At())
         os.Exit(1)
         return nil
@@ -1128,7 +1134,7 @@ func prsCallInterfaceFn(tokens *token.Tokens, ident *ast.Ident, usedGeneric type
         ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
         return &ast.FnCall{ Ident: ident, ReceiverType: ident.GetType(), F: f, ResvSpace: resvSpace, GenericUsedType: usedGeneric, Values: vals, ParenLPos: posL, ParenRPos: posR }
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] %s is not declared in %s\n", name, ident.Name)
+        fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement function %s\n", ident.Name, name.Str)
         fmt.Fprintln(os.Stderr, "\t" + ident.At())
         os.Exit(1)
     }

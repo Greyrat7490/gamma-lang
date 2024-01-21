@@ -191,10 +191,11 @@ func isGenericFunc(name string) bool {
 
     return false
 }
-func isNextType_(tokens *token.Tokens) bool {
-    switch tokens.Next().Type {
+func isType(tokens *token.Tokens) bool {
+    switch tokens.Cur().Type {
     case token.Mul:
-        return isNextType_(tokens)
+        tokens.Next()
+        return isType(tokens)
 
     case token.BrackL:
         tokens.Next()
@@ -207,7 +208,8 @@ func isNextType_(tokens *token.Tokens) bool {
             return false
         }
 
-        return isNextType_(tokens)
+        tokens.Next()
+        return isType(tokens)
 
     case token.Name:
         if obj := identObj.Get(tokens.Cur().Str); obj != nil {
@@ -237,7 +239,8 @@ func isNextType_(tokens *token.Tokens) bool {
 func isNextType(tokens *token.Tokens) bool {
     tokens.SaveIdx()
     defer tokens.ResetIdx()
-    return isNextType_(tokens)
+    tokens.Next()
+    return isType(tokens)
 }
 
 func prsType(tokens *token.Tokens) types.Type {

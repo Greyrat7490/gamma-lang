@@ -22,6 +22,10 @@ func Resolve(a ast.Ast) ast.Ast {
 }
 
 func getResolvedForwardType(t types.Type) types.Type {
+    if ptr,ok := t.(types.PtrType); ok {
+        return types.PtrType{ BaseType: getResolvedForwardType(ptr.BaseType) }
+    }
+
     if inferType,ok := t.(types.InferType); ok {
         if resolvedType := resolvedInfers[inferType.Idx]; resolvedType != nil {
             return resolvedType

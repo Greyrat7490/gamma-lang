@@ -47,10 +47,13 @@ func typeCheckExpr(e ast.Expr) {
             typeCheckFnCall(e)
         }
 
+    case *ast.Ident:
+        typeCheckIdent(e)
+
     case *ast.Cast:
         typeCheckCast(e)
 
-    case *ast.IntLit, *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit, *ast.Ident:
+    case *ast.IntLit, *ast.CharLit, *ast.BoolLit, *ast.PtrLit, *ast.StrLit:
         // nothing to check
 
     default:
@@ -63,6 +66,14 @@ func typeCheckExpr(e ast.Expr) {
 func checkTypeExpr(destType types.Type, e ast.Expr) bool {
     typeCheckExpr(e)
     return compatible(destType, e.GetType())
+}
+
+func typeCheckIdent(e *ast.Ident) {
+    if e.Obj == nil && e.Name == "_" {
+        fmt.Fprintf(os.Stderr, "[ERROR] %v is not defined\n", e.Name)
+        fmt.Fprintln(os.Stderr, "\t" + e.At())
+        os.Exit(1)
+    }
 }
 
 func typeCheckIndexed(e *ast.Indexed) {
