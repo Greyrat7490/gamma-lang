@@ -68,8 +68,8 @@ func GenDefVar(file *bufio.Writer, d *ast.DefVar) {
 
 func GenDefGenFn(file *bufio.Writer, d *ast.DefFn) {
     genType := d.FnHead.F.GetGeneric()
-    for _,t := range genType.UsedTypes {
-        genType.CurUsedType = t
+    for _,t := range genType.UsedInsetTypes {
+        genType.CurInsetType = t
         GenDefFn(file, d)
     }
 }

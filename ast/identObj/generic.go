@@ -21,9 +21,9 @@ func UnsetGeneric() {
 }
 
 func AddTypeToGeneric(generic *types.GenericType, typ types.Type) {
-    for _,t := range generic.UsedTypes {
+    for _,t := range generic.UsedInsetTypes {
         if types.Equal(typ, t) { return }
     }
 
-    generic.UsedTypes = append(generic.UsedTypes, typ)
+    generic.UsedInsetTypes = append(generic.UsedInsetTypes, typ)
 }

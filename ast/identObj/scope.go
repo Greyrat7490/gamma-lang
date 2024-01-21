@@ -163,7 +163,7 @@ func AddBuildIn(name string, argtype types.Type, retType types.Type) {
 
 func AddGenBuildIn(name string, genericName string, argtype types.Type, retType types.Type) {
     f := CreateFunc(token.Token{ Str: name }, false, nil)
-    f.SetGeneric(&types.GenericType{Name: genericName, UsedTypes: make([]types.Type, 0)})
+    f.SetGeneric(&types.GenericType{Name: genericName, UsedInsetTypes: make([]types.Type, 0)})
     f.SetRetType(retType)
     if argtype != nil {
         f.SetArgs([]types.Type{ argtype })

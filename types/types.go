@@ -67,7 +67,7 @@ type StructType struct {
     Name string
     Types []Type
     genericName string          // empty string means not generic
-    genericUsedType Type
+    insetType Type
     names map[string]int
     isBigStruct bool
     size uint
@@ -76,7 +76,7 @@ type EnumType struct {
     Name string
     IdType Type
     genericName string          // empty string means not generic
-    genericUsedType Type
+    insetType Type
     ids map[string]uint64
     types map[string]Type       // nil for no type
     size uint
@@ -91,8 +91,8 @@ type FuncType struct {
 }
 type GenericType struct {
     Name string
-    CurUsedType Type
-    UsedTypes []Type
+    CurInsetType Type
+    UsedInsetTypes []Type
 }
 type InterfaceType struct {
     Name string
@@ -223,7 +223,7 @@ func CreateInferType(defaultType Type) InferType {
 }
 
 func CreateGeneric(name string) GenericType {
-    return GenericType{ Name: name, UsedTypes: make([]Type, 0) }
+    return GenericType{ Name: name, UsedInsetTypes: make([]Type, 0) }
 }
 
 func (t *StructType) GetOffset(field string) (offset int64) {
@@ -245,8 +245,8 @@ func (t *StructType) GetType(field string) Type {
     return nil
 }
 
-func (t *StructType) GetGenericUsedType() Type {
-    return t.genericUsedType
+func (t *StructType) GetInsetType() Type {
+    return t.insetType
 }
 
 func (t *StructType) GetFieldNum(field string) int {
@@ -271,8 +271,8 @@ func (t *EnumType) GetType(name string) Type {
     return t.types[name]
 }
 
-func (t *EnumType) GetGenericUsedType() Type {
-    return t.genericUsedType
+func (t *EnumType) GetInsetType() Type {
+    return t.insetType
 }
 
 func (t *EnumType) GetTypeWithId(id uint64) Type {
@@ -323,7 +323,7 @@ func IsBigStruct(t Type) bool {
     case EnumType:
         return t.isBigStruct
     case *GenericType:
-        return IsBigStruct(t.CurUsedType)
+        return IsBigStruct(t.CurInsetType)
     default:
         return false
     }
@@ -350,40 +350,40 @@ func IsGeneric(t Type) bool {
     return false
 }
 
-func ReplaceGeneric(t Type, usedType Type) Type {
-    if usedType == nil || usedType == (*GenericType)(nil) {
+func ReplaceGeneric(t Type, insetType Type) Type {
+    if insetType == nil || insetType == (*GenericType)(nil) {
         return t
     }
 
     switch t := t.(type) {
     case PtrType:
-        t.BaseType = ReplaceGeneric(t.BaseType, usedType)
+        t.BaseType = ReplaceGeneric(t.BaseType, insetType)
         return t
 
     case EnumType:
-        if t.genericUsedType == nil || IsGeneric(t.genericUsedType) {
-            t.genericUsedType = usedType
+        if t.insetType == nil || IsGeneric(t.insetType) {
+            t.insetType = insetType
 
             ts := make(map[string]Type)
             for name, elemType := range t.types {
-                ts[name] = ReplaceGeneric(elemType, usedType)
+                ts[name] = ReplaceGeneric(elemType, insetType)
             }
 
             t.types = ts
-            t.size = t.IdType.Size() + usedType.Size()
-            t.isBigStruct = usedType.Size() > 0
+            t.size = t.IdType.Size() + insetType.Size()
+            t.isBigStruct = insetType.Size() > 0
         }
 
         return t
 
     case StructType:
-        if t.genericUsedType == nil || IsGeneric(t.genericUsedType) {
-            t.genericUsedType = usedType
+        if t.insetType == nil || IsGeneric(t.insetType) {
+            t.insetType = insetType
 
             ts := make([]Type, len(t.Types))
             size := uint(0)
             for i := range t.Types {
-                t2 := ReplaceGeneric(t.Types[i], usedType)
+                t2 := ReplaceGeneric(t.Types[i], insetType)
                 ts[i] = t2
                 size += t2.Size()
             }
@@ -399,7 +399,7 @@ func ReplaceGeneric(t Type, usedType Type) Type {
         return t
 
     case GenericType, *GenericType:
-        return usedType
+        return insetType
 
     default:
         return t
@@ -407,8 +407,8 @@ func ReplaceGeneric(t Type, usedType Type) Type {
 }
 
 func ReplaceFuncGeneric(t Type) Type {
-    if t,ok := t.(*GenericType); ok && t.CurUsedType != nil {
-        return t.CurUsedType
+    if t,ok := t.(*GenericType); ok && t.CurInsetType != nil {
+        return t.CurInsetType
     }
 
     return t
@@ -455,8 +455,8 @@ func (t InterfaceType)  GetKind() TypeKind { return Interface }
 func (t FuncType)       GetKind() TypeKind { return Func }
 func (t InferType)      GetKind() TypeKind { return Infer }
 func (t GenericType)    GetKind() TypeKind {
-    if t.CurUsedType != nil {
-        return t.CurUsedType.GetKind()
+    if t.CurInsetType != nil {
+        return t.CurInsetType.GetKind()
     }
     // TODO: always generic
     return Generic
@@ -480,8 +480,8 @@ func (t InferType)      Size() uint {
     return 0 
 }
 func (t GenericType) Size() uint {
-    if t.CurUsedType != nil {
-        return t.CurUsedType.Size()
+    if t.CurInsetType != nil {
+        return t.CurInsetType.Size()
     }
 
     return 0
@@ -539,8 +539,8 @@ func (t VecType) String() string {
 }
 func (t StructType) String() string { 
     if t.genericName != "" {
-        if t.genericUsedType != nil {
-            return fmt.Sprintf("%s<%s>", t.Name, t.genericUsedType)
+        if t.insetType != nil {
+            return fmt.Sprintf("%s<%s>", t.Name, t.insetType)
         }
         return fmt.Sprintf("%s<%s>", t.Name, t.genericName)
     }
@@ -548,8 +548,8 @@ func (t StructType) String() string {
 }
 func (t EnumType) String() string { 
     if t.genericName != "" {
-        if t.genericUsedType != nil {
-            return fmt.Sprintf("%s<%s>", t.Name, t.genericUsedType)
+        if t.insetType != nil {
+            return fmt.Sprintf("%s<%s>", t.Name, t.insetType)
         }
         return fmt.Sprintf("%s<%s>", t.Name, t.genericName)
     }
@@ -558,8 +558,8 @@ func (t EnumType) String() string {
 func (t InterfaceType) String() string { return t.Name }
 func (t InferType) String() string { return t.DefaultType.String() }
 func (t GenericType) String() string {
-    if t.CurUsedType != nil {
-        return t.CurUsedType.String()
+    if t.CurInsetType != nil {
+        return t.CurInsetType.String()
     }
     return t.Name
 }
@@ -589,15 +589,15 @@ func (t PtrType)        GetMangledName() string { return "$ptr_" + t.BaseType.Ge
 func (t ArrType)        GetMangledName() string { return "$arr_" + t.BaseType.GetMangledName() }
 func (t VecType)        GetMangledName() string { return "$vec_" + t.BaseType.GetMangledName() }
 func (t GenericType)    GetMangledName() string {
-    if t.CurUsedType != nil {
-        return t.CurUsedType.GetMangledName()
+    if t.CurInsetType != nil {
+        return t.CurInsetType.GetMangledName()
     }
     return t.Name
 }
 func (t StructType)     GetMangledName() string { 
     if t.genericName != "" {
-        if t.genericUsedType != nil {
-            return fmt.Sprintf("%s$%s", t.Name, t.genericUsedType)
+        if t.insetType != nil {
+            return fmt.Sprintf("%s$%s", t.Name, t.insetType)
         }
         return fmt.Sprintf("%s$%s", t.Name, t.genericName)
     }
@@ -605,8 +605,8 @@ func (t StructType)     GetMangledName() string {
 }
 func (t EnumType)       GetMangledName() string {
     if t.genericName != "" {
-        if t.genericUsedType != nil {
-            return fmt.Sprintf("%s$%s", t.Name, t.genericUsedType)
+        if t.insetType != nil {
+            return fmt.Sprintf("%s$%s", t.Name, t.insetType)
         }
         return fmt.Sprintf("%s$%s", t.Name, t.genericName)
     }
@@ -749,12 +749,12 @@ func EqualCustom(destType Type, srcType Type, interfaceCompareFn func(string, st
 
     case StructType:
         if t2,ok := srcType.(StructType); ok {
-            return t.Name == t2.Name && EqualCustom(t.genericUsedType, t2.genericUsedType, interfaceCompareFn)
+            return t.Name == t2.Name && EqualCustom(t.insetType, t2.insetType, interfaceCompareFn)
         }
 
     case EnumType:
         if t2,ok := srcType.(EnumType); ok {
-            return t.Name == t2.Name && EqualCustom(t.genericUsedType, t2.genericUsedType, interfaceCompareFn)
+            return t.Name == t2.Name && EqualCustom(t.insetType, t2.insetType, interfaceCompareFn)
         }
 
     case InterfaceType:

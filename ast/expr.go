@@ -21,7 +21,7 @@ type BadExpr struct{}
 type FnCall struct {
     F *identObj.Func
     ResvSpace *addr.Addr        // can be nil
-    GenericUsedType types.Type  // can be nil
+    InsetType types.Type  // can be nil
     FnSrc types.Type     // can be nil
     Ident Ident
     ParenLPos token.Pos
@@ -408,7 +408,7 @@ func (e *FieldLit)  GetType() types.Type { return e.Value.GetType() }
 func (e *StructLit) GetType() types.Type { return e.StructType }
 func (e *ArrayLit)  GetType() types.Type { return e.Type }
 func (e *VectorLit) GetType() types.Type { return e.Type }
-func (e *FnCall)    GetType() types.Type { return types.ReplaceGeneric(e.F.GetRetType(), e.GenericUsedType) }
+func (e *FnCall)    GetType() types.Type { return types.ReplaceGeneric(e.F.GetRetType(), e.InsetType) }
 func (e *Indexed)   GetType() types.Type { return e.Type }
 func (e *Field)     GetType() types.Type { return e.Type }
 func (e *EnumLit)   GetType() types.Type { return e.Type }

@@ -345,7 +345,7 @@ func GenIdent(file *bufio.Writer, e *ast.Ident, t types.Type) {
             asm.MovRegDeref(file, asm.RegA, v.Addr(), t.Size(), false)
 
         case *types.GenericType:
-            GenIdent(file, e, t.CurUsedType)
+            GenIdent(file, e, t.CurInsetType)
 
         default:
             asm.MovRegDeref(file, asm.RegA, v.Addr(), t.Size(), false)
@@ -571,7 +571,7 @@ func FnCallAddrToReg(file *bufio.Writer, e *ast.FnCall, reg asm.RegGroup) {
 
 func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
     if e.F.GetGeneric() != nil {
-        e.F.GetGeneric().CurUsedType = e.GenericUsedType
+        e.F.GetGeneric().CurInsetType = e.InsetType
     }
 
     passArgs := createPassArgs(e.F, e.Values)
@@ -858,7 +858,7 @@ func GenFmt(file *bufio.Writer, values []ast.Expr) {
 }
 
 func GenSizeof(file *bufio.Writer, e *ast.FnCall) {
-    asm.MovRegVal(file, asm.RegA, types.Ptr_Size, fmt.Sprint(e.GenericUsedType.Size()))
+    asm.MovRegVal(file, asm.RegA, types.Ptr_Size, fmt.Sprint(e.InsetType.Size()))
 }
 
 func createStrLit(fmtStr token.Token, startIdx int, endIdx int) *ast.StrLit {

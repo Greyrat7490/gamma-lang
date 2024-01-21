@@ -350,7 +350,7 @@ func ConstEvalFnCall(e *ast.FnCall) constVal.ConstVal {
 }
 
 func ConstEvalSizeof(e *ast.FnCall) constVal.ConstVal {
-    c := constVal.UintConst(e.GenericUsedType.Size())
+    c := constVal.UintConst(e.InsetType.Size())
     return &c
 }
 

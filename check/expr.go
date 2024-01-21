@@ -452,8 +452,8 @@ func exhaustedUnwraps(unwraps []*ast.Unwrap, lastPost string) {
 }
 
 func typeCheckFnCall(o *ast.FnCall) {
-    if o.GenericUsedType != nil {
-        o.F.GetGeneric().CurUsedType = o.GenericUsedType
+    if o.InsetType != nil {
+        o.F.GetGeneric().CurInsetType = o.InsetType
     } else if o.F.IsGeneric() {
         fmt.Fprintf(os.Stderr, "[ERROR] function %s is generic but got no generic typ passed\n", o.F.GetName())
         fmt.Fprintln(os.Stderr, "\t" + o.At())

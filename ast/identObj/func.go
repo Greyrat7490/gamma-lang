@@ -71,7 +71,7 @@ func (f *Func) GetMangledName() string {
     }
 
     if f.GetGeneric() != nil {
-        name += "$" + f.typ.Generic.CurUsedType.GetMangledName()
+        name += "$" + f.typ.Generic.CurInsetType.GetMangledName()
     }
 
     return name

@@ -88,7 +88,7 @@ func DefArg(file *bufio.Writer, regIdx uint, v vars.Var, t types.Type) {
         asm.MovDerefReg(file, v.Addr().Offseted(int64(types.Ptr_Size)), t.Size() - types.Ptr_Size, regs[regIdx+1])
 
     case *types.GenericType:
-        DefArg(file, regIdx, v, t.CurUsedType)
+        DefArg(file, regIdx, v, t.CurInsetType)
 
     default:
         asm.MovDerefReg(file, v.Addr(), t.Size(), regs[regIdx])
@@ -172,7 +172,7 @@ func PassVar(file *bufio.Writer, regIdx uint, t types.Type, otherVar vars.Var) {
         asm.MovRegDerefExtend(file, regs[regIdx], t.Size(), otherVar.Addr(), otherVar.GetType().Size(), true)
 
     case *types.GenericType:
-        PassVar(file, regIdx, t.CurUsedType, otherVar)
+        PassVar(file, regIdx, t.CurInsetType, otherVar)
 
     default:
         asm.MovRegDerefExtend(file, regs[regIdx], t.Size(), otherVar.Addr(), otherVar.GetType().Size(), false)
@@ -219,7 +219,7 @@ func PassExpr(file *bufio.Writer, regIdx uint, argType types.Type, srcSize uint,
         }
 
     case *types.GenericType:
-        PassExpr(file, regIdx, t.CurUsedType, srcSize, expr)
+        PassExpr(file, regIdx, t.CurInsetType, srcSize, expr)
 
     default:
         GenExpr(file, expr)

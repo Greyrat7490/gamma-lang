@@ -329,7 +329,7 @@ func GenRet(file *bufio.Writer, s *ast.Ret) {
     if s.RetExpr != nil {
         t := s.F.GetRetType() 
         if s.F.GetGeneric() != nil {
-            t = types.ReplaceGeneric(t, s.F.GetGeneric().CurUsedType) 
+            t = types.ReplaceGeneric(t, s.F.GetGeneric().CurInsetType) 
         }
 
         if types.IsBigStruct(t) {
