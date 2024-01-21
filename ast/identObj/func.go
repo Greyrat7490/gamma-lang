@@ -106,6 +106,13 @@ func (f *Func) UpdateReceiver(recv types.Type) *Func {
     return &res
 }
 
+func (f *Func) ResolveReceiver(t types.Type) {
+    if f.receiver != nil && types.IsResolvable(f.typ.Args[0]) {
+        f.typ.Args[0] = t
+        f.receiver = t
+    }
+}
+
 func (f *Func) IsGeneric() bool {
     return f.typ.Generic != nil
 }

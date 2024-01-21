@@ -674,7 +674,7 @@ func prsDotExpr(tokens *token.Tokens, obj ast.Expr) ast.Expr {
     }
 
     t := obj.GetType()
-    obj, t = autoDeref(obj, name.Pos, t)
+    obj, t = autoDeref(obj, name, t)
 
     if f := getInterfaceFunc(t, name.Str); f != nil {
         return prsDotCallFn(tokens, obj, dot.Pos, t, name, f)
@@ -695,16 +695,20 @@ func getInterfaceFunc(t types.Type, name string) *identObj.Func {
     return nil
 }
 
-func autoDeref(obj ast.Expr, pos token.Pos, t types.Type) (derefedObj ast.Expr, baseType types.Type)  {
+func autoDeref(obj ast.Expr, field token.Token, t types.Type) (derefedObj ast.Expr, baseType types.Type)  {
+    if identObj.HasFunc(t, field.Str) {
+        return obj, t
+    }
+
     if typ, ok := t.(types.PtrType); ok {
         derefedObj := &ast.Unary{ 
             Type: typ.BaseType,
-            Operator: token.Token{ Pos: pos,
+            Operator: token.Token{ Pos: field.Pos,
             Type: token.Mul, Str: "*" },
             Operand: obj,
         }
 
-        return autoDeref(derefedObj, pos, typ.BaseType)
+        return autoDeref(derefedObj, field, typ.BaseType)
     } else {
         return obj, t
     }
@@ -1131,8 +1135,9 @@ func prsCallInterfaceFn(tokens *token.Tokens, ident *ast.Ident, usedGeneric type
 
         resvSpace := identObj.ReserveSpace(f.GetRetType())
 
+        receiverType := ident.GetType()
         ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
-        return &ast.FnCall{ Ident: ident, ReceiverType: ident.GetType(), F: f, ResvSpace: resvSpace, GenericUsedType: usedGeneric, Values: vals, ParenLPos: posL, ParenRPos: posR }
+        return &ast.FnCall{ Ident: ident, ReceiverType: receiverType, F: f, ResvSpace: resvSpace, GenericUsedType: usedGeneric, Values: vals, ParenLPos: posL, ParenRPos: posR }
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement function %s\n", ident.Name, name.Str)
         fmt.Fprintln(os.Stderr, "\t" + ident.At())
