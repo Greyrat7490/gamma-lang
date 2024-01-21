@@ -663,12 +663,7 @@ func prsFnHead(tokens *token.Tokens, isInterfaceFn bool) ast.FnHead {
         os.Exit(1)
     }
 
-    var f *identObj.Func = nil
-    if isInterfaceFn && identObj.CurSelfType != nil {
-        f = identObj.DecInterfaceFunc(name, isConst, identObj.CurSelfType)
-    } else {
-        f = identObj.DecFunc(name, isConst)
-    }
+    f := identObj.DecFunc(name, isConst, identObj.CurSelfType)
 
     tokens.Next()
     generic := prsGeneric(tokens)

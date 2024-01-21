@@ -12,7 +12,7 @@ type Func struct {
     typ types.FuncType
     retAddr addr.Addr   // TODO remove
     Scope *Scope
-    receiver types.Type
+    fnSrc types.Type
     hasSrcObj bool
     isConst bool
 }
@@ -23,15 +23,11 @@ func GetCurFunc() *Func {
     return curFunc
 }
 
-func CreateFunc(name token.Token, isConst bool) Func {
-    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, typ: types.FuncType{ Name: name.Str } }
+func CreateFunc(name token.Token, isConst bool, fnSrc types.Type) Func {
+    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, fnSrc: fnSrc, typ: types.FuncType{ Name: name.Str } }
 }
 
-func CreateInterfaceFunc(name token.Token, isConst bool, receiver types.Type) Func {
-    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, receiver: receiver, typ: types.FuncType{ Name: name.Str } }
-}
-
-func CreateUnresolvedFunc(name string, receiver types.Type) Func {
+func CreateUnresolvedFunc(name string) Func {
     return Func{ typ: types.FuncType{ Ret: types.CreateInferType(nil) } }
 }
 
@@ -70,8 +66,8 @@ func (f *Func) GetRetAddr() addr.Addr {
 func (f *Func) GetMangledName() string {
     name := f.name
 
-    if f.receiver != nil {
-        name = f.receiver.GetMangledName() + "." + name
+    if f.fnSrc != nil {
+        name = f.fnSrc.GetMangledName() + "." + name
     }
 
     if f.GetGeneric() != nil {
@@ -93,11 +89,11 @@ func (f *Func) SetRetAddr(addr addr.Addr) {
 func (f *Func) SetArgs(args []types.Type) {
     f.typ.Args = args
 
-    if f.receiver != nil && len(args) > 0 {
+    if f.fnSrc != nil && len(args) > 0 {
         if t,ok := args[0].(types.PtrType); ok {
-            f.hasSrcObj = types.Equal(f.receiver, t.BaseType)
+            f.hasSrcObj = types.Equal(f.fnSrc, t.BaseType)
         } else {
-            f.hasSrcObj = types.Equal(f.receiver, args[0])
+            f.hasSrcObj = types.Equal(f.fnSrc, args[0])
         }
     }
 }
@@ -106,19 +102,19 @@ func (f *Func) SetGeneric(generic *types.GenericType) {
     f.typ.Generic = generic
 }
 
-func (f *Func) UpdateReceiver(recv types.Type) *Func {
+func (f *Func) FromNewFnSrc(fnSrc types.Type) *Func {
     res := *f
     res.typ.Args = make([]types.Type, len(res.typ.Args))
     copy(res.typ.Args, f.typ.Args)
-    res.typ.Args[0] = recv
-    res.receiver = recv
+    res.typ.Args[0] = fnSrc
+    res.fnSrc = fnSrc
     return &res
 }
 
-func (f *Func) ResolveReceiver(t types.Type) {
-    if f.receiver != nil && types.IsResolvable(f.typ.Args[0]) {
+func (f *Func) ResolveFnSrc(t types.Type) {
+    if f.fnSrc != nil && types.IsResolvable(f.typ.Args[0]) {
         f.typ.Args[0] = t
-        f.receiver = t
+        f.fnSrc = t
     }
 }
 

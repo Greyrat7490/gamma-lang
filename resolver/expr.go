@@ -103,10 +103,11 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
                 resolveForwardExpr(arg, nil)
             }
         } else {
-            if e.ReceiverType != nil && len(e.F.GetArgs()) > 0 &&
-                types.IsResolvable(e.F.GetArgs()[0]) && e.ReceiverType.GetKind() != types.Interface {
-                addResolved(e.F.GetArgs()[0], e.ReceiverType)
-                e.F.ResolveReceiver(getResolvedForwardType(e.F.GetArgs()[0]))
+                                                                        // resolving from interface not supported
+            if e.FnSrc != nil && types.IsResolvable(e.F.GetSrcObj()) && e.FnSrc.GetKind() != types.Interface {
+                fnSrcObj := e.F.GetSrcObj()
+                addResolved(fnSrcObj, e.FnSrc)
+                e.F.ResolveFnSrc(getResolvedForwardType(fnSrcObj))
             }
 
             for i,arg := range e.Values {
@@ -203,8 +204,8 @@ func resolveBackwardExpr(e ast.Expr) {
         }
 
     case *ast.FnCall:
-        if e.ReceiverType != nil && len(e.F.GetArgs()) > 0 && types.IsResolvable(e.F.GetArgs()[0]) {
-            e.F.ResolveReceiver(getResolvedBackwardType(e.F.GetArgs()[0]))
+        if e.FnSrc != nil && types.IsResolvable(e.F.GetSrcObj()) {
+            e.F.ResolveFnSrc(getResolvedBackwardType(e.F.GetSrcObj()))
         }
 
         for _,e := range e.Values {

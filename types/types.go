@@ -330,11 +330,14 @@ func IsBigStruct(t Type) bool {
 }
 
 func IsResolvable(t Type) bool {
-    if t,ok := t.(PtrType); ok {
+    switch t := t.(type) {
+    case PtrType:
         return IsResolvable(t.BaseType)
+    case InferType:
+        return true
+    default:
+        return false
     }
-
-    return t.GetKind() == Infer
 }
 
 func IsGeneric(t Type) bool {

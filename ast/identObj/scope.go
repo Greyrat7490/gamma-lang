@@ -155,14 +155,14 @@ func (scope *Scope) checkName(name token.Token) {
 }
 
 func AddBuildIn(name string, argtype types.Type, retType types.Type) {
-    f := CreateFunc(token.Token{ Str: name }, false)  
+    f := CreateFunc(token.Token{ Str: name }, false, nil)  
     f.SetRetType(retType)
     f.SetArgs([]types.Type{ argtype })
     globalScope.identObjs[name] = &f
 }
 
 func AddGenBuildIn(name string, genericName string, argtype types.Type, retType types.Type) {
-    f := CreateFunc(token.Token{ Str: name }, false)
+    f := CreateFunc(token.Token{ Str: name }, false, nil)
     f.SetGeneric(&types.GenericType{Name: genericName, UsedTypes: make([]types.Type, 0)})
     f.SetRetType(retType)
     if argtype != nil {
@@ -199,22 +199,10 @@ func DecConst(name token.Token, t types.Type, val constVal.ConstVal) *Const {
     return &c
 }
 
-func DecFunc(name token.Token, isConst bool) *Func {
+func DecFunc(name token.Token, isConst bool, fnSrc types.Type) *Func {
     curScope.parent.checkName(name)
 
-    f := CreateFunc(name, isConst)
-    f.Scope = curScope
-
-    curScope.parent.identObjs[name.Str] = &f
-    curFunc = &f
-
-    return curFunc
-}
-
-func DecInterfaceFunc(name token.Token, isConst bool, receiver types.Type) *Func {
-    curScope.parent.checkName(name)
-
-    f := CreateInterfaceFunc(name, isConst, receiver)
+    f := CreateFunc(name, isConst, fnSrc)
     f.Scope = curScope
 
     curScope.parent.identObjs[name.Str] = &f

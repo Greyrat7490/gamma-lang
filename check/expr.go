@@ -483,22 +483,22 @@ func typeCheckFnCall(o *ast.FnCall) {
         os.Exit(1)
     }
 
-    if o.ReceiverType != nil {
+    if o.FnSrc != nil {
         // TODO: for now generics are not checked until generic guards are implemented
         if len(o.Values) > 0 && o.Values[0].GetType().GetKind() == types.Generic {
             return
         }
 
-        if !identObj.HasFunc(o.ReceiverType, o.Ident.Name) {
-            fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement function %s\n", o.ReceiverType, o.Ident.Name)
+        if !identObj.HasFunc(o.FnSrc, o.Ident.Name) {
+            fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement function %s\n", o.FnSrc, o.Ident.Name)
             fmt.Fprintln(os.Stderr, "\t" + o.At())
             os.Exit(1)
         }
 
         if o.F.GetSrcObj() != nil {
-            if interfaceType,ok := o.ReceiverType.(types.InterfaceType); ok {
+            if interfaceType,ok := o.FnSrc.(types.InterfaceType); ok {
                 if !identObj.HasInterface(o.F.GetSrcObj(), interfaceType.Name) {
-                    fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement %s\n", o.F.GetSrcObj(), o.ReceiverType)
+                    fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement %s\n", o.F.GetSrcObj(), o.FnSrc)
                     fmt.Fprintln(os.Stderr, "\t" + o.At())
                     os.Exit(1)
                 }

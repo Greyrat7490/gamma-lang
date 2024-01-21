@@ -22,7 +22,7 @@ type FnCall struct {
     F *identObj.Func
     ResvSpace *addr.Addr        // can be nil
     GenericUsedType types.Type  // can be nil
-    ReceiverType types.Type     // can be nil
+    FnSrc types.Type     // can be nil
     Ident Ident
     ParenLPos token.Pos
     Values []Expr

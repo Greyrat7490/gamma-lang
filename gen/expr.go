@@ -537,8 +537,8 @@ func GenBinary(file *bufio.Writer, e *ast.Binary) {
     }
 }
 
-func getVtableOffset(receiverType types.Type, pos token.Pos, funcName string) uint {
-    if interfaceType,ok := receiverType.(types.InterfaceType); ok {
+func getVtableOffset(fnSrc types.Type, pos token.Pos, funcName string) uint {
+    if interfaceType,ok := fnSrc.(types.InterfaceType); ok {
         if i,ok := identObj.Get(interfaceType.Name).(*identObj.Interface); ok {
             return i.GetVTableOffset(funcName)
         } else {
@@ -548,7 +548,7 @@ func getVtableOffset(receiverType types.Type, pos token.Pos, funcName string) ui
         }
 
     } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] (internal) expected interface type but got %v\n", reflect.TypeOf(receiverType))
+        fmt.Fprintf(os.Stderr, "[ERROR] (internal) expected interface type but got %v\n", reflect.TypeOf(fnSrc))
         fmt.Fprintln(os.Stderr, "\t" + pos.At())
         os.Exit(1)
     }
@@ -582,8 +582,8 @@ func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
     passArgs.genPassArgsBigStruct(file)
     passArgs.genPassArgsReg(file)
 
-    if e.ReceiverType != nil && e.ReceiverType.GetKind() == types.Interface && passArgs.regArgs[0].typ.GetKind() == types.Interface {
-        offset := getVtableOffset(e.ReceiverType, e.Ident.Pos, e.F.GetName())
+    if e.FnSrc != nil && e.FnSrc.GetKind() == types.Interface && passArgs.regArgs[0].typ.GetKind() == types.Interface {
+        offset := getVtableOffset(e.FnSrc, e.Ident.Pos, e.F.GetName())
         GenExpr(file, passArgs.regArgs[0].value)
         CallVTableFn(file, offset)
     } else {
@@ -882,13 +882,13 @@ func convertFmtArg(arg ast.Expr) ast.Expr {
     if (arg.GetType().GetKind() == types.Str) { return arg }
 
     funcName := "to_str"
-    recvObj := identObj.Get("String").(*identObj.Interface)
+    fnSrc := identObj.Get("String").(*identObj.Interface)
 
-    f := recvObj.GetFunc(funcName)
-    f = f.UpdateReceiver(arg.GetType())
+    f := fnSrc.GetFunc(funcName)
+    f = f.FromNewFnSrc(arg.GetType())
 
     ident := ast.Ident{ Name: funcName, Obj: f }
-    return &ast.FnCall{ F: f, ReceiverType: recvObj.GetType(), Ident: ident, Values: []ast.Expr{ arg } }
+    return &ast.FnCall{ F: f, FnSrc: fnSrc.GetType(), Ident: ident, Values: []ast.Expr{ arg } }
 }
 
 func convertFmt(fmtStr token.Token, values []ast.Expr) ast.Expr {

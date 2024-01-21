@@ -617,7 +617,7 @@ func prsDotCallFn(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ type
 
     ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
     return &ast.FnCall{ 
-        Ident: ident, ReceiverType: typ, F: f, GenericUsedType: usedType,
+        Ident: ident, FnSrc: typ, F: f, GenericUsedType: usedType,
         Values: vals, ParenLPos: posL, ParenRPos: posR, 
     }
 }
@@ -1112,7 +1112,7 @@ func prsCallInterfaceFn(tokens *token.Tokens, ident *ast.Ident, usedGeneric type
     var f *identObj.Func = nil
     if obj,ok := ident.Obj.(*identObj.Interface); ok {
         f = obj.GetFunc(name.Str)
-        f = f.UpdateReceiver(vals[0].GetType())
+        f = f.FromNewFnSrc(vals[0].GetType())
 
     } else if obj := identObj.GetImplObj(ident.Name); obj != nil {
         f = obj.GetFunc(name.Str)
@@ -1135,9 +1135,9 @@ func prsCallInterfaceFn(tokens *token.Tokens, ident *ast.Ident, usedGeneric type
 
         resvSpace := identObj.ReserveSpace(f.GetRetType())
 
-        receiverType := ident.GetType()
+        fnSrc := ident.GetType()
         ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
-        return &ast.FnCall{ Ident: ident, ReceiverType: receiverType, F: f, ResvSpace: resvSpace, GenericUsedType: usedGeneric, Values: vals, ParenLPos: posL, ParenRPos: posR }
+        return &ast.FnCall{ Ident: ident, FnSrc: fnSrc, F: f, ResvSpace: resvSpace, GenericUsedType: usedGeneric, Values: vals, ParenLPos: posL, ParenRPos: posR }
     } else {
         fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement function %s\n", ident.Name, name.Str)
         fmt.Fprintln(os.Stderr, "\t" + ident.At())
@@ -1173,7 +1173,7 @@ func prsCallFn(tokens *token.Tokens, ident *ast.Ident, usedGeneric types.Type) *
         }
     }
 
-    f := identObj.CreateUnresolvedFunc(ident.Name, nil)
+    f := identObj.CreateUnresolvedFunc(ident.Name)
     return &ast.FnCall{ Ident: *ident, F: &f, Values: vals, ParenLPos: posL, ParenRPos: posR }
 }
 
