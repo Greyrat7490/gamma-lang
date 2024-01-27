@@ -16,5 +16,5 @@ impl i64 :: I {
 
 fn main() {
     i i64 := -69
-    println(fmt("i: {} (at {})", i, I::a(&i)))
+    println(fmt("i: {} (at {})", i, I.a(&i)))
 }

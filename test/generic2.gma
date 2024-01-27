@@ -1,12 +1,12 @@
 fn test<T>(t T) {
-    println(String::to_str(t))
+    println(String.to_str(t))
 }
 
 fn test2<T>(v [$]T) -> str {
     s := "{ "
 
     for i u64, v.len {
-        s = s + fmt("{} ", String::to_str(v[i]))
+        s = s + fmt("{} ", String.to_str(v[i]))
     }
 
     ret s + "}"

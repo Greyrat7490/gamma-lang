@@ -9,21 +9,21 @@ struct S<T> {
 }
 
 fn test_enum() {
-    a := Option::<u64>::Val(69)
-    b := Option::<u64>::None
-    c := Option::<i8>::Val(-64)
+    a := Option::<u64>.Val(69)
+    b := Option::<u64>.None
+    c := Option::<i8>.Val(-64)
 
-    if a : Option::<u64>::Val(a) {
+    if a : Option::<u64>.Val(a) {
         println(fmt("a: {}", a))
     }
 
-    if b : Option::<u64>::Val(a) {
+    if b : Option::<u64>.Val(a) {
         println(fmt("(dead code) a: {}", a))
     } else {
         println("b: None")
     }
 
-    if c : Option::<i8>::Val(c) {
+    if c : Option::<i8>.Val(c) {
         println(fmt("c: {}", c))
     }
 }

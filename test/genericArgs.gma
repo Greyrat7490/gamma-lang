@@ -3,7 +3,7 @@ enum Option<T> {
 }
 
 fn show<T>(opt Option<T>) {
-    if opt : Option::<T>::Val(v) {
+    if opt : Option::<T>.Val(v) {
         println(fmt("valid ({})", v))
     } else {
         println("none")
@@ -15,9 +15,9 @@ fn Add<T>(a T, b T) -> T {
 }
 
 fn testGenericType() {
-    a := Option::<u64>::Val(64)
-    b := Option::<bool>::None
-    c := Option::<u8>::Val(255)
+    a := Option::<u64>.Val(64)
+    b := Option::<bool>.None
+    c := Option::<u8>.Val(255)
 
     show::<u64>(a)
     show::<bool>(b)
@@ -41,7 +41,7 @@ fn testAdd() {
 }
 
 fn packVal<T>(val T) -> Option<T> {
-    ret Option::<T>::Val(val)
+    ret Option::<T>.Val(val)
 }
 
 enum Test {
@@ -49,16 +49,16 @@ enum Test {
 }
 
 fn retTest() -> Test {
-    ret Test::Val(64)
+    ret Test.Val(64)
 }
 
 fn testEnum() {
     a := packVal::<u64>(420)
-    if a : Option::<u64>::Val(a) {
+    if a : Option::<u64>.Val(a) {
         println(fmt("a = {}", a))
     }
 
-    if retTest() : Test::Val(z) {
+    if retTest() : Test.Val(z) {
         println(fmt("retTest() = {}", z))
     }
 }

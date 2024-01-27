@@ -17,13 +17,13 @@ impl i64 :: I {
 fn main() {
     u u64 := 420
 
-    I::show(u)
-    u64::show(u)
+    I.show(u)
+    u64.show(u)
     u.show()
 
     i i64 := -64
 
-    I::show(i)
-    i64::show(i)
+    I.show(i)
+    i64.show(i)
     i.show()
 }

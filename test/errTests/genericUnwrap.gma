@@ -3,9 +3,10 @@ enum Option<T> {
 }
 
 fn main() {
-    a := Option::<i8>::Val(-64)
+    // TODO better error position
+    a := Option::<i8>.Val(-64)
 
-    if a : Option::<u64>::Val(a) {
+    if a : Option::<u64>.Val(a) {
         println(fmt("a: {}", a))
     }
 }

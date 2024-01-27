@@ -7,33 +7,33 @@ enum E2 u64 {
 }
 
 fn test1(e E) {
-    if e : E::B(b) {
-        println(fmt("E::B({})", b))
+    if e : E.B(b) {
+        println(fmt("E.B({})", b))
     } else {
-        println("E::A")
+        println("E.A")
     }
 }
 
 fn test2(e E2) {
-    if e : E2::{
-        A(a): println(fmt("E2::A({})", a))
-        B(b): println(fmt("E2::B({})", b))
+    if e : E2.{
+        A(a): println(fmt("E2.A({})", a))
+        B(b): println(fmt("E2.B({})", b))
     }
 }
 
 fn retEnum(u u32) -> E {
-    ret E::B(u)
+    ret E.B(u)
 }
 
 fn retEnum2(s str) -> E2 {
-    ret E2::A(s)
+    ret E2.A(s)
 }
 
 fn main() {
     println("small enum -----")
-    test1(E::B(69))
+    test1(E.B(69))
 
-    e := E::B(420)
+    e := E.B(420)
     test1(e)
 
     e1 := retEnum(1)
@@ -42,9 +42,9 @@ fn main() {
     test1(retEnum(2))
 
     println("\nbig enum -----")
-    test2(E2::A("string A"))
+    test2(E2.A("string A"))
 
-    e2 := E2::A("string B")
+    e2 := E2.A("string B")
     test2(e2)
 
     e3 := retEnum2("test")

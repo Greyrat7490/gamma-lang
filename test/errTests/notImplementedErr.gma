@@ -5,7 +5,4 @@ fn main() {
 
     // *i64 does not implement String
     println(fmt("i: {} (at {})", i, &i))
-
-    // TODO use . to access function (String.to_str(i) instead of String::to_str(i))
-    // TODO same for enums
 }

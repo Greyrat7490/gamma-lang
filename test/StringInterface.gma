@@ -4,10 +4,10 @@ enum E u64 {
 
 impl E :: String {
     fn to_str(self) -> str {
-        if self : E::B(b) {
-            ret fmt("E::B({})", b)
+        if self : E.B(b) {
+            ret fmt("E.B({})", b)
         } else {
-            ret "E::A"
+            ret "E.A"
         }
     }
 }
@@ -22,8 +22,8 @@ fn main() {
     b := true
     println(b.to_str())
 
-    e1 := E::A
+    e1 := E.A
     println(e1.to_str())
-    e2 := E::B(420)
+    e2 := E.B(420)
     println(e2.to_str())
 }

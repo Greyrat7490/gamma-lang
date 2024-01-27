@@ -8,13 +8,13 @@ enum Option char {
 
 fn retOpt(a u64) -> Option {
     ret $ a <= {
-        2: Option::Val(420)
-        _: Option::None
+        2: Option.Val(420)
+        _: Option.None
     }
 }
 
 fn printContent(t Test) {
-    println(fmt("{}", $ t : Test::{
+    println(fmt("{}", $ t : Test.{
         A(a): a as u64
         B(b): b.len
         C(c): c as u64
@@ -24,9 +24,9 @@ fn printContent(t Test) {
 fn test1() {
     println("test1")
 
-    a := Test::A(69)
-    b := Test::B("string\n")
-    c := Test::C(true)
+    a := Test.A(69)
+    b := Test.B("string\n")
+    c := Test.C(true)
 
     printContent(a)
     printContent(b)
@@ -40,13 +40,13 @@ fn test2() {
     b := retOpt(2)
     c := retOpt(3)
 
-    if a : Option::Val(a) {
+    if a : Option.Val(a) {
         println(fmt("{}", a))
     }
-    if b : Option::Val(b) {
+    if b : Option.Val(b) {
         println(fmt("{}", b))
     }
-    if c : Option::None {
+    if c : Option.None {
         println("c has no value")
     }
 }

@@ -1,4 +1,4 @@
 fn main() {
-    a := Opt::<u64>::Val(64)
+    a := Opt::<u64>.Val(64)
     println(fmt("{}", a))
 }

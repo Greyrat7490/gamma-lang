@@ -37,8 +37,8 @@ impl Test :: Number {
     }
 
     fn print(a u64) {
-        // Self:: is optinal (TODO force Self::)
-        println(fmt("Test: {}", Self::sub(a, 1)))
+        // Self is optinal (TODO force Self)
+        println(fmt("Test: {}", Self.sub(a, 1)))
     }
 }
 
@@ -91,18 +91,18 @@ fn calc(lhs Number, rhs Number) -> u64 {
 
 /*
 fn calc2<T: Number, T2: Number>(lhs u64, rhs u64) -> u64 {
-    ret T::add(lhs, rhs) + T2::add(lhs, rhs)
+    ret T.add(lhs, rhs) + T2.add(lhs, rhs)
 }
 */
 
 fn interface_fn_no_ret() {
-    Test::print(70)
-    Test2::print(69)
+    Test.print(70)
+    Test2.print(69)
 }
 
 fn interface_fn_ret() {
-    println(fmt("{}", Test::add(30, 39)))
-    println(fmt("{}", Test::sub(69, 5)))
+    println(fmt("{}", Test.add(30, 39)))
+    println(fmt("{}", Test.sub(69, 5)))
 }
 
 fn self_ret(t Test, t2 Test2) {
@@ -153,7 +153,7 @@ impl Test3 :: Interface {
 }
 
 fn self_ptr() {
-    t := Test3::new()
+    t := Test3.new()
     println(fmt("{} {} {} {}", t.a, t.b, t.c.len, t.c.cap))
 
     t.test_append()
@@ -171,13 +171,13 @@ fn method_test() {
     t := Test{ 42069 }
     t2 := Test2{ 63 }
 
-    println(fmt("{}", Test::inc(t)))
+    println(fmt("{}", Test.inc(t)))
 
     // same as Test::inc(t) is just syntax sugar (like in rust)
     // so this function can also be called method
     println(fmt("{}", t.inc()))
 
-    println(fmt("{}", Test2::inc(t2)))
+    println(fmt("{}", Test2.inc(t2)))
     println(fmt("{}", t2.inc()))
 }
 

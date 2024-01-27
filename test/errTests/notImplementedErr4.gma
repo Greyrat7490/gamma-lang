@@ -16,5 +16,5 @@ impl i32 :: I {
 
 fn main() {
     i i64 := -69
-    I::a(&i)
+    I.a(&i)
 }

@@ -9,24 +9,24 @@ enum Test2 u8 {
 fn test1() {
     println("test1")
 
-    a := Test::A
-    b := Test::B
-    c := Test::C
+    a := Test.A
+    b := Test.B
+    c := Test.C
 
-    if a : Test::A {
-        println("a == Test::A")
+    if a : Test.A {
+        println("a == Test.A")
     }
 
-    if b == Test::B {
-        println("b == Test::B")
+    if b == Test.B {
+        println("b == Test.B")
     }
 
-    if c : Test::C {
-        println("c == Test::C")
+    if c : Test.C {
+        println("c == Test.C")
     }
 
-    if c != Test::B {
-        println("c != Test::B")
+    if c != Test.B {
+        println("c != Test.B")
     }
 }
 
@@ -35,53 +35,53 @@ fn test2() {
 
     s := "test string 2"
 
-    a := Test2::A(86)
-    b := Test2::B("test string")
-    c := Test2::C(true)
-    b2 := Test2::B(s)
+    a := Test2.A(86)
+    b := Test2.B("test string")
+    c := Test2.C(true)
+    b2 := Test2.B(s)
 
-    if a : Test2::A(a) {
+    if a : Test2.A(a) {
         println(fmt("i64: {}", a))
     }
 
-    if c : Test2::C(c) {
+    if c : Test2.C(c) {
         println(fmt("bool: {}", c))
         c = false                   // no side effect c is a new var
     }
 
-    if c : Test2::C(c) {
+    if c : Test2.C(c) {
         println(fmt("bool: {}", c))
     }
 
-    if b : Test2::B(b) {
+    if b : Test2.B(b) {
         println(fmt("str: {}", b))
     }
 
-    if b2 : Test2::B(b) {
+    if b2 : Test2.B(b) {
         println(fmt("str: {}", b))
     }
 
-    if b2 : Test2::C(_) {
+    if b2 : Test2.C(_) {
         println("dead code")
     } else {
-        println("b2 is not a Test2::C")
+        println("b2 is not a Test2.C")
     }
 }
 
 fn test3() {
     println("test3")
 
-    a := Test2::A(420)
+    a := Test2.A(420)
     b := &a
 
-    if *b : Test2::A(b) {
+    if *b : Test2.A(b) {
         println(fmt("A: {}", b))
     }
 
-    if *b : Test2::C(_) {
+    if *b : Test2.C(_) {
         println("dead code")
     } else {
-        println("*b is not a Test2::C")
+        println("*b is not a Test2.C")
     }
 }
 
@@ -98,42 +98,42 @@ struct Test3 {
 fn test4() {
     println("test4")
 
-    t := Test3{ a: 86, b: 69, t: Test2::A(64) }
+    t := Test3{ a: 86, b: 69, t: Test2.A(64) }
     
-    if t.t : Test2::A(a) {
+    if t.t : Test2.A(a) {
         println(fmt("A: {}", a))
     }
 }
 
 cfn retStruct() -> Test3 {
-    ret Test3{ 1, 2, Test2::A(86) }
+    ret Test3{ 1, 2, Test2.A(86) }
 }
 
 fn test5() {
     println("test5")
 
-    if retStruct().t : Test2::A(a) {
+    if retStruct().t : Test2.A(a) {
         println(fmt("A: {}", a))
     }
 
-    if retStruct().t : Test2::B(_) {
+    if retStruct().t : Test2.B(_) {
         println("dead code")
     } else {
-        println("retStruct().t is not a Test2::B")
+        println("retStruct().t is not a Test2.B")
     }
 }
 
 fn test6() {
     a :: retStruct()
     b :: a.t
-    if b : Test2::A(a) {
+    if b : Test2.A(a) {
         println(fmt("A: {}", a))
     }
 }
 
 cfn test7() -> str {
-    b :: Test2::B("test string")
-    if b : Test2::A(b) {
+    b :: Test2.B("test string")
+    if b : Test2.A(b) {
         ret "unreachable"
     }
 
@@ -141,8 +141,8 @@ cfn test7() -> str {
 }
 
 cfn test8() -> i64 {
-    b := Test2::A(64)
-    if b : Test2::A(a) {
+    b := Test2.A(64)
+    if b : Test2.A(a) {
         ret a
     }
 
@@ -150,8 +150,8 @@ cfn test8() -> i64 {
 }
 
 cfn test9() -> i64 {
-    a := Test::A
-    if a : Test::A {
+    a := Test.A
+    if a : Test.A {
         ret 1
     }
 
@@ -161,19 +161,19 @@ cfn test9() -> i64 {
 fn test10() {
     println("test10")
 
-    a := Test2::A(64)
+    a := Test2.A(64)
 
-    if a : Test2::A(a) {
+    if a : Test2.A(a) {
         println(fmt("{}", a))
     }
 
-    a = Test2::C(false)
-    if a : Test2::C(a) {
+    a = Test2.C(false)
+    if a : Test2.C(a) {
         println(fmt("{}", a))
     }
 
-    a = Test2::B("string")
-    if a : Test2::B(a) {
+    a = Test2.B("string")
+    if a : Test2.B(a) {
         println(fmt("{}", a))
     }
 }
@@ -183,49 +183,49 @@ fn printTest(t Test) {
 }
 
 fn printTest2(t Test2) {
-    if t : Test2::A(a) {
-        println(fmt("t == Test2::A: {}", a))
+    if t : Test2.A(a) {
+        println(fmt("t == Test2.A: {}", a))
     }
-    if t : Test2::B(b) {
-        println(fmt("t == Test2::B: {}", b))
+    if t : Test2.B(b) {
+        println(fmt("t == Test2.B: {}", b))
     }
-    if t : Test2::C(c) {
-        println(fmt("t == Test2::C: {}", c))
+    if t : Test2.C(c) {
+        println(fmt("t == Test2.C: {}", c))
     }
 }
 
 fn test11() {
     println("test11")
 
-    t2 := Test::A
+    t2 := Test.A
     printTest(t2)
 
-    t2 = Test::B
+    t2 = Test.B
     printTest(t2)
 
-    t2 = Test::C
+    t2 = Test.C
     printTest(t2)
 }
 
 fn test12() {
     println("test12")
 
-    t := Test2::A(-64)
+    t := Test2.A(-64)
     printTest2(t)
 
-    t = Test2::B("some string")
+    t = Test2.B("some string")
     printTest2(t)
 
-    t = Test2::C(false)
+    t = Test2.C(false)
     printTest2(t)
 }
 
 fn retEnum() -> Test2 {
-    ret Test2::B("some string")
+    ret Test2.B("some string")
 }
 
 fn ret1() -> u64 {
-    t := Test::C
+    t := Test.C
     ret t as u64
 }
 
@@ -249,17 +249,17 @@ enum Test4 {
 }
 
 fn retTest4() -> Test4 {
-    ret Test4::Val(69)
+    ret Test4.Val(69)
 }
 
 fn test14() {
     println("test14")
     a := retTest4()
-    if a : Test4::Val(a) {
+    if a : Test4.Val(a) {
         println(fmt("a = {}", a))
     }
 
-    if retTest4() : Test4::Val(a) {
+    if retTest4() : Test4.Val(a) {
         println(fmt("retTest4() = {}", a))
     }
 }

@@ -3,7 +3,7 @@ enum Test {
 }
 
 fn main() {
-    if Test::A : Test::{
+    if Test.A : Test.{
         A: println("A")
         B: println("B")
         C: println("C")

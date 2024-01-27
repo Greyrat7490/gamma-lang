@@ -26,5 +26,5 @@ impl Test2 :: Number {
 fn main() {
     t := Test2{ 64 }
 
-    println(fmt("{}", Test::inc(t)))
+    println(fmt("{}", Test.inc(t)))
 }

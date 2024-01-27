@@ -1,21 +1,21 @@
 fn find<T>(arr [$]T, elem T) -> Opt<u64> {
     for i u64, arr.len {
         if arr[i] == elem {
-            ret Opt::<u64>::Val(i)
+            ret Opt::<u64>.Val(i)
         }
     }
 
-    ret Opt::<u64>::None
+    ret Opt::<u64>.None
 }
 
 fn useless<T>(arr [$]T, elem T) -> Opt<T> {
     for i u64, arr.len {
         if arr[i] == elem {
-            ret Opt::<T>::Val(elem)
+            ret Opt::<T>.Val(elem)
         }
     }
 
-    ret Opt::<T>::None
+    ret Opt::<T>.None
 }
 
 fn printArr<T>(arr [$]T) {
@@ -33,14 +33,14 @@ fn testU64() {
     printArr::<u64>(arr)
 
     res := find::<u64>(arr, 64)
-    if res : Opt::<u64>::Val(res) {
+    if res : Opt::<u64>.Val(res) {
         println(fmt("64 at idx: {}", res))
     } else {
         println("could not find 64 in arr")
     }
 
     res2 := find::<u64>(arr, 69)
-    if res2 : Opt::<u64>::Val(res2) {
+    if res2 : Opt::<u64>.Val(res2) {
         println(fmt("69 at idx: {}", res2))
     } else {
         println("could not find 69 in arr")
@@ -55,14 +55,14 @@ fn testChar() {
     printArr::<char>(arr)
 
     res := find::<char>(arr, 'r')
-    if res : Opt::<u64>::Val(res) {
+    if res : Opt::<u64>.Val(res) {
         println(fmt("'r' at idx: {}", res))
     } else {
         println("could not find 'r' in arr")
     }
 
     res2 := find::<char>(arr, 'a')
-    if res2 : Opt::<u64>::Val(res2) {
+    if res2 : Opt::<u64>.Val(res2) {
         println(fmt("'a' at idx: {}", res2))
     } else {
         println("could not find 'a' in arr")
@@ -76,7 +76,7 @@ fn testGenericRet() {
     printArr::<bool>(arr)
 
     res := useless::<bool>(arr, true)
-    if res : Opt::<bool>::Val(res) {
+    if res : Opt::<bool>.Val(res) {
         println(fmt("arr contains {}", res))
     } else {
         println("arr does not contains true")

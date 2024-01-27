@@ -21,48 +21,48 @@ struct S { a u8 }
 
 impl S :: I {
     fn show1(self) {
-        println("S::show(s)")
+        println("S.show(s)")
     }
 
     fn show2(self, u u32) {
-        println(fmt("S::show(s, {})", u))
+        println(fmt("S.show(s, {})", u))
     }
 }
 
 fn struct_show(s S) {
     println("\nshow1")
     s.show1()
-    S::show1(s)
-    I::show1(s)
+    S.show1(s)
+    I.show1(s)
 
     println("\nshow1")
     s.show2(64)
-    S::show2(s, 64)
-    I::show2(s, 69)
+    S.show2(s, 64)
+    I.show2(s, 69)
 }
 
 fn enum_show(e Enum) {
     println("\nshow1")
     e.show1()
-    Enum::show1(e)
-    I::show1(e)
+    Enum.show1(e)
+    I.show1(e)
 
     println("\nshow2")
     e.show2(420)
-    Enum::show2(e, 64)
-    I::show2(e, 69)
+    Enum.show2(e, 64)
+    I.show2(e, 69)
 }
 
 fn main() {
-    a := Enum::A
+    a := Enum.A
     a.show1()
 
-    b := Enum::B
+    b := Enum.B
     b.show1()
 
     s := S{ 64 }
     struct_show(s)
 
-    c := Enum::C
+    c := Enum.C
     enum_show(c)
 }

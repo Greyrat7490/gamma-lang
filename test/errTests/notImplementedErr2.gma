@@ -1,4 +1,4 @@
 fn main() {
     i i64 := -69
-    println(fmt("i: {} (at {})", i, String::to_str(&i)))
+    println(fmt("i: {} (at {})", i, String.to_str(&i)))
 }
