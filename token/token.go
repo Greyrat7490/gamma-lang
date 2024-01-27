@@ -1,11 +1,11 @@
 package token
 
 import (
-    "os"
-    "fmt"
-    "bufio"
-    "strconv"
-    "gamma/types"
+	"bufio"
+	"fmt"
+	"gamma/types"
+	"os"
+	"strconv"
 )
 
 type TokenType uint
@@ -469,7 +469,6 @@ func (t Token) At() string {
 type Tokens struct {
     tokens []Token
     idx int
-    savedIdx int
     path string
     lastImport bool
 }
@@ -499,7 +498,6 @@ func (t *Tokens) SetLastImport() {
 
 func Tokenize(path string, src *os.File) (tokens Tokens) {
     tokens.idx = -1
-    tokens.savedIdx = -1
     tokens.path = path
     tokens.lastImport = true
 
@@ -702,16 +700,10 @@ func (t *Tokens) FindNext (typ TokenType) Pos {
     return Pos{ -1, -1, "" }
 }
 
-func (t *Tokens) SaveIdx() {
-    t.savedIdx = t.idx
+func (t *Tokens) SaveIdx() int {
+    return t.idx
 }
 
-func (t *Tokens) ResetIdx() {
-    if t.savedIdx == -1 {
-        fmt.Fprintln(os.Stderr, "[ERROR] no saved idx")
-        os.Exit(1)
-    }
-
-    t.idx = t.savedIdx
-    t.savedIdx = -1
+func (t *Tokens) ResetIdx(idx int) {
+    t.idx = idx
 }

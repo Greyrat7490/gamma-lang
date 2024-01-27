@@ -264,7 +264,7 @@ func (e *Unwrap) Readable(indent int) string {
 
     res := strings.Repeat("   ", indent) + "UNWRAP:\n" +
         e.SrcExpr.Readable(indent+1) +
-        fmt.Sprintf("%s%v::%s\n", s, e.SrcExpr.GetType(), e.ElemName.Str)
+        fmt.Sprintf("%s%v.%s\n", s, e.SrcExpr.GetType(), e.ElemName.Str)
 
     if e.Obj != nil {
         res += fmt.Sprintf("%s%s\n", s, e.Obj.GetName())

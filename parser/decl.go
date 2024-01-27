@@ -58,12 +58,15 @@ func prsDecl(tokens *token.Tokens) ast.Decl {
     }
 }
 
-func createSelfType() types.Type {
-    if identObj.CurSelfType != nil {
-        return identObj.CurSelfType
+func createSelfType(tokens *token.Tokens) types.Type {
+    if identObj.CurSelfType == nil {
+        fmt.Fprintln(os.Stderr, "[ERROR] Self used outside of impl and interface")
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+        return nil
     }
 
-    return types.StructType{ Name: "Self" }
+    return identObj.CurSelfType
 }
 
 func prsVecType(tokens *token.Tokens) types.VecType {
@@ -177,12 +180,8 @@ func isInterface(token token.Token) bool {
     _,ok := identObj.Get(token.Str).(*identObj.Interface)
     return ok
 }
-func isEnumLit(enumName string, elemName string) bool {
-    if e,ok := identObj.Get(enumName).(*identObj.Enum); ok {
-        return e.HasElem(elemName)
-    }
-
-    return false
+func isEnumLit(enumType types.EnumType, elemName string) bool {
+    return enumType.HasElem(elemName)
 }
 func isGenericFunc(name string) bool {
     if f,ok := identObj.Get(name).(*identObj.Func); ok {
@@ -191,17 +190,29 @@ func isGenericFunc(name string) bool {
 
     return false
 }
+
 func isType(tokens *token.Tokens) bool {
+    savedIdx := tokens.SaveIdx()
+    defer tokens.ResetIdx(savedIdx)
+    return isType_(tokens)
+}
+func isType_(tokens *token.Tokens) bool {
     switch tokens.Cur().Type {
+    case token.Typename, token.SelfType:
+        return true
+
     case token.Mul:
         tokens.Next()
-        return isType(tokens)
+        return isType_(tokens)
 
     case token.BrackL:
         tokens.Next()
-        idxKind := prsExpr(tokens).GetType().GetKind()
-        if idxKind != types.Int && idxKind != types.Uint && idxKind != types.Infer {
-            return false
+
+        if tokens.Cur().Type != token.XSwitch {
+            idxKind := prsExpr(tokens).GetType().GetKind()
+            if idxKind != types.Int && idxKind != types.Uint && idxKind != types.Infer {
+                return false
+            }
         }
 
         if tokens.Next().Type != token.BrackR {
@@ -209,7 +220,7 @@ func isType(tokens *token.Tokens) bool {
         }
 
         tokens.Next()
-        return isType(tokens)
+        return isType_(tokens)
 
     case token.Name:
         if obj := identObj.Get(tokens.Cur().Str); obj != nil {
@@ -233,14 +244,14 @@ func isType(tokens *token.Tokens) bool {
         return false
 
     default:
-        return types.ToBaseType(tokens.Cur().Str) != nil
+        return false
     }
 }
 func isNextType(tokens *token.Tokens) bool {
-    tokens.SaveIdx()
-    defer tokens.ResetIdx()
+    savedIdx := tokens.SaveIdx()
+    defer tokens.ResetIdx(savedIdx)
     tokens.Next()
-    return isType(tokens)
+    return isType_(tokens)
 }
 
 func prsType(tokens *token.Tokens) types.Type {
@@ -257,7 +268,7 @@ func prsType(tokens *token.Tokens) types.Type {
         }
 
     case token.SelfType:
-        return createSelfType()
+        return createSelfType(tokens)
 
     case token.Name:
         if obj := identObj.Get(tokens.Cur().Str); obj != nil {
@@ -785,13 +796,13 @@ func prsDecFields(tokens *token.Tokens) (fields []ast.DecField) {
 func prsOptionalSelfType(tokens *token.Tokens) types.Type {
     if tokens.Peek().Type == token.SelfType {
         tokens.Next()
-        return createSelfType()
+        return createSelfType(tokens)
     }
 
     if tokens.Peek().Type == token.Mul && tokens.Peek2().Type == token.SelfType {
         tokens.Next()
         tokens.Next()
-        return types.PtrType{ BaseType: createSelfType() } 
+        return types.PtrType{ BaseType: createSelfType(tokens) } 
     }
 
     // explicitly used StructName
@@ -812,14 +823,14 @@ func prsOptionalSelfType(tokens *token.Tokens) types.Type {
 
 func prsSelf(tokens *token.Tokens) (name token.Token, typ types.Type) {
     if tokens.Cur().Type == token.Mul && tokens.Peek().Type == token.Self {
-        return tokens.Next(), types.PtrType{ BaseType: createSelfType() } 
+        return tokens.Next(), types.PtrType{ BaseType: createSelfType(tokens) } 
     }
 
     if tokens.Cur().Type == token.Self {
         name = tokens.Cur()
         typ = prsOptionalSelfType(tokens)
         if typ == nil {
-            typ = createSelfType()
+            typ = createSelfType(tokens)
         }
         return
     }
