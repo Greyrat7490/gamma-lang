@@ -1124,12 +1124,25 @@ func prsCallFromFnSrc(tokens *token.Tokens, fnSrc types.Type, fnSrcPos token.Pos
     vals := prsPassArgs(tokens)
     posR := tokens.Cur().Pos
 
+    origFnSrc := fnSrc
     fnSrc = resolveFnSrc(fnSrc, fnName.Str, vals)
 
     f := identObj.GetFnFromFnSrc(fnSrc, fnName.Str)
     if f == nil {
+        if origFnSrc,ok := origFnSrc.(types.InterfaceType); ok {
+            if origFnSrc.GetFunc(fnName.Str) == nil {
+                fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement function %s\n", origFnSrc, fnName.Str)
+                fmt.Fprintln(os.Stderr, "\t" + fnName.At())
+                os.Exit(1)
+            } else if !identObj.HasInterface(fnSrc, origFnSrc.Name) {
+                fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement %s\n", fnSrc, origFnSrc.Name)
+                fmt.Fprintln(os.Stderr, "\t" + fnSrcPos.At())
+                os.Exit(1)
+            }
+        }
+        
         fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement function %s\n", fnSrc, fnName.Str)
-        fmt.Fprintln(os.Stderr, "\t" + fnSrcPos.At())
+        fmt.Fprintln(os.Stderr, "\t" + fnName.At())
         os.Exit(1)
     }
 
