@@ -341,12 +341,20 @@ func IsResolvable(t Type) bool {
 }
 
 func IsGeneric(t Type) bool {
-    if _,ok := t.(GenericType); ok {
+    switch t := t.(type) {
+    case PtrType:
+        return IsGeneric(t.BaseType)
+
+    case ArrType:
+        return IsGeneric(t.BaseType)
+
+    case VecType:
+        return IsGeneric(t.BaseType)
+
+    case GenericType, *GenericType:
         return true
     }
-    if _,ok := t.(*GenericType); ok {
-        return true
-    }
+
     return false
 }
 
@@ -357,6 +365,14 @@ func ReplaceGeneric(t Type, insetType Type) Type {
 
     switch t := t.(type) {
     case PtrType:
+        t.BaseType = ReplaceGeneric(t.BaseType, insetType)
+        return t
+
+    case ArrType:
+        t.BaseType = ReplaceGeneric(t.BaseType, insetType)
+        return t
+
+    case VecType:
         t.BaseType = ReplaceGeneric(t.BaseType, insetType)
         return t
 
@@ -406,9 +422,28 @@ func ReplaceGeneric(t Type, insetType Type) Type {
     }
 }
 
-func ReplaceFuncGeneric(t Type) Type {
-    if t,ok := t.(*GenericType); ok && t.CurInsetType != nil {
-        return t.CurInsetType
+func ResolveGeneric(t Type) Type {
+    switch t := t.(type) {
+    case PtrType:
+        t.BaseType = ResolveGeneric(t.BaseType)
+        return t
+
+    case ArrType:
+        t.BaseType = ResolveGeneric(t.BaseType)
+        return t
+
+    case VecType:
+        t.BaseType = ResolveGeneric(t.BaseType)
+        return t
+
+    case GenericType:
+        if t.CurInsetType != nil {
+            return t.CurInsetType
+        }
+    case *GenericType:
+        if t.CurInsetType != nil {
+            return t.CurInsetType
+        }
     }
 
     return t
@@ -725,9 +760,9 @@ func MinSizeUint(val uint64) uint {
     }
 }
 
-func EqualCustom(destType Type, srcType Type, interfaceCompareFn func(string, string)bool) bool {
-    srcType = ReplaceFuncGeneric(srcType)
-    destType = ReplaceFuncGeneric(destType)
+func EqualCustom(destType Type, srcType Type, interfaceCompareFn func(Type, Type)bool) bool {
+    srcType = ResolveGeneric(srcType)
+    destType = ResolveGeneric(destType)
 
     switch t := destType.(type) {
     case VecType:
@@ -762,7 +797,7 @@ func EqualCustom(destType Type, srcType Type, interfaceCompareFn func(string, st
             return t.Name == t2.Name
         }
 
-        return interfaceCompareFn(t.Name, srcType.String())
+        return interfaceCompareFn(t, srcType)
 
     case *GenericType:
         if t2,ok := srcType.(*GenericType); ok {
@@ -820,5 +855,5 @@ func EqualCustom(destType Type, srcType Type, interfaceCompareFn func(string, st
 }
 
 func Equal(destType Type, srcType Type) bool {
-    return EqualCustom(destType, srcType, func(s1 string, s2 string)bool{ return false })
+    return EqualCustom(destType, srcType, func(t1 Type, t2 Type)bool{ return false })
 }

@@ -100,7 +100,7 @@ func DerefSetVar(file *bufio.Writer, addr addr.Addr, other vars.Var) {
 }
 
 func DerefSetDeref(file *bufio.Writer, addr addr.Addr, t types.Type, otherAddr addr.Addr) {
-    t = types.ReplaceFuncGeneric(t)
+    t = types.ResolveGeneric(t)
 
     switch t := t.(type) {
     case types.StrType:
@@ -150,7 +150,7 @@ func DerefSetDeref(file *bufio.Writer, addr addr.Addr, t types.Type, otherAddr a
 }
 
 func DerefSetExpr(file *bufio.Writer, dst addr.Addr, t types.Type, val ast.Expr) {
-    t = types.ReplaceFuncGeneric(t)
+    t = types.ResolveGeneric(t)
 
     switch t := t.(type) {
     case types.StrType:
@@ -252,7 +252,7 @@ func derefSetBigStructLit(file *bufio.Writer, t types.StructType, val constVal.S
 }
 
 func DerefSetVal(file *bufio.Writer, addr addr.Addr, typ types.Type, val constVal.ConstVal) {
-    typ = types.ReplaceFuncGeneric(typ)
+    typ = types.ResolveGeneric(typ)
 
     switch val := val.(type) {
     case *constVal.StrConst:

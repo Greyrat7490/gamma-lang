@@ -59,9 +59,13 @@ func HasFunc(t types.Type, name string) bool {
 func HasInterface(t types.Type, name string) bool {
     if t == nil { return false }
 
-    if _,ok := t.(*types.GenericType); ok {
-        // TODO: generic guards (required interfaces list)
-        return true
+    if t,ok := t.(*types.GenericType); ok {
+        if t.CurInsetType == nil {
+            // TODO: generic guards (required interfaces list)
+            return true
+        }
+
+        return HasInterface(t.CurInsetType, name)
     }
 
     if t,ok := t.(types.InterfaceType); ok {

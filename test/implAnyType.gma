@@ -14,6 +14,12 @@ impl TestStruct<u64> :: TestInterface {
     }
 }
 
+impl TestStruct<i64> :: TestInterface {
+    fn show(self) {
+        println(fmt("TestStruct<i64>: {}", self.a))
+    }
+}
+
 impl *char :: String {
     fn to_str(self) -> str {
         size := 0
@@ -36,15 +42,27 @@ fn ptrTest() {
     println(fmt("{}", s as *char))
 }
 
+fn ptrTest2() {
+    s := "test string2\0"
+    println(*char.to_str(s as *char))
+}
+
 fn genericStructTest() {
     t := TestStruct::<u64>{ a: 64 }
     t.show()
 }
 
+fn genericStructTest2() {
+    t := TestStruct::<i64>{ a: -64 }
+    TestStruct::<i64>.show(t)
+}
+
 fn main() {
     println("generic struct test")
     genericStructTest()
+    genericStructTest2()
 
     println("\nptr test")
     ptrTest()
+    ptrTest2()
 }

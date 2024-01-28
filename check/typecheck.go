@@ -48,12 +48,8 @@ func compatibleBinaryOp(t1 types.Type, t2 types.Type) bool {
 }
 
 func compatible(destType types.Type, srcType types.Type) bool {
-    interfacesEqFunc := func(name1 string, name2 string)bool {
-        if impl := identObj.GetImplObj(name2); impl != nil {
-            return impl.HasInterface(name1)
-        }
-
-        return false
+    interfacesEqFunc := func(destType types.Type, srcType types.Type)bool {
+        return identObj.HasInterface(srcType, destType.String())
     }
 
     return types.EqualCustom(destType, srcType, interfacesEqFunc)

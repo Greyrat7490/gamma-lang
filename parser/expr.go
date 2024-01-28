@@ -39,7 +39,7 @@ func prsExprWithPrecedence(tokens *token.Tokens, precedence precedence) ast.Expr
         if isNextType(tokens) { 
             typePos := tokens.Cur().Pos
             t := prsType(tokens)
-            expr = prsPostType(tokens, t, typePos, nil)
+            expr = prsPostType(tokens, t, typePos)
         } else {
             expr = prsUnaryExpr(tokens)
         }
@@ -48,7 +48,7 @@ func prsExprWithPrecedence(tokens *token.Tokens, precedence precedence) ast.Expr
         if isType(tokens) { 
             typePos := tokens.Cur().Pos
             t := prsType(tokens)
-            expr = prsPostType(tokens, t, typePos, nil)
+            expr = prsPostType(tokens, t, typePos)
         } else {
             ident := prsIdentExpr(tokens)
             expr = prsPostNameExpr(tokens, ident, nil)
@@ -57,7 +57,7 @@ func prsExprWithPrecedence(tokens *token.Tokens, precedence precedence) ast.Expr
     case token.Typename, token.SelfType, token.BrackL:
         typePos := tokens.Cur().Pos
         t := prsType(tokens)
-        expr = prsPostType(tokens, t, typePos, nil)
+        expr = prsPostType(tokens, t, typePos)
 
     case token.Plus, token.Minus, token.Amp, token.BitNot:
         expr = prsUnaryExpr(tokens)
@@ -222,7 +222,7 @@ func prsPostNameExpr(tokens *token.Tokens, ident *ast.Ident, insetType types.Typ
     return ident
 }
 
-func prsPostType(tokens *token.Tokens, t types.Type, typePos token.Pos, insetType types.Type) ast.Expr {
+func prsPostType(tokens *token.Tokens, t types.Type, typePos token.Pos) ast.Expr {
     tokens.Next()
 
     switch tokens.Cur().Type {
@@ -235,7 +235,7 @@ func prsPostType(tokens *token.Tokens, t types.Type, typePos token.Pos, insetTyp
             return prsArrayLit(tokens, t, typePos)
 
         case types.StructType:
-            return prsStructLit(tokens, t, typePos, insetType)
+            return prsStructLit(tokens, t, typePos)
 
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] expected an array or vec type before \"{\" but got %v\n", t)
@@ -246,16 +246,16 @@ func prsPostType(tokens *token.Tokens, t types.Type, typePos token.Pos, insetTyp
     case token.Dot:
         if t,ok := t.(types.EnumType); ok {
             if isEnumLit(t, tokens.Peek().Str) {
-                return prsEnumLit(tokens, t, typePos, insetType)
+                return prsEnumLit(tokens, t, typePos)
             }
         }
 
-        return prsCallInterfaceFn(tokens, t, typePos, insetType)
+        return prsCallFromFnSrc(tokens, t, typePos, nil)
 
     case token.DefConst:
         insetType := prsInsetType(tokens)
         t = types.ReplaceGeneric(t, insetType)
-        return prsPostType(tokens, t, typePos, insetType)
+        return prsPostType(tokens, t, typePos)
 
     default:
         fmt.Fprintf(os.Stderr, "[ERROR] unexpected \"%s\" after type %v\n", tokens.Cur().Str, t)
@@ -389,9 +389,8 @@ func prsVecLitField(tokens *token.Tokens, lit *ast.VectorLit) {
     }
 }
 
-func prsStructLit(tokens *token.Tokens, t types.StructType, typePos token.Pos, insetType types.Type) *ast.StructLit {
+func prsStructLit(tokens *token.Tokens, t types.StructType, typePos token.Pos) *ast.StructLit {
     s := identObj.Get(t.Name).(*identObj.Struct)
-    t = types.ReplaceGeneric(t, insetType).(types.StructType)
 
     braceL := tokens.Cur()
     if braceL.Type != token.BraceL {
@@ -610,14 +609,7 @@ func prsDotCallFn(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ type
 
     vals = addSelfArg(vals, f, obj)
 
-    if insetType != nil {
-        if !f.IsGeneric() {
-            fmt.Fprintf(os.Stderr, "[ERROR] %s (from %s) is not generic\n", name.Str, typ)
-            fmt.Fprintln(os.Stderr, "\t" + name.At())
-            os.Exit(1)
-        }
-        f.AddTypeToGeneric(insetType)
-    }
+    addInsetTypeToFunc(f, name.Pos, insetType)
 
     ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
     return &ast.FnCall{ 
@@ -718,7 +710,7 @@ func autoDeref(obj ast.Expr, field token.Token, t types.Type) (derefedObj ast.Ex
     }
 }
 
-func prsEnumLit(tokens *token.Tokens, t types.EnumType, typePos token.Pos, insetType types.Type) *ast.EnumLit {
+func prsEnumLit(tokens *token.Tokens, t types.EnumType, typePos token.Pos) *ast.EnumLit {
     if tokens.Cur().Type != token.Dot {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a \".\" but got %v\n", tokens.Cur())
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
@@ -738,7 +730,6 @@ func prsEnumLit(tokens *token.Tokens, t types.EnumType, typePos token.Pos, inset
         content = prsParenExpr(tokens)
     }
 
-    t = types.ReplaceGeneric(t, insetType).(types.EnumType) // TODO: not needed?
     contentType := t.GetType(elemName.Str)
     return &ast.EnumLit{ Pos: typePos, Type: t, ElemName: elemName, ContentType: contentType, Content: content }
 }
@@ -845,7 +836,7 @@ func addSelfArg(values []ast.Expr, f *identObj.Func, obj ast.Expr) []ast.Expr {
 
     expectedSelfType := f.GetArgs()[0]
 
-    if expectedSelfType.GetKind() == types.Ptr &&  obj.GetType().GetKind() != types.Ptr {
+    if expectedSelfType.GetKind() == types.Ptr && obj.GetType().GetKind() != types.Ptr {
         values[0] = &ast.Unary { 
             Type: types.PtrType{ BaseType: obj.GetType() },
             Operator: token.Token{ Type: token.Amp, Str: "&" },
@@ -1112,49 +1103,51 @@ func addInsetTypeToFunc(f *identObj.Func, pos token.Pos, insetType types.Type) {
     }
 }
 
-func prsCallInterfaceFn(tokens *token.Tokens, fnSrc types.Type, fnSrcPos token.Pos, insetType types.Type) *ast.FnCall {
+func resolveFnSrc(src types.Type, args []ast.Expr) types.Type {
+    if src.GetKind() == types.Interface && len(args) > 0 {
+        return identObj.ResolveFnSrc(src, args[0].GetType())
+    }
+
+    return src
+}
+
+func prsCallFromFnSrc(tokens *token.Tokens, fnSrc types.Type, fnSrcPos token.Pos, insetType types.Type) *ast.FnCall {
     if tokens.Cur().Type != token.Dot {
         fmt.Fprintf(os.Stderr, "[ERROR] expected \".\" but got %s\n", tokens.Cur())
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
 
-    name := tokens.Next()
+    fnName := tokens.Next()
 
     posL := tokens.Next().Pos
     vals := prsPassArgs(tokens)
     posR := tokens.Cur().Pos
 
-    // identObj.GetFnFromFnSrc(type)
+    fnSrc = resolveFnSrc(fnSrc, vals)
 
-    var f *identObj.Func = nil
-    if obj,ok := identObj.Get(fnSrc.String()).(*identObj.Interface); ok {
-        f = obj.GetFunc(name.Str)
-        f = f.FromNewFnSrc(vals[0].GetType())
-
-    } else if obj := identObj.GetImplObj(fnSrc.String()); obj != nil {
-        f = obj.GetFunc(name.Str)
-
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] expected an interface or implementable obj before %s but got %s\n", fnSrc, name)
+    f := identObj.GetFnFromFnSrc(fnSrc, fnName.Str)
+    if f == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement function %s\n", fnSrc, fnName.Str)
         fmt.Fprintln(os.Stderr, "\t" + fnSrcPos.At())
         os.Exit(1)
     }
 
-    if f != nil {
-        addInsetTypeToFunc(f, name.Pos, insetType)
+    addInsetTypeToFunc(f, fnName.Pos, insetType)
 
-        resvSpace := identObj.ReserveSpace(f.GetRetType())
-        ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
+    resvSpace := identObj.ReserveSpace(f.GetRetType())
+    ident := ast.Ident{ Name: fnName.Str, Pos: fnName.Pos, Obj: f }
 
-        return &ast.FnCall{ Ident: ident, FnSrc: fnSrc, F: f, ResvSpace: resvSpace, InsetType: insetType, Values: vals, ParenLPos: posL, ParenRPos: posR }
-    } else {
-        fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement function %s\n", fnSrc, name.Str)
-        fmt.Fprintln(os.Stderr, "\t" + fnSrcPos.At())
-        os.Exit(1)
+    return &ast.FnCall{ 
+        Ident: ident,
+        FnSrc: fnSrc,
+        F: f,
+        ResvSpace: resvSpace,
+        InsetType: insetType,
+        Values: vals,
+        ParenLPos: posL,
+        ParenRPos: posR,
     }
-
-    return nil
 }
 
 func prsCallFn(tokens *token.Tokens, ident *ast.Ident, insetType types.Type) *ast.FnCall {
@@ -1162,29 +1155,21 @@ func prsCallFn(tokens *token.Tokens, ident *ast.Ident, insetType types.Type) *as
     vals := prsPassArgs(tokens)
     posR := tokens.Cur().Pos
 
-    if ident.Obj != nil {
-        if f,ok := ident.Obj.(*identObj.Func); ok {
-            if insetType != nil {
-                if !f.IsGeneric() {
-                    fmt.Fprintf(os.Stderr, "[ERROR] function %s is not generic\n", ident.Name)
-                    fmt.Fprintln(os.Stderr, "\t" + ident.At())
-                    os.Exit(1)
-                }
-                f.AddTypeToGeneric(insetType)
-            }
-
-            resvSpace := identObj.ReserveSpace(f.GetRetType())
-
-            return &ast.FnCall{ Ident: *ident, F: f, ResvSpace: resvSpace, InsetType: insetType, Values: vals, ParenLPos: posL, ParenRPos: posR }
-        } else {
-            fmt.Fprintf(os.Stderr, "[ERROR] you can only call a function (%s is not a function)\n", ident.Name)
-            fmt.Fprintln(os.Stderr, "\t" + ident.At())
-            os.Exit(1)
-        }
+    if ident.Obj == nil {
+        f := identObj.CreateUnresolvedFunc(ident.Name)
+        return &ast.FnCall{ Ident: *ident, F: &f, Values: vals, ParenLPos: posL, ParenRPos: posR }
     }
 
-    f := identObj.CreateUnresolvedFunc(ident.Name)
-    return &ast.FnCall{ Ident: *ident, F: &f, Values: vals, ParenLPos: posL, ParenRPos: posR }
+    f,ok := ident.Obj.(*identObj.Func)
+    if !ok {
+        fmt.Fprintf(os.Stderr, "[ERROR] you can only call a function (%s is not a function)\n", ident.Name)
+        fmt.Fprintln(os.Stderr, "\t" + ident.At())
+        os.Exit(1)
+    }
+
+    addInsetTypeToFunc(f, ident.Pos, insetType)
+    resvSpace := identObj.ReserveSpace(f.GetRetType())
+    return &ast.FnCall{ Ident: *ident, F: f, ResvSpace: resvSpace, InsetType: insetType, Values: vals, ParenLPos: posL, ParenRPos: posR }
 }
 
 func prsPassArgs(tokens *token.Tokens) []ast.Expr {

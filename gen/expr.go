@@ -569,7 +569,18 @@ func FnCallAddrToReg(file *bufio.Writer, e *ast.FnCall, reg asm.RegGroup) {
     }
 }
 
+func resolveGenericFnSrc(e *ast.FnCall) {
+    if e.FnSrc != nil && e.FnSrc.GetKind() == types.Interface{
+        if len(e.Values) > 0 && types.IsGeneric(e.Values[0].GetType()) {
+            e.FnSrc = identObj.ResolveFnSrc(e.FnSrc, types.ResolveGeneric(e.Values[0].GetType()))
+            e.F = identObj.GetFnFromFnSrc(e.FnSrc, e.F.GetName())
+        }
+    }
+}
+
 func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
+    resolveGenericFnSrc(e)
+
     if e.F.GetGeneric() != nil {
         e.F.GetGeneric().CurInsetType = e.InsetType
     }
@@ -882,13 +893,12 @@ func convertFmtArg(arg ast.Expr) ast.Expr {
     if (arg.GetType().GetKind() == types.Str) { return arg }
 
     funcName := "to_str"
-    fnSrc := identObj.Get("String").(*identObj.Interface)
+    fnSrc := arg.GetType()
 
-    f := fnSrc.GetFunc(funcName)
-    f = f.FromNewFnSrc(arg.GetType())
+    f := identObj.GetFnFromFnSrc(fnSrc, funcName)
 
     ident := ast.Ident{ Name: funcName, Obj: f }
-    return &ast.FnCall{ F: f, FnSrc: fnSrc.GetType(), Ident: ident, Values: []ast.Expr{ arg } }
+    return &ast.FnCall{ F: f, FnSrc: fnSrc, Ident: ident, Values: []ast.Expr{ arg } }
 }
 
 func convertFmt(fmtStr token.Token, values []ast.Expr) ast.Expr {

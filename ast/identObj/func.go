@@ -102,15 +102,6 @@ func (f *Func) SetGeneric(generic *types.GenericType) {
     f.typ.Generic = generic
 }
 
-func (f *Func) FromNewFnSrc(fnSrc types.Type) *Func {
-    res := *f
-    res.typ.Args = make([]types.Type, len(res.typ.Args))
-    copy(res.typ.Args, f.typ.Args)
-    res.typ.Args[0] = fnSrc
-    res.fnSrc = fnSrc
-    return &res
-}
-
 func (f *Func) ResolveFnSrc(t types.Type) {
     if f.fnSrc != nil && types.IsResolvable(f.typ.Args[0]) {
         f.typ.Args[0] = t
