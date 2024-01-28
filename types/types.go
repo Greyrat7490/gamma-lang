@@ -314,6 +314,38 @@ func (t *InterfaceType) GetFunc(name string) *FuncType {
     return nil
 }
 
+func IsSelfType(t Type, interfaceType InterfaceType) bool {
+    switch t := t.(type) {
+    case InterfaceType:
+        return Equal(t, interfaceType)
+
+    case PtrType:
+        return IsSelfType(t.BaseType, interfaceType)
+
+    default:
+        return false
+    }
+}
+
+func IsFnSrcResolvable(src Type, fnName string) bool {
+    if src,ok := src.(InterfaceType); ok {
+        f := src.GetFunc(fnName)
+        if len(f.Args) > 0 {
+            return IsSelfType(f.Args[0], src)
+        }
+    }
+
+    return false
+}
+
+func ResolveFnSrc(src Type, fnName string, firstArgType Type) Type {
+    if IsFnSrcResolvable(src, fnName) && !IsGeneric(firstArgType) {
+        return firstArgType
+    }
+
+    return src
+}
+
 func IsBigStruct(t Type) bool {
     switch t := t.(type) {
     case VecType:

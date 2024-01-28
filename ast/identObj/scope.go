@@ -119,16 +119,6 @@ func GetImplObj(name string) *Implementable {
     return nil
 }
 
-func ResolveFnSrc(src types.Type, firstArgType types.Type) types.Type {
-    if src,ok := src.(types.InterfaceType); ok {
-        if HasInterface(firstArgType, src.Name) && !types.IsGeneric(firstArgType) {
-            return firstArgType
-        }
-    }
-
-    return src
-}
-
 func GetFnFromFnSrc(fnSrc types.Type, fnName string) *Func {
     switch fnSrc := fnSrc.(type) {
     case types.InterfaceType:

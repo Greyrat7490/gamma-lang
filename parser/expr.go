@@ -1103,9 +1103,9 @@ func addInsetTypeToFunc(f *identObj.Func, pos token.Pos, insetType types.Type) {
     }
 }
 
-func resolveFnSrc(src types.Type, args []ast.Expr) types.Type {
-    if src.GetKind() == types.Interface && len(args) > 0 {
-        return identObj.ResolveFnSrc(src, args[0].GetType())
+func resolveFnSrc(src types.Type, fnName string, args []ast.Expr) types.Type {
+    if len(args) > 0 {
+        return types.ResolveFnSrc(src, fnName, args[0].GetType())
     }
 
     return src
@@ -1124,7 +1124,7 @@ func prsCallFromFnSrc(tokens *token.Tokens, fnSrc types.Type, fnSrcPos token.Pos
     vals := prsPassArgs(tokens)
     posR := tokens.Cur().Pos
 
-    fnSrc = resolveFnSrc(fnSrc, vals)
+    fnSrc = resolveFnSrc(fnSrc, fnName.Str, vals)
 
     f := identObj.GetFnFromFnSrc(fnSrc, fnName.Str)
     if f == nil {
