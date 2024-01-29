@@ -64,7 +64,7 @@ func ExprAddrToReg(file *bufio.Writer, e ast.Expr, reg asm.RegGroup) {
 func GenExpr(file *bufio.Writer, e ast.Expr) {
     switch e := e.(type) {
     case *ast.IntLit:
-        GenIntLit(file, e.Type.Size(), e)
+        GenIntLit(file, e)
     case *ast.CharLit:
         GenCharLit(file, e)
     case *ast.BoolLit:
@@ -127,7 +127,7 @@ func GenExpr(file *bufio.Writer, e ast.Expr) {
     }
 }
 
-func GenIntLit(file *bufio.Writer, size uint, e *ast.IntLit) {
+func GenIntLit(file *bufio.Writer, e *ast.IntLit) {
     asm.MovRegVal(file, asm.RegA, e.Type.Size(), fmt.Sprint(e.Repr))
 }
 

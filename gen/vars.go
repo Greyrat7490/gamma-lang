@@ -256,7 +256,7 @@ func DerefSetVal(file *bufio.Writer, addr addr.Addr, typ types.Type, val constVa
 
     switch val := val.(type) {
     case *constVal.StrConst:
-        derefSetStrVal(file, addr, 0, val)
+        derefSetStrVal(file, addr, 0, val, typ)
 
     case *constVal.StructConst:
         derefSetStructVal(file, typ.(types.StructType), addr, 0, val)
@@ -284,9 +284,11 @@ func derefSetPtrVal(file *bufio.Writer, addr addr.Addr, offset int, val *constVa
     PtrConstToAddr(file, *val, addr.Offseted(int64(offset)))
 }
 
-func derefSetStrVal(file *bufio.Writer, addr addr.Addr, offset int, val *constVal.StrConst) {
+func derefSetStrVal(file *bufio.Writer, addr addr.Addr, offset int, val *constVal.StrConst, t types.Type) {
     asm.MovDerefVal(file, addr.Offseted(int64(offset)), types.Ptr_Size, fmt.Sprintf("_str%d", uint64(*val)))
-    asm.MovDerefVal(file, addr.Offseted(int64(offset) + int64(types.Ptr_Size)), types.I32_Size, fmt.Sprint(str.GetSize(uint64(*val))))
+    if t.GetKind() == types.Str {
+        asm.MovDerefVal(file, addr.Offseted(int64(offset) + int64(types.Ptr_Size)), types.I32_Size, fmt.Sprint(str.GetSize(uint64(*val))))
+    }
 }
 
 func derefSetEnumVal(file *bufio.Writer, t types.EnumType, addr addr.Addr, offset int, val *constVal.EnumConst) {
@@ -300,7 +302,7 @@ func derefSetStructVal(file *bufio.Writer, t types.StructType, addr addr.Addr, o
     for i,val := range val.Fields {
         switch val := val.(type) {
         case *constVal.StrConst:
-            derefSetStrVal(file, addr, offset, val)
+            derefSetStrVal(file, addr, offset, val, t.Types[i])
 
         case *constVal.StructConst:
             derefSetStructVal(file, t.Types[i].(types.StructType), addr, offset, val)

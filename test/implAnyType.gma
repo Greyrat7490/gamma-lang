@@ -34,12 +34,8 @@ impl *char :: String {
 }
 
 fn ptrTest() {
-    // TODO fix segfault
-    // s := "test string\0" as *char
-    // println(fmt("{}", s))
-
-    s := "test string\0"
-    println(fmt("{}", s as *char))
+    s := "test string\0" as *char
+    println(fmt("{}", s))
 }
 
 fn ptrTest2() {

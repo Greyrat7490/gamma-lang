@@ -643,7 +643,11 @@ func typeCheckCast(e *ast.Cast) {
         }
 
     case types.Struct:
-        fmt.Fprintf(os.Stderr, "[ERROR] casting to a struct(%v) is not allowed\n", e.DestType)
+        fmt.Fprintf(os.Stderr, "[ERROR] casting to a struct (%v) is not allowed\n", e.DestType)
+        fmt.Fprintln(os.Stderr, "\t" + e.AsPos.At())
+        os.Exit(1)
+    case types.Enum:
+        fmt.Fprintf(os.Stderr, "[ERROR] casting to an enum (%v) is not allowed\n", e.DestType)
         fmt.Fprintln(os.Stderr, "\t" + e.AsPos.At())
         os.Exit(1)
     default:
