@@ -234,12 +234,10 @@ func PassValStack(file *bufio.Writer, value constVal.ConstVal, valtype types.Typ
         asm.PushVal(file, fmt.Sprintf("_str%d", uint64(*v)))
 
     case *constVal.StructConst:
-        t := valtype.(types.StructType)
-
-        if len(t.Types) == 1 && t.Types[0].GetKind() != types.Str {
-            asm.PushVal(file, v.Fields[0].GetVal())
+        if len(v.Type.Types) == 1 {
+            PassValStack(file, v.Fields[0], v.Type.Types[0])
         } else {
-            vs := PackValues(t.Types, v.Fields)
+            vs := PackValues(v.Type.Types, v.Fields)
             asm.PushVal(file, vs[0])
             if len(vs) == 2 {
                 asm.PushVal(file, vs[1])
@@ -265,7 +263,7 @@ func PassVarStack(file *bufio.Writer, otherVar vars.Var) {
         asm.PushDeref(file, otherVar.Addr().Offseted(int64(types.Ptr_Size)))
         asm.PushDeref(file, otherVar.Addr())
 
-    case types.StructType:
+    case types.StructType, types.EnumType:
         if t.Size() > uint(8) {
             asm.PushDeref(file, otherVar.Addr().Offseted(int64(types.Ptr_Size)))
         }

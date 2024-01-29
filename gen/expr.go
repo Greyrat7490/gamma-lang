@@ -230,7 +230,7 @@ func GenIndexed(file *bufio.Writer, e *ast.Indexed) {
         asm.MovRegDeref(file, asm.RegD, addr.Offseted(int64(types.Ptr_Size)), types.U32_Size, false)
         asm.MovRegDeref(file, asm.RegA, addr, types.Ptr_Size, false)
 
-    case types.StructType:
+    case types.StructType, types.EnumType:
         if t.Size() > uint(8) {
             asm.MovRegDeref(file, asm.RegD, addr.Offseted(int64(t.Size() - 8)), t.Size() - 8, false)
             asm.MovRegDeref(file, asm.RegA, addr, types.Ptr_Size, false)
@@ -326,7 +326,7 @@ func GenIdent(file *bufio.Writer, e *ast.Ident, t types.Type) {
             asm.MovRegDeref(file, asm.RegA, v.Addr(), types.Ptr_Size, false)
             asm.MovRegDeref(file, asm.RegD, v.Addr().Offseted(int64(types.Ptr_Size)), types.I32_Size, false)
 
-        case types.StructType:
+        case types.StructType, types.EnumType:
             if t.Size() > uint(8) {
                 asm.MovRegDeref(file, asm.RegA, v.Addr(), types.Ptr_Size, false)
                 asm.MovRegDeref(file, asm.RegD, v.Addr().Offseted(int64(types.Ptr_Size)), t.Size() - 8, false)
