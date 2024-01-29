@@ -185,7 +185,7 @@ func readStack(idx uint, t types.Type) constVal.ConstVal {
         return &constVal.ArrConst{ Idx: idx, Elems: array.GetValues(idx), Type: t }
 
     case types.StructType:
-        c := constVal.StructConst{ Fields: make([]constVal.ConstVal, len(t.Types)) }
+        c := constVal.StructConst{ Type: t, Fields: make([]constVal.ConstVal, len(t.Types)) }
         for i,t := range t.Types {
             c.Fields[i] = readStack(idx, t)
             idx += t.Size()

@@ -232,7 +232,7 @@ fn ret1() -> u64 {
 fn ret2() -> u8 {
     t := retEnum()
     printTest2(t)
-    ret *(&t as u64 as *u8)         // TODO: cast for enums with content
+    ret t as u8 
 }
 
 fn test13() {

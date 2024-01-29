@@ -1,19 +1,20 @@
 package gen
 
 import (
-    "os"
-    "fmt"
-    "bufio"
-    "reflect"
-    "gamma/types"
-    "gamma/types/str"
-    "gamma/types/addr"
-    "gamma/ast"
-    "gamma/ast/identObj/vars"
-    "gamma/cmpTime"
-    "gamma/cmpTime/constVal"
-    "gamma/gen/asm/x86_64"
-    "gamma/gen/asm/x86_64/nasm"
+	"bufio"
+	"fmt"
+	"gamma/ast"
+	"gamma/ast/identObj/vars"
+	"gamma/cmpTime"
+	"gamma/cmpTime/constVal"
+	"gamma/gen/asm/x86_64"
+	"gamma/gen/asm/x86_64/nasm"
+	"gamma/token"
+	"gamma/types"
+	"gamma/types/addr"
+	"gamma/types/str"
+	"os"
+	"reflect"
 )
 
 // Define variable ----------------------------------------------------------
@@ -21,7 +22,7 @@ import (
 func VarDefVal(file *bufio.Writer, v vars.Var, val constVal.ConstVal) {
     switch v := v.(type) {
     case *vars.GlobalVar:
-        globalVarDefVal(file, v, val)
+        globalVarDefVal(v, val)
 
     case *vars.LocalVar:
         DerefSetVal(file, v.Addr(), v.GetType(), val)
@@ -42,42 +43,40 @@ func VarDefExpr(file *bufio.Writer, v vars.Var, e ast.Expr) {
     DerefSetExpr(file, v.Addr(), v.GetType(), e)
 }
 
-func globalVarDefVal(file *bufio.Writer, v *vars.GlobalVar, val constVal.ConstVal) {
+func globalVarDefVal(v *vars.GlobalVar, val constVal.ConstVal) {
     nasm.AddData(fmt.Sprintf("%s:", v.GetName()))
+    defVal(v.GetType(), val, v.GetPos())
+}
 
+func defVal(t types.Type, val constVal.ConstVal, pos token.Pos) {
     switch c := val.(type) {
     case *constVal.StrConst:
         defStr(c)
 
     case *constVal.StructConst:
-        defStruct(v.GetType().(types.StructType), c)
+        defStruct(c, pos)
+
+    case *constVal.EnumConst:
+        defEnum(c, pos)
 
     case *constVal.ArrConst, *constVal.PtrConst, *constVal.BoolConst, *constVal.IntConst, *constVal.UintConst:
-        defBasic(val.GetVal(), v.GetType().Size())
+        defBasic(val.GetVal(), t.Size())
 
     default:
-        fmt.Fprintf(os.Stderr, "[ERROR] define global var of typ %v is not supported yet\n", v.GetType())
-        fmt.Fprintln(os.Stderr, "\t" + v.GetPos().At())
+        fmt.Fprintf(os.Stderr, "[ERROR] define global var of typ %v is not supported yet\n", t)
+        fmt.Fprintln(os.Stderr, "\t" + pos.At())
         os.Exit(1)
     }
 }
 
-func defStruct(t types.StructType, val *constVal.StructConst) {
+func defEnum(val *constVal.EnumConst, pos token.Pos) {
+    defBasic(fmt.Sprint(val.Id), val.Type.IdType.Size())
+    defVal(val.ElemType, val.Elem, pos)
+}
+
+func defStruct(val *constVal.StructConst, pos token.Pos) {
     for i,v := range val.Fields {
-        switch c := v.(type) {
-        case *constVal.StrConst:
-            defStr(c)
-
-        case *constVal.StructConst:
-            defStruct(t.Types[i].(types.StructType), c)
-
-        case *constVal.ArrConst, *constVal.PtrConst, *constVal.BoolConst, *constVal.IntConst, *constVal.UintConst:
-            defBasic(v.GetVal(), t.Types[i].Size())
-
-        default:
-            fmt.Fprintf(os.Stderr, "[ERROR] %v is not supported yet\n", t)
-            os.Exit(1)
-        }
+        defVal(val.Type.Types[i], v, pos)
     }
 }
 
@@ -228,26 +227,6 @@ func derefSetArrLit(file *bufio.Writer, dst addr.Addr, t types.ArrType, lit *ast
                 DerefSetExpr(file, dst.Offseted(int64(i) * int64(getActualArrBaseSize(t.BaseType))), t.BaseType, v)
             }
         }
-    }
-}
-
-func derefSetBigStructLit(file *bufio.Writer, t types.StructType, val constVal.StructConst, offset int) {
-    addr := asm.RegAsAddr(asm.RegC).Offseted(int64(offset))
-
-    for _,field := range val.Fields {
-        switch f := field.(type) {
-        case *constVal.StrConst:
-            idx := uint64(*f)
-            asm.MovDerefVal(file, addr, types.Ptr_Size, fmt.Sprintf("_str%d", idx))
-            asm.MovDerefVal(file, addr.Offseted(int64(types.Ptr_Size)), types.I32_Size, fmt.Sprint(str.GetSize(idx)))
-        case *constVal.StructConst:
-            derefSetBigStructLit(file, t, *f, offset)
-
-        default:
-            asm.MovDerefVal(file, addr, t.Size(), field.GetVal())
-        }
-
-        addr.Offset += int64(t.Size())
     }
 }
 

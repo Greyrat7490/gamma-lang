@@ -24,6 +24,7 @@ type ArrConst  struct {
 }
 
 type StructConst struct {
+    Type types.StructType
     Fields []ConstVal
 }
 

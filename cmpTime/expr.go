@@ -217,7 +217,7 @@ func ConstEvalStructLit(e *ast.StructLit) constVal.ConstVal {
         res[i] = c
     }
 
-    return &constVal.StructConst{ Fields: res }
+    return &constVal.StructConst{ Type: e.StructType, Fields: res }
 }
 
 func ConstEvalField(e *ast.Field) constVal.ConstVal {
