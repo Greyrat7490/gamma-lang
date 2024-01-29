@@ -1,0 +1,10 @@
+fn test<T>(a T, b T) {
+    println(fmt("a: {}, b: {}", a, b))
+}
+
+fn main() {
+    a u64 := 0
+    b bool := false
+
+    test(a, b)
+}

@@ -1,4 +1,0 @@
-fn main() {
-    v := [$]i32 { len: 1 }
-    println(fmt("{}", vtos(v)))
-}

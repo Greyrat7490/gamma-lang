@@ -372,6 +372,37 @@ func IsResolvable(t Type) bool {
     }
 }
 
+func ExtractGeneric(t1 Type, t2 Type) Type {
+    switch t1 := t1.(type) {
+    case PtrType:
+        if t2,ok := t2.(PtrType); ok {
+            return ExtractGeneric(t1.BaseType, t2.BaseType)
+        }
+
+    case ArrType:
+        if t2,ok := t2.(ArrType); ok {
+            return ExtractGeneric(t1.BaseType, t2.BaseType)
+        }
+
+    case VecType:
+        if t2,ok := t2.(VecType); ok {
+            return ExtractGeneric(t1.BaseType, t2.BaseType)
+        }
+
+    case GenericType, *GenericType:
+        if t2,ok := t2.(GenericType); ok {
+            return t2.CurInsetType
+        }
+        if t2,ok := t2.(*GenericType); ok {
+            return t2.CurInsetType
+        }
+
+        return t2
+    }
+
+    return nil
+}
+
 func IsGeneric(t Type) bool {
     switch t := t.(type) {
     case PtrType:

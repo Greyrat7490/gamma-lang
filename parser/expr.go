@@ -99,7 +99,6 @@ func prsExprWithPrecedence(tokens *token.Tokens, precedence precedence) ast.Expr
             expr = prsIndexExpr(tokens, expr)
         } else if tokens.Peek().Type == token.Dot {
             tokens.Next()
-            // TODO: in work
             expr = prsDotExpr(tokens, expr, nil)
         } else if tokens.Peek().Type == token.As && CAST_PRECEDENCE >= precedence {
             tokens.Next()
@@ -609,7 +608,7 @@ func prsDotCallFn(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ type
 
     vals = addSelfArg(vals, f, obj)
 
-    addInsetTypeToFunc(f, name.Pos, insetType)
+    addInsetTypeToFunc(f, name.Pos, &insetType, vals)
 
     ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
     return &ast.FnCall{ 
@@ -1092,14 +1091,47 @@ func prsInsetType(tokens *token.Tokens) types.Type {
     return nil
 }
 
-func addInsetTypeToFunc(f *identObj.Func, pos token.Pos, insetType types.Type) {
-    if insetType != nil {
-        if !f.IsGeneric() {
-            fmt.Fprintf(os.Stderr, "[ERROR] function %s is not generic\n", f.GetName())
-            fmt.Fprintln(os.Stderr, "\t" + pos.At())
-            os.Exit(1)
+func inferInsetType(f *identObj.Func, pos token.Pos, args []ast.Expr) (insetType types.Type) {
+    for i,a := range f.GetArgs() {
+        if types.IsGeneric(a) {
+            t := types.ExtractGeneric(a, args[i].GetType())
+
+            if insetType != nil {
+                if !types.Equal(insetType, t) || insetType.GetKind() != types.Uint || insetType.GetKind() != types.Int {
+                    fmt.Fprintf(os.Stderr, "[ERROR] cannot infer inset type for %s (conflicting types %s and %s)\n", f.GetName(), insetType, t)
+                    fmt.Fprintln(os.Stderr, "\t" + pos.At())
+                    os.Exit(1)
+                }
+
+                if t.Size() > insetType.Size() {
+                    insetType = t
+                }
+            }
+
+            insetType = t
         }
-        f.AddTypeToGeneric(insetType)
+    }
+
+    if insetType == nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot infer inset type of generic function %s\n", f.GetName())
+        fmt.Fprintln(os.Stderr, "\t" + pos.At())
+        os.Exit(1)
+    }
+
+    return insetType
+}
+
+func addInsetTypeToFunc(f *identObj.Func, pos token.Pos, insetType *types.Type, args []ast.Expr) {
+    if f.IsGeneric() {
+        if *insetType == nil {
+            *insetType = inferInsetType(f, pos, args)
+        }
+
+        f.AddTypeToGeneric(*insetType)
+    } else if *insetType != nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] function %s is not generic\n", f.GetName())
+        fmt.Fprintln(os.Stderr, "\t" + pos.At())
+        os.Exit(1)
     }
 }
 
@@ -1146,7 +1178,7 @@ func prsCallFromFnSrc(tokens *token.Tokens, fnSrc types.Type, fnSrcPos token.Pos
         os.Exit(1)
     }
 
-    addInsetTypeToFunc(f, fnName.Pos, insetType)
+    addInsetTypeToFunc(f, fnName.Pos, &insetType, vals)
 
     resvSpace := identObj.ReserveSpace(f.GetRetType())
     ident := ast.Ident{ Name: fnName.Str, Pos: fnName.Pos, Obj: f }
@@ -1180,7 +1212,7 @@ func prsCallFn(tokens *token.Tokens, ident *ast.Ident, insetType types.Type) *as
         os.Exit(1)
     }
 
-    addInsetTypeToFunc(f, ident.Pos, insetType)
+    addInsetTypeToFunc(f, ident.Pos, &insetType, vals)
     resvSpace := identObj.ReserveSpace(f.GetRetType())
     return &ast.FnCall{ Ident: *ident, F: f, ResvSpace: resvSpace, InsetType: insetType, Values: vals, ParenLPos: posL, ParenRPos: posR }
 }

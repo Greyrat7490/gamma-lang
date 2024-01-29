@@ -1,0 +1,39 @@
+fn test1() {
+    vec := [$]i32{ len: 3 }
+    vec[0] = 420
+    vec[1] = 64
+    vec[2] = 69
+
+    println(vtos(vec))
+}
+
+fn dummy<T>(a T) -> T {
+    ret a
+}
+
+fn test2() {
+    a := true
+    b := dummy(a)
+    println(fmt("a: {}, b: {}", a, b))
+}
+
+fn test3() {
+    // TODO in work
+    // a := dummy(420)
+    // println(fmt("a: {}", a))
+}
+
+fn test4() {
+    // TODO in work
+    // a := 5
+    // b := dummy(a)
+    // c u16 := 64
+    // println(fmt("a: {}, b: {}, c: {}, b+c: {}", a, b, c, b + c))
+}
+
+fn main() {
+    test1()
+    test2()
+    test3()
+    test4()
+}
