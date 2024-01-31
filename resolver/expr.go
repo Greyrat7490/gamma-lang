@@ -223,6 +223,8 @@ func resolveBackwardExpr(e ast.Expr) {
                 e.F.GetGeneric().UsedInsetTypes[i] = getResolvedBackwardType(insetType)
             }
             e.InsetType = getResolvedBackwardType(e.InsetType)
+
+            e.F.GetGeneric().RemoveDuplTypes()
         }
 
     case *ast.Cast:

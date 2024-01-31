@@ -314,6 +314,17 @@ func (t *InterfaceType) GetFunc(name string) *FuncType {
     return nil
 }
 
+func (t *GenericType) RemoveDuplTypes() {
+    for i := range t.UsedInsetTypes {
+        for j := i+1; j < len(t.UsedInsetTypes); j++ {
+            if Equal(t.UsedInsetTypes[i], t.UsedInsetTypes[j]) && t.UsedInsetTypes[i].Size() == t.UsedInsetTypes[j].Size() {
+                t.UsedInsetTypes[j] = t.UsedInsetTypes[len(t.UsedInsetTypes)-1]
+                t.UsedInsetTypes = t.UsedInsetTypes[:len(t.UsedInsetTypes)-1]
+            }
+        }
+    }
+}
+
 func IsSelfType(t Type, interfaceType InterfaceType) bool {
     switch t := t.(type) {
     case InterfaceType:

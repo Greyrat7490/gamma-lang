@@ -31,7 +31,7 @@ fn test4() {
 
 fn test5() {
     a := 5
-    b u8 := 64
+    b u16 := 64
     println(fmt("a: {}, b: {}, a+b: {}", a, b, a + b))
 
     c := dummy(a)
