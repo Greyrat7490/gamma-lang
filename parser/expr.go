@@ -1094,7 +1094,7 @@ func prsInsetType(tokens *token.Tokens) types.Type {
 func inferInsetType(f *identObj.Func, pos token.Pos, args []ast.Expr) (insetType types.Type) {
     for i,a := range f.GetArgs() {
         if types.IsGeneric(a) {
-            t := types.ExtractGeneric(a, args[i].GetType())
+            t := types.SolveGeneric(a, args[i].GetType())
 
             if insetType != nil {
                 if !types.Equal(insetType, t) || insetType.GetKind() != types.Uint || insetType.GetKind() != types.Int {

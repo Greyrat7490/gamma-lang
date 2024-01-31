@@ -372,32 +372,32 @@ func IsResolvable(t Type) bool {
     }
 }
 
-func ExtractGeneric(t1 Type, t2 Type) Type {
-    switch t1 := t1.(type) {
+func SolveGeneric(typeWithGeneric Type, srcType Type) Type {
+    switch t1 := typeWithGeneric.(type) {
     case PtrType:
-        if t2,ok := t2.(PtrType); ok {
-            return ExtractGeneric(t1.BaseType, t2.BaseType)
+        if t2,ok := srcType.(PtrType); ok {
+            return SolveGeneric(t1.BaseType, t2.BaseType)
         }
 
     case ArrType:
-        if t2,ok := t2.(ArrType); ok {
-            return ExtractGeneric(t1.BaseType, t2.BaseType)
+        if t2,ok := srcType.(ArrType); ok {
+            return SolveGeneric(t1.BaseType, t2.BaseType)
         }
 
     case VecType:
-        if t2,ok := t2.(VecType); ok {
-            return ExtractGeneric(t1.BaseType, t2.BaseType)
+        if t2,ok := srcType.(VecType); ok {
+            return SolveGeneric(t1.BaseType, t2.BaseType)
         }
 
     case GenericType, *GenericType:
-        if t2,ok := t2.(GenericType); ok {
+        if t2,ok := srcType.(GenericType); ok {
             return t2.CurInsetType
         }
-        if t2,ok := t2.(*GenericType); ok {
+        if t2,ok := srcType.(*GenericType); ok {
             return t2.CurInsetType
         }
 
-        return t2
+        return srcType
     }
 
     return nil
@@ -905,6 +905,11 @@ func EqualCustom(destType Type, srcType Type, interfaceCompareFn func(Type, Type
     case UintType:
         if t2,ok := srcType.(UintType); ok {
             return t2.Size() <= destType.Size()
+        }
+
+    case InferType:
+        if t2,ok := srcType.(InferType); ok {
+            return t.Idx == t2.Idx
         }
 
     case nil:

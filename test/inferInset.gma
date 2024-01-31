@@ -1,3 +1,7 @@
+fn dummy<T>(a T) -> T {
+    ret a
+}
+
 fn test1() {
     vec := [$]i32{ len: 3 }
     vec[0] = 420
@@ -7,10 +11,6 @@ fn test1() {
     println(vtos(vec))
 }
 
-fn dummy<T>(a T) -> T {
-    ret a
-}
-
 fn test2() {
     a := true
     b := dummy(a)
@@ -18,17 +18,24 @@ fn test2() {
 }
 
 fn test3() {
-    // TODO in work
-    // a := dummy(420)
-    // println(fmt("a: {}", a))
+    a u32 := dummy(420)
+    println(fmt("a: {}", a))
 }
 
 fn test4() {
-    // TODO in work
-    // a := 5
-    // b := dummy(a)
-    // c u16 := 64
-    // println(fmt("a: {}, b: {}, c: {}, b+c: {}", a, b, c, b + c))
+    a := 5
+    b := dummy(a)
+    c u16 := 64
+    println(fmt("a: {}, b: {}, c: {}, b+c: {}", a, b, c, b + c))
+}
+
+fn test5() {
+    a := 5
+    b u8 := 64
+    println(fmt("a: {}, b: {}, a+b: {}", a, b, a + b))
+
+    c := dummy(a)
+    println(fmt("c: {}", c))
 }
 
 fn main() {
@@ -36,4 +43,5 @@ fn main() {
     test2()
     test3()
     test4()
+    test5()
 }

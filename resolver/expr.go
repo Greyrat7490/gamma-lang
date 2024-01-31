@@ -97,7 +97,7 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
 
     case *ast.FnCall:
         resolveFuncIdent(e)
-        
+
         if e.F.GetName() == "fmt" {
             for _,arg := range e.Values {
                 resolveForwardExpr(arg, nil)
@@ -111,12 +111,18 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
             }
 
             for i,arg := range e.Values {
-                var t types.Type = nil
                 if i < len(e.F.GetArgs()) {
-                    t = e.F.GetArgs()[i]
+                    t := types.ReplaceGeneric(e.F.GetArgs()[i], e.InsetType) 
+                    addResolved(arg.GetType(), t)
+                    resolveForwardExpr(arg, t)
                 }
-                addResolved(arg.GetType(), t)
-                resolveForwardExpr(arg, t)
+            }
+
+            if e.F.GetGeneric() != nil {
+                for i,insetType := range e.F.GetGeneric().UsedInsetTypes {
+                    e.F.GetGeneric().UsedInsetTypes[i] = getResolvedForwardType(insetType)
+                }
+                e.InsetType = getResolvedForwardType(e.InsetType)
             }
         }
 
@@ -210,6 +216,13 @@ func resolveBackwardExpr(e ast.Expr) {
 
         for _,e := range e.Values {
             resolveBackwardExpr(e)
+        }
+
+        if e.F.GetGeneric() != nil {
+            for i,insetType := range e.F.GetGeneric().UsedInsetTypes {
+                e.F.GetGeneric().UsedInsetTypes[i] = getResolvedBackwardType(insetType)
+            }
+            e.InsetType = getResolvedBackwardType(e.InsetType)
         }
 
     case *ast.Cast:
