@@ -26,7 +26,7 @@ func GenDecl(file *bufio.Writer, d ast.Decl) {
         GenDefVar(file, d)
 
     case *ast.DefFn:
-        if d.FnHead.IsGeneric {
+        if d.FnHead.F.IsGeneric() {
             GenDefGenFn(file, d)
         } else {
             GenDefFn(file, d)
@@ -67,9 +67,8 @@ func GenDefVar(file *bufio.Writer, d *ast.DefVar) {
 }
 
 func GenDefGenFn(file *bufio.Writer, d *ast.DefFn) {
-    genType := d.FnHead.F.GetGeneric()
-    for _,t := range genType.UsedInsetTypes {
-        genType.CurInsetType = t
+    for _,t := range d.FnHead.F.GetUsedInsetTypes() {
+        d.FnHead.F.SetInsetType(t)
         GenDefFn(file, d)
     }
 }
@@ -85,13 +84,11 @@ func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
 
     Define(file, d.FnHead.F, framesize)
 
-    generic := d.FnHead.F.GetGeneric()
-
     regIdx := uint(0)
     argsFromStackOffset := uint(8)
     regArgsOffset := innersize
 
-    if types.IsBigStruct(types.ReplaceGeneric(d.FnHead.F.GetRetType(), generic)) {
+    if types.IsBigStruct(types.ResolveGeneric(d.FnHead.F.GetRetType())) {
         regArgsOffset += types.Ptr_Size
         addr := addr.Addr{ BaseAddr: "rbp", Offset: -int64(regArgsOffset) }
         asm.MovDerefReg(file, addr, types.Ptr_Size, asm.RegDi)
@@ -101,7 +98,7 @@ func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
 
     for _,a := range d.FnHead.Args {
         if v,ok := a.V.(*vars.LocalVar); ok {
-            t := types.ReplaceGeneric(v.GetType(), generic)
+            t := types.ResolveGeneric(v.GetType())
             if types.IsBigStruct(t) {
                 v.SetOffset(argsFromStackOffset, true) 
                 argsFromStackOffset += v.GetType().Size()
@@ -111,7 +108,7 @@ func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
 
     for _,a := range d.FnHead.Args {
         if v,ok := a.V.(*vars.LocalVar); ok {
-            t := types.ReplaceGeneric(v.GetType(), generic) 
+            t := types.ResolveGeneric(v.GetType())
             if !types.IsBigStruct(t) {
                 needed := types.RegCount(t)
 
@@ -143,13 +140,22 @@ func GenDefFn(file *bufio.Writer, d *ast.DefFn) {
 }
 
 func createVTable(file *bufio.Writer, d *ast.Impl) {
-    fnNames := d.Impl.GetVTableFuncNames()
-    implName := d.Impl.GetImplMangledName()
-    interfaceName := d.Impl.GetInterfaceName()
-    vtable.Create(implName, interfaceName, fnNames)
+    vtable.Create(d.Impl.GetDstType(), d.Impl.GetInterfaceType(), d.Impl.GetVTableFuncNames())
 }
 
 func GenImpl(file *bufio.Writer, d *ast.Impl) {
+    if d.Impl.IsGeneric() {
+        generic := d.Impl.GetGeneric()
+        for _,t := range generic.UsedInsetTypes {
+            d.Impl.SetInsetType(t)
+            genImpl(file, d)
+        }
+    } else {
+        genImpl(file, d)
+    }
+}
+
+func genImpl(file *bufio.Writer, d *ast.Impl) {
     createVTable(file, d)
     for _,f := range d.FnDefs {
         GenDefFn(file, &f)

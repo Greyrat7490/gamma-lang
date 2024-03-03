@@ -185,7 +185,7 @@ func isEnumLit(enumType types.EnumType, elemName string) bool {
 }
 func isGenericFunc(name string) bool {
     if f,ok := identObj.Get(name).(*identObj.Func); ok {
-        return f.GetGeneric() != nil
+        return f.IsGeneric()
     }
 
     return false
@@ -235,10 +235,10 @@ func isType_(tokens *token.Tokens) bool {
             if _,ok := obj.(*identObj.Enum); ok {
                 return true
             }
-        }
 
-        if generic := identObj.GetGeneric(tokens.Cur().Str); generic != nil {
-            return true
+            if _,ok := obj.(*identObj.Generic); ok {
+                return true
+            }
         }
 
         return false
@@ -285,6 +285,10 @@ func prsType(tokens *token.Tokens) types.Type {
                 t = enum.GetType()
             }
 
+            if gen,ok := obj.(*identObj.Generic); ok {
+                t = gen.GetType()
+            }
+
             if tokens.Peek().Type == token.Lss {
                 tokens.Next()
                 tokens.Next()
@@ -297,10 +301,6 @@ func prsType(tokens *token.Tokens) types.Type {
             }
 
             return t
-        }
-
-        if generic := identObj.GetGeneric(tokens.Cur().Str); generic != nil {
-            return generic
         }
 
         fmt.Fprintf(os.Stderr, "[ERROR] type \"%s\" is not defined\n", tokens.Cur().Str)
@@ -317,6 +317,29 @@ func prsType(tokens *token.Tokens) types.Type {
         }
         return t
     }
+}
+
+func prsInterfaceType(tokens *token.Tokens) *types.InterfaceType {
+    if obj := identObj.Get(tokens.Cur().Str); obj != nil {
+        if interfc,ok := obj.(*identObj.Interface); ok {
+            t := interfc.GetType().(types.InterfaceType)
+
+            if tokens.Peek().Type == token.Lss {
+                tokens.Next()
+                tokens.Next()
+                t.Generic.SetType = prsType(tokens)
+                if tokens.Next().Type != token.Grt {
+                    fmt.Fprintf(os.Stderr, "[ERROR] expected \">\" but got %s\n", tokens.Cur().Str)
+                    fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+                    os.Exit(1)
+                }
+            }
+
+            return &t
+        }
+    }
+
+    return nil
 }
 
 func prsDefVar(tokens *token.Tokens, name token.Token, t types.Type) ast.DefVar {
@@ -406,6 +429,15 @@ func prsDefine(tokens *token.Tokens) ast.Decl {
 func prsStruct(tokens *token.Tokens) ast.DefStruct {
     pos := tokens.Cur().Pos
 
+    if !identObj.InGlobalScope() {
+        fmt.Fprintln(os.Stderr, "[ERROR] you can only declare a struct in the global scope")
+        fmt.Fprintln(os.Stderr, "\t" + pos.At())
+        os.Exit(1)
+    }
+
+    identObj.StartScope()
+    defer identObj.EndScope()
+
     name := tokens.Next()
     if name.Type != token.Name {
         fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", name)
@@ -415,15 +447,8 @@ func prsStruct(tokens *token.Tokens) ast.DefStruct {
 
     tokens.Next()
     generic := prsGeneric(tokens)
-    isGeneric := generic.Str != ""
 
-    s := identObj.DecStruct(name)
-
-    if isGeneric {
-        genericType := types.CreateGeneric(generic.Str)
-        identObj.SetGeneric(&genericType)
-        s.SetGeneric(&genericType)
-    }
+    s := identObj.DecStruct(name, generic)
 
     braceLPos := tokens.Cur().Pos
     fields := prsDecFields(tokens)
@@ -437,17 +462,23 @@ func prsStruct(tokens *token.Tokens) ast.DefStruct {
     }
     s.SetFields(names, ts)
 
-    identObj.UnsetGeneric()
-
     return ast.DefStruct{ S: s, Pos: pos, Name: name, BraceLPos: braceLPos, Fields: fields, BraceRPos: braceRPos }
 }
 
 func prsInterface(tokens *token.Tokens) ast.Decl {
     pos := tokens.Cur().Pos
 
+    if !identObj.InGlobalScope() {
+        fmt.Fprintln(os.Stderr, "[ERROR] you can only declare an interface in the global scope")
+        fmt.Fprintln(os.Stderr, "\t" + pos.At())
+        os.Exit(1)
+    }
+
+    identObj.StartScope()
+    defer identObj.EndScope()
+
     tokens.Next()
     generic := prsGeneric(tokens)
-    isGeneric := generic.Str != ""
 
     name := tokens.Cur()
     if name.Type != token.Name {
@@ -457,15 +488,8 @@ func prsInterface(tokens *token.Tokens) ast.Decl {
     }
 
     braceLPos := tokens.Next().Pos
-    identObj.StartScope()
-    I := identObj.DecInterface(name)
+    I := identObj.DecInterface(name, generic)
     identObj.CurSelfType = I.GetType()
-
-    if isGeneric {
-        genericType := types.CreateGeneric(generic.Str)
-        identObj.SetGeneric(&genericType)
-        // TODO: I.SetGeneric(&genericType)
-    }
 
     heads := make([]ast.FnHead, 0)
 
@@ -479,16 +503,22 @@ func prsInterface(tokens *token.Tokens) ast.Decl {
     }
 
     braceRPos := tokens.Cur().Pos
-    identObj.EndScope()
     identObj.CurSelfType = nil
-
-    identObj.UnsetGeneric()
 
     return &ast.DefInterface{ Pos: pos, Name: name, I: I, BraceLPos: braceLPos, BraceRPos: braceRPos, FnHeads: heads }
 }
 
 func prsEnum(tokens *token.Tokens) ast.Decl {
     pos := tokens.Cur().Pos
+
+    if !identObj.InGlobalScope() {
+        fmt.Fprintln(os.Stderr, "[ERROR] you can only declare an enum in the global scope")
+        fmt.Fprintln(os.Stderr, "\t" + pos.At())
+        os.Exit(1)
+    }
+
+    identObj.StartScope()
+    defer identObj.EndScope()
 
     name := tokens.Next()
     if name.Type != token.Name {
@@ -499,7 +529,6 @@ func prsEnum(tokens *token.Tokens) ast.Decl {
 
     tokens.Next()
     generic := prsGeneric(tokens)
-    isGeneric := generic.Str != ""
 
     var idTyp types.Type = nil
     if tokens.Cur().Type != token.BraceL {
@@ -509,12 +538,7 @@ func prsEnum(tokens *token.Tokens) ast.Decl {
         idTyp = types.CreateUint(types.Ptr_Size)
     }
 
-    e := identObj.DecEnum(name)
-    if isGeneric {
-        genericType := types.CreateGeneric(generic.Str)
-        identObj.SetGeneric(&genericType)
-        e.SetGeneric(&genericType)
-    }
+    e := identObj.DecEnum(name, generic)
 
     braceLPos := tokens.Cur().Pos
     elems := prsEnumElems(tokens)
@@ -531,8 +555,6 @@ func prsEnum(tokens *token.Tokens) ast.Decl {
         }
     }
     e.SetElems(idTyp, names, ts)
-
-    identObj.UnsetGeneric()
 
     return &ast.DefEnum{ E: e, Pos: pos, IdType: idTyp, Name: name, BraceLPos: braceRPos, Elems: elems, BraceRPos: braceLPos }
 }
@@ -583,29 +605,24 @@ func prsEnumElemType(tokens *token.Tokens) *ast.EnumElemType {
 func prsImpl(tokens *token.Tokens) ast.Decl {
     pos := tokens.Cur().Pos
 
+    if !identObj.InGlobalScope() {
+        fmt.Fprintln(os.Stderr, "[ERROR] you can only declare an impl in the global scope")
+        fmt.Fprintln(os.Stderr, "\t" + pos.At())
+        os.Exit(1)
+    }
+
+    identObj.StartScope()
+    defer identObj.EndScope()
+
     tokens.Next()
     generic := prsGeneric(tokens)
-    isGeneric := generic.Str != ""
-
     dstType := prsType(tokens)
 
-    var I *identObj.Interface = nil
+    var interfaceType *types.InterfaceType = nil
     if tokens.Peek().Type == token.DefConst {
         tokens.Next()
-        InterfaceName := tokens.Next()
-        if InterfaceName.Type != token.Name {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected a Name but got %v\n", InterfaceName)
-            fmt.Fprintln(os.Stderr, "\t" + InterfaceName.At())
-            os.Exit(1)
-        }
-
-        i,ok := identObj.Get(InterfaceName.Str).(*identObj.Interface)
-        if !ok || i == nil {
-            fmt.Fprintf(os.Stderr, "[ERROR] interface \"%s\" is not defined\n", InterfaceName.Str)
-            fmt.Fprintln(os.Stderr, "\t" + InterfaceName.At())
-            os.Exit(1)
-        }
-        I = i
+        tokens.Next()
+        interfaceType = prsInterfaceType(tokens)
     }
 
     implObj := identObj.CreateImplObj(dstType)
@@ -618,19 +635,12 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
-    identObj.StartScope()
 
-    impl := identObj.CreateImpl(pos, I, dstType)
+    impl := identObj.CreateImpl(pos, interfaceType, dstType, generic)
     implObj.AddImpl(impl)
 
-    if isGeneric {
-        genericType := types.CreateGeneric(generic.Str)
-        identObj.SetGeneric(&genericType)
-        // TODO: impl.SetGeneric(&genericType)
-    }
-
     funcsReservedLen := 5
-    if I != nil { funcsReservedLen = len(I.GetFuncs()) }
+    if interfaceType != nil { funcsReservedLen = len(interfaceType.Funcs) }
     funcs := make([]ast.DefFn, 0, funcsReservedLen)
 
     for tokens.Next().Type != token.BraceR {
@@ -649,10 +659,7 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
         fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
         os.Exit(1)
     }
-    identObj.EndScope()
     identObj.CurSelfType = nil
-
-    identObj.UnsetGeneric()
 
     return &ast.Impl{ Pos: pos, Impl: impl, BraceLPos: braceLPos, BraceRPos: braceRPos, FnDefs: funcs }
 }
@@ -674,16 +681,9 @@ func prsFnHead(tokens *token.Tokens, isInterfaceFn bool) ast.FnHead {
         os.Exit(1)
     }
 
-    f := identObj.DecFunc(name, isConst, identObj.CurSelfType)
-
     tokens.Next()
     generic := prsGeneric(tokens)
-    isGeneric := generic.Str != ""
-    if isGeneric {
-        genericType := types.CreateGeneric(generic.Str)
-        f.SetGeneric(&genericType)
-        identObj.SetGeneric(&genericType)
-    }
+    f := identObj.DecFunc(name, isConst, identObj.CurSelfType, generic)
 
     argNames, argTypes := prsArgs(tokens, isInterfaceFn)
     f.SetArgs(argTypes)
@@ -707,7 +707,7 @@ func prsFnHead(tokens *token.Tokens, isInterfaceFn bool) ast.FnHead {
         argDecs = append(argDecs, a)
     }
 
-    return ast.FnHead{ Name: name, F: f, Args: argDecs, RetType: retType, IsConst: isConst, IsGeneric: isGeneric, Generic: generic }
+    return ast.FnHead{ Name: name, F: f, Generic: generic, Args: argDecs, RetType: retType, IsConst: isConst }
 }
 
 func prsDefFn(tokens *token.Tokens, isInterfaceFn bool) ast.DefFn {
@@ -722,9 +722,7 @@ func prsDefFn(tokens *token.Tokens, isInterfaceFn bool) ast.DefFn {
         os.Exit(1)
     }
 
-    identObj.StartScope()
     block := prsBlock(tokens)
-    identObj.EndScope()
 
     identObj.EndScope()
 
@@ -734,12 +732,10 @@ func prsDefFn(tokens *token.Tokens, isInterfaceFn bool) ast.DefFn {
         cmpTime.AddConstFunc(def)
     }
 
-    identObj.UnsetGeneric()
-
     return def
 }
 
-func prsGeneric(tokens *token.Tokens) token.Token {
+func prsGeneric(tokens *token.Tokens) *identObj.Generic {
     if tokens.Cur().Type == token.Lss {
         name := tokens.Next()
 
@@ -756,10 +752,10 @@ func prsGeneric(tokens *token.Tokens) token.Token {
         }
 
         tokens.Next()
-        return name
+        return identObj.DecGeneric(name)
     }
 
-    return token.Token{}
+    return nil
 }
 
 func prsDecField(tokens *token.Tokens) ast.DecField {

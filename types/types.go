@@ -86,17 +86,18 @@ type FuncType struct {
     Name string
     Args []Type
     Ret Type
-    Generic *GenericType
+    Generic GenericType
     // TODO: isConst?
 }
 type GenericType struct {
     Name string
-    CurInsetType Type
-    UsedInsetTypes []Type
+    SetType Type
+    Idx uint64
 }
 type InterfaceType struct {
     Name string
     Funcs []FuncType
+    Generic GenericType
 }
 type InferType struct {
     Idx uint64
@@ -222,10 +223,6 @@ func CreateInferType(defaultType Type) InferType {
     return t
 }
 
-func CreateGeneric(name string) GenericType {
-    return GenericType{ Name: name, UsedInsetTypes: make([]Type, 0) }
-}
-
 func (t *StructType) GetOffset(field string) (offset int64) {
     if fieldNum, ok := t.names[field]; ok {
         for i := 0; i < fieldNum; i++ {
@@ -314,17 +311,6 @@ func (t *InterfaceType) GetFunc(name string) *FuncType {
     return nil
 }
 
-func (t *GenericType) RemoveDuplTypes() {
-    for i := range t.UsedInsetTypes {
-        for j := i+1; j < len(t.UsedInsetTypes); j++ {
-            if Equal(t.UsedInsetTypes[i], t.UsedInsetTypes[j]) && t.UsedInsetTypes[i].Size() == t.UsedInsetTypes[j].Size() {
-                t.UsedInsetTypes[j] = t.UsedInsetTypes[len(t.UsedInsetTypes)-1]
-                t.UsedInsetTypes = t.UsedInsetTypes[:len(t.UsedInsetTypes)-1]
-            }
-        }
-    }
-}
-
 func IsSelfType(t Type, interfaceType InterfaceType) bool {
     switch t := t.(type) {
     case InterfaceType:
@@ -366,10 +352,12 @@ func IsBigStruct(t Type) bool {
     case EnumType:
         return t.isBigStruct
     case *GenericType:
-        return IsBigStruct(t.CurInsetType)
-    default:
-        return false
+        if ResolveGeneric(t) != nil {
+            return IsBigStruct(ResolveGeneric(t))
+        }
     }
+
+    return false
 }
 
 func IsResolvable(t Type) bool {
@@ -402,10 +390,10 @@ func SolveGeneric(typeWithGeneric Type, srcType Type) Type {
 
     case GenericType, *GenericType:
         if t2,ok := srcType.(GenericType); ok {
-            return t2.CurInsetType
+            return ResolveGeneric(t2)
         }
         if t2,ok := srcType.(*GenericType); ok {
-            return t2.CurInsetType
+            return ResolveGeneric(t2)
         }
 
         return srcType
@@ -450,6 +438,12 @@ func ReplaceGeneric(t Type, insetType Type) Type {
         t.BaseType = ReplaceGeneric(t.BaseType, insetType)
         return t
 
+    case InterfaceType:
+        if t.Generic.Name != "" {
+            SetCurInsetType(t.Generic, insetType)  
+        }
+        return t
+
     case EnumType:
         if t.insetType == nil || IsGeneric(t.insetType) {
             t.insetType = insetType
@@ -488,39 +482,17 @@ func ReplaceGeneric(t Type, insetType Type) Type {
 
         return t
 
-    case GenericType, *GenericType:
-        return insetType
+    case GenericType:
+        SetCurInsetType(t, insetType)
+        return t
+    case *GenericType:
+        genericCopy := *t
+        SetCurInsetType(genericCopy, insetType)
+        return &genericCopy
 
     default:
         return t
     }
-}
-
-func ResolveGeneric(t Type) Type {
-    switch t := t.(type) {
-    case PtrType:
-        t.BaseType = ResolveGeneric(t.BaseType)
-        return t
-
-    case ArrType:
-        t.BaseType = ResolveGeneric(t.BaseType)
-        return t
-
-    case VecType:
-        t.BaseType = ResolveGeneric(t.BaseType)
-        return t
-
-    case GenericType:
-        if t.CurInsetType != nil {
-            return t.CurInsetType
-        }
-    case *GenericType:
-        if t.CurInsetType != nil {
-            return t.CurInsetType
-        }
-    }
-
-    return t
 }
 
 func RegCount(t Type) uint {
@@ -564,8 +536,8 @@ func (t InterfaceType)  GetKind() TypeKind { return Interface }
 func (t FuncType)       GetKind() TypeKind { return Func }
 func (t InferType)      GetKind() TypeKind { return Infer }
 func (t GenericType)    GetKind() TypeKind {
-    if t.CurInsetType != nil {
-        return t.CurInsetType.GetKind()
+    if ResolveGeneric(t) != nil {
+        return ResolveGeneric(t).GetKind()
     }
     // TODO: always generic
     return Generic
@@ -589,8 +561,8 @@ func (t InferType)      Size() uint {
     return 0 
 }
 func (t GenericType) Size() uint {
-    if t.CurInsetType != nil {
-        return t.CurInsetType.Size()
+    if ResolveGeneric(t) != nil {
+        return ResolveGeneric(t).Size()
     }
 
     return 0
@@ -664,17 +636,22 @@ func (t EnumType) String() string {
     }
     return t.Name
 }
-func (t InterfaceType) String() string { return t.Name }
+func (t InterfaceType) String() string { 
+    if t.Generic.Name != "" {
+        return fmt.Sprintf("%s<%s>", t.Name, t.Generic)
+    }
+    return t.Name 
+}
 func (t InferType) String() string { return t.DefaultType.String() }
 func (t GenericType) String() string {
-    if t.CurInsetType != nil {
-        return t.CurInsetType.String()
+    if ResolveGeneric(t) != nil {
+        return ResolveGeneric(t).String()
     }
     return t.Name
 }
 func (t FuncType) String() string {
     generic := ""
-    if t.Generic != nil {
+    if t.Generic.Name != "" {
         generic = fmt.Sprintf("<%s>", t.Generic)
     }
 
@@ -693,13 +670,19 @@ func (t CharType)       GetMangledName() string { return t.String() }
 func (t BoolType)       GetMangledName() string { return t.String() }
 func (t StrType)        GetMangledName() string { return t.String() }
 func (t InferType)      GetMangledName() string { return t.String() }
-func (t InterfaceType)  GetMangledName() string { return t.String() }
 func (t PtrType)        GetMangledName() string { return "$ptr_" + t.BaseType.GetMangledName() }
 func (t ArrType)        GetMangledName() string { return "$arr_" + t.BaseType.GetMangledName() }
 func (t VecType)        GetMangledName() string { return "$vec_" + t.BaseType.GetMangledName() }
+func (t InterfaceType)  GetMangledName() string { 
+    if t.Generic.Name != "" {
+        return t.Generic.GetMangledName() + "$" + t.Name
+    } 
+
+    return t.String() 
+}
 func (t GenericType)    GetMangledName() string {
-    if t.CurInsetType != nil {
-        return t.CurInsetType.GetMangledName()
+    if ResolveGeneric(t) != nil {
+        return ResolveGeneric(t).GetMangledName()
     }
     return t.Name
 }
@@ -723,7 +706,7 @@ func (t EnumType)       GetMangledName() string {
 }
 func (t FuncType)       GetMangledName() string { 
     generic := ""
-    if t.Generic != nil {
+    if t.Generic.Name != "" {
         generic = "$gen_" + t.Generic.GetMangledName()
     }
 
@@ -835,8 +818,12 @@ func MinSizeUint(val uint64) uint {
 }
 
 func EqualCustom(destType Type, srcType Type, interfaceCompareFn func(Type, Type)bool) bool {
-    srcType = ResolveGeneric(srcType)
-    destType = ResolveGeneric(destType)
+    if s := ResolveGeneric(srcType); s != nil {
+        srcType = s
+    }
+    if d := ResolveGeneric(destType); d != nil {
+        destType = d
+    }
 
     switch t := destType.(type) {
     case VecType:
@@ -873,6 +860,10 @@ func EqualCustom(destType Type, srcType Type, interfaceCompareFn func(Type, Type
 
         return interfaceCompareFn(t, srcType)
 
+    case GenericType:
+        if t2,ok := srcType.(GenericType); ok {
+            return t.Name == t2.Name
+        }
     case *GenericType:
         if t2,ok := srcType.(*GenericType); ok {
             return t.Name == t2.Name
@@ -884,11 +875,7 @@ func EqualCustom(destType Type, srcType Type, interfaceCompareFn func(Type, Type
                 return false
             }
 
-            if t.Generic != nil && t2.Generic != nil {
-                if !EqualCustom(*t.Generic, *t2.Generic, interfaceCompareFn) {
-                    return false
-                }
-            } else if !(t.Generic == nil && t2.Generic == nil) {
+            if !EqualCustom(t.Generic, t2.Generic, interfaceCompareFn) {
                 return false
             }
 

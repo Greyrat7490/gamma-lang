@@ -102,6 +102,7 @@ func Get(name string) IdentObj {
 }
 
 func CreateImplObj(t types.Type) *Implementable {
+    // TODO: something else than t.String()
     if obj,ok := globalScope.implObj[t.String()]; ok {
         return obj
     }
@@ -119,16 +120,32 @@ func GetImplObj(name string) *Implementable {
     return nil
 }
 
-func GetFnFromFnSrc(fnSrc types.Type, fnName string) *Func {
-    switch fnSrc := fnSrc.(type) {
+func GetFnFromFnSrc(fnSrc *types.Type, fnName string) *Func {
+    switch src := (*fnSrc).(type) {
     case types.InterfaceType:
-        if obj,ok := Get(fnSrc.String()).(*Interface); ok {
+        if obj,ok := Get(src.String()).(*Interface); ok {
             return obj.GetFunc(fnName)
         }
 
     default:
-        if obj := GetImplObj(fnSrc.String()); obj != nil {
-            return obj.GetFunc(fnName)
+        if obj := GetImplObj(src.String()); obj != nil {
+            if f := obj.GetFunc(fnName); f != nil {
+                return f
+            }
+        }
+
+        if obj := GetImplObj("T"); obj != nil {
+            if i := obj.GetImplByFnName(fnName); i != nil {
+                if genericType,ok := i.dstType.(*types.GenericType); ok {
+                    i.AddTypeToGeneric(src)
+
+                    newFnSrc := *genericType
+                    newFnSrc.SetType = *fnSrc
+                    *fnSrc = newFnSrc
+
+                    return obj.GetFunc(fnName)
+                }
+            }
         }
     }
 
@@ -171,15 +188,16 @@ func (scope *Scope) checkName(name token.Token) {
 }
 
 func AddBuildIn(name string, argtype types.Type, retType types.Type) {
-    f := CreateFunc(token.Token{ Str: name }, false, nil)  
+    f := CreateFunc(token.Token{ Str: name }, false, nil, nil)  
     f.SetRetType(retType)
     f.SetArgs([]types.Type{ argtype })
     globalScope.identObjs[name] = &f
 }
 
 func AddGenBuildIn(name string, genericName string, argtype types.Type, retType types.Type) {
-    f := CreateFunc(token.Token{ Str: name }, false, nil)
-    f.SetGeneric(&types.GenericType{Name: genericName, UsedInsetTypes: make([]types.Type, 0)})
+    gen := Generic{ Typ: types.CreateGeneric(genericName) }
+
+    f := CreateFunc(token.Token{ Str: name }, false, nil, &gen)
     f.SetRetType(retType)
     if argtype != nil {
         f.SetArgs([]types.Type{ argtype })
@@ -215,10 +233,10 @@ func DecConst(name token.Token, t types.Type, val constVal.ConstVal) *Const {
     return &c
 }
 
-func DecFunc(name token.Token, isConst bool, fnSrc types.Type) *Func {
+func DecFunc(name token.Token, isConst bool, fnSrc types.Type, generic *Generic) *Func {
     curScope.parent.checkName(name)
 
-    f := CreateFunc(name, isConst, fnSrc)
+    f := CreateFunc(name, isConst, fnSrc, generic)
     f.Scope = curScope
 
     curScope.parent.identObjs[name.Str] = &f
@@ -227,10 +245,10 @@ func DecFunc(name token.Token, isConst bool, fnSrc types.Type) *Func {
     return curFunc
 }
 
-func DecInterface(name token.Token) *Interface {
+func DecInterface(name token.Token, generic *Generic) *Interface {
     curScope.parent.checkName(name)
 
-    I := CreateInterface(name)
+    I := CreateInterface(name, generic)
     I.scope = curScope
 
     curScope.parent.identObjs[name.Str] = &I
@@ -238,34 +256,28 @@ func DecInterface(name token.Token) *Interface {
     return &I
 }
 
-func DecStruct(name token.Token) *Struct {
-    if !InGlobalScope() {
-        fmt.Fprintln(os.Stderr, "[ERROR] you can only declare a struct in the global scope")
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
-        return nil
-    }
-
+func DecStruct(name token.Token, generic *Generic) *Struct {
     curScope.checkName(name)
 
-    s := CreateStruct(name)
-    curScope.identObjs[name.Str] = &s
+    s := CreateStruct(name, generic)
+    curScope.parent.identObjs[name.Str] = &s
     return &s
 }
 
-func DecEnum(name token.Token) *Enum {
-    if !InGlobalScope() {
-        fmt.Fprintln(os.Stderr, "[ERROR] you can only declare an enum in the global scope")
-        fmt.Fprintln(os.Stderr, "\t" + name.At())
-        os.Exit(1)
-        return nil
-    }
-
+func DecEnum(name token.Token, generic *Generic) *Enum {
     curScope.checkName(name)
 
-    e := CreateEnum(name)
-    curScope.identObjs[name.Str] = &e
+    e := CreateEnum(name, generic)
+    curScope.parent.identObjs[name.Str] = &e
     return &e
+}
+
+func DecGeneric(name token.Token) *Generic {
+    curScope.checkName(name)
+
+    g := CreateGeneric(name)
+    curScope.identObjs[name.Str] = &g
+    return &g
 }
 
 func ReserveSpace(t types.Type) *addr.Addr {

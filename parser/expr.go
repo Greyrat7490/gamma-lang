@@ -1135,9 +1135,15 @@ func addInsetTypeToFunc(f *identObj.Func, pos token.Pos, insetType *types.Type, 
     }
 }
 
-func resolveFnSrc(src types.Type, fnName string, args []ast.Expr) types.Type {
+func resolveFnSrc(src types.Type, fnName token.Token, args []ast.Expr) types.Type {
     if len(args) > 0 {
-        return types.ResolveFnSrc(src, fnName, args[0].GetType())
+        src = types.ResolveFnSrc(src, fnName.Str, args[0].GetType())
+    }
+
+    if src.GetKind() == types.Interface {
+        fmt.Fprintf(os.Stderr, "[ERROR] cannot resolve %s to explicate implementation (use explicate type instead of interface)\n", src)
+        fmt.Fprintln(os.Stderr, "\t" + fnName.At())
+        os.Exit(1)
     }
 
     return src
@@ -1156,23 +1162,10 @@ func prsCallFromFnSrc(tokens *token.Tokens, fnSrc types.Type, fnSrcPos token.Pos
     vals := prsPassArgs(tokens)
     posR := tokens.Cur().Pos
 
-    origFnSrc := fnSrc
-    fnSrc = resolveFnSrc(fnSrc, fnName.Str, vals)
+    fnSrc = resolveFnSrc(fnSrc, fnName, vals)
 
-    f := identObj.GetFnFromFnSrc(fnSrc, fnName.Str)
+    f := identObj.GetFnFromFnSrc(&fnSrc, fnName.Str)
     if f == nil {
-        if origFnSrc,ok := origFnSrc.(types.InterfaceType); ok {
-            if origFnSrc.GetFunc(fnName.Str) == nil {
-                fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement function %s\n", origFnSrc, fnName.Str)
-                fmt.Fprintln(os.Stderr, "\t" + fnName.At())
-                os.Exit(1)
-            } else if !identObj.HasInterface(fnSrc, origFnSrc.Name) {
-                fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement %s\n", fnSrc, origFnSrc.Name)
-                fmt.Fprintln(os.Stderr, "\t" + fnSrcPos.At())
-                os.Exit(1)
-            }
-        }
-        
         fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement function %s\n", fnSrc, fnName.Str)
         fmt.Fprintln(os.Stderr, "\t" + fnName.At())
         os.Exit(1)

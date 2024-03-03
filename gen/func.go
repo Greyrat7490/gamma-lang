@@ -88,7 +88,9 @@ func DefArg(file *bufio.Writer, regIdx uint, v vars.Var, t types.Type) {
         asm.MovDerefReg(file, v.Addr().Offseted(int64(types.Ptr_Size)), t.Size() - types.Ptr_Size, regs[regIdx+1])
 
     case *types.GenericType:
-        DefArg(file, regIdx, v, t.CurInsetType)
+        DefArg(file, regIdx, v, types.ResolveGeneric(t))
+    case types.GenericType:
+        DefArg(file, regIdx, v, types.ResolveGeneric(t))
 
     default:
         asm.MovDerefReg(file, v.Addr(), t.Size(), regs[regIdx])
@@ -162,7 +164,7 @@ func PassVar(file *bufio.Writer, regIdx uint, t types.Type, otherVar vars.Var) {
         case types.Interface:
             asm.MovRegDeref(file, regs[regIdx+1], otherVar.Addr().Offseted(int64(types.Ptr_Size)), types.Ptr_Size, false)
         case types.Struct, types.Enum:
-            asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vtable.GetVTableName(otherVar.GetType().String(), t.String()))
+            asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vtable.GetVTableName(otherVar.GetType(), t))
         default:
             fmt.Fprintf(os.Stderr, "[ERROR] (internal) expected %v to be an interface or implementable but got %v\n", otherVar.GetName(), otherVar.GetType())
             os.Exit(1)
@@ -171,8 +173,10 @@ func PassVar(file *bufio.Writer, regIdx uint, t types.Type, otherVar vars.Var) {
     case types.IntType:
         asm.MovRegDerefExtend(file, regs[regIdx], t.Size(), otherVar.Addr(), otherVar.GetType().Size(), true)
 
+    case types.GenericType:
+        PassVar(file, regIdx, types.ResolveGeneric(t), otherVar)
     case *types.GenericType:
-        PassVar(file, regIdx, t.CurInsetType, otherVar)
+        PassVar(file, regIdx, types.ResolveGeneric(t), otherVar)
 
     default:
         asm.MovRegDerefExtend(file, regs[regIdx], t.Size(), otherVar.Addr(), otherVar.GetType().Size(), false)
@@ -218,8 +222,10 @@ func PassExpr(file *bufio.Writer, regIdx uint, argType types.Type, srcSize uint,
             asm.MovRegRegExtend(file, regs[regIdx], t.Size(), asm.RegGroup(0), srcSize, false)
         }
 
+    case types.GenericType:
+        PassExpr(file, regIdx, types.ResolveGeneric(t), srcSize, expr)
     case *types.GenericType:
-        PassExpr(file, regIdx, t.CurInsetType, srcSize, expr)
+        PassExpr(file, regIdx, types.ResolveGeneric(t), srcSize, expr)
 
     default:
         GenExpr(file, expr)

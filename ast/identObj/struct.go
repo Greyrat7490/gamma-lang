@@ -12,11 +12,11 @@ type Struct struct {
     decPos token.Pos
     name string
     typ types.StructType
-    generic *types.GenericType
+    generic *Generic
 }
 
-func CreateStruct(name token.Token) Struct {
-    return Struct{ decPos: name.Pos, name: name.Str, typ: types.CreateEmptyStructType(name.Str) }
+func CreateStruct(name token.Token, generic *Generic) Struct {
+    return Struct{ decPos: name.Pos, name: name.Str, typ: types.CreateEmptyStructType(name.Str), generic: generic }
 }
 
 func (s *Struct) GetName() string {
@@ -57,7 +57,7 @@ func (s *Struct) resolveRecursiveField() {
 
 func (s *Struct) SetFields(fieldNames []string, fieldTypes []types.Type) {
     if s.IsGeneric() {
-        s.typ = types.CreateStructType(s.name, fieldTypes, fieldNames, s.generic.Name)
+        s.typ = types.CreateStructType(s.name, fieldTypes, fieldNames, s.generic.Typ.Name)
     } else {
         s.typ = types.CreateStructType(s.name, fieldTypes, fieldNames, "")
     }
@@ -78,13 +78,9 @@ func (s *Struct) GetFieldNames() []string {
 }
 
 func (s *Struct) GetGeneric() *types.GenericType {
-    return s.generic
+    return &s.generic.Typ
 }
 
 func (s *Struct) IsGeneric() bool {
     return s.generic != nil
-}
-
-func (s *Struct) SetGeneric(t *types.GenericType) {
-    s.generic = t
 }

@@ -12,6 +12,7 @@ type Func struct {
     typ types.FuncType
     retAddr addr.Addr   // TODO remove
     Scope *Scope
+    Generic *Generic
     fnSrc types.Type
     hasSrcObj bool
     isConst bool
@@ -23,8 +24,8 @@ func GetCurFunc() *Func {
     return curFunc
 }
 
-func CreateFunc(name token.Token, isConst bool, fnSrc types.Type) Func {
-    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, fnSrc: fnSrc, typ: types.FuncType{ Name: name.Str } }
+func CreateFunc(name token.Token, isConst bool, fnSrc types.Type, generic *Generic) Func {
+    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, fnSrc: fnSrc, typ: types.FuncType{ Name: name.Str }, Generic: generic }
 }
 
 func CreateUnresolvedFunc(name string) Func {
@@ -43,8 +44,17 @@ func (f *Func) GetType() types.Type {
     return f.typ
 }
 
-func (f *Func) GetGeneric() *types.GenericType {
-    return f.typ.Generic
+func (f *Func) GetGeneric() types.GenericType {
+    if f.Generic == nil { return types.GenericType{} }
+    return f.Generic.Typ
+}
+
+func (f *Func) GetUsedInsetTypes() []types.Type {
+    return f.Generic.UsedInsetTypes
+}
+
+func (f *Func) RmDuplInsetTypes() {
+    f.Generic.RemoveDuplTypes()
 }
 
 func (f *Func) GetRetType() types.Type {
@@ -70,8 +80,8 @@ func (f *Func) GetMangledName() string {
         name = f.fnSrc.GetMangledName() + "." + name
     }
 
-    if f.GetGeneric() != nil {
-        name += "$" + f.typ.Generic.CurInsetType.GetMangledName()
+    if f.IsGeneric() {
+        name += "$" + f.typ.Generic.GetMangledName()
     }
 
     return name
@@ -98,10 +108,6 @@ func (f *Func) SetArgs(args []types.Type) {
     }
 }
 
-func (f *Func) SetGeneric(generic *types.GenericType) {
-    f.typ.Generic = generic
-}
-
 func (f *Func) ResolveFnSrc(t types.Type) {
     if f.fnSrc != nil && types.IsResolvable(f.typ.Args[0]) {
         f.typ.Args[0] = t
@@ -110,7 +116,7 @@ func (f *Func) ResolveFnSrc(t types.Type) {
 }
 
 func (f *Func) IsGeneric() bool {
-    return f.typ.Generic != nil
+    return f.Generic != nil
 }
 
 func (f *Func) IsUnresolved() bool {
@@ -125,7 +131,11 @@ func (f *Func) GetSrcObj() types.Type {
 }
 
 func (f *Func) AddTypeToGeneric(typ types.Type) {
-   AddTypeToGeneric(f.typ.Generic, typ) 
+   AddTypeToGeneric(f.Generic, typ) 
+}
+
+func (f *Func) SetInsetType(insetType types.Type) {
+    types.SetCurInsetType(f.Generic.Typ, insetType)
 }
 
 func (f Func) String() string {

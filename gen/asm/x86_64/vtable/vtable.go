@@ -7,13 +7,13 @@ import (
 	"gamma/gen/asm/x86_64/nasm"
 )
 
-func Create(implName string, interfaceName string, fnNames []string) {
-    nasm.AddData(GetVTableName(implName, interfaceName) + ":")
+func Create(implDstType types.Type, interfaceType types.InterfaceType, fnNames []string) {
+    nasm.AddData(GetVTableName(implDstType, interfaceType) + ":")
     for _,name := range fnNames {
-        nasm.AddData(fmt.Sprintf("%s %s.%s", asm.GetDataSize(types.Ptr_Size), implName, name))
+        nasm.AddData(fmt.Sprintf("%s %s.%s", asm.GetDataSize(types.Ptr_Size), implDstType.GetMangledName(), name))
     }
 }
 
-func GetVTableName(implName string, interfaceName string) string {
-    return fmt.Sprintf("_vtable_%s_%s", implName, interfaceName)
+func GetVTableName(implDstType types.Type, interfaceType types.InterfaceType) string {
+    return fmt.Sprintf("_vtable_%s_%s", implDstType.GetMangledName(), interfaceType.GetMangledName())
 }

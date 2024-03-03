@@ -1,0 +1,122 @@
+interface<T> I {
+    fn func(a T) -> T
+}
+
+interface<T> I2 {
+    fn func2(a T) -> T
+}
+
+interface I3 {
+    fn func3(self) -> Self
+}
+
+impl i64 :: I2<i64> {
+    fn func2(self) -> Self {
+        ret self
+    }
+}
+
+impl u64 :: I2<u64> {
+    fn func2(self) -> Self {
+        ret self
+    }
+}
+
+impl<T> T :: I3 {
+    fn func3(self) -> Self {
+        ret self
+    }
+}
+
+impl<T> T :: I<T> {
+    fn func(self) -> Self {
+        ret self
+    }
+}
+// TODO: should cause an error (this impl already exists with impl<T> T)
+impl u64 :: I<u64> {
+    fn func(self) -> Self {
+        ret self
+    }
+}
+
+impl Opt<str> :: String {
+    fn to_str(self) -> str {
+        if self : Opt::<str>.Val(s) {
+            ret s
+        }
+        ret "None"
+    }
+}
+
+// TODO: error generic impl after non generic
+// TODO: in work
+impl<T> Opt<T> :: String {
+    fn to_str(self) -> str {
+        if self : Opt::<T>.Val(s) {
+            ret fmt("{}", s)
+        }
+        ret "None"
+    }
+}
+
+// TODO: in work
+impl<T> Opt<T> :: I<T> {
+    fn func(a T) -> T {
+        ret a
+    }
+}
+
+fn test_gen_interface() {
+    println("generic interface")
+
+    a u64 := 420
+    println(fmt("{}", u64.func2(a)))
+
+    b i64 := -420
+    println(fmt("{}", i64.func2(b)))
+
+    // would cause an error (cannot resolve to actual impl)
+    // println(fmt("{}", I2<u64>.func2(a)))
+}
+
+fn test_gen_impl_dst() {
+    println("\ngeneric impl destination")
+
+    a u64 := 64
+    println(fmt("{}", u64.func3(a)))
+
+    b i16 := -64
+    println(fmt("{}", i16.func3(b)))
+}
+
+fn test_gen_dst_interface() {
+    println("\ngeneric impl destination and interface")
+
+    a u64 := 420
+    println(fmt("{}", u64.func(a)))
+
+    b i8 := -64
+    println(fmt("{}", i8.func(b)))
+}
+
+fn test_gen_enum() {
+    println("\ngeneric enum")
+
+    // TODO: auto infer insetType for generic enum and struct
+    c := Opt::<str>.Val("test string")
+    println(fmt("c: {}", c))
+
+    d := Opt::<str>.None
+    println(fmt("d: {}", d))
+
+    // e := Opt::<bool>.Val(true)
+    // println(fmt("e: {}", e))
+}
+
+fn main() {
+    test_gen_interface()
+    test_gen_impl_dst()
+    test_gen_dst_interface()
+    test_gen_enum()
+}

@@ -14,13 +14,18 @@ type Interface struct {
     name string
     scope *Scope
     typ types.InterfaceType
+    generic *Generic
     funcs []Func
 }
 
 var CurSelfType types.Type = nil
 
-func CreateInterface(name token.Token) Interface {
-    return Interface{ decPos: name.Pos, name: name.Str, typ: types.InterfaceType{ Name: name.Str }, funcs: make([]Func, 0) }
+func CreateInterface(name token.Token, generic *Generic) Interface {
+    interfaceType := types.InterfaceType{ Name: name.Str }
+    if generic != nil {
+        interfaceType.Generic = generic.Typ
+    }
+    return Interface{ decPos: name.Pos, name: name.Str, typ: interfaceType, funcs: make([]Func, 0), generic: generic }
 }
 
 func (i *Interface) GetName() string {
@@ -55,6 +60,18 @@ func (i *Interface) GetFunc(name string) *Func {
     return nil
 }
 
+func (i *Interface) GetGeneric() *Generic {
+    return i.generic
+}
+
+func (i *Interface) IsGeneric() bool {
+    return i.generic != nil
+}
+
+func (i *Interface) AddTypeToGeneric(typ types.Type) {
+   AddTypeToGeneric(i.generic, typ) 
+}
+
 func (i *Interface) AddFunc(f *Func) {
     i.typ.Funcs = append(i.typ.Funcs, f.typ)
     i.funcs = append(i.funcs, *f)
@@ -85,55 +102,89 @@ func (i *Interface) GetFuncNames() []string {
     return res
 }
 
+func (i *Interface) SetInsetType(insetType types.Type) {
+    types.SetCurInsetType(i.generic.Typ, insetType)
+}
+
 
 type Impl struct {
     decPos token.Pos
-    interface_ *Interface // can be nil
+    interface_ *Interface               // can be nil
+    interfaceType *types.InterfaceType  // can be nil
     dstType types.Type
+    generic *Generic                    // can be nil
     scope *Scope
 }
 
-func CreateImpl(decPos token.Pos, interface_ *Interface, dstType types.Type) Impl {
-    return Impl{ decPos: decPos, interface_: interface_, dstType: dstType, scope: curScope }
+func CreateImpl(decPos token.Pos, interfaceType *types.InterfaceType, dstType types.Type, generic *Generic) Impl {
+    interface_,ok := Get(interfaceType.Name).(*Interface)
+    if !ok {
+        fmt.Fprintf(os.Stderr, "[ERROR] (internal) interface %v is not defined correct\n", interfaceType)
+        fmt.Fprintln(os.Stderr, "\t" + decPos.At())
+        os.Exit(1)
+    }
+
+    return Impl{ decPos: decPos, interface_: interface_, interfaceType: interfaceType, dstType: dstType, scope: curScope, generic: generic }
 }
 
 func (i *Impl) HasInterface() bool {
-    return i.interface_ != nil
+    return i.interfaceType != nil
 }
 
 func (i *Impl) GetInterfaceName() string {
-    if i.interface_ == nil {
+    if i.interfaceType == nil {
         return ""
     }
 
-    return i.interface_.name
+    return i.interfaceType.Name
 }
 
-func (i *Impl) GetImplName() string {
-    return i.dstType.String()
+func (i *Impl) GetInterfaceType() types.InterfaceType {
+    if i.interfaceType == nil {
+        return types.InterfaceType{}
+    }
+
+    return *i.interfaceType
 }
 
-func (i *Impl) GetImplMangledName() string {
-    return i.dstType.GetMangledName()
+func (i *Impl) GetDstType() types.Type {
+    return i.dstType
+}
+
+func (i *Impl) GetGeneric() *Generic {
+    return i.generic
+}
+
+func (i *Impl) IsGeneric() bool {
+    return i.generic != nil
+}
+
+func (i *Impl) AddTypeToGeneric(typ types.Type) {
+   AddTypeToGeneric(i.generic, typ) 
+}
+
+func (i *Impl) SetInsetType(insetType types.Type) {
+    types.SetCurInsetType(i.generic.Typ, insetType)
 }
 
 func (i *Impl) GetInterfaceFuncs() []types.FuncType {
-    if i.interface_ == nil {
+    if i.interfaceType == nil {
         return nil
     }
 
-    return i.interface_.typ.Funcs
+    return i.interfaceType.Funcs
 }
 
 func (i *Impl) GetVTableFuncNames() []string {
-    if i.interface_ == nil {
+    if i.interfaceType == nil {
         return nil
     }
 
-    names := make([]string, 0, len(i.interface_.typ.Funcs))
+    names := make([]string, 0, len(i.interfaceType.Funcs))
 
-    for _,f := range i.interface_.typ.Funcs {
-        if len(f.Args) > 0 && types.IsSelfType(f.Args[0], i.interface_.typ) {
+    
+    for _,f := range i.interfaceType.Funcs {
+        if len(f.Args) > 0 && types.IsSelfType(f.Args[0], *i.interfaceType) {
             names = append(names, f.Name)
         }
     }
@@ -142,13 +193,13 @@ func (i *Impl) GetVTableFuncNames() []string {
 }
 
 func (i *Impl) GetInterfaceFuncNames() []string {
-    if i.interface_ == nil {
+    if i.interfaceType == nil {
         return nil
     }
 
-    names := make([]string, 0, len(i.interface_.typ.Funcs))
+    names := make([]string, 0, len(i.interfaceType.Funcs))
 
-    for _,f := range i.interface_.typ.Funcs {
+    for _,f := range i.interfaceType.Funcs {
         names = append(names, f.Name)
     }
 
@@ -156,10 +207,10 @@ func (i *Impl) GetInterfaceFuncNames() []string {
 }
 
 func (i *Impl) GetInterfaceFuncPos(name string) token.Pos {
-    if i.interface_ != nil {
-        for idx, f := range i.interface_.typ.Funcs {
-            if f.Name == name {
-                return i.interface_.funcs[idx].decPos
+    if i.interfaceType != nil {
+        for _,f := range i.interface_.funcs {
+            if f.name == name {
+                return f.decPos
             }
         }
     }
@@ -168,11 +219,11 @@ func (i *Impl) GetInterfaceFuncPos(name string) token.Pos {
 }
 
 func (i *Impl) GetInterfacePos() token.Pos {
-    if i.interface_ == nil {
-        return token.Pos{}
+    if i.interfaceType != nil {
+        return i.interface_.GetPos()
     }
 
-    return i.interface_.decPos
+    return i.decPos
 }
 
 func (i *Impl) GetFunc(name string) *Func {
@@ -181,6 +232,7 @@ func (i *Impl) GetFunc(name string) *Func {
             return f
         } else {
             fmt.Fprintf(os.Stderr, "[ERROR] (internal) the scope of Impl should only contain funcs but got %v\n", reflect.TypeOf(f))
+            fmt.Fprintln(os.Stderr, "\t" + i.decPos.At())
             os.Exit(1)
         }
     }

@@ -10,8 +10,8 @@ type Implementable struct {
 
 func (s *Implementable) AddImpl(impl Impl) {
     s.impls = append(s.impls, impl)
-    if impl.interface_ != nil {
-        s.interfaces = append(s.interfaces, impl.interface_.name) 
+    if impl.interfaceType != nil {
+        s.interfaces = append(s.interfaces, impl.interfaceType.Name) 
     }
 }
 
@@ -35,6 +35,16 @@ func (s *Implementable) GetFunc(name string) *Func {
     return nil
 }
 
+func (s *Implementable) GetImplByFnName(fnName string) *Impl {
+    for _,i := range s.impls {
+        if i.GetFunc(fnName) != nil {
+            return &i
+        }
+    }
+
+    return nil
+}
+
 func (s *Implementable) GetFuncNames() []string {
     funcs := []string{}
 
@@ -48,7 +58,14 @@ func (s *Implementable) GetFuncNames() []string {
 func HasFunc(t types.Type, name string) bool {
     if t == nil { return false }
 
-    if t,ok := t.(types.InterfaceType); ok {
+    switch t := t.(type) {
+    case *types.GenericType:
+        implObj := GetImplObj("T")
+        return implObj != nil && implObj.GetFunc(name) != nil
+    case types.GenericType:
+        implObj := GetImplObj("T")
+        return implObj != nil && implObj.GetFunc(name) != nil
+    case types.InterfaceType:
         return t.GetFunc(name) != nil
     }
 
@@ -59,16 +76,22 @@ func HasFunc(t types.Type, name string) bool {
 func HasInterface(t types.Type, name string) bool {
     if t == nil { return false }
 
-    if t,ok := t.(*types.GenericType); ok {
-        if t.CurInsetType == nil {
+    switch t := t.(type) {
+    case *types.GenericType:
+        if types.ResolveGeneric(t) == nil {
             // TODO: generic guards (required interfaces list)
             return true
         }
 
-        return HasInterface(t.CurInsetType, name)
-    }
+        return HasInterface(types.ResolveGeneric(t), name)
+    case types.GenericType:
+        if types.ResolveGeneric(t) == nil {
+            // TODO: generic guards (required interfaces list)
+            return true
+        }
 
-    if t,ok := t.(types.InterfaceType); ok {
+        return HasInterface(types.ResolveGeneric(t), name)
+    case types.InterfaceType:
         return t.Name == name
     }
 

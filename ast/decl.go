@@ -52,12 +52,11 @@ type DefFn struct {
 
 type FnHead struct {
     F *identObj.Func
+    Generic *identObj.Generic  // can be nil
     Name token.Token
     Args []DecVar
     RetType types.Type
     IsConst bool
-    Generic token.Token // empty if IsGeneric == false
-    IsGeneric bool
 }
 
 type DefStruct struct {
@@ -103,7 +102,6 @@ type EnumElemType struct {
 type Impl struct {
     Impl identObj.Impl
     Pos token.Pos
-    Generic token.Token // empty if IsGeneric == false
     BraceLPos token.Pos
     FnDefs []DefFn
     BraceRPos token.Pos
@@ -177,8 +175,8 @@ func (o *FnHead) Readable(indent int) string {
     s := strings.Repeat("   ", indent+1)
 
     generic := ""
-    if o.Generic.Type != 0 {
-        generic = fmt.Sprintf("%sGeneric: %s\n", s, o.Generic.Str)
+    if o.F.IsGeneric() {
+        generic = fmt.Sprintf("%sGeneric: %s\n", s, o.F.GetGeneric().Name)
     }
 
     res += fmt.Sprintf("%sName: %s\n%s%sArgs: [%s]\n", s, o.Name, generic, s, args)
@@ -257,12 +255,12 @@ func (d *EnumElem) Readable(indent int) string {
 func (d *Impl) Readable(indent int) string {
     res := strings.Repeat("   ", indent) + "IMPL:\n"
 
-    if d.Generic.Type != 0 {
-        res += fmt.Sprintf("%sGeneric: %s\n", strings.Repeat("   ", indent+1), d.Generic.Str)
+    if d.Impl.GetGeneric() != nil {
+        res += fmt.Sprintf("%sGeneric: %s\n", strings.Repeat("   ", indent+1), d.Impl.GetGeneric().Typ.Name)
     }
 
     res += strings.Repeat("   ", indent+1) + "Interface: " + d.Impl.GetInterfaceName() + "\n" +
-        strings.Repeat("   ", indent+1) + "DestType: " + d.Impl.GetImplName() + "\n"
+        strings.Repeat("   ", indent+1) + "DestType: " + d.Impl.GetDstType().String() + "\n"
 
     for _,f := range d.FnDefs {
         res += f.Readable(indent+1)

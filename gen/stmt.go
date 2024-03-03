@@ -328,8 +328,8 @@ func GenContinue(file *bufio.Writer, s *ast.Continue) {
 func GenRet(file *bufio.Writer, s *ast.Ret) {
     if s.RetExpr != nil {
         t := s.F.GetRetType() 
-        if s.F.GetGeneric() != nil {
-            t = types.ReplaceGeneric(t, s.F.GetGeneric().CurInsetType) 
+        if s.F.IsGeneric() {
+            t = types.ResolveGeneric(t)
         }
 
         if types.IsBigStruct(t) {

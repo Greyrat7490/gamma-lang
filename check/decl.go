@@ -98,6 +98,10 @@ func typeCheckImplNoInterface(d *ast.Impl) {
 func typeCheckInterfaceImplemented(d *ast.Impl) {
     err := false
 
+    if d.Impl.GetInterfaceType().Generic.Name != "" {
+        types.UpdateInsetType(d.Impl.GetInterfaceType().Generic)
+    }
+
     for _,expected := range d.Impl.GetInterfaceFuncs() {
         found := false
         for _,f := range d.FnDefs {

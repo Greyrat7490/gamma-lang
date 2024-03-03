@@ -344,8 +344,10 @@ func GenIdent(file *bufio.Writer, e *ast.Ident, t types.Type) {
         case types.IntType:
             asm.MovRegDeref(file, asm.RegA, v.Addr(), t.Size(), false)
 
+        case types.GenericType:
+            GenIdent(file, e, types.ResolveGeneric(t))
         case *types.GenericType:
-            GenIdent(file, e, t.CurInsetType)
+            GenIdent(file, e, types.ResolveGeneric(t))
 
         default:
             asm.MovRegDeref(file, asm.RegA, v.Addr(), t.Size(), false)
@@ -572,15 +574,19 @@ func FnCallAddrToReg(file *bufio.Writer, e *ast.FnCall, reg asm.RegGroup) {
 func resolveGenericFnSrc(e *ast.FnCall) {
     if e.FnSrc != nil && e.FnSrc.GetKind() == types.Interface && len(e.Values) > 0 && types.IsGeneric(e.Values[0].GetType()) { 
         e.FnSrc = types.ResolveFnSrc(e.FnSrc, e.F.GetName(), types.ResolveGeneric(e.Values[0].GetType()))
-        e.F = identObj.GetFnFromFnSrc(e.FnSrc, e.F.GetName())
+        e.F = identObj.GetFnFromFnSrc(&e.FnSrc, e.F.GetName())
     }
 }
 
 func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
     resolveGenericFnSrc(e)
 
-    if e.F.GetGeneric() != nil {
-        e.F.GetGeneric().CurInsetType = e.InsetType
+    if e.F.IsGeneric() {
+        e.F.SetInsetType(e.InsetType)
+    }
+
+    if types.IsGeneric(e.FnSrc) {
+        types.UpdateInsetType(e.FnSrc)
     }
 
     passArgs := createPassArgs(e.F, e.Values)
@@ -893,7 +899,7 @@ func convertFmtArg(arg ast.Expr) ast.Expr {
     funcName := "to_str"
     fnSrc := arg.GetType()
 
-    f := identObj.GetFnFromFnSrc(fnSrc, funcName)
+    f := identObj.GetFnFromFnSrc(&fnSrc, funcName)
 
     ident := ast.Ident{ Name: funcName, Obj: f }
     return &ast.FnCall{ F: f, FnSrc: fnSrc, Ident: ident, Values: []ast.Expr{ arg } }
@@ -1025,12 +1031,12 @@ func createPassArgs(f *identObj.Func, values []ast.Expr) passArgs {
 
     // rdi contains addr to return big struct to
     regsCount := uint(0)
-    retType := types.ReplaceGeneric(f.GetRetType(), f.GetGeneric()) 
+    retType := types.ResolveGeneric(f.GetRetType()) 
     if types.IsBigStruct(retType) { regsCount = 1 }
 
     stackSize := uint(0)
     for i,t := range f.GetArgs() {
-        t = types.ReplaceGeneric(t, f.GetGeneric()) 
+        t = types.ResolveGeneric(t) 
         if types.IsBigStruct(t) {
             bigStructArgs = prepend(bigStructArgs, t, values[i])
             stackSize += (t.Size() + 7) & ^uint(7)

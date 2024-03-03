@@ -118,9 +118,9 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
                 }
             }
 
-            if e.F.GetGeneric() != nil {
-                for i,insetType := range e.F.GetGeneric().UsedInsetTypes {
-                    e.F.GetGeneric().UsedInsetTypes[i] = getResolvedForwardType(insetType)
+            if e.F.IsGeneric() {
+                for i,insetType := range e.F.GetUsedInsetTypes() {
+                    e.F.GetUsedInsetTypes()[i] = getResolvedForwardType(insetType)
                 }
                 e.InsetType = getResolvedForwardType(e.InsetType)
             }
@@ -218,13 +218,13 @@ func resolveBackwardExpr(e ast.Expr) {
             resolveBackwardExpr(e)
         }
 
-        if e.F.GetGeneric() != nil {
-            for i,insetType := range e.F.GetGeneric().UsedInsetTypes {
-                e.F.GetGeneric().UsedInsetTypes[i] = getResolvedBackwardType(insetType)
+        if e.F.IsGeneric() {
+            for i,insetType := range e.F.GetUsedInsetTypes() {
+                e.F.GetUsedInsetTypes()[i] = getResolvedBackwardType(insetType)
             }
             e.InsetType = getResolvedBackwardType(e.InsetType)
 
-            e.F.GetGeneric().RemoveDuplTypes()
+            e.F.RmDuplInsetTypes()
         }
 
     case *ast.Cast:
