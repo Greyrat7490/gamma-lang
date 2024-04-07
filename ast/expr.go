@@ -408,10 +408,7 @@ func (e *FieldLit)  GetType() types.Type { return e.Value.GetType() }
 func (e *StructLit) GetType() types.Type { return e.StructType }
 func (e *ArrayLit)  GetType() types.Type { return e.Type }
 func (e *VectorLit) GetType() types.Type { return e.Type }
-func (e *FnCall)    GetType() types.Type { 
-    types.UpdateInsetType(e.FnSrc)
-    return e.F.GetRetType() 
-}
+func (e *FnCall)    GetType() types.Type { return e.F.GetRetType() }
 func (e *Indexed)   GetType() types.Type { return e.Type }
 func (e *Field)     GetType() types.Type { return e.Type }
 func (e *EnumLit)   GetType() types.Type { return e.Type }

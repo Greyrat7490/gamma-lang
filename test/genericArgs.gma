@@ -34,7 +34,7 @@ fn testAdd() {
     println(fmt("Add::<i32>: {}", Add::<i32>(c, d)))
 
     e i8 := 69
-    println(fmt("Add::<i8>: {}", Add::<i8>(e, -5 as i8)))
+    println(fmt("Add::<i8>: {}", Add::<i8>(e, -5)))
 
     res := Add::<str>("test", " string")
     println(fmt("Add::<str>: {}", res))

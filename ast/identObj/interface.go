@@ -46,10 +46,6 @@ func (i *Interface) Addr() addr.Addr {
     return addr.Addr{}
 }
 
-func (i *Interface) GetFuncs() []types.FuncType {
-    return i.typ.Funcs
-}
-
 func (i *Interface) GetFunc(name string) *Func {
     for _,f := range i.funcs {
         if f.name == name {
@@ -117,14 +113,36 @@ type Impl struct {
 }
 
 func CreateImpl(decPos token.Pos, interfaceType *types.InterfaceType, dstType types.Type, generic *Generic) Impl {
-    interface_,ok := Get(interfaceType.Name).(*Interface)
-    if !ok {
-        fmt.Fprintf(os.Stderr, "[ERROR] (internal) interface %v is not defined correct\n", interfaceType)
-        fmt.Fprintln(os.Stderr, "\t" + decPos.At())
-        os.Exit(1)
+    if interfaceType != nil {
+        interface_,ok := Get(interfaceType.Name).(*Interface)
+        if !ok {
+            fmt.Fprintf(os.Stderr, "[ERROR] (internal) interface %v is not defined correct\n", interfaceType)
+            fmt.Fprintln(os.Stderr, "\t" + decPos.At())
+            os.Exit(1)
+        }
+        return Impl{ decPos: decPos, interface_: interface_, interfaceType: interfaceType, dstType: dstType, scope: curScope, generic: generic }
     }
 
-    return Impl{ decPos: decPos, interface_: interface_, interfaceType: interfaceType, dstType: dstType, scope: curScope, generic: generic }
+    return Impl{ decPos: decPos, interfaceType: interfaceType, dstType: dstType, scope: curScope, generic: generic }
+}
+
+func createImplFromGeneric(implObj *Implementable, src types.Type, impl *Impl) Impl {
+    impl.AddTypeToGeneric(src)
+
+    newScope := *impl.scope
+    newScope.identObjs = make(map[string]IdentObj, len(newScope.identObjs))
+    newScope.implObj = make(map[string]*Implementable, len(newScope.implObj))
+
+    newImpl := *impl
+    newImpl.scope = &newScope
+
+    for _,obj := range impl.scope.identObjs {
+        if f,ok := obj.(*Func); ok {
+            newScope.identObjs[f.name] = f.replaceGeneric(src)
+        }
+    }
+
+    return newImpl
 }
 
 func (i *Impl) HasInterface() bool {

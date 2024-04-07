@@ -37,6 +37,8 @@ func (g *Generic) Addr() addr.Addr {
 }
 
 func AddTypeToGeneric(generic *Generic, typ types.Type) {
+    if typ.GetKind() == types.Infer { return }
+
     for _,t := range generic.UsedInsetTypes {
         if types.Equal(typ, t) { return }
     }

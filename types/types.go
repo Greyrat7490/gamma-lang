@@ -182,13 +182,15 @@ func CreateStructType(name string, types []Type, names []string, genericName str
 
 func CreateEnumType(name string, idType Type, names []string, types []Type, genericName string) EnumType {
     size := uint(0)
+    isBigStruct := false
     for _,t := range types {
-        if t != nil && t.Size() > size {
-            size = t.Size()
+        if t == nil { continue }
+
+        isBigStruct = true
+        if t.Size() > size { 
+            size = t.Size() 
         }
     }
-
-    isBigStruct := size > 0
 
     size += idType.Size()
 
@@ -364,6 +366,16 @@ func IsResolvable(t Type) bool {
     switch t := t.(type) {
     case PtrType:
         return IsResolvable(t.BaseType)
+    case ArrType:
+        return IsResolvable(t.BaseType)
+    case VecType:
+        return IsResolvable(t.BaseType)
+    case InterfaceType:
+        return IsResolvable(t.Generic.SetType)
+    case StructType:
+        return IsResolvable(t.insetType)
+    case EnumType:
+        return IsResolvable(t.insetType)
     case InferType:
         return true
     default:
@@ -413,6 +425,15 @@ func IsGeneric(t Type) bool {
     case VecType:
         return IsGeneric(t.BaseType)
 
+    case InterfaceType:
+        return t.Generic.Name != ""
+
+    case StructType:
+        return t.genericName != ""
+
+    case EnumType:
+        return t.genericName != ""
+
     case GenericType, *GenericType:
         return true
     }
@@ -455,7 +476,6 @@ func ReplaceGeneric(t Type, insetType Type) Type {
 
             t.types = ts
             t.size = t.IdType.Size() + insetType.Size()
-            t.isBigStruct = insetType.Size() > 0
         }
 
         return t
@@ -483,12 +503,9 @@ func ReplaceGeneric(t Type, insetType Type) Type {
         return t
 
     case GenericType:
-        SetCurInsetType(t, insetType)
-        return t
+        return insetType
     case *GenericType:
-        genericCopy := *t
-        SetCurInsetType(genericCopy, insetType)
-        return &genericCopy
+        return insetType
 
     default:
         return t

@@ -571,24 +571,7 @@ func FnCallAddrToReg(file *bufio.Writer, e *ast.FnCall, reg asm.RegGroup) {
     }
 }
 
-func resolveGenericFnSrc(e *ast.FnCall) {
-    if e.FnSrc != nil && e.FnSrc.GetKind() == types.Interface && len(e.Values) > 0 && types.IsGeneric(e.Values[0].GetType()) { 
-        e.FnSrc = types.ResolveFnSrc(e.FnSrc, e.F.GetName(), types.ResolveGeneric(e.Values[0].GetType()))
-        e.F = identObj.GetFnFromFnSrc(&e.FnSrc, e.F.GetName())
-    }
-}
-
 func GenFnCall(file *bufio.Writer, e *ast.FnCall) {
-    resolveGenericFnSrc(e)
-
-    if e.F.IsGeneric() {
-        e.F.SetInsetType(e.InsetType)
-    }
-
-    if types.IsGeneric(e.FnSrc) {
-        types.UpdateInsetType(e.FnSrc)
-    }
-
     passArgs := createPassArgs(e.F, e.Values)
 
     passArgs.genAlignStack(file)

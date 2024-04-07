@@ -136,15 +136,12 @@ func GetFnFromFnSrc(fnSrc *types.Type, fnName string) *Func {
 
         if obj := GetImplObj("T"); obj != nil {
             if i := obj.GetImplByFnName(fnName); i != nil {
-                if genericType,ok := i.dstType.(*types.GenericType); ok {
-                    i.AddTypeToGeneric(src)
+                impl := createImplFromGeneric(obj, src, i)
 
-                    newFnSrc := *genericType
-                    newFnSrc.SetType = *fnSrc
-                    *fnSrc = newFnSrc
+                obj := CreateImplObj(src)
+                obj.AddImpl(impl)
 
-                    return obj.GetFunc(fnName)
-                }
+                return obj.GetFunc(fnName)
             }
         }
     }

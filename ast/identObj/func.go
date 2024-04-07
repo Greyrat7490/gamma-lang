@@ -25,7 +25,11 @@ func GetCurFunc() *Func {
 }
 
 func CreateFunc(name token.Token, isConst bool, fnSrc types.Type, generic *Generic) Func {
-    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, fnSrc: fnSrc, typ: types.FuncType{ Name: name.Str }, Generic: generic }
+    if generic != nil {
+        return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, fnSrc: fnSrc, typ: types.FuncType{ Name: name.Str, Generic: generic.Typ }, Generic: generic }
+    }
+
+    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, fnSrc: fnSrc, typ: types.FuncType{ Name: name.Str } }
 }
 
 func CreateUnresolvedFunc(name string) Func {
@@ -45,8 +49,7 @@ func (f *Func) GetType() types.Type {
 }
 
 func (f *Func) GetGeneric() types.GenericType {
-    if f.Generic == nil { return types.GenericType{} }
-    return f.Generic.Typ
+    return f.typ.Generic
 }
 
 func (f *Func) GetUsedInsetTypes() []types.Type {
@@ -130,8 +133,54 @@ func (f *Func) GetSrcObj() types.Type {
     return nil
 }
 
-func (f *Func) AddTypeToGeneric(typ types.Type) {
-   AddTypeToGeneric(f.Generic, typ) 
+func (f Func) ResolveInferedTypes(typ types.Type) *Func {
+    if types.IsResolvable(f.fnSrc) {
+        f.fnSrc = typ
+    }
+
+    for i := range f.typ.Args {
+        if types.IsResolvable(f.typ.Args[i]) {
+            f.typ.Args[i] = typ
+        }
+    }
+
+    if types.IsResolvable(f.typ.Ret) {
+        f.typ.Ret = typ
+    }
+
+    if types.IsResolvable(f.typ.Generic.SetType) {
+        f.typ.Generic.SetType = typ
+    }
+
+    AddTypeToGeneric(f.Generic, typ)
+
+    return &f
+}
+
+func (f Func) replaceGeneric(typ types.Type) *Func {
+    f.fnSrc = types.ReplaceGeneric(f.fnSrc, typ)
+
+    args := f.typ.Args
+    f.typ.Args = make([]types.Type, len(args))
+    copy(f.typ.Args, args)
+
+    for i,a := range f.typ.Args {
+        f.typ.Args[i] = types.ReplaceGeneric(a, typ)
+    }
+
+    f.typ.Ret = types.ReplaceGeneric(f.typ.Ret, typ)
+    f.typ.Generic.SetType = typ
+
+    return &f
+}
+
+func (f *Func) ResolveGeneric(typ types.Type) *Func {
+    if !f.IsGeneric() { return f }
+
+    f = f.replaceGeneric(typ)
+
+    AddTypeToGeneric(f.Generic, typ)
+    return f
 }
 
 func (f *Func) SetInsetType(insetType types.Type) {

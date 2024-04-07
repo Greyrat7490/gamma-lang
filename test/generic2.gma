@@ -6,7 +6,7 @@ fn test2<T>(v [$]T) -> str {
     s := "{ "
 
     for i u64, v.len {
-        s = s + fmt("{} ", String.to_str(v[i]))
+        s += fmt("{} ", String.to_str(v[i]))
     }
 
     ret s + "}"

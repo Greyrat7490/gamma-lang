@@ -608,7 +608,7 @@ func prsDotCallFn(tokens *token.Tokens, obj ast.Expr, dotPos token.Pos, typ type
 
     vals = addSelfArg(vals, f, obj)
 
-    addInsetTypeToFunc(f, name.Pos, &insetType, vals)
+    f = resolveGeneric(f, name.Pos, &insetType, vals)
 
     ident := ast.Ident{ Name: name.Str, Pos: name.Pos, Obj: f }
     return &ast.FnCall{ 
@@ -1121,20 +1121,6 @@ func inferInsetType(f *identObj.Func, pos token.Pos, args []ast.Expr) (insetType
     return insetType
 }
 
-func addInsetTypeToFunc(f *identObj.Func, pos token.Pos, insetType *types.Type, args []ast.Expr) {
-    if f.IsGeneric() {
-        if *insetType == nil {
-            *insetType = inferInsetType(f, pos, args)
-        }
-
-        f.AddTypeToGeneric(*insetType)
-    } else if *insetType != nil {
-        fmt.Fprintf(os.Stderr, "[ERROR] function %s is not generic\n", f.GetName())
-        fmt.Fprintln(os.Stderr, "\t" + pos.At())
-        os.Exit(1)
-    }
-}
-
 func resolveFnSrc(src types.Type, fnName token.Token, args []ast.Expr) types.Type {
     if len(args) > 0 {
         src = types.ResolveFnSrc(src, fnName.Str, args[0].GetType())
@@ -1147,6 +1133,22 @@ func resolveFnSrc(src types.Type, fnName token.Token, args []ast.Expr) types.Typ
     }
 
     return src
+}
+
+func resolveGeneric(f *identObj.Func, pos token.Pos, insetType *types.Type, args []ast.Expr) *identObj.Func {
+    if f.IsGeneric() {
+        if *insetType == nil {
+            *insetType = inferInsetType(f, pos, args)
+        }
+
+        return f.ResolveGeneric(*insetType)
+    } else if *insetType != nil {
+        fmt.Fprintf(os.Stderr, "[ERROR] function %s is not generic\n", f.GetName())
+        fmt.Fprintln(os.Stderr, "\t" + pos.At())
+        os.Exit(1)
+    }
+
+    return f
 }
 
 func prsCallFromFnSrc(tokens *token.Tokens, fnSrc types.Type, fnSrcPos token.Pos, insetType types.Type) *ast.FnCall {
@@ -1171,7 +1173,7 @@ func prsCallFromFnSrc(tokens *token.Tokens, fnSrc types.Type, fnSrcPos token.Pos
         os.Exit(1)
     }
 
-    addInsetTypeToFunc(f, fnName.Pos, &insetType, vals)
+    f = resolveGeneric(f, fnName.Pos, &insetType, vals)
 
     resvSpace := identObj.ReserveSpace(f.GetRetType())
     ident := ast.Ident{ Name: fnName.Str, Pos: fnName.Pos, Obj: f }
@@ -1205,7 +1207,8 @@ func prsCallFn(tokens *token.Tokens, ident *ast.Ident, insetType types.Type) *as
         os.Exit(1)
     }
 
-    addInsetTypeToFunc(f, ident.Pos, &insetType, vals)
+    f = resolveGeneric(f, ident.Pos, &insetType, vals)
+
     resvSpace := identObj.ReserveSpace(f.GetRetType())
     return &ast.FnCall{ Ident: *ident, F: f, ResvSpace: resvSpace, InsetType: insetType, Values: vals, ParenLPos: posL, ParenRPos: posR }
 }

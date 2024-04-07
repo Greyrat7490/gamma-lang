@@ -460,31 +460,22 @@ func typeCheckFnCall(o *ast.FnCall) {
         os.Exit(1)
     }
 
-    if types.IsGeneric(o.FnSrc) {
-        types.UpdateInsetType(o.FnSrc)
+    if len(o.F.GetArgs()) != len(o.Values) {
+        fmt.Fprintf(os.Stderr, "[ERROR] expected %d args for function \"%s\" but got %d\n", len(o.F.GetArgs()), o.F.GetName(), len(o.Values))
+        fmt.Fprintf(os.Stderr, "\texpected: %v\n", o.F.GetArgs())
+        fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))
+        fmt.Fprintln(os.Stderr, "\t" + o.At())
+        os.Exit(1)
     }
 
-    if f,ok := o.Ident.Obj.(*identObj.Func); ok {
-        if len(f.GetArgs()) != len(o.Values) {
-            fmt.Fprintf(os.Stderr, "[ERROR] expected %d args for function \"%s\" but got %d\n", len(f.GetArgs()), f.GetName(), len(o.Values))
-            fmt.Fprintf(os.Stderr, "\texpected: %v\n", f.GetArgs())
+    for i, t1 := range o.F.GetArgs() {
+        if !checkTypeExpr(t1, o.Values[i]) {
+            fmt.Fprintf(os.Stderr, "[ERROR] expected %v as arg %d but got %v for function \"%s\"\n", t1, i, o.Values[i].GetType(), o.F.GetName())
+            fmt.Fprintf(os.Stderr, "\texpected: %v\n", o.F.GetArgs())
             fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))
             fmt.Fprintln(os.Stderr, "\t" + o.At())
             os.Exit(1)
         }
-
-        for i, t1 := range f.GetArgs() {
-            if !checkTypeExpr(t1, o.Values[i]) {
-                fmt.Fprintf(os.Stderr, "[ERROR] expected %v as arg %d but got %v for function \"%s\"\n", t1, i, o.Values[i].GetType(), f.GetName())
-                fmt.Fprintf(os.Stderr, "\texpected: %v\n", f.GetArgs())
-                fmt.Fprintf(os.Stderr, "\tgot:      %v\n", valuesToTypes(o.Values))
-                fmt.Fprintln(os.Stderr, "\t" + o.At())
-                os.Exit(1)
-            }
-        }
-    } else {
-        fmt.Fprintln(os.Stderr, "[ERROR] expected identObj to be a func (in typecheck.go FnCall)")
-        os.Exit(1)
     }
 
     if o.FnSrc != nil {

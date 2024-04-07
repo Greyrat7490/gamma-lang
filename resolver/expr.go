@@ -98,6 +98,10 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
     case *ast.FnCall:
         resolveFuncIdent(e)
 
+        if types.IsResolvable(e.InsetType) {
+            e.F = e.F.ResolveInferedTypes(getResolvedForwardType(e.InsetType))
+        }
+
         if e.F.GetName() == "fmt" {
             for _,arg := range e.Values {
                 resolveForwardExpr(arg, nil)
@@ -112,17 +116,10 @@ func resolveForwardExpr(e ast.Expr, t types.Type) {
 
             for i,arg := range e.Values {
                 if i < len(e.F.GetArgs()) {
-                    t := types.ReplaceGeneric(e.F.GetArgs()[i], e.InsetType) 
+                    t := e.F.GetArgs()[i]
                     addResolved(arg.GetType(), t)
                     resolveForwardExpr(arg, t)
                 }
-            }
-
-            if e.F.IsGeneric() {
-                for i,insetType := range e.F.GetUsedInsetTypes() {
-                    e.F.GetUsedInsetTypes()[i] = getResolvedForwardType(insetType)
-                }
-                e.InsetType = getResolvedForwardType(e.InsetType)
             }
         }
 
@@ -210,21 +207,16 @@ func resolveBackwardExpr(e ast.Expr) {
         }
 
     case *ast.FnCall:
+        if types.IsResolvable(e.InsetType) {
+            e.F = e.F.ResolveInferedTypes(getResolvedBackwardType(e.InsetType))
+        }
+
         if e.FnSrc != nil && types.IsResolvable(e.F.GetSrcObj()) {
             e.F.ResolveFnSrc(getResolvedBackwardType(e.F.GetSrcObj()))
         }
 
         for _,e := range e.Values {
             resolveBackwardExpr(e)
-        }
-
-        if e.F.IsGeneric() {
-            for i,insetType := range e.F.GetUsedInsetTypes() {
-                e.F.GetUsedInsetTypes()[i] = getResolvedBackwardType(insetType)
-            }
-            e.InsetType = getResolvedBackwardType(e.InsetType)
-
-            e.F.RmDuplInsetTypes()
         }
 
     case *ast.Cast:

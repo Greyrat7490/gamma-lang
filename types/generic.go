@@ -26,6 +26,8 @@ func UpdateInsetType(t Type) {
 }
 
 func SetCurInsetType(t Type, insetType Type) {
+    if insetType == nil { return }
+    
     switch t := t.(type) {
     case PtrType:
         SetCurInsetType(t.BaseType, insetType)

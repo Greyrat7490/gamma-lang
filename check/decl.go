@@ -98,6 +98,7 @@ func typeCheckImplNoInterface(d *ast.Impl) {
 func typeCheckInterfaceImplemented(d *ast.Impl) {
     err := false
 
+    // TODO: remove when generic guards are implemented
     if d.Impl.GetInterfaceType().Generic.Name != "" {
         types.UpdateInsetType(d.Impl.GetInterfaceType().Generic)
     }
