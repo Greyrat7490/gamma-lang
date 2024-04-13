@@ -745,6 +745,19 @@ func prsGeneric(tokens *token.Tokens) *identObj.Generic {
             os.Exit(1)
         }
 
+        var guardType types.InterfaceType
+        if tokens.Peek().Type == token.Colon {
+            tokens.Next()
+            interfaceName := tokens.Next()
+            interfaceType := prsInterfaceType(tokens)
+            if interfaceType == nil {
+                fmt.Fprintf(os.Stderr, "[ERROR] %s is not an interface\n", interfaceName.Str)
+                fmt.Fprintln(os.Stderr, "\t" + interfaceName.At())
+                os.Exit(1)
+            }
+            guardType = *interfaceType
+        }
+
         if tokens.Next().Type != token.Grt {
             fmt.Fprintf(os.Stderr, "[ERROR] expected \">\" but got %v\n", tokens.Cur())
             fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
@@ -752,7 +765,7 @@ func prsGeneric(tokens *token.Tokens) *identObj.Generic {
         }
 
         tokens.Next()
-        return identObj.DecGeneric(name)
+        return identObj.DecGeneric(name, guardType)
     }
 
     return nil

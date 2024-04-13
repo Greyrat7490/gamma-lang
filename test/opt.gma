@@ -18,7 +18,7 @@ fn useless<T>(arr [$]T, elem T) -> Opt<T> {
     ret Opt::<T>.None
 }
 
-fn printArr<T>(arr [$]T) {
+fn printArr<T: String>(arr [$]T) {
     print("{ ")
     for i u64, arr.len {
         print(fmt("{} ", arr[i]))

@@ -91,6 +91,7 @@ type FuncType struct {
 }
 type GenericType struct {
     Name string
+    Guard Type
     SetType Type
     Idx uint64
 }
@@ -872,18 +873,18 @@ func EqualCustom(destType Type, srcType Type, interfaceCompareFn func(Type, Type
 
     case InterfaceType:
         if t2,ok := srcType.(InterfaceType); ok {
-            return t.Name == t2.Name
+            return t.Name == t2.Name && EqualCustom(t.Generic.SetType, t2.Generic.SetType, interfaceCompareFn)
         }
 
         return interfaceCompareFn(t, srcType)
 
     case GenericType:
         if t2,ok := srcType.(GenericType); ok {
-            return t.Name == t2.Name
+            return t.Name == t2.Name && EqualCustom(t.Guard, t2.Guard, interfaceCompareFn)
         }
     case *GenericType:
         if t2,ok := srcType.(*GenericType); ok {
-            return t.Name == t2.Name
+            return t.Name == t2.Name && EqualCustom(t.Guard, t2.Guard, interfaceCompareFn)
         }
 
     case FuncType:

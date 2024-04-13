@@ -60,11 +60,9 @@ func HasFunc(t types.Type, name string) bool {
 
     switch t := t.(type) {
     case *types.GenericType:
-        implObj := GetImplObj("T")
-        return implObj != nil && implObj.GetFunc(name) != nil
+        return HasFunc(t.Guard, name)
     case types.GenericType:
-        implObj := GetImplObj("T")
-        return implObj != nil && implObj.GetFunc(name) != nil
+        return HasFunc(t.Guard, name)
     case types.InterfaceType:
         return t.GetFunc(name) != nil
     }
@@ -78,19 +76,9 @@ func HasInterface(t types.Type, name string) bool {
 
     switch t := t.(type) {
     case *types.GenericType:
-        if types.ResolveGeneric(t) == nil {
-            // TODO: generic guards (required interfaces list)
-            return true
-        }
-
-        return HasInterface(types.ResolveGeneric(t), name)
+        return HasInterface(t.Guard, name) 
     case types.GenericType:
-        if types.ResolveGeneric(t) == nil {
-            // TODO: generic guards (required interfaces list)
-            return true
-        }
-
-        return HasInterface(types.ResolveGeneric(t), name)
+        return HasInterface(t.Guard, name) 
     case types.InterfaceType:
         return t.Name == name
     }

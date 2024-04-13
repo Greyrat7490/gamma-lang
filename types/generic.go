@@ -2,9 +2,9 @@ package types
 
 var genericInsetTypes []Type = make([]Type, 0, 20)
 
-func CreateGeneric(name string) GenericType {
+func CreateGeneric(name string, guardType InterfaceType) GenericType {
     genericInsetTypes = append(genericInsetTypes, nil)
-    return GenericType{ Name: name, Idx: uint64(len(genericInsetTypes)-1) }
+    return GenericType{ Name: name, Idx: uint64(len(genericInsetTypes)-1), Guard: guardType }
 }
 
 func UpdateInsetType(t Type) {

@@ -452,12 +452,20 @@ func exhaustedUnwraps(unwraps []*ast.Unwrap, lastPost string) {
 }
 
 func typeCheckFnCall(o *ast.FnCall) {
-    if o.InsetType != nil {
-        o.F.SetInsetType(o.InsetType)
-    } else if o.F.IsGeneric() {
-        fmt.Fprintf(os.Stderr, "[ERROR] function %s is generic but got no generic typ passed\n", o.F.GetName())
-        fmt.Fprintln(os.Stderr, "\t" + o.At())
-        os.Exit(1)
+    if o.F.IsGeneric() {
+        if o.InsetType == nil {
+            fmt.Fprintf(os.Stderr, "[ERROR] function %s is generic but got no generic typ passed\n", o.F.GetName())
+            fmt.Fprintln(os.Stderr, "\t" + o.At())
+            os.Exit(1)
+        }
+
+        if guard,ok := o.F.Generic.Typ.Guard.(types.InterfaceType); ok && guard.Name != "" {
+            if !identObj.HasInterface(o.InsetType, guard.Name) {
+                fmt.Fprintf(os.Stderr, "[ERROR] insetType \"%v\" does not implement interface \"%v\" required by generic guard\n", o.InsetType, guard)
+                fmt.Fprintln(os.Stderr, "\t" + o.At())
+                os.Exit(1)
+            }
+        }
     }
 
     if len(o.F.GetArgs()) != len(o.Values) {
@@ -479,11 +487,6 @@ func typeCheckFnCall(o *ast.FnCall) {
     }
 
     if o.FnSrc != nil {
-        // TODO: for now generics are not checked until generic guards are implemented
-        if len(o.Values) > 0 && o.Values[0].GetType().GetKind() == types.Generic {
-            return
-        }
-
         if !identObj.HasFunc(o.FnSrc, o.Ident.Name) {
             fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement function %s\n", o.FnSrc, o.Ident.Name)
             fmt.Fprintln(os.Stderr, "\t" + o.At())

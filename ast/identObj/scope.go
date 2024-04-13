@@ -192,7 +192,7 @@ func AddBuildIn(name string, argtype types.Type, retType types.Type) {
 }
 
 func AddGenBuildIn(name string, genericName string, argtype types.Type, retType types.Type) {
-    gen := Generic{ Typ: types.CreateGeneric(genericName) }
+    gen := Generic{ Typ: types.CreateGeneric(genericName, types.InterfaceType{}) }
 
     f := CreateFunc(token.Token{ Str: name }, false, nil, &gen)
     f.SetRetType(retType)
@@ -269,10 +269,10 @@ func DecEnum(name token.Token, generic *Generic) *Enum {
     return &e
 }
 
-func DecGeneric(name token.Token) *Generic {
+func DecGeneric(name token.Token, guardType types.InterfaceType) *Generic {
     curScope.checkName(name)
 
-    g := CreateGeneric(name)
+    g := CreateGeneric(name, guardType)
     curScope.identObjs[name.Str] = &g
     return &g
 }

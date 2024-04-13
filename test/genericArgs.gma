@@ -2,7 +2,7 @@ enum Option<T> {
     Val(T), None
 }
 
-fn show<T>(opt Option<T>) {
+fn show<T: String>(opt Option<T>) {
     if opt : Option::<T>.Val(v) {
         println(fmt("valid ({})", v))
     } else {

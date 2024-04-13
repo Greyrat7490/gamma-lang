@@ -58,7 +58,7 @@ enum Opt<T> bool {
     Val(T), None
 }
 
-fn vtos<T>(v [$]T) -> str {
+fn vtos<T: String>(v [$]T) -> str {
     s := "{ "
 
     for i u64, v.len {

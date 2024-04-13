@@ -1,0 +1,14 @@
+fn printArr<T>(arr [$]T) {
+    print("{ ")
+
+    for i u64, arr.len {
+        print(fmt("{} ", arr[i]))
+    }
+
+    println("}")
+}
+
+fn main() {
+    arr := [$]i32{ len: 2 }
+    printArr::<i32>(arr)
+}

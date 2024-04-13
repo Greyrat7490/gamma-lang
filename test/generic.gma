@@ -4,7 +4,7 @@ fn dummy<T>(a T) -> T {
     ret a
 }
 
-fn printArr<T>(arr [$]T) {
+fn printArr<T: String>(arr [$]T) {
     print("{ ")
 
     for i u64, arr.len {

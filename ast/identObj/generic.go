@@ -14,8 +14,8 @@ type Generic struct {
     UsedInsetTypes []types.Type
 }
 
-func CreateGeneric(name token.Token) Generic {
-    return Generic{ Typ: types.CreateGeneric(name.Str), decPos: name.Pos }
+func CreateGeneric(name token.Token, guardType types.InterfaceType) Generic {
+    return Generic{ Typ: types.CreateGeneric(name.Str, guardType), decPos: name.Pos }
 }
 
 func (g *Generic) GetName() string {
