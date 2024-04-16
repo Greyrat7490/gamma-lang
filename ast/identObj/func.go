@@ -13,7 +13,7 @@ type Func struct {
     retAddr addr.Addr   // TODO remove
     Scope *Scope
     Generic *Generic
-    fnSrc types.Type
+    FnSrc types.Type
     hasSrcObj bool
     isConst bool
 }
@@ -26,10 +26,10 @@ func GetCurFunc() *Func {
 
 func CreateFunc(name token.Token, isConst bool, fnSrc types.Type, generic *Generic) Func {
     if generic != nil {
-        return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, fnSrc: fnSrc, typ: types.FuncType{ Name: name.Str, Generic: generic.Typ }, Generic: generic }
+        return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, FnSrc: fnSrc, typ: types.FuncType{ Name: name.Str, Generic: generic.Typ }, Generic: generic }
     }
 
-    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, fnSrc: fnSrc, typ: types.FuncType{ Name: name.Str } }
+    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, FnSrc: fnSrc, typ: types.FuncType{ Name: name.Str } }
 }
 
 func CreateUnresolvedFunc(name string) Func {
@@ -75,8 +75,8 @@ func (f *Func) GetRetAddr() addr.Addr {
 func (f *Func) GetMangledName() string {
     name := f.name
 
-    if f.fnSrc != nil {
-        name = f.fnSrc.GetMangledName() + "." + name
+    if f.FnSrc != nil {
+        name = f.FnSrc.GetMangledName() + "." + name
     }
 
     if f.IsGeneric() {
@@ -98,20 +98,36 @@ func (f *Func) SetRetAddr(addr addr.Addr) {
 func (f *Func) SetArgs(args []types.Type) {
     f.typ.Args = args
 
-    if f.fnSrc != nil && len(args) > 0 {
+    if f.FnSrc != nil && len(args) > 0 {
         if t,ok := args[0].(types.PtrType); ok {
-            f.hasSrcObj = types.Equal(f.fnSrc, t.BaseType)
+            f.hasSrcObj = types.Equal(f.FnSrc, t.BaseType)
         } else {
-            f.hasSrcObj = types.Equal(f.fnSrc, args[0])
+            f.hasSrcObj = types.Equal(f.FnSrc, args[0])
         }
     }
 }
 
 func (f *Func) ResolveFnSrc(t types.Type) {
-    if f.fnSrc != nil && types.IsResolvable(f.typ.Args[0]) {
+    if f.FnSrc != nil && types.IsResolvable(f.typ.Args[0]) {
         f.typ.Args[0] = t
-        f.fnSrc = t
+        f.FnSrc = t
     }
+}
+
+func (f Func) ResolveInterface(t types.Type) *Func {
+    args := f.typ.Args
+    f.typ.Args = make([]types.Type, len(args))
+    copy(f.typ.Args, args)
+
+    if interfaceType,ok := f.FnSrc.(types.InterfaceType); ok {
+        for i,a := range f.typ.Args {
+            f.typ.Args[i] = types.ReplaceInterface(interfaceType, a, t)
+        }
+
+        f.typ.Ret = types.ReplaceInterface(interfaceType, f.typ.Ret, t)
+        f.FnSrc = t
+    }
+    return &f
 }
 
 func (f *Func) IsGeneric() bool {
@@ -130,8 +146,8 @@ func (f *Func) GetSrcObj() types.Type {
 }
 
 func (f Func) ResolveInferedTypes(typ types.Type) *Func {
-    if types.IsResolvable(f.fnSrc) {
-        f.fnSrc = typ
+    if types.IsResolvable(f.FnSrc) {
+        f.FnSrc = typ
     }
 
     for i := range f.typ.Args {
@@ -154,7 +170,7 @@ func (f Func) ResolveInferedTypes(typ types.Type) *Func {
 }
 
 func (f Func) replaceGeneric(typ types.Type) *Func {
-    f.fnSrc = types.ReplaceGeneric(f.fnSrc, typ)
+    f.FnSrc = types.ReplaceGeneric(f.FnSrc, typ)
 
     args := f.typ.Args
     f.typ.Args = make([]types.Type, len(args))

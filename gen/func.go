@@ -163,11 +163,8 @@ func PassVar(file *bufio.Writer, regIdx uint, t types.Type, otherVar vars.Var) {
         switch otherVar.GetType().GetKind() {
         case types.Interface:
             asm.MovRegDeref(file, regs[regIdx+1], otherVar.Addr().Offseted(int64(types.Ptr_Size)), types.Ptr_Size, false)
-        case types.Struct, types.Enum:
-            asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vtable.GetVTableName(otherVar.GetType(), t))
         default:
-            fmt.Fprintf(os.Stderr, "[ERROR] (internal) expected %v to be an interface or implementable but got %v\n", otherVar.GetName(), otherVar.GetType())
-            os.Exit(1)
+            asm.MovRegVal(file, regs[regIdx+1], t.Size() - 8, vtable.GetVTableName(otherVar.GetType(), t))
         }
 
     case types.IntType:

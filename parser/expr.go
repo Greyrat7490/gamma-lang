@@ -679,6 +679,8 @@ func prsDotExpr(tokens *token.Tokens, obj ast.Expr, insetType types.Type) ast.Ex
 }
 
 func getInterfaceFunc(t types.Type, name string) *identObj.Func {
+    // TODO: replace generic with guard
+
     if impl := identObj.GetImplObj(t.String()); impl != nil {
         return impl.GetFunc(name)
     }
@@ -1122,14 +1124,8 @@ func inferInsetType(f *identObj.Func, pos token.Pos, args []ast.Expr) (insetType
 }
 
 func resolveFnSrc(src types.Type, fnName token.Token, args []ast.Expr) types.Type {
-    if len(args) > 0 {
+    if len(args) > 0 && !types.IsGeneric(args[0].GetType()) {
         src = types.ResolveFnSrc(src, fnName.Str, args[0].GetType())
-    }
-
-    if src.GetKind() == types.Interface {
-        fmt.Fprintf(os.Stderr, "[ERROR] cannot resolve %s to explicate implementation (use explicate type instead of interface)\n", src)
-        fmt.Fprintln(os.Stderr, "\t" + fnName.At())
-        os.Exit(1)
     }
 
     return src

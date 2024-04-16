@@ -327,20 +327,17 @@ func IsSelfType(t Type, interfaceType InterfaceType) bool {
     }
 }
 
-func IsFnSrcResolvable(src Type, fnName string) bool {
-    if src,ok := src.(InterfaceType); ok {
-        f := src.GetFunc(fnName)
-        if len(f.Args) > 0 {
-            return IsSelfType(f.Args[0], src)
-        }
-    }
-
-    return false
-}
-
 func ResolveFnSrc(src Type, fnName string, firstArgType Type) Type {
-    if IsFnSrcResolvable(src, fnName) && !IsGeneric(firstArgType) {
-        return firstArgType
+    switch t := src.(type) {
+    case InterfaceType:
+        f := t.GetFunc(fnName)
+        if len(f.Args) > 0 && IsSelfType(f.Args[0], t) {
+            return firstArgType
+        }
+    case GenericType:
+        return t.Guard
+    case *GenericType:
+        return t.Guard
     }
 
     return src
@@ -413,6 +410,63 @@ func SolveGeneric(typeWithGeneric Type, srcType Type) Type {
     }
 
     return nil
+}
+
+func SolveInterface(typeWithInterface Type, srcType Type) Type {
+    switch t1 := typeWithInterface.(type) {
+    case PtrType:
+        if t2,ok := srcType.(PtrType); ok {
+            return SolveInterface(t1.BaseType, t2.BaseType)
+        }
+
+    case ArrType:
+        if t2,ok := srcType.(ArrType); ok {
+            return SolveInterface(t1.BaseType, t2.BaseType)
+        }
+
+    case VecType:
+        if t2,ok := srcType.(VecType); ok {
+            return SolveInterface(t1.BaseType, t2.BaseType)
+        }
+
+    case GenericType, *GenericType:
+        if t2,ok := srcType.(GenericType); ok {
+            return SolveInterface(ResolveGeneric(t1), ResolveGeneric(t2)) 
+        }
+        if t2,ok := srcType.(*GenericType); ok {
+            return SolveInterface(ResolveGeneric(t1), ResolveGeneric(t2)) 
+        }
+
+        return srcType
+
+    case InterfaceType:
+        return srcType
+    }
+
+    return nil
+}
+
+func ReplaceInterface(interfaceType InterfaceType, dstType Type, srcType Type) Type {
+    switch dstType := dstType.(type) {
+    case PtrType:
+        dstType.BaseType = ReplaceInterface(interfaceType, dstType.BaseType, srcType) 
+
+    case ArrType:
+        dstType.BaseType = ReplaceInterface(interfaceType, dstType.BaseType, srcType) 
+
+    case VecType:
+        dstType.BaseType = ReplaceInterface(interfaceType, dstType.BaseType, srcType) 
+
+    case GenericType, *GenericType:
+        return ReplaceInterface(interfaceType, ResolveGeneric(dstType), srcType)
+
+    case InterfaceType:
+        if Equal(interfaceType, dstType) {
+            return srcType
+        }
+    }
+
+    return dstType
 }
 
 func IsGeneric(t Type) bool {

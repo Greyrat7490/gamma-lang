@@ -1,8 +1,8 @@
-fn test<T>(t T) {
+fn test<T: String>(t T) {
     println(String.to_str(t))
 }
 
-fn test2<T>(v [$]T) -> str {
+fn test2<T: String>(v [$]T) -> str {
     s := "{ "
 
     for i u64, v.len {
@@ -14,5 +14,8 @@ fn test2<T>(v [$]T) -> str {
 
 fn main() {
     test::<u64>(420)
-    println(test2::<u32>([$]u32{ len: 2 }))
+
+    a := [$]u32{ len: 2 }
+    a[0] = 42069
+    println(test2::<u32>(a))
 }
