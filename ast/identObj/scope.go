@@ -120,8 +120,8 @@ func GetImplObj(name string) *Implementable {
     return nil
 }
 
-func GetFnFromFnSrc(fnSrc *types.Type, fnName string) *Func {
-    switch src := (*fnSrc).(type) {
+func GetFnFromFnSrc(fnSrc types.Type, fnName string) *Func {
+    switch src := fnSrc.(type) {
     case types.InterfaceType:
         if obj,ok := Get(src.String()).(*Interface); ok {
             return obj.GetFunc(fnName)

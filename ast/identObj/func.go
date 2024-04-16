@@ -56,10 +56,6 @@ func (f *Func) GetUsedInsetTypes() []types.Type {
     return f.Generic.UsedInsetTypes
 }
 
-func (f *Func) RmDuplInsetTypes() {
-    f.Generic.RemoveDuplTypes()
-}
-
 func (f *Func) GetRetType() types.Type {
     return f.typ.Ret
 }

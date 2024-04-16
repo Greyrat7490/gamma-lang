@@ -1166,7 +1166,7 @@ func prsCallFromFnSrc(tokens *token.Tokens, fnSrc types.Type, fnSrcPos token.Pos
 
     fnSrc = resolveFnSrc(fnSrc, fnName, vals)
 
-    f := identObj.GetFnFromFnSrc(&fnSrc, fnName.Str)
+    f := identObj.GetFnFromFnSrc(fnSrc, fnName.Str)
     if f == nil {
         fmt.Fprintf(os.Stderr, "[ERROR] %s does not implement function %s\n", fnSrc, fnName.Str)
         fmt.Fprintln(os.Stderr, "\t" + fnName.At())

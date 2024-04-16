@@ -45,14 +45,3 @@ func AddTypeToGeneric(generic *Generic, typ types.Type) {
 
     generic.UsedInsetTypes = append(generic.UsedInsetTypes, typ)
 }
-
-func (g *Generic) RemoveDuplTypes() {
-    for i := range g.UsedInsetTypes {
-        for j := i+1; j < len(g.UsedInsetTypes); j++ {
-            if types.Equal(g.UsedInsetTypes[i], g.UsedInsetTypes[j]) && g.UsedInsetTypes[i].Size() == g.UsedInsetTypes[j].Size() {
-                g.UsedInsetTypes[j] = g.UsedInsetTypes[len(g.UsedInsetTypes)-1]
-                g.UsedInsetTypes = g.UsedInsetTypes[:len(g.UsedInsetTypes)-1]
-            }
-        }
-    }
-}

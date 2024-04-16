@@ -7,24 +7,6 @@ func CreateGeneric(name string, guardType InterfaceType) GenericType {
     return GenericType{ Name: name, Idx: uint64(len(genericInsetTypes)-1), Guard: guardType }
 }
 
-func UpdateInsetType(t Type) {
-    switch t := t.(type) {
-    case PtrType:
-        UpdateInsetType(t.BaseType)
-
-    case ArrType:
-        UpdateInsetType(t.BaseType)
-
-    case VecType:
-        UpdateInsetType(t.BaseType)
-
-    case GenericType:
-        SetCurInsetType(t, t.SetType)
-    case *GenericType:
-        SetCurInsetType(t, t.SetType)
-    }
-}
-
 func SetCurInsetType(t Type, insetType Type) {
     if insetType == nil { return }
     

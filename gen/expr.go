@@ -882,7 +882,7 @@ func convertFmtArg(arg ast.Expr) ast.Expr {
     funcName := "to_str"
     fnSrc := arg.GetType()
 
-    f := identObj.GetFnFromFnSrc(&fnSrc, funcName)
+    f := identObj.GetFnFromFnSrc(fnSrc, funcName)
 
     ident := ast.Ident{ Name: funcName, Obj: f }
     return &ast.FnCall{ F: f, FnSrc: fnSrc, Ident: ident, Values: []ast.Expr{ arg } }
@@ -1014,12 +1014,10 @@ func createPassArgs(f *identObj.Func, values []ast.Expr) passArgs {
 
     // rdi contains addr to return big struct to
     regsCount := uint(0)
-    retType := types.ResolveGeneric(f.GetRetType()) 
-    if types.IsBigStruct(retType) { regsCount = 1 }
+    if types.IsBigStruct(f.GetRetType()) { regsCount = 1 }
 
     stackSize := uint(0)
     for i,t := range f.GetArgs() {
-        t = types.ResolveGeneric(t) 
         if types.IsBigStruct(t) {
             bigStructArgs = prepend(bigStructArgs, t, values[i])
             stackSize += (t.Size() + 7) & ^uint(7)
