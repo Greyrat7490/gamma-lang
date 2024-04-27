@@ -926,11 +926,16 @@ func EqualCustom(destType Type, srcType Type, interfaceCompareFn func(Type, Type
         }
 
     case InterfaceType:
-        if t2,ok := srcType.(InterfaceType); ok {
+        switch t2 := srcType.(type) {
+        case InterfaceType:
             return t.Name == t2.Name && EqualCustom(t.Generic.SetType, t2.Generic.SetType, interfaceCompareFn)
+        case GenericType:
+            return Equal(t, t2.Guard)
+        case *GenericType:
+            return Equal(t, t2.Guard)
+        default:
+            return interfaceCompareFn(t, srcType)
         }
-
-        return interfaceCompareFn(t, srcType)
 
     case GenericType:
         if t2,ok := srcType.(GenericType); ok {

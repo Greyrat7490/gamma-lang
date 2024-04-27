@@ -22,7 +22,8 @@ impl u64 :: I2<u64> {
     }
 }
 
-impl<T> T :: I3 {
+// TODO: add I3 guard implicitly
+impl<T: I3> T :: I3 {
     fn func3(self) -> Self {
         ret self
     }
@@ -34,11 +35,11 @@ impl<T> T :: I<T> {
     }
 }
 // TODO: should cause an error (this impl already exists with impl<T> T)
-impl u64 :: I<u64> {
-    fn func(self) -> Self {
-        ret self
-    }
-}
+// impl u64 :: I<u64> {
+//     fn func(self) -> Self {
+//         ret self
+//     }
+// }
 
 impl Opt<str> :: String {
     fn to_str(self) -> str {
@@ -51,7 +52,7 @@ impl Opt<str> :: String {
 
 // TODO: error generic impl after non generic
 // TODO: in work
-impl<T> Opt<T> :: String {
+impl<T: String> Opt<T> :: String {
     fn to_str(self) -> str {
         if self : Opt::<T>.Val(s) {
             ret fmt("{}", s)
@@ -76,7 +77,7 @@ fn test_gen_interface() {
     b i64 := -420
     println(fmt("{}", i64.func2(b)))
 
-    // would cause an error (cannot resolve to actual impl)
+    // TODO: in work
     // println(fmt("{}", I2<u64>.func2(a)))
 }
 
