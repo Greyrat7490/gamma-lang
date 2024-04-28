@@ -156,10 +156,7 @@ func isDefInfer(tokens *token.Tokens) bool {
         return true
     }
 
-    if tokens.Peek().Type == token.DefConst {
-        if tokens.Peek2().Type == token.Lss || isImplementable(tokens.Cur()) || isInterface(tokens.Cur()) {
-            return false
-        }
+    if tokens.Peek().Type == token.DefConst && tokens.Peek2().Type != token.Lss {
         return true
     }
 
@@ -171,13 +168,6 @@ func isStruct(obj identObj.IdentObj) bool {
 }
 func isEnum(token token.Token) bool {
     _,ok := identObj.Get(token.Str).(*identObj.Enum)
-    return ok
-}
-func isImplementable(token token.Token) bool {
-    return identObj.GetImplObj(token.Str) != nil
-}
-func isInterface(token token.Token) bool {
-    _,ok := identObj.Get(token.Str).(*identObj.Interface)
     return ok
 }
 func isEnumLit(enumType types.EnumType, elemName string) bool {

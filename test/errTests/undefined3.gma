@@ -4,7 +4,7 @@ struct S {
 
 fn main() {
     s := S{ 69 }
-    S::test()
+    S.test()
 }
 
 impl S {
