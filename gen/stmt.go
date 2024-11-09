@@ -115,7 +115,7 @@ func GenIfCond(file *bufio.Writer, e ast.Expr, hasElse bool) uint {
 
     case *ast.Unwrap:
         idType := e.EnumType.IdType
-        id := e.EnumType.GetID(e.ElemName.Str)
+        id := e.EnumType.GetElemID(e.ElemName.Str)
 
         stackSize := identObj.GetStackSize()
         ExprAddrToReg(file, e.SrcExpr, asm.RegD)
@@ -191,7 +191,7 @@ func GenCaseCond(file *bufio.Writer, condExpr ast.Expr) {
 
     case *ast.Unwrap:
         idType := e.EnumType.IdType
-        id := e.EnumType.GetID(e.ElemName.Str)
+        id := e.EnumType.GetElemID(e.ElemName.Str)
 
         ExprAddrToReg(file, e.SrcExpr, asm.RegD)
         asm.MovRegDeref(file, asm.RegA, asm.RegAsAddr(asm.RegD), idType.Size(), false)

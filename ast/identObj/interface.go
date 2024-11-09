@@ -21,7 +21,7 @@ type Interface struct {
 var CurSelfType types.Type = nil
 
 func CreateInterface(name token.Token, generic *Generic) Interface {
-    interfaceType := types.InterfaceType{ Name: name.Str }
+    interfaceType := types.CreateInterfaceType(name.Str)
     if generic != nil {
         interfaceType.Generic = generic.Typ
     }
@@ -126,12 +126,12 @@ func CreateImpl(decPos token.Pos, interfaceType *types.InterfaceType, dstType ty
     return Impl{ decPos: decPos, interfaceType: interfaceType, dstType: dstType, scope: curScope, generic: generic }
 }
 
-func createImplFromGeneric(implObj *Implementable, src types.Type, impl *Impl) Impl {
+func createImplFromGeneric(src types.Type, impl *Impl) Impl {
     impl.AddTypeToGeneric(src)
 
     newScope := *impl.scope
     newScope.identObjs = make(map[string]IdentObj, len(newScope.identObjs))
-    newScope.implObj = make(map[string]*Implementable, len(newScope.implObj))
+    newScope.implObj = make(Implementations, len(newScope.implObj))
 
     newImpl := *impl
     newImpl.scope = &newScope

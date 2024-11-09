@@ -26,14 +26,14 @@ func GetCurFunc() *Func {
 
 func CreateFunc(name token.Token, isConst bool, fnSrc types.Type, generic *Generic) Func {
     if generic != nil {
-        return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, FnSrc: fnSrc, typ: types.FuncType{ Name: name.Str, Generic: generic.Typ }, Generic: generic }
+        return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, FnSrc: fnSrc, typ: types.CreateFuncType(name.Str, generic.Typ), Generic: generic }
     }
 
-    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, FnSrc: fnSrc, typ: types.FuncType{ Name: name.Str } }
+    return Func{ name: name.Str, decPos: name.Pos, isConst: isConst, FnSrc: fnSrc, typ: types.CreateFuncType(name.Str, types.GenericType{}) }
 }
 
 func CreateUnresolvedFunc(name string) Func {
-    return Func{ typ: types.FuncType{ Ret: types.CreateInferType(nil) } }
+    return Func{ typ: types.CreateUnresolvedFuncType() }
 }
 
 func (f *Func) GetArgs() []types.Type {

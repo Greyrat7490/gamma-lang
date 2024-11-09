@@ -103,7 +103,7 @@ func constEval(e ast.Expr, arrWithNils bool) constVal.ConstVal {
             elem = ConstEval(e.Content.Expr)
             if elem == nil { return nil }
         }
-        return &constVal.EnumConst{ Id: e.Type.GetID(e.ElemName.Str), Type: e.Type, ElemType: e.Type.GetType(e.ElemName.Str), Elem: elem } 
+        return &constVal.EnumConst{ Id: e.Type.GetElemID(e.ElemName.Str), Type: e.Type, ElemType: e.Type.GetType(e.ElemName.Str), Elem: elem } 
 
     case *ast.Unwrap:
         return ConstEvalUnwrap(e)
@@ -170,7 +170,7 @@ func ConstEvalUnwrap(e *ast.Unwrap) constVal.ConstVal {
             }
         }
 
-        res := c.Id == e.EnumType.GetID(e.ElemName.Str)
+        res := c.Id == e.EnumType.GetElemID(e.ElemName.Str)
         return (*constVal.BoolConst)(&res)
     }
 

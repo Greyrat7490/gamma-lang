@@ -49,6 +49,7 @@ type Type interface {
     Size()           uint
     String()         string
     GetMangledName() string
+    GetImplID()      uint64
     GetKind()        TypeKind
 }
 
@@ -64,6 +65,7 @@ type ArrType struct {
 type VecType struct { BaseType Type }
 type StrType struct { } 
 type StructType struct {
+    ImplId uint64
     Name string
     Types []Type
     genericName string          // empty string means not generic
@@ -73,6 +75,7 @@ type StructType struct {
     size uint
 }
 type EnumType struct {
+    ImplId uint64
     Name string
     IdType Type
     genericName string          // empty string means not generic
@@ -96,6 +99,7 @@ type GenericType struct {
     Idx uint64
 }
 type InterfaceType struct {
+    ImplId uint64
     Name string
     Funcs []FuncType
     Generic GenericType
@@ -103,6 +107,26 @@ type InterfaceType struct {
 type InferType struct {
     Idx uint64
     DefaultType Type
+}
+
+
+var inferIdx uint64 = 0
+var implIdx uint64 = 17
+
+func nextInferIdx() uint64 {
+    i := inferIdx
+    inferIdx++
+    return i
+}
+
+func nextImplIdx() uint64 {
+    i := implIdx
+    implIdx++
+    return i
+}
+
+func GetCurImplIdx() uint64 {
+    return implIdx
 }
 
 func isAligned(types []Type, size uint) (aligned bool, rest uint)  {
@@ -172,6 +196,7 @@ func CreateStructType(name string, types []Type, names []string, genericName str
     }
 
     return StructType{ 
+        ImplId: nextImplIdx(),
         Name: name,
         Types: types,
         isBigStruct: isBigStruct,
@@ -208,6 +233,7 @@ func CreateEnumType(name string, idType Type, names []string, types []Type, gene
     }
 
     return EnumType{ 
+        ImplId: nextImplIdx(),
         Name: name,
         IdType: idType,
         types: ts,
@@ -218,12 +244,20 @@ func CreateEnumType(name string, idType Type, names []string, types []Type, gene
     }
 }
 
-var inferIdx uint64 = 0
-
 func CreateInferType(defaultType Type) InferType {
-    t := InferType{ DefaultType: defaultType, Idx: inferIdx } 
-    inferIdx++
-    return t
+    return InferType{ DefaultType: defaultType, Idx: nextInferIdx() }
+}
+
+func CreateInterfaceType(name string) InterfaceType {
+    return InterfaceType{ ImplId: nextImplIdx(), Name: name }
+}
+
+func CreateFuncType(name string, generic GenericType) FuncType {
+    return FuncType{ Name: name, Generic: generic }
+}
+
+func CreateUnresolvedFuncType() FuncType {
+    return FuncType{ Ret: CreateInferType(nil) }
 }
 
 func (t *StructType) GetOffset(field string) (offset int64) {
@@ -300,7 +334,7 @@ func (t *EnumType) GetElems() []string {
     return res
 }
 
-func (t *EnumType) GetID(name string) uint64 {
+func (t *EnumType) GetElemID(name string) uint64 {
     return t.ids[name]
 }
 
@@ -640,12 +674,6 @@ func (t GenericType) Size() uint {
     return 0
 }
 
-func (t InferType) GetInterfaces() map[string]InterfaceType { 
-    fmt.Fprintln(os.Stderr, "[ERROR] (internal) InferType has no interfaces")
-    os.Exit(1)
-    return nil
-}
-
 func (t IntType) String() string {
     switch t.size {
     case I8_Size:
@@ -797,6 +825,48 @@ func (t FuncType)       GetMangledName() string {
 
     return t.Name + generic + args + ret
 }
+
+func (t IntType) GetImplID() uint64 { 
+    switch t.size {
+    case I8_Size:
+        return 1
+    case I16_Size:
+        return 2
+    case I32_Size:
+        return 3
+    default:
+        return 4
+    }
+}
+func (t UintType) GetImplID() uint64 { 
+    switch t.size {
+    case U8_Size:
+        return 5
+    case U16_Size:
+        return 6
+    case U32_Size:
+        return 7
+    default:
+        return 8
+    }
+}
+func (t CharType) GetImplID() uint64 { return 9 }
+func (t BoolType) GetImplID() uint64 { return 10 }
+func (t StrType) GetImplID() uint64 { return 11 }
+func (t PtrType) GetImplID() uint64 { return 12 }
+func (t ArrType) GetImplID() uint64 { return 13 }
+func (t VecType) GetImplID() uint64 { return 14 }
+func (t GenericType) GetImplID() uint64 { 
+    if ResolveGeneric(t) != nil {
+        return ResolveGeneric(t).GetImplID()
+    }
+    return 15 
+}
+func (t FuncType) GetImplID() uint64 { return 16 }
+func (t InferType) GetImplID() uint64 { return t.DefaultType.GetImplID() }
+func (t InterfaceType) GetImplID() uint64 { return t.ImplId }
+func (t StructType) GetImplID() uint64 { return t.ImplId }
+func (t EnumType) GetImplID() uint64 { return t.ImplId }
 
 func ToBaseType(s string) Type {
     switch s {

@@ -608,6 +608,12 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
     generic := prsGeneric(tokens)
     dstType := prsType(tokens)
 
+    if dstType.GetKind() == types.Func {
+        fmt.Fprintln(os.Stderr, "[ERROR] functions are not implementable")
+        fmt.Fprintln(os.Stderr, "\t" + tokens.Cur().At())
+        os.Exit(1)
+    }
+
     var interfaceType *types.InterfaceType = nil
     if tokens.Peek().Type == token.DefConst {
         tokens.Next()
@@ -615,7 +621,7 @@ func prsImpl(tokens *token.Tokens) ast.Decl {
         interfaceType = prsInterfaceType(tokens)
     }
 
-    implObj := identObj.CreateImplObj(dstType)
+    implObj := identObj.GetImplementable(dstType, true)
 
     identObj.CurSelfType = dstType
 

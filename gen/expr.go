@@ -171,7 +171,7 @@ func GenStructLit(file *bufio.Writer, e *ast.StructLit) {
 }
 
 func GenEnumLit(file *bufio.Writer, e *ast.EnumLit) {
-    id := e.Type.GetID(e.ElemName.Str)
+    id := e.Type.GetElemID(e.ElemName.Str)
     if e.Content == nil {
         asm.MovRegVal(file, asm.RegA, e.Type.Size(), fmt.Sprint(id))
     } else {
@@ -667,7 +667,7 @@ func DerefSetBigStruct(file *bufio.Writer, address addr.Addr, e ast.Expr) {
         }
 
     case *ast.EnumLit:
-        asm.MovDerefVal(file, address, e.Type.IdType.Size(), fmt.Sprint(e.Type.GetID(e.ElemName.Str)))
+        asm.MovDerefVal(file, address, e.Type.IdType.Size(), fmt.Sprint(e.Type.GetElemID(e.ElemName.Str)))
         if e.Content != nil {
             if c := cmpTime.ConstEval(e.Content); c != nil {
                 DerefSetVal(file, address.Offseted(int64(e.Type.IdType.Size())), e.ContentType, c)

@@ -12,7 +12,7 @@ import (
 
 type Scope struct {
     identObjs map[string]IdentObj
-    implObj map[string]*Implementable
+    implObj Implementations
     parent *Scope
     children []Scope
     unnamedVars uint
@@ -26,7 +26,7 @@ type ReservedSpace struct {
     typ types.Type
 }
 
-var globalScope = Scope{ identObjs: make(map[string]IdentObj), implObj: make(map[string]*Implementable), children: make([]Scope, 0) }
+var globalScope = Scope{ identObjs: make(map[string]IdentObj), implObj: make(Implementations, 50), children: make([]Scope, 0, 50) }
 var curScope = &globalScope
 var stackSize uint = 0
 
@@ -101,25 +101,6 @@ func Get(name string) IdentObj {
     return nil
 }
 
-func CreateImplObj(t types.Type) *Implementable {
-    // TODO: something else than t.String()
-    if obj,ok := globalScope.implObj[t.String()]; ok {
-        return obj
-    }
-
-    obj := &Implementable{ dstType: t, impls: make([]Impl, 0, 1), interfaces: make([]string, 0, 1) }
-    globalScope.implObj[t.String()] = obj
-    return obj
-}
-
-func GetImplObj(name string) *Implementable {
-    if obj,ok := globalScope.implObj[name]; ok {
-        return obj
-    }
-
-    return nil
-}
-
 func GetFnFromFnSrc(fnSrc types.Type, fnName string) *Func {
     switch src := fnSrc.(type) {
     case types.InterfaceType:
@@ -128,17 +109,17 @@ func GetFnFromFnSrc(fnSrc types.Type, fnName string) *Func {
         }
 
     default:
-        if obj := GetImplObj(src.String()); obj != nil {
+        if obj := GetImplementable(src, false); obj != nil {
             if f := obj.GetFunc(fnName); f != nil {
                 return f
             }
         }
 
-        if obj := GetImplObj("T"); obj != nil {
+        if obj := GetImplementable(types.GenericType{}, false); obj != nil {
             if i := obj.GetImplByFnName(fnName); i != nil {
-                impl := createImplFromGeneric(obj, src, i)
+                impl := createImplFromGeneric(src, i)
 
-                obj := CreateImplObj(src)
+                obj := GetImplementable(src, true)
                 obj.AddImpl(impl)
 
                 return obj.GetFunc(fnName)

@@ -681,7 +681,7 @@ func prsDotExpr(tokens *token.Tokens, obj ast.Expr, insetType types.Type) ast.Ex
 func getInterfaceFunc(t types.Type, name string) *identObj.Func {
     // TODO: replace generic with guard
 
-    if impl := identObj.GetImplObj(t.String()); impl != nil {
+    if impl := identObj.GetImplementable(t, false); impl != nil {
         return impl.GetFunc(name)
     }
 
